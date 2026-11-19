@@ -403,6 +403,23 @@ Relevé dans `reponses2` le 19/11 vers 00:10, et confronté au rapport, au CSV e
 - `CP8-clotures-malgre-vente` → **« plus-tard »**. Rangé par lui, pas un oubli. Son audit
   existe : `notice/AUDIT_COMPROMIS_CLOTURES_MALGRE_LA_VENTE_2026-11-18.md`.
 
+**⭐ ÉTAT APRÈS L'AUDIT V2 ET LE PATCH AFFINÉ — 19/11 vers 02:30** *(rien n'est joué ; `reponses2`
+relue à 00:50 : toujours 13 documents, aucun ajout)* — `notice/AUDIT_INDEPENDANT_V2_2026-11-19.md` :
+
+- `L173-TR42PT5H-lien` « deplacer-27195 » → **le patch affiné le fait** (ajoute 27195, retire 27196 ;
+  27196 va à 739a0db1). Mon calcul indépendant donne la même chose.
+- `L3938-61OW86CS` « ecarter » → **le patch affiné retire 4496** ; mon calcul met la ligne sur
+  l'annonce 39836, offre 19130 (STRIPOLLI / STRIPPOLI : une faute de frappe).
+- `L3991-NEFHS7JI` (×2) → **le patch affiné retire 26395 et 26397** ; mon calcul trouve son bien :
+  l'annonce **55001** (mandat 3576), SANS transaction chez nous — la vente AKSU est sur le lot voisin
+  54999 (ligne 82TBULHC).
+- `L3464-1ESJE28Q` et `L3579-8Q3LHGZ4` « defaire-et-creer » → le patch affiné **défait** ; mon calcul
+  confirme les biens 9194 et 46472, sans transaction. ⛔ **Créer reste à faire** (geste 5).
+- `L17-Y8O4NJSY`, `L1401-74IL9C8F`, `L1135-QH6672TZ` « poser » → hors du gel ; mon calcul confirme
+  les trois appariements (Y8O4NJSY : 3661/3660/3662 ; 74IL9C8F : l'offre à 7 305 jours, « 2002 pour
+  2022 ») ; ⛔ le blocage des deux dates d'offre tient.
+- `REGLE-transaction-cible` « toutes », `OFF4281`, `REFUS5`, `CP8` → **inchangés, non traités**.
+
 ---
 
 ## 7. LE RAPPORT DE L'AUTRE SESSION — ce qu'il vaut, et ses trois trous

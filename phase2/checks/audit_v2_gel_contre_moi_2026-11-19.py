@@ -81,12 +81,20 @@ def qualifier_gel(iu, tid):
     sc, pr = preuve(iu, tid)
     autre = mes_lignes.get(tid)
     if autre and autre != iu:
-        sc_autre, _ = preuve(autre, tid)
-        if sc is not None and sc_autre is not None and sc >= 0 and sc == sc_autre:
+        sc_autre, pr_autre = preuve(autre, tid)
+        # ⭐ (temps 2, OXQSBZ9V / ZW7MKTWH) la MEME cle que la resolution : la date au jour
+        #   exact, puis le nom -- jamais le prix, qui confirme sans designer. Egaux sur ces
+        #   deux-la : c'est une egalite de DESIGNATION, donc une question.
+        def cle(s, p):
+            if s is None or s < 0:
+                return (-1, -1)
+            return (int("au jour pres" in p or "au jour de l'annulation" in p),
+                    int(any(x.startswith("acquereur ") and "different" not in x for x in p.split(", "))
+                        or "NOM VOISIN" in p))
+        a, b = cle(sc, pr), cle(sc_autre, pr_autre)
+        if a == b and a != (-1, -1):
             return "egalite(%s)" % autre
-        if sc is None or sc < 0 or (sc_autre is not None and sc_autre > sc):
-            return "croise(%s)" % autre
-        return "egalite(%s)" % autre
+        return "croise(%s)" % autre if b > a else "egalite(%s)" % autre
     if sc is None:
         return "inconnue"
     if sc < 0:
@@ -140,6 +148,28 @@ for L in A.LIGNES:
         elif m is not None and not gk:
             autre = ligne_du_gel.get(m)
             e = "moi_en_plus" + ("(gel->%s)" % autre if autre else "")
+            # ⛔ (temps 2, UL12H3AQ) je « prends » a une ligne soeur une transaction dont la
+            #   chaine Hektor est tenue par CETTE soeur au jour exact (offre 24594 de 7N8A20H5) :
+            #   mon attribution vient d'un nom mieux ecrit, pas d'une preuve. Ou les deux lignes
+            #   se valent : c'est une question, pas un ajout.
+            if autre and m in A.TX:
+                ch = A.TX[m]["chaine"]
+                soeur = A.LIGNE_DE.get(autre)
+                ancre_soeur = soeur and any(
+                    x in A.TX and A.TX[x]["chaine"] == ch and x != m and
+                    (lambda s_p: s_p[0] is not None and s_p[0] > 0 and "au jour pres" in s_p[1])(preuve(autre, x))
+                    for x in (int(MOI[autre][kk]) for kk in ROLES if MOI.get(autre, {}).get(kk)))
+                # ⚠ seulement si MA prise n'a pas de date au jour exact : sinon c'est le gel qui
+                #   croise (0GV2LNV2 prend 4747 AU JOUR PRES -- la chaine de nuit melait deux
+                #   acheteurs). Le soupcon ne vaut que contre un nom seul.
+                if ancre_soeur and "au jour pres" not in preuve(iu, m)[1]:
+                    e += "[VOL_PROBABLE]"
+                else:
+                    sc_m, pr_m = preuve(iu, m)
+                    sc_s, pr_s = preuve(autre, m)
+                    if sc_s is not None and sc_s >= 0 and \
+                            ("au jour pres" in pr_m) == ("au jour pres" in pr_s):
+                        e += "[egalite_avec_la_soeur]"
         elif m is None and g_hk:
             autres = {mes_lignes.get(x) for x in g_hk} - {None}
             e = "gel_en_plus" + ("(moi->%s)" % ",".join(sorted(autres)) if autres else "")
@@ -163,6 +193,10 @@ for L in A.LIGNES:
         etats.append(e.split("(")[0].split("[")[0])
         for q in quals:
             etats.append("Q:" + q.split("(")[0])
+        if "[VOL_PROBABLE]" in e:
+            etats.append("Q:vol_probable")
+        if "[egalite_avec_la_soeur]" in e:
+            etats.append("Q:egalite")
         detail_cat[(k, e.split("(")[0].split("[")[0])] += 1
         pg = [(x, preuve(iu, x)) for x in sorted(gk)]
         pm = preuve(iu, m) if m is not None else (None, "")
@@ -173,7 +207,11 @@ for L in A.LIGNES:
     s = set(etats)
     ann_gel = sorted({annonce_de(x) for k in g for x in g[k]} - {""})
     bien = "" if not ann_gel or not moi["annonce"] else ("meme_bien" if moi["annonce"] in ann_gel else "BIEN_DIFFERENT")
-    if not g:
+    if "Q:vol_probable" in s:
+        v = "MON_ERREUR_PROBABLE"         # ⛔ je prends a une soeur sa propre chaine
+    elif not g and "Q:egalite" in s:
+        v = "SANS_LIEN_GEL/QUESTION"      # deux lignes soeurs a preuve egale (YRUF0S9H)
+    elif not g:
         v = "SANS_LIEN_GEL/" + ("A_RATTACHER" if any(moi[k] for k in ROLES)
                                 else ("BIEN_SANS_TRANSACTION" if moi["annonce"] else "RIEN"))
     elif not s - {"identique", "C5_seul"}:

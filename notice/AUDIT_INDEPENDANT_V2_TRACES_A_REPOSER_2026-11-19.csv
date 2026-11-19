@@ -1,0 +1,17 @@
+﻿transaction;genre;valeurs_posees_par_nous;notes_du_sheet;origine_des_notes;posees_depuis_la_ligne;la_transaction_va_a;a_faire
+998;compromis;hon_entree=1000;1;classeur:G;a8aaeb2b;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+3650;vente;;1;classeur:F+G;427UDDSF;EN ATTENTE (9Q0FHAKK, ligne a question);ATTENDRE sa reponse sur 9Q0FHAKK : la transaction lui reviendrait
+4385;compromis;annul=2022-04-22;1;classeur:F;8RWTD0YX;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+4496;compromis;annul=2021-06-21;1;classeur:F;61OW86CS;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+6555;compromis;;1;classeur:F;Q602VZJX;EGR8KXOL;REPOSER pour EGR8KXOL puis retirer celles de Q602VZJX
+8321;compromis;annul=2023-10-23 motif=Retractation;1;classeur:G;8Q3LHGZ4;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+11138;compromis;annul=2026-06-02;1;classeur:F+G;774aa002;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+12952;compromis;annul=2024-09-24 motif=Annule sans motif precise;1;classeur:G;1ESJE28Q;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+16377;compromis;annul=2021-04-21;1;classeur:F;RX6J289Y;R0JRVFDC;REPOSER pour R0JRVFDC puis retirer celles de RX6J289Y
+16378;compromis;motif=Changement de situation acquereur;0;;CITFQGOB;RX6J289Y;REPOSER pour RX6J289Y puis retirer celles de CITFQGOB
+17427;compromis;;1;classeur:F;OXQSBZ9V;EN ATTENTE (87QOXR64, ligne a question);ATTENDRE sa reponse sur 87QOXR64 : la transaction lui reviendrait
+19277;offre;;1;classeur:F+G;Y51UMZHY;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+23050;compromis;;1;classeur:F;SBH4QWDW;VMWFLLW4;REPOSER pour VMWFLLW4 puis retirer celles de SBH4QWDW
+26395;compromis;annul=2021-03-21;1;classeur:F;NEFHS7JI;AUCUNE LIGNE;RETIRER (la transaction ne revient a aucune ligne)
+27195;compromis;annul=2026-07-27;1;classeur:F+G;739a0db1;TR42PT5H;REPOSER pour TR42PT5H puis retirer celles de 739a0db1
+27196;offre;;1;classeur:G;TR42PT5H;739a0db1;REPOSER pour 739a0db1 puis retirer celles de TR42PT5H

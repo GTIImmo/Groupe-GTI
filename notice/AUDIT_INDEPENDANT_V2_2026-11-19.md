@@ -353,4 +353,178 @@ A RATTACHER (40)  1eec6575 2U5QPKRC 4G2UHO35 515RUEN3 58I5AO17 5H70KQZA 5e4c8881
 
 ---
 
-*(§ 7 à § 9 écrits après la lecture du rapport de l'autre session.)*
+## 7. ⭐⭐⭐ TEMPS 2 — LA COMPARAISON AVEC L'AUTRE SESSION (ouverte APRÈS `6c2979c`, 01:21)
+
+> Lu en entier : `notice/AUDIT_INDEPENDANT_CLASSEUR_2026-11-18.md` (786 lignes), ses deux CSV.
+> Script : `phase2/checks/audit_v2_comparer_autre_session_2026-11-19.py` ; fichier :
+> `notice/AUDIT_INDEPENDANT_V2_SES_OPERATIONS_JUGEES_2026-11-19.csv` (ses 141 opérations,
+> chacune jugée par mon calcul, avec les deux preuves mesurées par la même règle).
+
+### Les trois trous annoncés par le dossier V2, revérifiés
+
+1. ✅ **Le « § 5 ter » existe désormais** (commit `02db14e`, postérieur à la mesure du dossier V2) :
+   la liste des 87 lignes touchées, les 33 questions, les 31 traces, les copies de C5, le run.
+2. ✅ **Les 18 lignes à question** : il les classe lui-même (§ 5 ter B1) et recommande déjà d'en
+   sortir 4. ➡ Je les sors toutes les 18 (§ 8), comme Frédéric l'a demandé.
+3. ⚠ **Ses chiffres bougent** — c'est vrai et il le dit (§ 5 ter I). Remesurés ici : gel 12 787
+   (empreinte identique), 55 retraits / 109 ajouts, 20 transactions Hektor à trace.
+
+### Ses 141 opérations contre mon calcul
+
+```
+                     ma v1.1     ma v1 ARRETEE (ce2301e, la seule strictement independante)
+ajouts       86       86 / 86      85 / 86
+deplacements 23       23 / 23      20 / 23
+retraits     32       31 / 32      28 / 32
+TOTAL       141      140          133
+```
+
+- ⭐ **Les 7 écarts entre v1 et v1.1** sont tous des compromis disputés entre deux acheteurs d'un
+  même bien (19131, 17427, 23050, 6554). Ma v1 suivait le NOM, comme le gel ; ma v1.1 suit la
+  DATE au jour exact, comme son patch. Le principe de la v1.1 vient de lignes où c'était **le gel**
+  qui avait raison (N1CUULMN…), pas de son patch, que je n'avais pas ouvert : c'est une
+  convergence avec lui, mais elle n'est pas aveugle au gel.
+- ⛔ **UNE seule opération est contredite par mes deux versions** : le retrait du compromis
+  27512 de `1D7EIYKW` (acquéreurs GANDON/BERAUD, prix et commission collent, seul compromis du
+  dossier). **Son propre rapport recommande déjà de la sortir** (§ 5 ter B1). Deux lectures
+  indépendantes concordent CONTRE le patch tel qu'il est écrit.
+
+### Ses 350 verdicts contre les miens — qui a la meilleure preuve
+
+**Accord** (deux chemins indépendants mènent au même endroit) : JUSTE 185 sur 190, À RATTACHER
+37 sur 38, FAUX 10 sur 12 (+ `739a0db1` et `8RWTD0YX`, même issue), RIEN CHEZ NOUS 50 sur 51,
+JUSTE SANS PREUVE FORTE 10 sur 12.
+
+**⭐ Là où IL a la meilleure preuve** — et je le dis :
+
+```
+4fc6b33a   le nom DUVERT sur le compromis est un vieux contact de 2016 reutilise par l'agent :
+           mon « autre acquereur » n'etait pas une contradiction
+NKDC0I1M   l'offre sans date est la SEULE du dossier : sa lecture du contexte tranche
+UL12H3AQ   ⛔ MON ERREUR : j'ai donne le compromis 24593 a UL12H3AQ (nom « MONTE » bien ecrit)
+           alors que la chaine colle a 7N8A20H5 par la date exacte de l'offre ET la commission
+           (3 500). UL12H3AQ est une offre annulee le jour meme, jamais saisie : « rien chez nous »
+PPIM4947   deux offres du meme jour sans nom chez Hektor : il les departage par l'ETAT et la
+           SUITE (l'acceptee mene a la vente FENON) -- meme issue, meilleure preuve que mon tri
+I3R03A11   l'offre 19458 (192 000 = le prix, 1 jour apres) est bien celle de RIOS : mon veto
+           (nom HEULIN) etait trop strict, sa copie C5 1001476 est bien une copie
+YRUF0S9H . ZW7MKTWH . T2GZOY5O   mon attribution sortait d'un DEPARTAGE (prix ou tri) entre
+           deux lignes soeurs : il a raison de les laisser incertaines
+c0a73edd   le gel suit les CHIFFRES du lot 59133 (offre, prix, commission) ; moi le lien de
+           l'agence vers 59136 : sa lecture est la mieux prouvee, la question reste a Frederic
+```
+
+**Là où je le contredis** : `1D7EIYKW` seulement (ci-dessus). Et une règle, qui rejoint sa
+pratique : **un nom différent sans date ne fonde jamais un retrait** (`contredit_nom`).
+
+**Ce que j'ai trouvé et que son patch ne couvre pas** — un seul audit, donc **PAS dans le patch** ;
+la matière d'un 4ᵉ tour :
+
+```
+le 4e TOUR des copies C5   12 des 13 lignes qui tiennent encore une copie sans avoir ete jugees :
+                           EO8MXFE9 T0WL4QE7 SWSN80FQ FWCFAN6O LKBO1TOH 9KHYVR1M 8NZ6V6XB
+                           S3HOG6UL 6U5DQQ4J 2FBR2M9U JRN2I7TM 1cc703d9 -- je designe pour chacune
+                           la vraie transaction de Hektor (I3R03A11 : je m'en remets a lui)
+PARTIEL non juges     50   un role croise ou contredit (liste : CSV, verdict PARTIEL)
+INCOMPLET non juges   13   un lien que je prouve et que le gel n'a pas
+FAUX non juges         6   60CLRO51 P46WN6R6 + 4 du meme motif (1f3d536a d2108609 caea1510
+                           5a4371b5 : une offre C5 + un compromis annule d'un AUTRE acheteur,
+                           sans date -- « contredit_nom », donc a juger, pas a retirer)
+mes erreurs probables  2   VNPQZFM8 . 6W6F4A4R (meme motif que UL12H3AQ) -- a ne PAS appliquer
+```
+
+---
+
+## 8. ⭐⭐⭐ TEMPS 3 — LE PATCH AFFINÉ, TOUJOURS DORMANT
+
+**Fichiers** : `supabase/patch_correction_gel_audit_v2_2026-11-19.sql` (+ `_INVERSE`, `_REPETITION`),
+générés par `phase2/checks/audit_v2_generer_patch_affine_2026-11-19.py` — **ne pas les retoucher
+à la main**. Les opérations, gardées et sorties, avec leur motif :
+`notice/AUDIT_INDEPENDANT_V2_OPERATIONS_AFFINEES_2026-11-19.csv`.
+
+⛔⛔ **IL PORTE SON `commit;`** (une seule instruction, la dernière ligne) : il ne se joue JAMAIS
+« pour voir ». **Il n'a pas été joué.**
+
+```
+CE QU'IL FAIT     45 liens retires . 78 ajoutes . le gel passe de 12 787 a 12 820
+                  lignes sans lien 91 -> 71   (le patch du 18/11 : 60)
+                  chaque operation est SOUTENUE par les deux audits (le script s'arrete sinon)
+CE QU'IL NE FAIT  ni transaction, ni valeur posee, ni Hektor, ni les 8 lignes INCERTAINES,
+     PAS          ni les 18 lignes a question
+```
+
+**Les trois corrections du § 8 du dossier V2, et ce que j'y ajoute :**
+
+1. ⛔ **Les deux colonnes de mesure ne sont plus détournées** : `etage` = le libellé constant
+   « audits independants 18-19/11 » ; `preuves` = **le vrai compte** des familles de preuve du
+   lien, mesuré par mon apparieur (2 : 17 liens . 3 : 27 . 4 : 3 . 5 : 8 . 6 : 11 . 7 : 12) —
+   jamais 0. ⚠ Les 17 liens à 2 familles sont des lignes que leur numéro de mandat ne menait
+   nulle part, rattachées par trois dates au jour exact et le nom du vendeur : trois dates
+   exactes restent UNE famille. La phrase du juge reste dans le CSV.
+   Confiance écrite : « sûre » (40) seulement si l'autre session dit « certaine » ET mon calcul
+   CERTAINE ; sinon « bonne » (38).
+2. ⛔ **Les 18 lignes à question sortent** — 33 opérations — avec `QJQ9M4OF` (indivisible de
+   `D9MMB7OU`, son propre rapport le dit), puis **EN CASCADE 4 opérations** dont la cible resterait
+   tenue par une ligne sortie : `6FQO29C8` ×2 (19131, 19133, tenues par V3FO5NDA), `H6CTRVR6`
+   (11415, tenue par E9GL6MUS), `9WQ204HP` (4480, tenue par 3308P0UX). **37 sorties en tout.**
+   Un retrait seul ne casse jamais l'exclusivité : il reste (OXQSBZ9V lâche 17427 ; 427UDDSF lâche
+   3648 et 3650 — leur destinataire attend ta réponse).
+3. ⚠ **La suite est enchaînée** : `notice/AUDIT_INDEPENDANT_V2_TRACES_A_REPOSER_2026-11-19.csv` —
+   16 transactions de Hektor portent une trace de nous (8 dates d'annulation, 3 motifs,
+   1 commission, 15 notes) : 6 à reposer pour la ligne qui reçoit, 8 à retirer, 2 en attente de
+   ta réponse (3650 → 9Q0FHAKK, 17427 → 87QOXR64). La répétition les compte (attendu avant
+   nettoyage : 10 et 15).
+
+**Et ce que mon audit ajoute :**
+
+4. ⭐ **La garde lit l'EMPREINTE du gel** (`8084e535…`), pas seulement son compte — c'est le piège
+   rencontré cette nuit : la copie locale avait le bon compte et une autre empreinte.
+5. ⭐ **Le retour arrière ne juge que SA part** (leçon 31) : il retire ses 78 poses, remet ses 45
+   retraits à l'identique, et DIT (sans refuser) si le reste du gel a changé depuis. ⚠ L'inverse
+   du 18/11 exigeait un gel entier identique à la sauvegarde : il aurait refusé de défaire après
+   n'importe quel autre geste légitime.
+6. ⭐ **Le témoin inverse compare 7 colonnes** (rôle, confiance, preuves, étage, auteur, ligne,
+   date de gel) au lieu de 4, et un **témoin positif** vérifie que les 78 poses sont là et que les
+   45 retraits sont partis.
+
+**Prouvé SANS RIEN ÉCRIRE, sur la base vivante, le 19/11 vers 02:15 :**
+
+```
+la GARDE COMPLETE, jouee seule (que des lectures)    passe : 12 787 liens, empreinte identique,
+                                                     45 retraits presents avec leur role,
+                                                     78 cibles presentes avec le bon genre
+une SIMULATION de l'etat d'apres (gel - 45 + 78),    12 820 liens . 0 transaction a deux lignes
+  par une requete en lecture, avec l'empreinte de    . 0 ligne a deux liens pour un role
+  ses propres listes (= celles du fichier)           . 71 lignes sans lien . 78 ajouts presents
+EXPLAIN de l'insertion (sans execution)              colonnes et types acceptes
+temoin apres coup                                    gel inchange : 12 787, meme empreinte,
+                                                     0 pose, pas de sauvegarde creee
+les rangs du Sheet ecrits dans le patch              0 ecart avec le Sheet de cette nuit
+```
+
+**Ce que ça pourrait casser ailleurs** — mesuré par l'autre session côté code (§ 5 ter F),
+non contredit : aucun déclencheur, aucune fonction, aucune tâche ne lit le gel ; deux sentinelles
+le regardent. `data.classeur_lien_casse` reste à 0. `data.classeur_ligne_sans_lien` (seuil 92)
+passera à **71 et restera verte en tolérant 21 lignes de trop** → son seuil doit suivre la mesure
+(geste 6, une modification de code, avec son « vas-y »). La descente du matin copiera la
+sauvegarde (sans clé primaire) : la relecture par rang l'a déjà fait sans perte pour trois
+sauvegardes du gel. ⚠ Et tout script qui poserait des valeurs du Sheet APRÈS le patch suivrait
+les nouveaux liens : c'est voulu, mais les 16 traces du point 3 restent sur l'ancienne
+transaction tant que le geste 2 n'est pas fait.
+
+---
+
+## 9. TEMPS 4 — L'EXPLICATION À FRÉDÉRIC (le résumé ; le message complet est dans la conversation)
+
+1. **Seul**, j'ai apparié les 4 796 lignes sans le gel : 4 567 certaines, 159 solides, 68 biens
+   sans transaction, 2 sans rien ; 16 témoins du chantier tenus ; six défauts de MA méthode
+   trouvés et corrigés en route.
+2. **Avec l'autre session**, l'accord est très large (133 de ses 141 opérations soutenues par ma
+   version arrêtée, 140 par ma version 1.1). Elle a la meilleure preuve sur 9 lignes, moi sur une
+   (1D7EIYKW, où son propre rapport me rejoint).
+3. **Le patch affiné** garde 104 opérations (45 retraits, 78 ajouts), sort les 18 lignes à
+   question et 4 opérations qui en dépendent, ne détourne plus les colonnes, et sa garde comme sa
+   simulation passent sur la base vivante. **Il attend ton « vas-y ».**
+4. **Après lui, dans l'ordre** : les 16 traces (geste 2), les copies de C5 des deux côtés
+   (geste 3), le 4ᵉ tour (geste 4, dont mon audit fournit la matière), créer 1ESJE28Q et 8Q3LHGZ4
+   (geste 5), le seuil de la sentinelle (geste 6), puis les 36 / 207 et les 91 / 277.
