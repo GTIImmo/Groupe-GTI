@@ -1573,6 +1573,21 @@ def chainage_sans_date_visible_actif() -> bool:
     return os.environ.get("APP_CHAINAGE_SANS_DATE_VISIBLE", "0") == "1"
 
 
+# ⛔ LES EXCLUSIONS DECLAREES DE LA REGLE E -- decision de Frederic du 19/11/2026 :
+#   « exclus-la, et DECLARE l'exclusion dans le code et dans ton fichier. Une exclusion
+#   tacite s'oublie. » UNE REGLE NE TRANCHE PAS UNE QUESTION OUVERTE : une transaction
+#   ecrite ici n'est PAS rendue visible par la regle E -- elle reste seule, exactement
+#   comme avant E, et le compte rendu le DIT a chaque run (« [E] exclusion declaree »).
+#   ⚠ On retire la ligne quand la question a sa reponse, pas avant, pas en silence.
+#   Trace : notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_2026-11-19.md, § 1.10.
+EXCLUES_DE_LA_REGLE_E: dict[int, str] = {
+    26613: "bien 52166, compromis ANNULE SANS DATE (maison CHANUT, 210 000) = la ligne SHN6RKDI "
+           "du classeur, INCERTAINE : prepare pour MOSNIER, ou brouillon de CREPINGE/LAROUX ou "
+           "de LUTTENBACHER/CARRET ? Sans exclusion, E le reunirait au dossier CARRET + "
+           "LUTTENBACHER. Exclu le 19/11 -- a retirer apres sa reponse.",
+}
+
+
 # REGLE B : l'ecart maximal, en jours, entre un compromis et l'offre acceptee
 # qu'on lui rattache. MESURE le 10/11 -- voir chainage_offre_acceptee_seule_actif.
 FENETRE_OFFRE_REGULARISEE_JOURS = 31
@@ -2579,6 +2594,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 deja_pris_e = {m for c in toutes for m in c["membres"]}
                 for app_id, kind, state, _d, acqs in sans_date_du_bien:
                     if app_id in deja_pris_e:
+                        continue
+                    if app_id in EXCLUES_DE_LA_REGLE_E:
+                        # une question ouverte : on la laisse seule, et on le dit
+                        signale("[E] exclusion declaree -- laissee seule (EXCLUES_DE_LA_REGLE_E)")
                         continue
                     toutes.append({"membres": [app_id], "acquereurs": set(acqs),
                                    "offre_acceptee": kind == "offre" and state in ETATS_OFFRE_ACCEPTEE,

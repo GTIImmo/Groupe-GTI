@@ -51,6 +51,8 @@ TEMOINS = {20088: 41481, 19070: 39745, 1335: 3481, 14110: 28653, 16197: 33458}
 #: les 4 tentatives echouees dont la VENTE porte le nom chez Hektor, et le couple PYOT (abstention).
 BLOQUES = {7499: ("15220", "GENILLON"), 8845: ("17536", "Rouchon"), 11103: ("23238", "Simonyan"),
            28214: ("54867", "PLANCHE"), 4385: ("9629", "PYOT, abstention")}
+#: L'EXCLUSION DECLAREE (EXCLUES_DE_LA_REGLE_E, decision du 19/11) DOIT la laisser seule
+EXCLUES = {26613: ("52166", "SHN6RKDI, exclusion declaree")}
 SORTIE_RESTE = RACINE / "notice" / "TEMPS4_REGLE_E_SANS_DATE_RESTANTES_2026-11-19.csv"
 INTERRUPTEUR = "APP_CHAINAGE_SANS_DATE_VISIBLE"
 
@@ -98,10 +100,16 @@ def main() -> int:
         en_base[a] = ch
 
     n, compte_n = rejouer(False)
-    ecart = sum(1 for a in n if n[a] != en_base[a])
-    print("N  regle E eteinte : %d dossiers . ecart avec la base : %d" % (len(set(n.values())), ecart))
-    if ecart:
-        echecs.append("E eteinte != base")
+    ecarts = {a for a in n if n[a] != en_base[a]}
+    # ⚠ LES 10 RATTACHEMENTS DU 19/11 (rattachements_manuels.csv) sont dans le fichier mais pas
+    #   encore dans la base tant que la nuit n'a pas recalcule : un ecart sur CES 10 offres est
+    #   attendu jusque-la ; un ecart sur n'importe quelle autre transaction est un rouge.
+    pas_encore_en_base = {5356, 5408, 13056, 16866, 17278, 20196, 21339, 22069, 26825, 28328}
+    print("N  regle E eteinte : %d dossiers . ecart avec la base : %d (dont %d = les 10 rattachements "
+          "du 19/11 que la nuit n'a pas encore appliques)"
+          % (len(set(n.values())), len(ecarts), len(ecarts & pas_encore_en_base)))
+    if ecarts - pas_encore_en_base:
+        echecs.append("E eteinte != base : %s" % sorted(ecarts - pas_encore_en_base)[:20])
     e, compte_e = rejouer(True)
     print("E  regle E allumee : %d dossiers" % len(set(e.values())))
     print("   transactions sans date rendues visibles : %s" % compte_e.get(
@@ -143,6 +151,16 @@ def main() -> int:
             t, bien, nom, "RESTE SEUL" if seul else "⛔ REUNI A TORT"))
         if not seul:
             echecs.append("garde %s" % t)
+    for t, (bien, nom) in EXCLUES.items():
+        seul = len(par_e[e[t]]) == 1
+        print("   temoin de l'EXCLUSION %-6s (bien %s, %s) : %s" % (
+            t, bien, nom, "RESTE SEUL" if seul else "⛔ REUNI MALGRE L'EXCLUSION"))
+        if not seul:
+            echecs.append("exclusion %s" % t)
+    dites = compte_e.get("[E] exclusion declaree -- laissee seule (EXCLUES_DE_LA_REGLE_E)", 0)
+    print("   exclusions DITES par le compte rendu : %s (attendu %d)" % (dites, len(EXCLUES)))
+    if dites != len(EXCLUES):
+        echecs.append("exclusion muette")
     biens_bougent = {info[next(iter(m))]["bien"] for _, m, _, _ in reunions}
     seuls_n = {a for a, c in n.items() if info[a]["tri"] is None and not info[a]["effacee"]
                and len(par_n[c]) == 1}
@@ -226,7 +244,9 @@ def main() -> int:
         if len(par_e[e[t]]) > 1:
             continue
         T = info[t]
-        if not T["acqs"]:
+        if t in EXCLUES:
+            raison = "EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)"
+        elif not T["acqs"]:
             raison = "aucun numero d'acquereur : rien a comparer"
         else:
             dossiers = {e[a] for a, x in info.items() if a != t and x["bien"] == T["bien"]

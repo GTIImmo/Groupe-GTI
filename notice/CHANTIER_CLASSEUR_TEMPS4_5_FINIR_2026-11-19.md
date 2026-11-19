@@ -26,9 +26,9 @@
 
 ```
 Q  SUJET                         ETAT        VERDICT EN UNE LIGNE                          ATTEND SA DECISION
-①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee : 35        l'allumage -- PAS cette
-                                             reunions, temoins verts, 0 a tort connu       nuit ; demain, APRES le
-                                                                                           controle des 10
+①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee ; 26613     l'allumage -- PAS cette
+                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     nuit ; demain, APRES le
+                                             sur 33 dossiers, temoins verts                controle des 10
 ②  les 10 « meme nom »           FAIT,       des menages -> R1 : les 10 lignes ECRITES,    -- (decide). ⏰ demain :
                                  ECRIT       rejouees : 10 dossiers bougent, pas un de     controler la nuit
                                              plus ; 11 590 -> 11 580                       (§ 2.7)
@@ -267,6 +267,42 @@ LE FICHIER    les rattachements manuels VERRONT desormais les transactions sans 
 ```
 ⚠ La session a coupé pendant le premier passage de la mesure : le CSV était écrit, la sortie écran
 perdue. Le second passage (identique, lecture seule) a rendu les témoins ci-dessus, tous verts.
+
+### 1.10 ✅ 26613 EXCLUE DE LA RÈGLE E — l'exclusion est DÉCLARÉE (sa décision du 19/11)
+
+**Ses mots** : *« Exclus-la, et DÉCLARE l'exclusion dans le code et dans ton fichier. Une exclusion
+tacite s'oublie. »* Et pour la règle : *« ne l'allume PAS. UN GESTE PAR NUIT — on verra demain, après
+le contrôle des 10. Le code reste commité et éteint, c'est tout. »*
+
+```
+LE CODE     phase2/sync/affaire_ledger.py, juste apres chainage_sans_date_visible_actif :
+              EXCLUES_DE_LA_REGLE_E = {26613: "bien 52166, compromis ANNULE SANS DATE (maison
+              CHANUT, 210 000) = la ligne SHN6RKDI ... a retirer apres sa reponse."}
+            dans le bloc de la regle E : une transaction de ce dictionnaire n'est PAS rendue
+            visible (elle reste seule, comme avant E), ET le compte rendu le DIT a chaque run :
+              « [E] exclusion declaree -- laissee seule (EXCLUES_DE_LA_REGLE_E) »
+            ⭐ tant que E est eteinte, la ligne ne joue pas : RIEN ne change cette nuit
+A RETIRER   quand il aura repondu a SHN6RKDI (prepare pour MOSNIER, ou brouillon de
+            CREPINGE/LAROUX ou de LUTTENBACHER/CARRET ?) -- pas avant, pas en silence
+REJOUE      phase2/checks/temps4_regle_e_sans_date_visible_2026-11-19.py, temoin de
+            l'exclusion AJOUTE, sur le fichier a 16 decisions :
+              N (E eteinte) 11 580 dossiers ; ecart avec la base 10 = EXACTEMENT les 10 offres
+                du 19/11 que la nuit n'a pas encore appliquees (le temoin le sait, et
+                rougirait sur toute autre transaction)
+              E (allumee)   11 546 dossiers
+              positifs 5/5 REUNIS . gardes 5/5 SEULS . 26613 RESTE SEUL . exclusion DITE 1 fois
+              inverse 0 . dossiers coupes 0 . deux ventes 0 . deux compromis vivants 0
+              33 reunions (34 transactions) au lieu de 34 (35) : 26613 et son dossier en moins,
+                rien d'autre ; [D] 761 -> 760 ; sans date restantes 49 -> 50 (la 50e est 26613,
+                raison « exclusion declaree »)
+              etiquettes : 19 cas normaux, 15 absorbent l'etiquette du dossier cible ; 33
+                fusions en une nuit si on l'allume
+TESTS       relances, verts : test_chainage_offre_proposee, test_chainage_vente_ferme,
+            test_chainage_offre_regularisee. (test_chainage_v2 : rouge PREEXISTANT, comptes
+            du 12/11, non relance.)
+⚠ CSV       TEMPS4_REGLE_E_REUNIONS / _SANS_DATE_RESTANTES sont REECRITS par ce rejeu : ils
+            portent l'etat a 16 decisions + l'exclusion. Ceux de la question ① sont dans 67eed58.
+```
 
 ---
 

@@ -39,6 +39,7 @@ bien,transaction,genre,etat,acquereurs,raison
 47790,24135,compromis,cancelled,"118663,474814",aucun autre dossier de cet acheteur sur le bien
 49573,25692,compromis,cancelled,536387,aucun autre dossier de cet acheteur sur le bien
 49624,25709,compromis,cancelled,"410820,410892",aucun autre dossier de cet acheteur sur le bien
+52166,26613,compromis,cancelled,"360833,361399",EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
 53015,27033,compromis,cancelled,392646,aucun autre dossier de cet acheteur sur le bien
 53036,27039,compromis,cancelled,385384,aucun autre dossier de cet acheteur sur le bien
 54672,28115,compromis,cancelled,382346,aucun autre dossier de cet acheteur sur le bien
