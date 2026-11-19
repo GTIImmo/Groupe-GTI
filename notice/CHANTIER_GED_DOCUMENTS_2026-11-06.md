@@ -3657,3 +3657,11 @@ qui vient de cliquer « Fermer » -- un DOUBLE-CLIC sur « Fermer » pourrait en
 après TOUTE ouverture de la fenêtre (d'elle-même ou par « Voir et trancher » : dans les deux cas le bouton peut arriver sous
 un curseur qui vient de cliquer). C'est le seul chemin qui enregistre (pas de touche Entrée, pas de formulaire). Contrôles :
 `test_ged_bilan` **137 VERT** (1 neuf) ; témoin inverse (délai retiré) -> 1 ROUGE ; `npm run build` vert. Pas encore poussé.
+**✅ En ligne et éprouvé (19/11, « Pousse et vérifie »)** : poussé seul (`da23acf`), Vercel READY, paquet `index-BOcjX_vM.js`.
+Sur 63330, « Voir et trancher » (titre 800 / fiche 742) : « Enregistrer et envoyer à Hektor » mesuré INACTIF à 153 ms et
+654 ms, ACTIF à 1 355 ms. Puis fermé, rouvert, et DEUX clics sur « Enregistrer » à 200 ms : inactif au clic, aucun
+« Enregistré » au pied, 0 calque, 0 `update_hektor_annonce_fields`, terrain toujours 742. Fenêtre refermée sans rien écrire.
+**Le rouge de `test_ged_remplir_contact` signalé sur main (session « Page d'accueil », 19/11) : FAUSSE ALERTE de fins de
+ligne**, pas le lot G -- rejoué sur le contenu commité (`git -c core.autocrlf=false archive`) : 505ffa6 80/80, 64a7914 74/74 ;
+par un `git archive` par défaut (CRLF sous Windows) : 79/1 et 73/1. L'essai lit désormais ses sources en LF (`lireSource`,
+commit `280d0d2`) : 80/80 sur le disque en CRLF.
