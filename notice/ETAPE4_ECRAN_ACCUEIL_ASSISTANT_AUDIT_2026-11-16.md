@@ -3247,7 +3247,7 @@ Patron repris : le schéma privé `ged_prive` de la GED (morceau 9, 13/11).
 **Reste** : P1, le moteur de questions côté serveur (« vas-y »). Question ouverte : l'auteur garde-t-il la lecture après
 la création (choix posé par moi) ?
 
-## 92. SA DÉCISION « que le négo et admin » (19/11) : patch écrit et répété, NON collé
+## 92. SA DÉCISION « que le négo et admin » (19/11) : patch écrit, répété, COLLÉ EN PRODUCTION le 19/11
 
 **Ses mots** : « 2. Que le négo et admin » (à ma question : l'auteur garde-t-il la lecture après la création ?).
 
@@ -3261,7 +3261,10 @@ la création (choix posé par moi) ?
 - **En pratique** : un commercial crée pour lui-même (la fenêtre le force sur lui, D2) ; il reste le négociateur, donc
   il garde la lecture. Seul l'auteur qui crée POUR un autre la perd après la création.
 
-**Reste** : le coller (son accord).
+**Collé le 19/11** par moi, avec son accord (« Oui vas y »), par le même script que P3 (empreinte du fichier vérifiée
+avant : md5 `a714cb9a…`, celui du commit 7976217). « PATCH PASSÉ, sans erreur ». **Relu en base** : une seule règle de
+lecture, de la forme nouvelle (`user_id = auth.uid() AND app_dossier_id IS NULL` OR admin OR négociateur) ; la prise
+porte `app_dossier_id is null` ; elle reste exécutable par `authenticated` SEUL (ni anon, ni service_role) ; 0 ligne.
 
 ## 93. P1 — LE MOTEUR DE QUESTIONS CÔTÉ SERVEUR (19/11) : écrit, éprouvé hors ligne, dormant, NON poussé
 
@@ -3312,4 +3315,9 @@ la création (choix posé par moi) ?
 - ⚠ Non éprouvé : contre la VRAIE table (seulement contre une fausse table qui imite les conditions de PostgREST).
   L'épreuve réelle viendra avec P2 (l'écran), interrupteur sur « admin ».
 
-**Reste** : pousser (son accord) ; P2, les boutons sous une question dans l'écran de l'assistant.
+**Poussé le 19/11** avec son accord, après fusion de main (11 commits de l'autre session : classeur, GED lot G'),
+front construit, essais rejoués verts (couverture, lot 0, serveur 58, gestes 415, lecteur 73, fichiers 28, socle 30).
+⚠ Un rouge À L'AUTRE SESSION, pas à moi : `test_ged_remplir_contact.cjs` 79 verts / 1 rouge (« une case changée depuis
+l'ouverture n'est pas écrite… ») — ma branche ne change aucun code du front par rapport à main.
+
+**Reste** : P2, les boutons sous une question dans l'écran de l'assistant.
