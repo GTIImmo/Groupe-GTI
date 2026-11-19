@@ -1,6 +1,6 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import {
-  EVENEMENT_CREATION_FAITE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
+  EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
   relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
   commencerParcours, parcoursDeConversation, parcoursOuvert,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
@@ -896,6 +896,16 @@ export default function AccueilAssistant(props: {
     window.addEventListener(EVENEMENT_CREATION_FAITE, surCreation)
     return () => window.removeEventListener(EVENEMENT_CREATION_FAITE, surCreation)
   }, [majCarte])
+
+  // 19/11 (P2 morceau 4) : la fenêtre remplie par un parcours a créé la fiche -> le parcours passe à « créée »
+  useEffect(() => {
+    const surParcours = (e: Event) => {
+      const v = (e as CustomEvent<ParcoursVue>).detail
+      if (v?.id) setParcours((l) => l.map((x) => (x.id === v.id ? v : x)))
+    }
+    window.addEventListener(EVENEMENT_PARCOURS_CREE, surParcours)
+    return () => window.removeEventListener(EVENEMENT_PARCOURS_CREE, surParcours)
+  }, [])
 
   const onTouche = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {

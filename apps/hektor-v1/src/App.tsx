@@ -295,7 +295,7 @@ import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
-import { EVENEMENT_CREATION_FAITE, contactDeLaRecherche, noterCreationCarte, transactionPourLien, type CaseParcours, type CatalogueParcours, type CreationFaite, type OuvertureCreation } from './lib/assistant'
+import { EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, contactDeLaRecherche, noterCreationCarte, noterParcoursCree, prendreCoordonneesMandant, transactionPourLien, type CaseParcours, type CatalogueParcours, type CreationFaite, type OuvertureCreation, type ParcoursVue } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { webpEnJpeg } from './lib/photoJpeg'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
@@ -15290,7 +15290,7 @@ export default function App() {
   const draftMandantAssistantRef = useRef<{ hektor_contact_id: string; nom: string } | null>(null)
   // 19/11 (§89, D2) : le négociateur que la carte a posé, pour DIRE pourquoi il saute au lieu de l'effacer en silence
   const draftNegoAssistantRef = useRef<{ hektor_user_id: string; nom: string; signale?: boolean } | null>(null)
-  const [draftPrefillAssistant, setDraftPrefillAssistant] = useState<{ carteId: string; champs: string[]; nombre: number; heure: string; desaccords: string[]; lecture: 'en_cours' | 'faite' | 'ratee' | null } | null>(null)
+  const [draftPrefillAssistant, setDraftPrefillAssistant] = useState<{ carteId: string; champs: string[]; nombre: number; heure: string; desaccords: string[]; lecture: 'en_cours' | 'faite' | 'ratee' | null; parcoursId?: string } | null>(null)
   const draftAnnoncePhotoUploadStartedRef = useRef<Set<string>>(new Set())
   const draftAnnonceEstimationSavedRef = useRef<Set<string>>(new Set())
   const [draftAnnonceStep, setDraftAnnonceStep] = useState<DraftAnnonceStepKey>('offre')
@@ -18529,6 +18529,89 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftPrefillAssistant({ carteId, champs, nombre: champs.length, heure: heureCarte, desaccords, lecture: o.photos.length ? (lue ? 'faite' : 'ratee') : null })
   }
 
+  // 19/11 (étape 4 chap. 6, P2 morceau 4) : « Ouvrir la fenêtre remplie » à la fin d'un parcours guidé. Rien n'est écrit :
+  // la fenêtre est remise à zéro comme au bouton, puis chaque réponse va dans SA case (le parcours parle la langue de la
+  // fenêtre, aucune traduction). La personne relit et crée DANS la fenêtre. ⛔ Les coordonnées d'un NOUVEAU mandant sont
+  // PRISES au coffre privé, et prendre, c'est effacer (décision du 19/11) : une seconde ouverture ne les a plus, et le dit.
+  async function assistantOuvrirParcours(vue: ParcoursVue) {
+    if (!canCreateHektorDraftAnnonce) return
+    openDraftAnnonceModal()
+    const r = vue.reponses
+    const t = (cle: string) => (r[cle] === null || r[cle] === undefined || typeof r[cle] === 'object' ? '' : String(r[cle]).trim())
+    const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const champs: string[] = []
+    const poser = (cle: string, setter: (v: string) => void) => { if (t(cle)) { setter(t(cle)); champs.push(cle) } }
+    if (t('offre_famille')) setDraftAnnonceOffreFamille(t('offre_famille'))
+    poser('type', setDraftAnnonceTypeId)
+    if (t('sous_type')) setDraftAnnonceTypeTransac(t('sous_type'))
+    if (t('agence')) setDraftAnnonceAgency(t('agence'))
+    if (t('negociateur') && profile?.role !== 'commercial') {
+      draftNegoAssistantRef.current = { hektor_user_id: t('negociateur'), nom: hektorNegotiators.find((n) => n.idUser === t('negociateur'))?.label ?? '' }
+      setDraftAnnonceNegotiatorId(t('negociateur'))
+      champs.push('negociateur')
+    }
+    poser('adresse_haut', setDraftAnnonceAddress)
+    poser('cp', setDraftAnnoncePostalCode)
+    poser('ville', setDraftAnnonceCity)
+    poser('note', setDraftAnnonceNote)
+    const nomsFenetre = new Set(draftAnnonceWizardGroups.flatMap((g) => g.fields.map((f) => f.name)))
+    const cases: Record<string, string> = {}
+    for (const cle of Object.keys(r)) if (nomsFenetre.has(cle) && t(cle)) { cases[cle] = t(cle); champs.push(cle) }
+    // §89 D5 : comme le scan, une estimation sans date porte la date du jour (format de la fenêtre jj-mm-aaaa)
+    if (vue.genre === 'creation_estimation' && !cases.ESTIMATION_DATE) {
+      const d = new Date()
+      cases.ESTIMATION_DATE = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
+    }
+    setDraftAnnonceWizardFields(cases)
+    const pieces = Array.isArray(r.composition) ? r.composition as Array<Record<string, unknown>> : []
+    if (pieces.length) {
+      setDraftAnnonceCompositionPieces(pieces.map((p) => {
+        const v = (k: string) => (p[k] === null || p[k] === undefined ? '' : String(p[k]))
+        return createEmptyHektorCompositionPieceDraft({
+          idTypePiece: v('idTypePiece'), typeLabel: v('typeLabel') || hektorCompositionPieceTypeLabel(v('idTypePiece')),
+          detailPiece: v('detailPiece'), etagePiece: v('etagePiece'), surfacePiece: v('surfacePiece'),
+          notePublique: v('notePublique'), notePrivee: v('notePrivee'), noteInterAgence: v('noteInterAgence'),
+        })
+      }))
+      champs.push('composition')
+    }
+    setDraftAnnonceScanEstimation(vue.genre === 'creation_estimation')
+    setDraftPrefillAssistant({ carteId: '', parcoursId: vue.id, champs: [...champs], nombre: champs.length, heure, desaccords: [], lecture: null })
+    if (t('mandant_choix') === 'existant' && t('mandant')) {
+      const id = t('mandant')
+      const trouve = await searchMandantContactOptions({ search: id, scope: null, limit: 5 })
+        .then((l) => l.find((x) => x.hektor_contact_id === id)).catch(() => undefined)
+      const nom = trouve?.display_name || [trouve?.prenom, trouve?.nom].filter(Boolean).join(' ') || `Contact ${id}`
+      draftMandantAssistantRef.current = { hektor_contact_id: id, nom }
+      setDraftMandantChoice('existing')
+      setDraftExistingMandantSearch(nom)
+      setDraftExistingMandantId(id)
+      champs.push('mandant')
+    } else if (t('mandant_choix') === 'nouveau') {
+      try {
+        const c = await prendreCoordonneesMandant(vue.id)
+        if (c && Object.keys(c).length) {
+          setDraftMandantChoice('new')
+          if (c.civilite) setDraftMandantCivility(c.civilite === 'Mme' ? 'Mme.' : c.civilite === 'Mlle' ? 'Mlle.' : c.civilite)
+          if (c.nom) setDraftMandantLastName(c.nom)
+          if (c.prenom) setDraftMandantFirstName(c.prenom)
+          if (c.email) setDraftMandantEmail(c.email)
+          if (c.telephone) setDraftMandantPhone(c.telephone)
+          if (c.adresse) setDraftMandantAddress(c.adresse)
+          if (c.cp) setDraftMandantPostalCode(c.cp)
+          if (c.ville) setDraftMandantCity(c.ville)
+          champs.push('mandant')
+        } else {
+          setDraftMandantChoice('new')
+          setErrorMessage("Les coordonnées du nouveau mandant ne sont plus gardées (déjà reprises par une ouverture précédente de la fenêtre) : saisis-les à l'étape Mandat.")
+        }
+      } catch (erreur) {
+        setErrorMessage(erreur instanceof Error ? erreur.message : "Les coordonnées du nouveau mandant n'ont pas pu être reprises.")
+      }
+    }
+    setDraftPrefillAssistant({ carteId: '', parcoursId: vue.id, champs, nombre: champs.length, heure, desaccords: [], lecture: null })
+  }
+
   // 18/11 (§66) : la marque d'une case remplie par l'assistant (rien quand la fenêtre a été ouverte à la main)
   const marqueAssistant = (champ: string) => (draftPrefillReels.includes(champ) ? ' is-assistant' : '')
 
@@ -19212,6 +19295,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       // 18/11 (étape 4 §66) : la fiche venait d'une carte de l'assistant -> la carte passe à « créée » (gardé au serveur,
       // pour un rechargement ; l'écran de l'assistant, s'il est monté, se met à jour tout de suite). Un échec ici ne
       // touche pas la création : la carte reste seulement à « Fenêtre ouverte ».
+      // 19/11 (P2 morceau 4) : la fiche venait d'un PARCOURS guidé -> il est noté terminé (avec le bien), l'écran de
+      // l'assistant se met à jour. Un échec ici ne touche pas la création.
+      if (draftPrefillAssistant?.parcoursId) {
+        const parcoursId = draftPrefillAssistant.parcoursId
+        setDraftPrefillAssistant(null)
+        noterParcoursCree(parcoursId, Number(numeroCreeDansLeTravail(job, 'app_dossier_id')) || null)
+          .then((vue) => window.dispatchEvent(new CustomEvent<ParcoursVue>(EVENEMENT_PARCOURS_CREE, { detail: vue })))
+          .catch(() => undefined)
+      }
       if (draftPrefillAssistant?.carteId) {
         const carteId = draftPrefillAssistant.carteId
         const suite = { app_dossier_id: Number(numeroCreeDansLeTravail(job, 'app_dossier_id')) || null,
@@ -23522,7 +23614,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <p><strong>Lecture de la fiche papier…</strong> La fenêtre se remplit avec ce qu'elle lit, puis avec ta dictée.</p>
                       ) : (
                         <p>
-                          <strong>Pré-rempli par l'assistant : {draftPrefillReels.length} case{draftPrefillReels.length > 1 ? 's' : ''}</strong>, d'après ta demande de {draftPrefillAssistant.heure}
+                          <strong>Pré-rempli par l'assistant : {draftPrefillReels.length} case{draftPrefillReels.length > 1 ? 's' : ''}</strong>, d'après {draftPrefillAssistant.parcoursId ? 'tes réponses au parcours' : 'ta demande'} de {draftPrefillAssistant.heure}
                           {draftPrefillAssistant.lecture === 'faite' ? ' et la fiche papier' : ''}. Elles portent la marque <span className="daa-point" aria-label="point magenta" /> : relis-les, puis continue comme d'habitude.
                         </p>
                       )}
@@ -28071,6 +28163,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onOuvrirCreation={(ouverture, carteId) => void assistantOuvrirCreation(ouverture, carteId)}
               catalogueParcours={catalogueParcours}
               estAdmin={profile?.role === 'admin'}
+              onOuvrirParcours={(vue) => void assistantOuvrirParcours(vue)}
               chercherMandantsParcours={(recherche) => searchMandantContactOptions({ search: recherche, scope: null, limit: 8 })
                 .then((lignes) => lignes.map((l) => ({ id: l.hektor_contact_id, nom: l.display_name || [l.prenom, l.nom].filter(Boolean).join(' ') || `Contact ${l.hektor_contact_id}`,
                   detail: [l.agence_nom, l.commercial_nom].filter(Boolean).join(' · ') })))}

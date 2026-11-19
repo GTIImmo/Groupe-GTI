@@ -430,6 +430,9 @@ function vueFausse(p: FauxParcours): ParcoursVue {
   }
 }
 
+/** P2 morceau 4 : la fenêtre remplie par un parcours a créé la fiche -> l'écran de l'assistant met le parcours à jour. */
+export const EVENEMENT_PARCOURS_CREE = 'gti-assistant-parcours-cree'
+
 /** L'App prévient l'écran de l'assistant qu'une carte « créer » a abouti (il peut être démonté : la carte se relira). */
 export const EVENEMENT_CREATION_FAITE = 'gti-assistant-creation-faite'
 export type CreationFaite = { carteId: string; resultat: Record<string, unknown> }

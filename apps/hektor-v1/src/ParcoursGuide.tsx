@@ -169,7 +169,7 @@ function QuestionMandant({ valeurs, setValeur, coordonnees, setCoordonnees, cher
   valeurs: Valeurs
   setValeur: (nom: string, v: unknown) => void
   coordonnees: CoordonneesMandant
-  setCoordonnees: (c: CoordonneesMandant) => void
+  setCoordonnees: (maj: (avant: CoordonneesMandant) => CoordonneesMandant) => void
   chercher?: (texte: string) => Promise<MandantTrouve[]>
   dejaDeposees: boolean
 }) {
@@ -231,14 +231,14 @@ function QuestionMandant({ valeurs, setValeur, coordonnees, setCoordonnees, cher
             <span className="asp-lbl">Civilité</span>
             {['M.', 'Mme'].map((c) => (
               <button key={c} type="button" className={`asp-puce${coordonnees.civilite === c ? ' is-on' : ''}`} aria-pressed={coordonnees.civilite === c}
-                onClick={() => setCoordonnees({ ...coordonnees, civilite: coordonnees.civilite === c ? '' : c })}>{c}</button>
+                onClick={() => setCoordonnees((avant) => ({ ...avant, civilite: avant.civilite === c ? '' : c }))}>{c}</button>
             ))}
           </div>
           <div className="asp-grille">
             {CASES_MANDANT.map((c) => (
               <label key={c.cle} className={`asp-champ${c.large ? ' asp-champ-large' : ''}`}><span>{c.libelle}</span>
                 <input value={coordonnees[c.cle] ?? ''} autoComplete="off" inputMode={c.cle === 'cp' || c.cle === 'telephone' ? 'tel' : c.cle === 'email' ? 'email' : undefined}
-                  onChange={(e) => setCoordonnees({ ...coordonnees, [c.cle]: e.target.value })} /></label>
+                  onChange={(e) => { const v = e.target.value; setCoordonnees((avant) => ({ ...avant, [c.cle]: v })) }} /></label>
             ))}
           </div>
         </div>
