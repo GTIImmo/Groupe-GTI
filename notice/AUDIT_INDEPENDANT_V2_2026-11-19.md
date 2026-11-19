@@ -519,6 +519,38 @@ sauvegardes du gel. ⚠ Et tout script qui poserait des valeurs du Sheet APRÈS 
 les nouveaux liens : c'est voulu, mais les 16 traces du point 3 restent sur l'ancienne
 transaction tant que le geste 2 n'est pas fait.
 
+**⭐ Revérifié PAR MOI le 19/11, à la question de Frédéric « si je valide, que fait-il exactement
+entre l'app, le serveur et Hektor ? »** — dans la base vivante et dans le code, en lecture seule :
+
+```
+LA BASE      le gel n'a que DEUX dependances : app_v_classeur_lien_casse et
+             app_v_classeur_ligne_sans_lien. 0 fonction, 0 declencheur, 0 politique,
+             0 tache cron, 0 cle etrangere. Droits : postgres et service_role SEULS
+             -> authenticated et anon n'y lisent rien.
+L'APP        0 occurrence de « classeur_lien » dans apps/hektor-v1/src. Elle affiche
+             app_monitor_status (api.ts:3369) : seule la ligne « Lignes du classeur
+             qu'aucun lien ne rattache » bougera, 91 -> 71, et restera verte.
+LE SERVEUR   0 occurrence dans scheduled/ ; dans phase2/sync, seulement l'epreuve de
+             la descente. La descente recopie tout : la sauvegarde v2 (sans cle
+             primaire, comme les 5 sauvegardes du gel deja en base) passera par la
+             relecture par rang, sous le plafond (12 787 < 15 000) -- descente du
+             18/11 : 208 tables, exit 0.
+RENDER       0 occurrence dans Console/ (le worker) ni dans backend/ (l'API).
+HEKTOR       aucune requete ; et les transactions nees du classeur n'y vont jamais
+             (filtre transaction_origine, console_job_worker.js:24148-24156).
+LE GEL       a l'heure de la verification : 12 787 liens, empreinte 8084e535...,
+             0 pose v2, pas de sauvegarde v2 -> la garde passerait.
+```
+
+⚠ **Trouvé en passant, HORS du patch, rien touché** : 6 vues de `public` sur 53 sont écrivables
+par `authenticated` (modifiables automatiquement, sans `security_invoker`, propriétaire `postgres`
+qui contourne la RLS). Parmi elles, la sentinelle `app_v_classeur_ligne_sans_lien` : par elle, un
+utilisateur connecté peut insérer, modifier ou supprimer des lignes de `app_classeur_ligne_id`,
+que le verrou du 16/11 lui ferme en direct. Les cinq autres : `app_appointment_event_current`,
+`app_appointment_request_current`, `app_console_action_abandonnees`,
+`app_mandat_broadcasts_current`, `app_v_repartition_orpheline`. Certaines de ces écritures sont
+peut-être voulues : non vérifié. Signalé à Frédéric, c'est sa décision.
+
 ---
 
 ## 9. TEMPS 4 — L'EXPLICATION À FRÉDÉRIC (le résumé ; le message complet est dans la conversation)
