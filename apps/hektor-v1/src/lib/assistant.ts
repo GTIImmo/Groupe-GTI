@@ -1,4 +1,5 @@
 import { hasSupabaseEnv, supabase } from './supabase'
+import { webpEnJpeg } from './photoJpeg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Étape 4 de l'assistant IA, lot 2 (17/11/2026) -- LES APPELS DE L'ÉCRAN À L'ASSISTANT (Render).
@@ -145,6 +146,7 @@ async function appelerJson<T>(chemin: string, methode: 'POST' | 'DELETE', corps?
 
 /** Dépose UN fichier : préparer (le serveur contrôle) -> envoyer au coffre (adresse signée) -> confirmer (le serveur relit). */
 export async function deposerFichier(fichier: File): Promise<FichierJoint> {
+  fichier = await webpEnJpeg(fichier)  // 19/11 (§89, D10) : la carte « Ajouter des photos » ne prend que JPEG / PNG
   if (MAQUETTE) {
     await attendre(400)
     return { id: Math.random().toString(16).slice(2).padEnd(32, '0').slice(0, 32), nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
