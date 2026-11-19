@@ -41,7 +41,11 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
 ④  la « fusion » du 18/11        FAIT        un TRANSFERT compte comme fusion (1 sur 6) ;  --
                                              la RPC garde l'etiquette du plus petit
                                              numero, pas la plus ancienne
-⑤  les 48 « a juger »            A FAIRE     (le gros morceau, avec ⑥)
+⑤  les 48 « a juger »            FAIT        le Sheet tranche 14 des 48 : 8 CASSES, 5      les 8 lignes « pures »
+                                             corrections, 1 mixte ; 34 n'ont AUCUNE ligne  (§ 5.6) -- je n'en
+                                             au Sheet (sans effet sur ⑧). Il renverse 5    ecris aucune ;
+                                             « corrections » du temps 3. 6 dossiers        les 6 melanges : quel
+                                             MELANGES demandent une SCISSION               outil (⑨)
 ⑥  les 255 a plusieurs etiquettes A FAIRE
 ⑦  le patch du gel               A FAIRE                                                   le « vas-y » du patch V2
 ⑧  ECRIRE DANS LE SHEET          A FAIRE     ⭐ LE BUT                                      le critere de fin, AVANT
@@ -567,3 +571,162 @@ CE QU'IL FAUT EN TIRER POUR ⑧ : compter les etiquettes qui disparaissent ne su
                 a l'etiquette que portent AUJOURD'HUI les transactions de la ligne.
 NON MESURE      la frequence d'un transfert hors de nos gestes (un seul en 7 jours, et c'etait C5).
 ```
+
+---
+
+## ⑤ LES 48 « À JUGER » — tranchés par le classeur, colonne indépendante nommée
+
+**Le script** : `phase2/checks/temps5_q5_les_48_a_juger_par_le_classeur_2026-11-19.py` (lecture seule : la
+base en `mode=ro`, le Sheet par un GET en direct — 4 797 lignes ce 19/11). Sorties :
+`notice/TEMPS5_Q5_PAIRES_JUGEES_PAR_LE_CLASSEUR_2026-11-19.csv` (62 paires) et
+`notice/TEMPS5_Q5_LES_48_DOSSIERS_VERDICT_2026-11-19.csv` (48 dossiers).
+
+### 5.1 Les colonnes du juge — et pourquoi elles ne sont pas circulaires
+
+```
+LUES (jamais recopiees dans les colonnes de Hektor qu'elles jugent) :
+   S  « Offre Achat »          contre la PROPOSITION ou l'ACCEPTATION de l'offre (propositions_json,
+                               le journal de Hektor) -- jamais la colonne `date` (nos refus l'ont bougee)
+   T  « Compromis »            contre la date du compromis chez Hektor
+   V W X « Vente Prevue / Fixee / Signee »   contre la date de la vente chez Hektor
+   AB « Acquereur »            contre les noms de acquereurs_json (Hektor)
+   AF « Prix »                 contre `montant` (Hektor), a 1 %
+   C  « Mandat »               contre `numero_mandat` (Hektor ; notre numero_mandat_app n'est PAS lu)
+JAMAIS LUES (nous les avons posees, C1 a C9) : Y Vente Reglee . Z Annulee . AA facture . P Commission .
+   Q Charge . F . G . AH-AJ avis . R Etat Actuel (nos refus en derivent). Toute date >= 11/11/2026
+   est ignoree (nos gestes) ; les 190 transactions creees depuis le Sheet sont ignorees.
+LE GEL n'est lu qu'APRES le verdict, pour comparer.
+
+UNE LIGNE DESIGNE UNE TRANSACTION si DEUX colonnes independantes au moins s'accordent :
+   DATEE      la date du genre (a un jour pres) + le nom (AB) OU le prix (AF) OU le mandat (C)
+   SANS DATE  la case du genre VIDE au Sheet : mandat + nom + prix, les trois ensemble
+VERDICT     MEME LIGNE (une seule affaire) . DEUX LIGNES (deux affaires) . AMBIGU (une ligne designe
+            deux transactions du meme genre, ou une transaction est designee par deux lignes) .
+            UNE SEULE / AUCUNE (non tranche)
+```
+
+**Comment le juge a été construit — et ce que ça vaut.** La première version (date + nom ou prix)
+a fait **échouer son témoin** : 5 paires « correction » du temps 3 tenues sur une seule ligne. Je ne
+l'ai pas cru : je les ai **lues à la main** sur le Sheet. Résultat : deux défauts du JUGE (une
+ambiguïté — deux offres le même jour au même prix, bien 47815 — et le prix AF qui n'est souvent pas le
+montant), et un défaut du TEMPS 3 : sa famille « correction » avait été classée **sur les noms**, et
+le Sheet en renverse une partie. Le juge a gagné l'ambiguïté et la colonne C (mandat), et la famille
+« correction » n'est plus un témoin.
+
+```
+LE TEMOIN, rejoue sur la version finale -- tout vert :
+   ⭐ INDEPENDANT du juge : la ligne 8Q3LHGZ4, jugee FAUSSE par l'audit V2 (une affaire CHEVALIER de
+      2023, mandat 16239, que le gel relie au compromis 8321 et a l'offre 8322 de 2014) -> AUCUNE.
+      Le juge ne se laisse pas prendre la ou le gel s'est trompe.
+   les 10 menages (valides le 19/11) -> 3 MEME LIGNE, 6 absents du Sheet, 1 UNE SEULE, 0 DEUX LIGNES.
+      La « une seule » est PARIS (26825-26824) : la ligne WUQ5445T porte l'offre du 20/02/2020, une case
+      compromis VIDE, un prix tape « 43 », et s'annule le 20/06/2020 -- un mois apres le compromis du
+      21/05/2020. ⭐ RIEN NE CONTREDIT TA DECISION SUR LES 10.
+   relus a la main, rejoues pour qu'il ne regresse pas (ils ont SERVI a le construire, ils ne prouvent
+      pas son independance) : 10374, 28673 (x3), 47815 (AMBIGU), 36794, 43114, 1950, 12728 (AMBIGU)
+```
+
+### 5.2 Le verdict des 48
+
+```
+PAR DOSSIER     8 CASSES CONFIRMEES par le Sheet   (une ligne porte les deux transactions separees)
+                5 CORRECTIONS CONFIRMEES           (deux lignes : le geste a separe deux affaires)
+                1 MIXTE -- lu a la main (15722)
+               34 NON TRANCHES : 32 paires dont NI le juge NI le gel ne trouvent la moindre ligne
+                  (deux methodes independantes : le Sheet ne porte pas ces affaires, de 2008 a 2025) ;
+                  3 dont l'autre cote est une creation C5 (circulaire par construction) ; 3 a une seule
+                  ligne ou ambigus (11820, 35716, 49941)
+PAR PAIRE (62)  AUCUNE 34 . MEME LIGNE 9 . DEUX LIGNES 9 . UNE SEULE 7 . AMBIGU 3
+LE GEL, APRES   les desaccords avec le juge sont lus en 5.4
+```
+
+⭐ **Ce que ça change pour l'écriture du Sheet (⑧)** : les 34 non tranchés **n'ont aucune ligne au
+Sheet** — on n'y écrira donc aucune étiquette, et leur sort ne peut pas fausser la colonne
+`affair_uuid`. Ils restent tels que nos gestes les ont laissés, et ce n'est pas un risque pour le BUT.
+
+### 5.3 ⭐ Ce que le Sheet RENVERSE ailleurs — 5 « corrections » du temps 3 sont des CASSES
+
+Le temps 3 rangeait en « correction » un dossier coupé entre **deux noms à plus d'un mois**. Le Sheet,
+lui, porte **une seule ligne** pour ces 5-là — c'est **la même affaire**, et Hektor porte sur le
+compromis le contact d'un AUTRE (le défaut connu « l'acheteur précédent reste sur le compromis
+suivant ») :
+
+```
+10374  ligne VUNYM8UV  offre VIALLE 04/07/2020 + compromis 25/09/2020 (au nom de MEYRAND chez Hektor)
+10396  ligne NTLQIZLO  offre URBAIN 15/06/2019 + compromis 01/08/2019 (au nom de PLAY)
+15439  ligne 7PBRZJD8  offre sans acquereur 05/06/2023 + compromis GASMI 17/07/2023
+28673  ligne EC977D21  offre CHARLES 23/08/2021 + compromis 30/09/2021 (au nom de LYONNET, l'acheteur
+                       d'avril, ligne 6D1WSAK8)
+35735  ligne 80OY9IUH  offre BOUCHARD 29/11/2019 + compromis 18/05/2020 (au nom de CHARRA MEILLER)
+```
+⚠ **Et une question ouverte reçoit un élément, sans être tranchée** : le compromis DEBARD 20088 (sans
+date, 50 000) est désigné par le **prix** de la ligne ZW7MKTWH (la 2ᵉ offre, 50 000), pas par 5QE9107L
+(la 1ʳᵉ, 55 000) où le gel l'a mis. C'est TA question `5QE9107L` : le Sheet penche pour la 2ᵉ offre. Je
+ne touche à rien — « un patch ne tranche pas une question ouverte ». (Pour le chaînage, c'est sans
+effet : les deux offres DEBARD sont dans le même dossier.)
+
+### 5.4 Les 13 casses (8 + 5) — 8 se réparent d'une ligne, 5 demandent une SCISSION
+
+```
+PURES -- le dossier du compromis ne porte QUE cette affaire : UNE LIGNE du fichier la repare.
+   bien   offre -> compromis      la ligne du Sheet
+   1950    988 -> 987    566d1a48  offre sans acquereur 27/06/2025 + compromis EL FAQRAOUI, 66 000
+   10374  4907 -> 4906   VUNYM8UV  VIALLE 04/07/2020, 16 000
+   10396  4932 -> 4931   NTLQIZLO  URBAIN 15/06/2019, 119 000
+   15439  7600 -> 7599   7PBRZJD8  offre sans acquereur 05/06/2023 + compromis GASMI, 330 000
+   30678 14928 -> 14927  05e8ddb5  offre sans acquereur + compromis BEZIER GUILLEMIN (sans date), 120 000
+   35735 16879 -> 16878  80OY9IUH  BOUCHARD 29/11/2019, 58 000
+   43432 21799 -> 21798  26283bf9  offre sans acquereur + compromis BESSET 10/11/2025, 56 000
+   50165 25992 -> 25991  600f4e1c  offre sans acquereur + compromis MAGAND 10/12/2025, 153 000
+MELANGEES -- Hektor a laisse le contact de l'acheteur PRECEDENT sur le compromis du suivant, et la
+   regle D (« meme numero d'acheteur ») a COLLE ce compromis dans le dossier du precedent. Une ligne du
+   fichier completerait l'affaire mais garderait le melange : il faut SEPARER, et le fichier ne sait
+   que REUNIR.
+   28673  {14142 CHARLES + 14141}              colle a LYONNET {14143}
+   36794  {17322 FAUVET + 17320 + vente 17324} colle a CREVON {17321, 17323}
+   37192  {17435 MORSI BARAKAT + 17432}        colle a THOMAS {17433, 17436} ET a LEONE {17434} --
+          3 lignes du Sheet (IT0BF6M4, D96KSCYQ, 3ID282Y1) pour un seul dossier
+   43114  {21586 BIGONNET + 21585}             colle a BEIKES {21584, 21587}
+   43126  {21600 ZEMMA + 21598}                colle a FERRARI {21597, 21599, vente 21601}
+   + le MIXTE 15722 : {7780 DE OLIVEIRA + 7778 + vente 7782} colle a COLOMBET {7779, 7781}
+```
+⛔ **Je n'ajoute AUCUNE ligne au fichier** (ta consigne). Les 8 lignes « pures » sont prêtes, au format
+du fichier, pour ta décision (§ 5.6). Pour les 6 mélangés, il n'existe aucun outil : voir ⑨.
+
+**Le gel, lu après coup — deux erreurs qu'il porte** (pour ⑦) : **15722**, l'offre 7780 (DE OLIVEIRA,
+04/05/2021) est liée à VEP1DVQ4 (la ligne COLOMBET) au lieu de 2SCBZXMH, et l'offre 7781 (COLOMBET,
+01/04/2021) n'est liée à rien ; **12728**, les deux compromis du 30/04/2021 (6554 à 90 000 annulé, 6555 à
+87 000 actif) sont liés « à l'envers » au regard de l'état et du prix (la ligne vendue EGR8KXOL à
+87 000 a reçu l'annulé à 90 000) — le juge, lui, les déclare AMBIGUS et ne tranche pas.
+
+### 5.5 Ce que je n'ai pas mesuré
+
+```
+. les 34 non tranches : le Sheet ne les porte pas ; le REGISTRE seul ne sait pas les trancher (temps 3).
+  Ils restent comme nos gestes les ont laisses. Non mesure : s'ils etaient reunis AVANT nos gestes a raison.
+. l'ampleur du MELANGE « contact de l'acheteur precedent + regle D » sur TOUT le registre : je l'ai vu
+  sur 6 dossiers des 79 coupes par nos gestes. ⑥ en donne une mesure par l'autre bout (une etiquette
+  sur plusieurs lignes du Sheet).
+. le juge a un jour de tolerance sur les dates ; une date du Sheet decalee de plus (saisie tardive)
+  rate la ligne -- le sens de l'erreur est « non tranche », jamais « tranche a tort ».
+```
+
+### 5.6 Les 8 lignes « pures » — PROPOSÉES, NON écrites (ta décision)
+
+```
+988;987;1950;2026-11-19;EL FAQRAOUI -- ligne 566d1a48 : offre (sans acquereur chez Hektor) du 27/06/2025 et compromis, 66 000 EUR
+4907;4906;10374;2026-11-19;VIALLE -- ligne VUNYM8UV : offre du 04/07/2020 et compromis du 25/09/2020 (au nom de MEYRAND chez Hektor), 16 000 EUR
+4932;4931;10396;2026-11-19;URBAIN -- ligne NTLQIZLO : offre du 15/06/2019 et compromis du 01/08/2019 (au nom de PLAY chez Hektor), 119 000 EUR
+7600;7599;15439;2026-11-19;GASMI -- ligne 7PBRZJD8 : offre (sans acquereur) du 05/06/2023 et compromis du 17/07/2023, 330 000 EUR
+14928;14927;30678;2026-11-19;BEZIER GUILLEMIN -- ligne 05e8ddb5 : offre (sans acquereur) et compromis sans date, 120 000 EUR
+16879;16878;35735;2026-11-19;BOUCHARD -- ligne 80OY9IUH : offre du 29/11/2019 et compromis du 18/05/2020 (au nom de CHARRA MEILLER chez Hektor), 58 000 EUR
+21799;21798;43432;2026-11-19;BESSET -- ligne 26283bf9 : offre (sans acquereur) et compromis du 10/11/2025, 56 000 EUR
+25992;25991;50165;2026-11-19;MAGAND -- ligne 600f4e1c : offre (sans acquereur) et compromis du 10/12/2025, 153 000 EUR
+```
+⚠ Non rejouées : elles ne sont pas dans le fichier. Si tu les valides, le rejeu (gabarit du § 2.7)
+nommera 8 dossiers qui bougent, pas un de plus — et **pas la même nuit que la règle E** (un geste par
+nuit).
+⛔ **Lu dans le code, une réserve sur 30678** : le compromis 14927 est **SANS DATE**. Tant que la règle E
+est éteinte, il n'entre pas dans `toutes`, et le fichier dirait la ligne « transaction introuvable »
+(c'est le trou du § 1.1). Cette ligne-là ne jouera **qu'après l'allumage de E** — les 7 autres jouent
+avec E éteinte.
