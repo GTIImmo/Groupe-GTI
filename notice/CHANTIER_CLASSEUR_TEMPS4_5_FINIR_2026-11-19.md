@@ -46,7 +46,10 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              au Sheet (sans effet sur ⑧). Il renverse 5    ecris aucune ;
                                              « corrections » du temps 3. 6 dossiers        les 6 melanges : quel
                                              MELANGES demandent une SCISSION               outil (⑨)
-⑥  les 255 a plusieurs etiquettes A FAIRE
+⑥  les 255 a plusieurs etiquettes FAIT     255 -> 251 cette nuit -> 229 au bout de       la decision C5 deja
+                                             TOUT (E, les 8, le patch). Le noyau : 128 C5, posee (pour ⑧ : choisir
+                                             74 que le Sheet tient (66 MELANGES), 26 liens a l'export)
+                                             du gel seul. + 207 dossiers sur 2-3 lignes
 ⑦  le patch du gel               A FAIRE                                                   le « vas-y » du patch V2
 ⑧  ECRIRE DANS LE SHEET          A FAIRE     ⭐ LE BUT                                      le critere de fin, AVANT
                                                                                            la 1re ligne
@@ -730,3 +733,85 @@ nuit).
 est éteinte, il n'entre pas dans `toutes`, et le fichier dirait la ligne « transaction introuvable »
 (c'est le trou du § 1.1). Cette ligne-là ne jouera **qu'après l'allumage de E** — les 7 autres jouent
 avec E éteinte.
+⭐ **Rejoué depuis, en simulation (⑥)** : avec la règle E allumée, les 8 lignes réunissent bien 8 dossiers
+(11 546 → 11 538), 30678 compris.
+
+---
+
+## ⑥ LES 255 LIGNES À PLUSIEURS ÉTIQUETTES — ce qu'elles deviennent après les corrections
+
+**Le script** : `phase2/checks/temps5_q6_les_lignes_a_plusieurs_etiquettes_2026-11-19.py`, **découpé en
+étapes** (`rejeu 1`, `rejeu 2`, `rejeu 3`, `compte`, `classer`) — la première mesure, d'un seul bloc, a
+été tuée par son délai à 13 h et sa sortie était vide (Python retenait tout en mémoire). Chaque étape
+écrit maintenant son résultat sur le disque (`C:\Hektor\chantier_classeur_q6_cache\`, hors du dépôt)
+et imprime au fil de l'eau. Durées réelles : 7 s, 11 s, 13 s par rejeu ; le classement, Sheet compris,
+moins de 10 minutes. Sorties : `notice/TEMPS5_Q6_COMPTES_PAR_SCENARIO_2026-11-19.md` et
+`notice/TEMPS5_Q6_LIGNES_A_PLUSIEURS_ETIQUETTES_2026-11-19.csv`.
+
+### 6.1 Le compte, scénario par scénario
+
+**Pourquoi on peut compter par dossiers** : après la pose de nuit, une étiquette = un dossier. ⭐ **Vérifié
+sur la base d'aujourd'hui** : 255 lignes à plusieurs étiquettes, 255 lignes à plusieurs dossiers, **0 de
+différence**. Et le scénario 1 ne diffère de la base que par **les 10 offres du 19/11, aucune autre**.
+
+```
+LIGNES DU SHEET A PLUSIEURS ETIQUETTES          gel tel quel   gel apres le patch V2
+   0 la base d'aujourd'hui                           255              243
+   1 + les 10 menages (CETTE NUIT, decide)           251              239
+   2 + la regle E avec l'exclusion (simulee)         249              237
+   3 + les 8 lignes pures de ⑤ (simulees)            241              229
+CHAQUE CORRECTION NE FAIT QUE REGLER -- aucune ne cree une ligne nouvelle :
+   les 10 menages : 4 lignes reglees (les 6 autres menages n'ont pas de ligne au Sheet -- cf. ⑤)
+   la regle E     : 2 . les 8 lignes de ⑤ : 8
+   LE PATCH V2    : 16 reglees, MAIS 4 NOUVELLES -- 2SCBZXMH, 3W10AEIK, TRJ5Y59U, f90b0418 (⑦)
+```
+
+### 6.2 Ce qui reste au bout — 229 lignes, classées par le juge de ⑤
+
+```
+128  C5 -- une transaction creee depuis le Sheet est coupee de son dossier (la scission du 18/11)
+        105 PURES : la creation est seule dans son dossier, le reste de la ligne dans UN autre
+         23 dans un dossier qui porte aussi une autre ligne
+ 74  LE SHEET LES TIENT -- la ligne designe, par ses propres colonnes, une transaction de CHAQUE
+     dossier : le chainage coupe une affaire que le Sheet tient en une ligne
+          8 PURES : chaque dossier ne porte que cette ligne -> UNE ligne du fichier la reparerait
+         66 MELANGEES : un des dossiers porte AUSSI une autre ligne du Sheet -- c'est la famille de ⑤
+            (« le contact de l'acheteur precedent » + la regle D) : il faudrait SEPARER
+            dont 2SCBZXMH (15722), 5GZVT548 (36794), 9K4Y3S4N (43126), 3ID282Y1 (37192)...
+ 26  LE GEL DEBORDE -- un des dossiers n'a AUCUNE transaction que la ligne designe : le lien vient
+     du gel seul, a relire comme une erreur possible du gel (12 pures, 14 melangees)
+  1  NON TRANCHE (f90b0418, une des 4 nouvelles du patch V2)
+```
+
+### 6.3 L'autre bout — une même étiquette sur PLUSIEURS lignes
+
+Une ligne à plusieurs étiquettes empêche d'écrire **une** étiquette. L'inverse empêche d'écrire une étiquette
+**qui ne désigne qu'une affaire** : au bout (scénario 3, gel V2), **207 dossiers sont tenus par 2 ou 3
+lignes du Sheet** (431 lignes ; 190 dossiers à 2 lignes, 17 à 3). Écrire leur étiquette mettrait le MÊME
+`affair_uuid` sur deux ou trois affaires. Certains sont légitimes (le classeur a des doublons :
+« annulée » puis re-saisie, 6 groupes connus), la plupart sont les mélanges de ⑤. ➡ **C'est le second
+bouchon de ⑧, aussi lourd que le premier.**
+
+### 6.4 Le verdict de ⑥
+
+```
+LE NOYAU DUR NE BOUGE PAS AVEC LES CORRECTIONS DU REGISTRE. Elles reglent 26 lignes sur 255 (10 %).
+Ce qui reste a trois natures, et AUCUNE ne se regle par une regle de chainage :
+   C5 (128)       une decision deja posee et en attente (« rattacher a la main, ou choisir
+                  l'etiquette a l'export ? ») -- ⭐ pour ⑧, la seconde suffit : une creation C5 ne
+                  decide JAMAIS de l'etiquette d'une ligne ; on prend celle des transactions de Hektor
+   MELANGES (66+) une SCISSION, que rien ne sait faire aujourd'hui (⑨)
+   GEL (26)       une relecture de ces liens, comme l'ont fait les deux audits
+➡ POUR ⑧ : on n'ecrit PAS ces lignes. On ecrit d'abord les lignes qui n'ont AUCUN de ces defauts
+  (⑧ les compte), et le noyau attend ses decisions.
+```
+
+### 6.5 Ce que je n'ai pas mesuré
+
+```
+. les 74 « le Sheet les tient » ne sont pas relus a la main un par un : le classement ne teste pas
+  l'ambiguite (deux offres le meme jour au meme prix) que le juge de ⑤ teste paire par paire
+. les 207 dossiers a plusieurs lignes : ni compte des doublons legitimes, ni des melanges
+. la RPC de nuit n'est pas rejouee : « une etiquette = un dossier » est verifie sur la base
+  d'aujourd'hui, et suppose pour les scenarios
+```

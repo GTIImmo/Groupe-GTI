@@ -90,7 +90,8 @@ def rang_classement(c: str) -> int:
     return 9
 
 
-def main() -> int:
+def preparer_juge() -> dict:
+    """Lit le Sheet (GET) et le registre (mode=ro), et rend le juge -- voir l'en-tete."""
     ac.MORCEAUX_DE_NOM = True
     for f in (RACINE / ".env",):
         if f.exists():
@@ -242,6 +243,14 @@ def main() -> int:
                 "le_sheet_nomme": " | ".join("%s : %s (%s)" % (r["id"] or r["num"], r["acq"], r["etat"])
                                              for r in montre[:3]),
                 "le_gel_dit": g}
+
+    # ⭐ LE JUGE SERT AUSSI A ⑥ (temps5_q6_...) : on le rend tel quel, sans rien recalculer
+    return {"tx": tx, "vue": vue, "gel": gel, "designe": designe_c, "juger": juger, "src": src}
+
+
+def main() -> int:
+    J = preparer_juge()
+    tx, juger = J["tx"], J["juger"]
 
     # LES PAIRES DU TEMPS 3, regroupees par dossier d'avant
     brut = list(csv.DictReader(PAIRES.open(encoding="utf-8")))
