@@ -3487,3 +3487,51 @@ une fausse alerte CRLF de son essai) ; Render et Vercel vérifiés sur c8f0a9d a
   l'adresse) ; à mieux résumer (le type et la rue) — cosmétique.
 
 **Reste** : P4-b (par photo), P4-c (services publics), P4-d (phrases libres).
+
+## 96. La pastille corrigée, puis P4-b — LA FICHE PAPIER LUE DANS LE PARCOURS (19/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « ok corrige le petit détail : la pastille, et ensuite enchaîne dans le chantier ».
+
+### 96.1 La pastille (commit 8d9e07c)
+
+Une réponse montre ses ESSENTIELS d'abord (le bien : le type, puis la rue) et une valeur recopiée ne compte qu'une
+fois : « Maison · 3 rue de l'Essai +3 » au lieu de « Maison · Vente classique +8 » (vu à l'essai réel du §95.4). Le
+serveur donne maintenant les `essentiels` de chaque question à l'écran.
+
+### 96.2 P4-b (commits 0b94f44 serveur, 986f511 écran) — planche 2 de la maquette
+
+- **Le même scan que la fenêtre, côté serveur** (`openai_listing_sheet_service`, une page par appel, en parallèle) :
+  la fiche jointe À LA DEMANDE (l'IA passe ses photos dans la carte du parcours ; lue AU CLIC, jamais avant) ou
+  PENDANT le parcours (« Lire la fiche papier » : le trombone, puis `POST /assistant/parcours/{id}/fiche`).
+- **Comme l'écran** : plusieurs pages = la meilleure confiance case par case ; à moins de 75 % = « à vérifier » (la case
+  le dit, et sa question est REPOSÉE même si l'essentiel est connu) ; la note brute de la fiche à défaut de note.
+- **La dictée prime** : la fiche ne remplace aucune réponse donnée (prouvé : « maison, 118 m² » dits gardés contre
+  « appartement, 64 m² » lus).
+- ⛔ **Les coordonnées du mandant lues sur la fiche** partent AU COFFRE PRIVÉ avec le jeton de la personne
+  (`app_assistant_mandant_deposer`) : ni les réponses, ni la vue, ni l'IA ne les voient ; le mandant devient
+  « nouveau » et la question du mandant sait que le coffre est rempli.
+- **Les pages de l'avis de valeur** (fourchette, état, points, argumentaire, charges, postes) sont gardées à part ; à
+  l'ouverture, la fenêtre les passe à SON remplisseur du scan (le brouillon que l'éditeur relit après la création), puis
+  le parcours pose ses cases, qui priment.
+- **Le coût d'un scan est enfin mesuré** : le service rend ses jetons (`usage`, une clé de plus que l'écran ignore) ;
+  le parcours garde pages, pages lues et coût (`_fiche.mesure`).
+- La consigne (comptes ouverts seulement) : fiche jointe -> le même geste avec ses photos ; sans fiche, une phrase
+  pour conseiller de la photographier (planche 1).
+
+### 96.3 Les preuves (hors ligne)
+
+- Traduction **39 verts** (6 nouveaux : fusion de deux pages, doutes et leurs recopies, coordonnées À PART, pages de
+  l'avis, fiche vide). Parcours **94 verts** (10 nouveaux : rien lu avant le clic, 2 pages lues, la dictée prime, doute =
+  question reposée, coordonnées au coffre avec SON jeton et nulle part ailleurs, la route pendant le parcours, le
+  parcours d'un autre refusé, fiche illisible refusée sans écriture). Rejoués verts : socle 31, gestes 415, lecteur 74,
+  fichiers 28, couverture, catalogue, lot 0, build.
+- **Maquette** : la bande « Tu as la fiche papier ? … » → « Je lis la fiche… » → « Fiche lue : … le mandant gardé à
+  part » ; la case « Pieces · à vérifier » dans la question reposée.
+
+### 96.4 Limites dites
+
+- Pas éprouvé en réel : il faut une PHOTO de fiche papier (une fiche d'essai remplie à la main) ; le coût réel d'un scan
+  sera lu dans `_fiche.mesure`.
+- La lecture prend ~30 s par lot de pages (le scan de la fenêtre aussi) ; une page illisible ne coule pas les autres.
+
+**Reste** : pousser (son accord) et l'essai réel avec une fiche photographiée ; puis P4-c (services publics), P4-d.
