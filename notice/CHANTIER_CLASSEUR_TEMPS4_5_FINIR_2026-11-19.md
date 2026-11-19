@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : 19/11 au soir — **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 00:45 (chapitre ⑫)** — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -37,15 +37,24 @@
 > **21520 exclue de E** (fait, § 11.1) ; les 9 « même acheteur » : **l'étiquette sur la seule ligne
 > vivante**. Ses demandes : *« finis-le »* — fait (§ 11.4, 11.5) ; la garde mesurée (§ 11.3) ; ⛔ pas de
 > code de scission avant la fin de l'écriture.
+>
+> ⭐ **Ses décisions du 20/11, 00:30 (chapitre ⑫)** : **G2 → B** — les lignes de la vague 1 que G2 changerait
+> passent en **vague 2** (**9**, pas 10 : SUVPN4BH sort de la liste avec l'exclusion de 4720), G2 se code
+> **après** l'écriture et la relecture de ses 281 coupes ; **4126, 4496, 4720 exclues de E** (fait, § 12.1) ;
+> **E pour la nuit de vendredi**, avec le compte exact avant (§ 12.2) et le contrôle samedi matin (§ 12.4) ;
+> **l'ordre du § 11.8 est VALIDÉ**. ⛔ E n'est PAS encore allumée : son mot ici, avec le compte définitif.
 
 ```
 Q  SUJET                         ETAT        VERDICT EN UNE LIGNE                          ATTEND SA DECISION
-①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee ; 26613     l'allumage (une nuit) ;
-                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     ⭐ (⑪) exclure AUSSI
-                                             sur 33 dossiers, temoins verts                4126, 4496, 4720 (que
-                                             ⭐ LE SHEET LA JUGE (§ 10.4) : 3 justes, 11   G2 contredit) ? ;
+①  compromis annule sans date    FAIT        regle E + garde, ETEINTE, rejouee ; 26613     ⭐ (⑫) son « allume »
+                                             EXCLUE ET DECLAREE (§ 1.10) : 34 reunions     ICI, apres le compte
+                                             sur 33 dossiers, temoins verts                definitif de vendredi
+                                             ⭐ LE SHEET LA JUGE (§ 10.4) : 3 justes, 11   matin (§ 12.2) ;
                                              ou c'est le GEL qui se trompe, 1 douteuse     relire puis retirer les
                                              ✅ (⑪) 21520 EXCLUE ET DECLAREE : 32 reunions 11 liens suspects du gel
+                                             ✅ (⑫) 4126, 4496, 4720 EXCLUES : 29 reunions,
+                                             30 transactions, temoins verts, le Sheet
+                                             n'en dement AUCUNE
 ②  les 10 « meme nom »           FAIT,       des menages -> R1 : les 10 lignes ECRITES,    -- (decide). ⏰ demain :
                                  ECRIT       rejouees : 10 dossiers bougent, pas un de     controler la nuit
                                              plus ; 11 590 -> 11 580                       (§ 2.7)
@@ -104,6 +113,15 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              changent d'etiquette -> avant l'ecriture,     scission ~2 j ½ (apres
                                              ou ces 10 en vague 2 · 2025-2026 : 803        l'ecriture)
                                              lignes, 171 non ecrites (21 %)
+⑫  LA NUIT DU 20/11, 00:30 :     FAIT        ✅ 4126/4496/4720 exclues de E, temoins      E : son « allume » ici,
+   B, les 3 exclusions, E                    verts · le compte de E AVANT l'allumage :     avec le compte DEFINITIF
+   vendredi                                  29 reunions, 30 transactions, 30 fusions      (vendredi matin) ;
+                                             (le cri sonnera), 0 coupe, le Sheet n'en      samedi : A un mot de
+                                             dement aucune · DECISION B : 9 lignes en      toi, ou B une tache
+                                             vague 2 (SUVPN4BH reste), vague 1 de          planifiee unique ; les
+                                             reference 4 073 · les CONTROLES DE NUIT       8 lignes ; le patch V2
+                                             prets, eprouves (inverse rouge, simulation
+                                             verte) · une 3e lecture pour 4126 et 4496
 ```
 
 ---
@@ -1768,9 +1786,176 @@ SI TU CHOISIS A                        G2 la nuit du 24 -> la vague 1a MERCREDI 
 
 ---
 
+## ⑫ LA NUIT DU 19 AU 20/11, 00:30 — SES DÉCISIONS : B, LES 3 EXCLUSIONS, E VENDREDI
+
+**Ses mots** : *« LA GARDE G2 : je prends B. Les 10 lignes sortent de la vague 1 et passent en vague 2. G2 se
+code APRES l'ecriture, et pas avant d'avoir relu ses 281 coupes invisibles -- trois lues sur 281, ce n'est pas une
+preuve. LES 3 RATTACHEMENTS (4126, 4496, 4720) : exclus de E aussi, et declares comme 21520. Deux regles qui se
+contredisent et aucune des deux prouvee : on met de cote, on ne tranche pas. E POUR VENDREDI SOIR : oui,
+allume-la vendredi, avec ses 3 exclusions en plus. Tu me donnes avant le compte exact de ce qu'elle fera, et tu
+me le controles samedi matin. L'ORDRE DU § 11.8 EST VALIDE. »*
+
+> ⚠ Ce message m'est arrivé deux fois : dans cette conversation, et relayé par la session « Envoi données vers
+> Google Sheets ». ⛔ **E n'est PAS allumée** : un interrupteur de production, dont les fusions d'étiquettes
+> sont **définitives**, s'allume sur **son mot dans cette conversation**, avec le compte DÉFINITIF sous les
+> yeux (§ 12.2) — c'est aussi ce que demande sa phrase (« tu me donnes AVANT le compte exact »).
+
+### 12.1 Les 3 exclusions — posées et déclarées ; E reste éteinte
+
+```
+CODE      phase2/sync/affaire_ledger.py : EXCLUES_DE_LA_REGLE_E + 4126, 4496, 4720 -- chacune avec son pourquoi
+          (bien, montant, acquereur, le dossier ou E la mettrait, l'offre acceptee DATEE d'un autre acheteur)
+TEMOIN    phase2/checks/temps4_regle_e_sans_date_visible_2026-11-19.py : EXCLUES + les 3 ; chacune DOIT rester
+          seule, et le compte rendu DOIT le dire (5 sur 5)
+REJEU     00:29:52 -> 00:30:14 (22 s, un seul appel, sortie au fil) : TOUT VERT
+            exclusions 5/5 seules et DITES (5) . temoins positifs 5/5 . gardes 5/5 . inverse 0 . coupes 0 .
+            deux ventes 0 . deux compromis vivants 0
+.env      APP_CHAINAGE_SANS_DATE_VISIBLE toujours ABSENT : rien ne change en production
+```
+
+**⭐ Ce que la mise de côté a montré en passant — une TROISIÈME lecture, que ni E ni G2 ne donne** (lu dans la
+photo du Sheet, rien de prouvé) :
+
+```
+4126  bien 9232   le gel relie le compromis annule sans date 4126 a la ligne P252U1JH CHAPTARD GAIGA (Annulee,
+                  offre du 30/09/2021, 77 000) avec l'offre refusee de GAIGA (4128). La vente est la ligne
+                  FOZ6HZLK GIORGETTI. -> le compromis rate serait celui de GAIGA (« refusee » = souvent acceptee
+                  puis tombee), pas celui de GUERIN (le nom porte chez Hektor) ni une piece seule.
+4496  bien 9769   le compromis annule vaut 155 000 -- le dossier ou E le mettrait vaut 159 000, et l'offre refusee
+                  de BISCH (4498, ligne XC761R8Z BAYADA BISCH) vaut 155 000. -> meme forme : le compromis rate de
+                  BISCH. ⚠ Le gel le relie a la ligne 61OW86CS STRIPOLLI (12 000) : un lien du gel SUSPECT de plus.
+4720  bien 10129  aucune ligne du Sheet ne le designe. L'offre refusee de SGARRA (13/04/2021, 27 000) serait la
+                  candidate ; rien ne le prouve.
+➡ Ta mise de cote etait juste : pour deux des trois, la bonne reponse est probablement un RATTACHEMENT A LA
+  MAIN a l'offre refusee de l'autre acheteur (ta decision, ligne a ligne) -- pas E, pas G2. Rien n'est propose
+  au fichier : c'est pour plus tard.
+```
+
+Dans le fichier des 803 : P252U1JH passe de la couche 6 (« lien du gel suspect ») à la couche 11 (« en attente : une
+transaction exclue de E »). Les « en attente » sont maintenant **2** : d2108609 CHOUVELLON et P252U1JH.
+
+### 12.2 ⭐ Ce que E fera — le compte, AVANT l'allumage
+
+**Sur la base du 20/11 à 00:30** (AVANT la nuit des 10 ; le fichier des rattachements porte déjà ses 16 décisions) :
+
+```
+REUNIONS        29 dossiers, 30 transactions sans date rattachees, sur 29 biens   (hier soir : 32 / 33 / 32)
+                  15 « l'essai annule rejoint l'affaire du meme acheteur »
+                  14 « a verifier : le dossier porte deja un compromis annule du meme acheteur »
+                   1 « compromis -> vente du meme acheteur »
+DOSSIERS        11 580 -> 11 550 (-30) ; 0 dossier coupe
+ETIQUETTES      30 disparaissent (fusions) : 17 celle de la transaction seule (le cas normal) ;
+                13 celle du DOSSIER CIBLE (la transaction seule a le plus petit numero, elle donne la sienne)
+LA POSE         29 fusions en une nuit, plus les mouvements ordinaires -> ⚠ LE CRI SONNERA (seuil 10) : ATTENDU
+LE RUN DIRA     [E] rendues visibles 79 . [E] exclusion declaree 5 . [E] garde (compromis vivant d'un autre) 10
+                . [D] reunis 726 -> 756
+LE SHEET        ses 29 reunions jugees cote par cote : 16 un seul cote visible . 10 lien du gel suspect (E
+                probablement juste) . 3 le meme acheteur des deux cotes . AUCUNE DEMENTIE
+VAGUE 1         10 lignes dont l'etiquette serait absorbee par E -- sans effet : E passe AVANT l'ecriture
+RESTENT SEULES  54 des 84 sans date : 42 aucun autre dossier de l'acheteur . 5 EXCLUSIONS DECLAREES . 5 la garde
+                de E . 2 sans numero d'acquereur
+```
+
+⚠ **Ce n'est pas encore le compte EXACT** : la nuit de 04:00 apporte les 10 ménages et les nouvelles de Hektor. **Le
+compte définitif se fait ce matin, après le contrôle des 10** (une commande, ~25 s), puis il est **figé** :
+
+```
+python -X utf8 -u phase2\checks\temps4_regle_e_sans_date_visible_2026-11-19.py      -> le compte definitif
+python -X utf8 -u phase2\checks\controle_nuit_chainage_classeur_2026-11-20.py regle_e reference
+                                                                     -> la prediction FIGEE (le juge de samedi)
+```
+
+### 12.3 La décision B — 9 lignes, pas 10
+
+Les scénarios 2 et 3 et les quatre variantes de la garde, **rejoués avec les 5 exclusions** (un rejeu par appel,
+00:30:35 → 00:32:09, 8 à 15 s chacun ; témoin : la copie sans garde redonne le scénario 3 à **0 écart**) :
+
+```
+G2       434 dossiers coupes (437) . 9 lignes de la vague 1 changent d'etiquette (10) . 0 en sort
+         -> SUVPN4BH SORT DE LA LISTE : 4720 exclue de E, son dossier garde sa propre etiquette -- elle reste en
+            vague 1. Aucune ligne nouvelle.
+LA VAGUE 1 DE REFERENCE (etat 5)   4 082  ->  4 073 apres la decision B
+LES 9    A6OS2TTJ MOULIN . ANHQ1PK7 DOUX . JBCC1KBT LARDON . MFMR0U6A SIMONNOT . QL70KV8I LECUYER (SCI LA PETITE
+         VERRIERE) . R9ANL92S ROCHETTE . SA7DWYEZ GONZALEZ . V5NJER40 DEYGAS . WG8CG5T2 HEURTIER
+         toutes la meme forme : [garde l'etiquette] le compromis annule + l'offre refusee de l'acheteur d'AVANT ||
+         [etiquette NEUVE] le compromis vivant + l'offre acceptee de la ligne + la vente
+```
+
+**Où c'est écrit** : `notice/TEMPS6_DECISION_B_LIGNES_REPORTEES_EN_VAGUE_2_PAR_G2_2026-11-20.csv` (la coupe de chaque
+dossier, l'étiquette avant et après G2, le pourquoi) — **l'outil d'écriture le lira comme une EXCLUSION de la vague 1**.
+La liste n'est pas figée à la main : `temps6 … classer` la **recalcule** à chaque passage et la **compare aux 10 du
+19/11** (chaque écart nommé). Dans le fichier des 803, les 9 entrent avec `decision_b_vague_2 = oui` (812 lignes).
+
+### 12.4 Les contrôles de nuit — prêts, et éprouvés dans les deux sens
+
+`phase2/checks/controle_nuit_chainage_classeur_2026-11-20.py <dix|regle_e> <etape>` — **lecture seule**, une étape par
+appel (~10 s), chaque étape écrite au fil dans `C:\Hektor\chantier_classeur_q6_cache\controles_nuit\`.
+
+```
+journal         le run du jour : fini en code 0 ? les compteurs du chainage, la pose (fusions, scissions), le cri
+rejeu_tel_quel  la vraie fonction reglee comme la nuit -> doit redonner la base A 0 ECART
+rejeu_sans      la meme SANS le geste (sans les 10 lignes / E eteinte) -> la difference = l'effet du geste, seul
+juger           dix     : 16 decisions lues ; l'effet = EXACTEMENT les 10 offres ; chacune dans le dossier de son
+                          compromis, sous SON etiquette, inchangee depuis la photo du 19/11 ; >= 10 fusions ; gardes
+                regle_e : E a joue ; 5 exclusions dites et seules ; les reunions = EXACTEMENT la prediction figee ;
+                          chaque dossier reuni porte l'etiquette predite ; 0 coupe ; les 10 tiennent ; gardes
+                -> notice\CONTROLE_NUIT_<NUIT>_<date>.md ; sortie 0 vert / 1 rouge / 2 pas pu mesurer
+TEMOIN INVERSE  juge cette nuit AVANT qu'elle ait eu lieu : ROUGE pour les bonnes raisons (les 10 offres pas
+                reunies, 6 decisions lues ; E n'a pas joue, 30 reunions predites non faites)
+TEMOIN POSITIF  « simuler » (la base remplacee par le rejeu, la pose simulee) : VERT -- 29 reunions, 30
+                transactions, EXACTEMENT la prediction, 5 exclusions seules, 10 sur 10
+⚠ NON MESURE PAR LE SCRIPT : le journal des etiquettes chez Supabase (app_dossier_etiquette_journal) -- je le lis a
+  part, en lecture seule.
+```
+
+### 12.5 L'ordre — VALIDÉ (le § 11.8, avec B)
+
+```
+VEN 20/11  MATIN (apres ~07:00)  MOI  le controle des 10 : dix journal / rejeu_tel_quel / rejeu_sans / juger
+                                      + le journal Supabase -> rapport
+                                      puis le compte DEFINITIF de E et sa prediction figee (§ 12.2)
+           la journee            TOI  ton « allume » pour E, ICI (je pose la ligne de .env sur ton mot) ;
+                                      les 8 lignes (ta reponse) ; le patch V2 (je te le redemande, sauvegarde prete)
+           NUIT 20->21                la REGLE E, avec ses 5 exclusions
+SAM 21/11  MATIN                 MOI  le controle de E : regle_e journal / rejeu_tel_quel / rejeu_sans / juger
+                                      (COMMENT, si tu n'es pas la : ta reponse, § 12.7)
+LUN 23/11 -> MER 25/11                inchange : les 8 lignes et la vague 0 lundi soir, 1a mardi, 1b mercredi
+MAR 24/11  MATIN                 MOI  la vague 1 DEFINITIVE regeneree SANS les lignes de la decision B
+APRES L'ECRITURE                      G2 : la relecture de ses 281 coupes invisibles, PUIS le code (derriere un
+                                      interrupteur), PUIS la vague 2 ; l'outil de scission
+```
+
+### 12.6 Ce que je n'ai pas mesuré
+
+```
+. le compte de E est celui de la base D'AVANT la nuit des 10 : le definitif ce matin (§ 12.2)
+. le journal des etiquettes chez Supabase : pas dans le script, lu a part au controle
+. la troisieme lecture de 4126 (GAIGA) et 4496 (BISCH) : une lecture du Sheet, rien de prouve
+. la liste B apres la nuit des 10, apres E et apres le patch V2 : elle se recalcule mardi matin, avant la vague 1
+. « simuler » eprouve le JUGE, pas la nuit ; le vrai controle est celui du matin
+```
+
+### 12.7 Ce qui attend ta décision
+
+```
+1  E : ton « allume », ICI, apres le compte definitif de ce matin -- la ligne APP_CHAINAGE_SANS_DATE_VISIBLE=1
+2  SAMEDI MATIN, si tu n'es pas la : A tu m'envoies un mot et je lance le controle ; B une tache planifiee UNIQUE
+   samedi 08:00 qui le lance et laisse le compte rendu (une configuration nouvelle : ton accord)
+3  les 8 lignes de 5.6 -- apres le controle des 10
+4  le patch V2, de jour -- je te le redemande avec sa sauvegarde prete
+5  V1 tes Apps Script . V2 coller app_sheet_ecrit
+6  plus tard : G2 (apres l'ecriture et la relecture des 281) ; l'outil de scission ; la troisieme lecture de 4126
+   et 4496 (deux rattachements a la main, ta decision)
+```
+
+
+---
+
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
 
 ```
+⏰ (⑫) LES COMMANDES : controle_nuit_chainage_classeur_2026-11-20.py dix journal | rejeu_tel_quel |
+   rejeu_sans | juger (une par appel), puis le compte definitif de E et « regle_e reference » (§ 12.4).
 ⏰ DEMAIN MATIN, AVANT TOUT AUTRE GESTE : le controle des 10 menages (§ 2.7) -- 11 580 dossiers,
    « 16 rattachement(s) a la main », 10 fusions a la pose (le cri du seuil SONNE, c'est attendu),
    chacune des 10 offres sous l'etiquette de son compromis. Puis, s'il est vert et avec tes « vas-y »,

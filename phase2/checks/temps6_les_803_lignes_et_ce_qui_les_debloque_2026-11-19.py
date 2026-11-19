@@ -30,6 +30,11 @@ exclue de E comme 26613 (couche 11, « en attente de ta reponse »). Et ses dema
 melanges (la famille, la coupe que le Sheet propose, ce que fait la garde, qui agit) et des 16 non
 tranchees ; les lignes 2025-2026 avec les deux formats de date du Sheet.
 
+SES DECISIONS DU 20/11 (nuit), APPLIQUEES ICI : 4126, 4496, 4720 exclues de E comme 21520 (affaire_ledger.py ;
+rejouer « rejeu 2 », « rejeu 3 » de temps5_q6 puis « garde temoin|g1|g2|g12 » avant « classer ») ; la DECISION B :
+les lignes de la vague 1 dont G2 changerait l'etiquette passent en VAGUE 2 -- recalculees a chaque classement,
+comparees aux 10 du 19/11, ecrites dans TEMPS6_DECISION_B_LIGNES_REPORTEES_EN_VAGUE_2_PAR_G2_2026-11-20.csv.
+
 ⛔ N'ECRIT RIEN, NI DANS LE SHEET, NI EN BASE, NI CHEZ HEKTOR.
 
 TEMOIN : la photo, rangee comme le fait le script de ⑧, doit redonner EXACTEMENT les cases du CSV de ⑧
@@ -84,12 +89,17 @@ Q8 = RACINE / "notice" / "TEMPS5_Q8_LES_LIGNES_DU_SHEET_ET_LEUR_VAGUE_2026-11-19
 SORTIE_CSV = RACINE / "notice" / "TEMPS6_LES_803_LIGNES_NON_ECRITES_ET_CE_QUI_LES_DEBLOQUE_2026-11-19.csv"
 SORTIE_XLSX = SORTIE_CSV.with_suffix(".xlsx")
 SORTIE_MD = RACINE / "notice" / "TEMPS6_SANS_SCISSION_LE_COMPTE_2026-11-19.md"
+#: DECISION B de Frederic (20/11) : les lignes de la vague 1 dont G2 changerait l'etiquette passent en vague 2
+SORTIE_B = RACINE / "notice" / "TEMPS6_DECISION_B_LIGNES_REPORTEES_EN_VAGUE_2_PAR_G2_2026-11-20.csv"
+#: les 10 lignes mesurees le 19/11 au soir (§ 11.3) -- la liste recalculee leur est comparee, chaque ecart NOMME
+LES_10_DU_19_11 = ("A6OS2TTJ", "ANHQ1PK7", "JBCC1KBT", "MFMR0U6A", "QL70KV8I", "R9ANL92S", "SA7DWYEZ", "SUVPN4BH",
+                   "V5NJER40", "WG8CG5T2")
 AL, AB = 37, 27
 
 COUCHES = {
     1: "1 la nuit des 10 menages (decidee, joue cette nuit)",
     2: "2 le patch V2 du gel (ton « vas-y »)",
-    3: "3 la regle E (ton allumage ; 26613 et 21520 exclues)",
+    3: "3 la regle E (allumage vendredi 20/11 ; 5 exclusions declarees : 26613, 21520, 4126, 4496, 4720)",
     4: "4 les 8 lignes de 5.6 (ta lecture)",
     5: "5 la regle C5 « a l'export » (DECIDEE le 19/11 au soir : une regle de l'outil d'ecriture)",
     6: "6 relecture du gel (un patch a valider, sans scission)",
@@ -593,7 +603,7 @@ def etape_classer() -> int:
         for a in ts:
             if i in LIG:
                 lignes_tx_v2[a].add(i)
-    mesure_garde, resout = {}, {}
+    mesure_garde, resout, lab_par_garde = {}, {}, {}
     src_g = sqlite3.connect("file:%s?mode=ro" % (RACINE / "phase2" / "phase2.sqlite"), uri=True)
     an_tx_g = {a: int(str(d)[:4]) for a, d in src_g.execute("SELECT app_affaire_id, date FROM app_affaire_ledger")
                if re.match(r"\d{4}-", str(d or "")) and not str(d).startswith("0000")}
@@ -612,6 +622,7 @@ def etape_classer() -> int:
             mem3[c].add(a)
         vus = {c for c in coupes_ if any(lignes_tx_v2.get(a) for a in mem3[c])}
         lab_g = etiquettes(lab[3], chg)
+        lab_par_garde[nom] = lab_g
         rg = ranger(gel_v2, conf_v2, chg, True, True, c5=True)
         sg = structure(gel_v2, chg, True)
         chg_lab = sorted(i for i in v1_5 if {lab_g.get(a) for a in etats[5][i][2]} != {lab[3].get(etats[5][i][2][0])})
@@ -868,6 +879,78 @@ def etape_classer() -> int:
         lignes_md.append("        les INVISIBLES -- ce qui se DETACHE (le morceau sans la plus petite transaction) : %s"
                          % " . ".join("%s %d" % kv for kv in m["detache_invisibles"].most_common(12)))
 
+    # ── ⭐ DECISION B DE FREDERIC (20/11) : les lignes de la vague 1 dont G2 changerait l'etiquette -> VAGUE 2 ──
+    #   « LA GARDE G2 : je prends B. Les 10 lignes sortent de la vague 1 et passent en vague 2. G2 se code APRES
+    #   l'ecriture, et pas avant d'avoir relu ses 281 coupes invisibles. »
+    #   La liste n'est PAS figee a la main : elle se RECALCULE a chaque classement (les exclusions de E, le patch,
+    #   la nuit la font bouger), et elle est comparee aux 10 du 19/11 -- chaque ecart est NOMME.
+    reportees_b = list(mesure_garde.get(GARDE_RETENUE, {}).get("v1_etiquette_change", []))
+    lignes_md.append("")
+    lignes_md.append("⭐ DECISION B (20/11) : LES LIGNES DE LA VAGUE 1 DONT LA GARDE %s CHANGERAIT L'ETIQUETTE PASSENT EN"
+                     " VAGUE 2 (G2 se code apres l'ecriture)" % GARDE_RETENUE.upper())
+    if GARDE_RETENUE not in mesure_garde:
+        lignes_md.append("   ⛔ la garde %s n'est pas rejouee : la liste ne peut pas etre faite" % GARDE_RETENUE)
+        echecs.append("decision B : garde %s non rejouee" % GARDE_RETENUE)
+    else:
+        chg_b, lab_b = gardes_mesurees[GARDE_RETENUE], lab_par_garde[GARDE_RETENUE]
+        sortis_b = sorted(set(LES_10_DU_19_11) - set(reportees_b))
+        neufs_b = sorted(set(reportees_b) - set(LES_10_DU_19_11))
+        lignes_md.append("   %d ligne(s) : %s" % (len(reportees_b), " ".join(reportees_b)))
+        lignes_md.append("   contre les 10 du 19/11 au soir -- sortent de la liste : %s . nouvelles : %s"
+                         % (" ".join("%s (etat 5 : %s)" % (i, etats[5][i][0]) for i in sortis_b) or "aucune",
+                            " ".join(neufs_b) or "aucune"))
+        lignes_md.append("   ➡ la vague 1 de reference (etat 5) : %d - %d = %d lignes"
+                         % (len(v1_5), len(reportees_b), len(v1_5) - len(reportees_b)))
+        src_b = sqlite3.connect("file:%s?mode=ro" % (RACINE / "phase2" / "phase2.sqlite"), uri=True)
+        nom_b = {}
+        for a, aj in src_b.execute("SELECT app_affaire_id, acquereurs_json FROM app_affaire_ledger"):
+            try:
+                v = json.loads(aj or "null")
+                v = v[0] if isinstance(v, list) and v else v
+                nom_b[a] = (v or {}).get("nom", "") if isinstance(v, dict) else ""
+            except (ValueError, TypeError):
+                nom_b[a] = ""
+        src_b.close()
+        mem3_b = defaultdict(set)
+        for a, c in S[3].items():
+            mem3_b[c].add(a)
+        sorties_b = []
+        for i in sorted(reportees_b, key=lambda x: LIG[x]["num"]):
+            ts_ = etats[5][i][2]
+            dossier = mem3_b[S[3][ts_[0]]]
+            parts_b = defaultdict(list)
+            for a in sorted(dossier):
+                parts_b[chg_b[a]].append(a)
+            tete_b = chg_b[min(dossier)]
+            def piece(xs):
+                return " + ".join("%s %s(%s) %s" % (a, TX[a]["genre"][:5], (TX[a]["etat"] or "-")[:6], nom_b.get(a, ""))
+                                  for a in xs)
+            coupe_b = " || ".join(("[garde l'etiquette] " if g_ == tete_b else "[etiquette NEUVE] ") + piece(xs)
+                                  for g_, xs in sorted(parts_b.items(), key=lambda kv: min(kv[1])))
+            sorties_b.append({
+                "ligne_au_19_11": LIG[i]["num"], "id_unique": i,
+                **{n: LIG[i]["row"][entete.index(n)] for n in ("Acquéreur", "Etat Actuel", "Offre Achat", "Compromis",
+                                                                "Prix") if n in entete},
+                "transactions_de_la_ligne": " ".join(map(str, ts_)),
+                "etiquette_avant_g2": lab[3].get(ts_[0], ""),
+                "etiquette_apres_g2": " ".join(sorted({str(lab_b.get(a, "")) for a in ts_})),
+                "le_dossier_coupe_par_g2": coupe_b,
+                "pourquoi": "la tentative ratee d'un acheteur precedent (le plus petit numero du dossier) GARDERAIT "
+                            "l'etiquette ; la ligne en recevrait une NEUVE -- ecrite avant G2, elle designerait la "
+                            "mauvaise affaire. DECISION B du 20/11 : vague 2, apres G2.",
+            })
+            lignes_md.append("   %s %-28s %s" % (i, LIG[i]["row"][entete.index("Acquéreur")][:28] if "Acquéreur" in entete
+                                                  else "", coupe_b[:220]))
+        if sorties_b:
+            with SORTIE_B.open("w", encoding="utf-8-sig", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(sorties_b[0].keys()), delimiter=";")
+                w.writeheader()
+                w.writerows(sorties_b)
+            lignes_md.append("   le fichier (que l'outil d'ecriture lira comme une EXCLUSION de la vague 1) : %s"
+                             % SORTIE_B.name)
+            print("CSV decision B : %s (%d lignes)" % (SORTIE_B, len(sorties_b)), flush=True)
+    reportees_b_set = set(reportees_b)
+
     # ── LES MELANGES PAR FAMILLE, et la coupe que le Sheet propose ──
     lignes_md.append("")
     lignes_md.append("LES MELANGES (couche 9) PAR FAMILLE -- groupes, lignes, et l'etat de la coupe que le Sheet propose :")
@@ -989,8 +1072,13 @@ def etape_classer() -> int:
         return COUCHES[n], "moi (relecture) puis toi"
 
     def debloque(i):
+        if i in reportees_b_set:
+            return ("DECISION B du 20/11 : SORT DE LA VAGUE 1 -> VAGUE 2. La garde G2 changerait son etiquette (la "
+                    "tentative ratee d'un acheteur precedent, au plus petit numero, garderait celle du dossier) ; G2 se "
+                    "code APRES l'ecriture, apres la relecture de ses 281 coupes invisibles (%s)" % SORTIE_B.name,
+                    "la garde G2 (apres l'ecriture), puis la vague 2")
         c0 = auj[i][0]
-        ex_ = sorted(a for a in gel_v2.get(i, set()) if a in exclues_e)
+        ex_ =sorted(a for a in gel_v2.get(i, set()) if a in exclues_e)
         if ex_ and all(etats[n][i][0] != "VAGUE_1" for n in (1, 2, 3, 4, 5)):
             return (COUCHES[11] + " : %s" % "; ".join("%s -- %s" % (a, al_.EXCLUES_DE_LA_REGLE_E[a][:140]) for a in ex_),
                     "toi")
@@ -1034,13 +1122,18 @@ def etape_classer() -> int:
     print("\nLIGNES NON ECRITES (pas en vague 1 aujourd'hui) : %d (attendu 803)" % len(non_ecrites), flush=True)
     if len(non_ecrites) != 803:
         echecs.append("non ecrites : %d" % len(non_ecrites))
+    # DECISION B (20/11) : les lignes de la vague 1 d'aujourd'hui que G2 reporte en vague 2 entrent dans le fichier
+    en_plus_b = sorted(i for i in reportees_b_set if auj[i][0] == "VAGUE_1")
+    print("   + %d ligne(s) de la vague 1 d'aujourd'hui reportee(s) en vague 2 par la decision B (et %d qui n'y etaient"
+          " pas encore)" % (len(en_plus_b), len(reportees_b_set) - len(en_plus_b)), flush=True)
     sorties = []
-    for i in sorted(non_ecrites, key=lambda x: LIG[x]["num"]):
+    for i in sorted(non_ecrites + en_plus_b, key=lambda x: LIG[x]["num"]):
         quoi, qui = debloque(i)
         r, ds, ts = auj[i]
         sorties.append({
             "ligne_au_19_11": LIG[i]["num"], "id_unique": i, "case_aujourd_hui": r,
             "case_apres_nuit_et_patch": apr[i][0], "case_au_bout_1_a_5": etats[5][i][0],
+            "decision_b_vague_2": "oui" if i in reportees_b_set else "",
             "ce_qui_la_debloque": quoi, "qui": qui,
             **{n: LIG[i]["row"][col(n)] for n in lisibles},
             "dossiers_aujourd_hui": " ".join(map(str, ds)),
