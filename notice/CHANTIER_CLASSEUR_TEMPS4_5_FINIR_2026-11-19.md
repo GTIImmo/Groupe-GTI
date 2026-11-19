@@ -14,7 +14,8 @@
 > l'étiquette ne bouge pas, l'appartenance bouge · les temps 1, 2, 3 sont faits (`f04c511`,
 > `f7a2d18`, `ecb2c6f`).
 
-**État des questions** : ① lue, jugée, et sa garde REJOUÉE (§ 1.7) · ② en cours · ③ à ⑨ à suivre.
+**État des questions** : ① lue, jugée, et sa garde REJOUÉE (§ 1.7) · ② expliquée et chiffrée
+(§ 2) · ③ à ⑨ à suivre.
 
 ---
 
@@ -234,6 +235,88 @@ LE FICHIER    les rattachements manuels VERRONT desormais les transactions sans 
 ```
 ⚠ La session a coupé pendant le premier passage de la mesure : le CSV était écrit, la sortie écran
 perdue. Le second passage (identique, lecture seule) a rendu les témoins ci-dessus, tous verts.
+
+---
+
+## ② LES 10 « MÊME NOM » — ce sont des COUPLES
+
+### 2.1 Ce qui les explique vraiment
+
+Lu fiche par fiche (`acquereurs_json` du registre, puis `app_contact_current.couple_json` par le
+numéro Hektor — ⚠ dans les tables de contacts, `hektor_contact_id` porte NOTRE numéro et le numéro
+Hektor est dans `hektor_target_id`, le piège des « deux numéros » déjà payé) :
+
+```
+TOUS LES 10 SONT DES MENAGES : l'offre au nom d'un conjoint, le compromis au nom de l'autre,
+au meme prix.
+   3 LIES PAR UN NUMERO   l'offre est sur la fiche « couple » de Hektor, dont refCouple pointe
+                          la fiche du compromis ; notre couple_json le dit aussi
+                          DZAMAN (27037) . ARSAC ET DUMAS (36712) . VERILHAC (42883)
+   7 RELIES PAR RIEN,     chaque conjoint a SA fiche, et sa case « conjoint » est VIDE (une
+     SAUF LE NOM          coquille sans nom) : aucun numero ne relie les deux
+                          RIGHI Philippe / Ghislaine (10955) . SOULEZ Gilles / Isabelle (11014)
+                          . BOUGEARD Marina / Kevin (35702) . GAGNE Sebastien / Sylvie (41584)
+                          . MILHAS Jacques / Maud (44276) . PARIS Noemie / Christophe (52724)
+                          . HAHNEL Sandrine / Nicolas (55040)
+POURQUOI ILS ETAIENT ENSEMBLE AVANT LE 11/11 : l'offre ACCEPTEE attirait le compromis sans
+regarder le nom (branche compromis : « l'unique chaine a offre acceptee »). Refusee, elle ne
+l'attire plus, et la regle § 2.3 exige le MEME NUMERO. Ces menages ne tenaient que par l'etat.
+```
+
+### 2.2 Les remèdes, et ce que chacun coûte
+
+```
+R1  LE FICHIER DES RATTACHEMENTS MANUELS -- 10 lignes
+    regle les 10, exactement, des la nuit suivante, et survit a chaque recalcul
+    COUT : aucun code ; SA decision, ligne par ligne (le fichier est une decision)
+    LIMITE : ne protege pas l'avenir -- le prochain menage coupe ne sera pas vu
+R2  UNE REGLE « LE COUPLE PAR SON NUMERO » -- dans la regle D, deux numeros que notre base
+    relie comme conjoints comptent pour un meme acheteur
+    MESURE SUR TOUT LE REGISTRE (lecture seule, 106 617 liens de couple lus) : elle reunirait
+    5 paires de dossiers, 0 bloquee par les gardes :
+       les 3 lies ci-dessus + GASMI (15439 : compromis 330 000 du 17/07/2023, offre 330 000 du
+       05/06/2023) + FOUVET (48923 : compromis 29 000 du 21/09/2012, offre 29 000 du 11/09/2012)
+       -- les 5 au meme prix, a quelques semaines : A RAISON
+    COUT : du code dans la regle D, derriere un interrupteur ; lire les liens de couple des
+    contacts au moment du chainage (une dependance de plus pour la nuit) ; un rejeu complet
+    LIMITE : ne regle PAS les 7 (rien ne les relie)
+R3  UNE REGLE PAR LE NOM DE FAMILLE sur le meme bien
+    regle les 10 d'un coup
+    COUT : contraire au principe du projet (« les numeros, jamais les noms » : un nom partage
+    est un couple OU un homonyme, 109 cas mesures) ; portee NON MESUREE, forcement bien plus
+    large que les 10. ⛔ Je ne le recommande pas.
+R4  REPARER LES 7 CHEZ HEKTOR (« transformer en couple », le geste prouve le 02/11)
+    puis R2 les rattrape la nuit d'apres
+    COUT : 7 ecritures chez Hektor (SON accord), un geste dont le formulaire suivant ne doit
+    pas etre enregistre (le piege E6), et R2 ecrite
+```
+
+### 2.3 Ce que je recommande
+
+**R1 pour les 10, maintenant** — dix lignes, aucune règle, aucun risque hors des dix, et c'est le
+seul remède qui règle les 7. **R2 ensuite, si tu veux protéger l'avenir** : elle ne rapporte que 5
+paires aujourd'hui (dont GASMI et FOUVET, que R1 ne voit pas), mais elle recollera seule le prochain
+ménage dont la fiche « couple » porte l'offre. R3 non. R4 seulement si le chantier des couples
+reprend un jour pour d'autres raisons.
+
+### 2.4 Ce que ça pourrait casser ailleurs
+
+```
+R1   rien hors des 10 dossiers ; chaque reunion fera une fusion d'etiquette (10 la nuit)
+R2   5 reunions mesurees ; la nuit lirait une table de contacts de plus -- si sa lecture
+     echoue, la regle doit se taire (comme R2 du registre, « lecture ratee = on ne touche a
+     rien »), sinon une panne de contacts changerait des dossiers
+```
+
+### 2.5 Ce que je n'ai pas mesuré
+
+```
+. R2 n'est PAS ecrite : les 5 paires sont comptees par une lecture des donnees, pas rejouees
+  par la vraie fonction
+. R3 : sa portee sur tout le registre
+. si d'autres menages coupes existent dont AUCUN des deux n'a ete touche par nos gestes
+  (R2 en trouve 2 de plus ; pour les menages sans lien, seul un nom les trahirait)
+```
 
 ---
 
