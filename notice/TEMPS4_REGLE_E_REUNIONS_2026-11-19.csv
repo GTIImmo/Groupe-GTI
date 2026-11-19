@@ -2,12 +2,9 @@ bien,transaction,genre,etat,rejoint_dossier_de,membres_apres,autres_acheteurs_da
 3155,1297,compromis,cancelled,"1296,1298",3,False,37,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),c6528a07-3956-475a-87f7-32bfdf539aae,2,False
 3481,1335,compromis,cancelled,"1337,1334",3,False,137,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),9c8af637-99ce-46c3-8525-420be0662dc0,2,False
 8442,3669,compromis,cancelled,"3672,3670,3671",4,False,108,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),68bf38b6-68ba-47a6-a55b-c9b94510766c,2,True
-9232,4126,compromis,cancelled,"4129,4125",4,True,250,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),40595f6e-6c5b-410a-96c1-351422b0c012,2,False
 9483,4267,compromis,cancelled,"4268,4269,4270,4273",5,False,92,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),1f3ec2b1-b964-4903-a8b5-95772c76b0a7,3,True
 9483,4268,compromis,cancelled,"4267,4269,4270,4273",5,False,92,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),1f3ec2b1-b964-4903-a8b5-95772c76b0a7,3,False
-9769,4496,compromis,cancelled,"4499,4495",4,True,96,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),926ce35b-cd1a-453e-adf2-fb44e0b40d06,2,False
 9993,4651,compromis,cancelled,"4649,4650,4654",6,True,427,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),a662e0e4-1b25-4720-bd4c-5dcef8d7a826,2,False
-10129,4720,compromis,cancelled,"4721,4724",4,True,147,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),1996da17-fc26-4337-a370-ea8b35ff77e2,2,True
 14414,7080,compromis,cancelled,"7081,7082,7083",4,False,169,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),b6eaa815-4e79-4332-ac52-d8fa2e58ce9f,2,True
 15087,7450,compromis,cancelled,"7448,7449,7453",6,True,367,A VERIFIER (le dossier porte deja un compromis annule du meme acheteur),3eee569d-0bfc-4f22-be3a-b1e42e7a1e2f,2,False
 15449,7605,compromis,cancelled,"7608,7604,7607",4,False,110,A RAISON (l'essai annule rejoint l'affaire du meme acheteur),ffa7c437-4085-4268-a335-029b155908f1,2,False

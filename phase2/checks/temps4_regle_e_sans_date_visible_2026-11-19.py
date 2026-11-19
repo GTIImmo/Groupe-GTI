@@ -54,7 +54,11 @@ BLOQUES = {7499: ("15220", "GENILLON"), 8845: ("17536", "Rouchon"), 11103: ("232
 #: L'EXCLUSION DECLAREE (EXCLUES_DE_LA_REGLE_E, decision du 19/11) DOIT la laisser seule
 EXCLUES = {26613: ("52166", "SHN6RKDI, exclusion declaree"),
            # 19/11 au soir, decision de Frederic : la seule reunion que le Sheet laisse douteuse
-           21520: ("43050", "CHOUVELLON d2108609, exclusion declaree")}
+           21520: ("43050", "CHOUVELLON d2108609, exclusion declaree"),
+           # 20/11, decision de Frederic : les 3 rattachements de E que la garde G2 contredit
+           4126: ("9232", "GUERIN / GIORGETTI, E contre G2, exclusion declaree"),
+           4496: ("9769", "GALLOT / NOIRJEAN ET FAUCHEZ, E contre G2, exclusion declaree"),
+           4720: ("10129", "GARNIER / ROBERT = SUVPN4BH, E contre G2, exclusion declaree")}
 SORTIE_RESTE = RACINE / "notice" / "TEMPS4_REGLE_E_SANS_DATE_RESTANTES_2026-11-19.csv"
 INTERRUPTEUR = "APP_CHAINAGE_SANS_DATE_VISIBLE"
 

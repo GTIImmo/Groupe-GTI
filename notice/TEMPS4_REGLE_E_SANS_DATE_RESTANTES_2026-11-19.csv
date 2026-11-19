@@ -3,8 +3,11 @@ bien,transaction,genre,etat,acquereurs,raison
 61,30,compromis,cancelled,12074,aucun autre dossier de cet acheteur sur le bien
 1968,997,compromis,cancelled,12352,aucun autre dossier de cet acheteur sur le bien
 8461,3689,compromis,cancelled,"29814,422477,466710,598039",aucun autre dossier de cet acheteur sur le bien
+9232,4126,compromis,cancelled,49384,EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
 9362,4195,compromis,cancelled,"381952,518971,518972",aucun autre dossier de cet acheteur sur le bien
 9629,4385,compromis,cancelled,31107,GARDE E : le compromis vivant du dossier est a un autre acheteur
+9769,4496,compromis,cancelled,60182,EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
+10129,4720,compromis,cancelled,113265,EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
 10527,5054,compromis,cancelled,111368,aucun autre dossier de cet acheteur sur le bien
 11764,6146,compromis,cancelled,"32950,32951,576333,576334",aucun autre dossier de cet acheteur sur le bien
 11820,6171,compromis,cancelled,33045,aucun autre dossier de cet acheteur sur le bien
