@@ -3092,7 +3092,7 @@ déposée, travail `done`.
 
 Restent à trancher par lui : l'effacement des coordonnées d'un nouveau mandant (avant P3) ; le sens de « clearing ».
 
-## 90. LOT 0 FAIT : les 10 défauts corrigés (9 dans le code, le 7 attend la mémoire), éprouvés à l'écran et par un essai (19/11) — branche à part, NON poussé
+## 90. LOT 0 FAIT : les 10 défauts corrigés (9 dans le code, le 7 attend la mémoire), éprouvés à l'écran et par un essai (19/11) — POUSSÉ le 19/11 avec son accord (0a6abe6 sur main, Vercel prêt)
 
 **Ses mots** : « Vas-y, sois autonome, mais contrôle et vérifie par des tests pour avoir le résultat souhaité. »
 
@@ -3156,3 +3156,81 @@ toujours un type) ; les 4 fonds de l'éditeur passent par `fermerEditeurAvis`.
 **Reste à faire par lui** : dire s'il faut fusionner la branche dans `main` (quand l'autre session aura commité), puis
 pousser (son accord). Ensuite : P3, la mémoire (patch, son accord), après ses deux réponses (effacement des coordonnées,
 « clearing »).
+
+## 91. SES DEUX RÉPONSES (19/11) ; « clearing » audité ; P3, LA MÉMOIRE DU PARCOURS : patch écrit et répété (NON collé)
+
+**Ses mots** : « Ok vas-y, je valide ta reco de règle, et non je sais pas, audit pour clearing. »
+
+### 91.1 La règle d'effacement, VALIDÉE
+
+Les coordonnées d'un nouveau mandant s'effacent **dès que la fenêtre les a reçues**. Le reste du parcours s'efface
+**30 jours** après son dernier mouvement (proposition du §80.8). Des coordonnées jamais prises (parcours abandonné)
+s'effacent aussi à 30 jours, avec leur parcours.
+⚠ Conséquence assumée : si la personne ferme la fenêtre sans créer, les coordonnées ne sont plus dans la base (la fenêtre
+les avait, elle les perd en se fermant, comme une saisie à la main). Il faudra les ressaisir.
+
+### 91.2 « clearing » : l'audit (lecture seule)
+
+- **Ce que c'est chez Hektor** : une case oui / non / non précisé du bloc des **diagnostics**, entre l'ERP (risques) et
+  le plomb (`console_job_worker.js`, `HEKTOR_OUI_NON_EXACT_FIELDS`). Notre fenêtre la montre à l'étape 5 « Diagnostics
+  & énergie » sous le libellé brut « Clearing » (App.tsx:1686), le worker l'envoie, la fiche l'affiche (31820).
+- **Son sens** : NON TROUVÉ. Aucune note, aucune capture de Hektor ne porte son libellé : la saisie console ne garde que
+  le libellé des boutons (« Non précisé », « Oui », « Non »). ⚠ Hypothèse NON prouvée : dans le vocabulaire des
+  diagnostics, « clearing » désigne le contrôle de fin de travaux après retrait d'amiante (mesure d'empoussièrement).
+  Seul l'écran de Hektor (l'infobulle ou le libellé de la case) le dirait.
+- **Son usage, mesuré** sur les 13 565 fiches : la case n'existe que dans les **125** fiches qui ont un relevé de la
+  console. **1 seule dit « oui »** (une maison active), **6 disent « non »**, 100 « non précisé », 18 sans valeur.
+  Témoin positif : `diag_assainissement` est présent dans 12 942 fiches par la même recherche.
+- **Déjà décidé ailleurs** : `clearing` est exclu du contrôle au retour (8a7, « ne se lit pas dans la fiche »).
+- **Conclusion** : on garde la décision du §88, « laissé à la main, déclaré ». Aucune question du parcours ne la pose.
+  À rouvrir seulement si l'écran de Hektor lui donne un sens utile.
+
+### 91.3 P3 — la mémoire du parcours : ce que pose le patch
+
+Fichiers : `supabase/patch_assistant_parcours_memoire_2026-11-19.sql`, `…_INVERSE.sql`, `…_REPETITION.sql`.
+Patron repris : le schéma privé `ged_prive` de la GED (morceau 9, 13/11).
+
+- **`app_assistant_parcours`** : un parcours (genre `creation_estimation` / `creation_annonce` / `avis`), ses réponses
+  aux NOMS DES CASES DE LA FENÊTRE, l'étape, l'état, l'annonce quand elle existe. Écrite par le **serveur seul**.
+  **Lue par** : son auteur, **le négociateur de l'annonce** dès qu'elle existe (e-mail du profil actif = celui de la
+  fiche), l'admin. ⚠ Le manager n'est pas nommé. ⚠ Choix fait par moi, à valider : **l'auteur garde la lecture** après
+  la création (c'est sa conversation, qu'il lit déjà). Une contrainte REFUSE les clés `email` / `telephone` dans les
+  réponses.
+- **Le schéma `assistant_prive`** et sa table `mandant_coordonnees` (civilité, nom, prénom, e-mail, téléphone,
+  adresse, CP, ville ; aucune autre case acceptée). Deux portes seulement :
+  - `app_assistant_mandant_deposer` : l'**écran de l'auteur**, sur SON parcours de création en cours ;
+  - `app_assistant_mandant_prendre` : l'écran qui ouvre la fenêtre (auteur ou admin) ; **rend ET efface** ; une
+    seconde prise ne rend rien.
+  - ⭐ **La clé de service n'a AUCUNE des deux portes** : le serveur de l'assistant (celui qui parle au modèle) ne peut
+    ni les écrire ni les lire, même par erreur. L'API ne voit pas ce schéma, donc **la descente de 07:45 ne les
+    recopie pas** sur le serveur local (ni dans la sauvegarde de 09:00).
+- **L'effacement à 30 jours** : `app_assistant_parcours_purger()` et la tâche pg_cron `assistant-parcours-purge`
+  (03:15 UTC = 04:15 à Paris).
+- **Rien ne l'appelle encore** : le moteur (P1), les boutons (P2) et D7 viendront à part. La table naît vide.
+
+### 91.4 Les preuves (sans rien garder)
+
+- **La répétition** jouée en base par `jouer_sql.py` (transaction annulée) : **TOUT EST VERT, 31 contrôles**, patch
+  puis inverse. Elle se met à la place de chaque personne (auteur, autre, négociateur réel, admin réel, anonyme, clé de
+  service) seulement autour de l'appel testé. Elle prouve notamment :
+  - avant l'annonce, le négociateur ne lit pas ; après, il lit (**témoin positif**) ; un autre ne lit jamais ;
+  - l'écran n'écrit pas le parcours ; ni l'écran ni la clé de service ne lisent la table privée ;
+  - la clé de service ne peut ni prendre ni déposer ;
+  - la prise efface, la seconde prise rend vide, un autre ne prend rien et n'efface rien ;
+  - un dépôt vide efface ; un parcours fini ne reçoit plus de coordonnées ;
+  - la purge efface le vieux parcours AVEC ses coordonnées, garde ceux qui ont bougé (le déclencheur remet `maj_le`) ;
+  - l'inverse retire tout et laisse les conversations, les messages et les cartes.
+- **Relu après** : aucune table, aucun schéma, aucune fonction, aucune tâche restés en base.
+- **Trois mutants, trois rouges** : la prise qui n'efface pas (rouge ⑪) ; la règle sans le négociateur (rouge ④) ; le
+  dépôt ouvert à un autre (rouge ⑦).
+- ⚠ Mon outil de répétition refusait tout `end;`, même dans un bloc : il ne regarde plus que le texte HORS des blocs
+  `$…$`. Témoin : il refuse toujours le patch (qui porte `commit;`).
+
+### 91.5 Ce que ça pourrait casser ailleurs
+
+- La descente recopiera `app_assistant_parcours` (vide au départ) ; rien d'autre ne la lit.
+- Une 15e tâche pg_cron : un DELETE d'une petite table par nuit.
+- Rien sur les tables métier, les conversations, les cartes, `app_agent_run`.
+
+**Reste à faire par lui** : coller le patch dans l'éditeur SQL (son accord), puis je relis en base. Ensuite P1, le moteur
+de questions côté serveur (« vas-y »).
