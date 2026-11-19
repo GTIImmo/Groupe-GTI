@@ -40,7 +40,9 @@ ETAT_PAR_GESTE = {"repondre": "faite", "passer": "passee", "nsp": "nsp"}
 # reposée, elle s'affiche en pastille verte, modifiable. `_sources` dit d'où vient chaque case pré-remplie.
 ETAT_CONNUE = "connue"
 CLE_SOURCES = "_sources"
-SOURCES = frozenset({"demande"})
+SOURCES = frozenset({"demande", "scan"})  # P4-b : « scan » = la fiche papier lue
+CLE_DOUTES = "_doutes"          # P4-b : les cases lues à moins de 75 % -> « à vérifier », leur question est reposée
+CLE_FICHE = "_fiche"            # P4-b : la fiche lue (pages, coût), les pages de l'avis gardées à part, le coffre
 # ⛔ règle du 18/11 : les coordonnées d'un nouveau mandant vivent à part (assistant_prive), jamais dans les réponses.
 COORDONNEES = frozenset({"civilite", "nom", "prenom", "email", "telephone", "mandant_email", "mandant_telephone"})
 MANDANT_CHOIX = frozenset({"", "existant", "nouveau"})
@@ -166,7 +168,8 @@ def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste:
     return nouvelles
 
 
-def appliquer_depart(reponses: dict[str, Any], valeurs: dict[str, Any], source: str, annee: int) -> dict[str, Any]:
+def appliquer_depart(reponses: dict[str, Any], valeurs: dict[str, Any], source: str, annee: int,
+                     doutes: dict[str, float] | None = None) -> dict[str, Any]:
     """P4-a : pré-remplit le parcours avec ce que la personne a DÉJÀ dit (traduit dans la langue de la fenêtre). Ne
     remplace jamais une réponse donnée ; ignore une case qui n'est d'aucune question (la fenêtre ne la montre pas) ou
     qui ne passe pas les contrôles d'une réponse ; marque « connue » chaque question posée dont l'essentiel est dit."""
@@ -189,12 +192,16 @@ def appliquer_depart(reponses: dict[str, Any], valeurs: dict[str, Any], source: 
             continue
         nouvelles[cle] = propre
         sources[cle] = source
+        if doutes and cle in doutes:
+            nouvelles.setdefault(CLE_DOUTES, {})[cle] = doutes[cle]
     if sources:
         nouvelles[CLE_SOURCES] = sources
     suivi = etats(nouvelles)
+    a_verifier = set(nouvelles.get(CLE_DOUTES) or {})
     for q in questions_posees(nouvelles, annee):
         essentiels = q.get("essentiels") or []
-        if essentiels and q["id"] not in suivi and all(nouvelles.get(c) not in (None, "", []) for c in essentiels):
+        if essentiels and q["id"] not in suivi and all(nouvelles.get(c) not in (None, "", []) for c in essentiels) \
+                and not a_verifier & set(q["champs"]):
             suivi[q["id"]] = ETAT_CONNUE
     if suivi:
         nouvelles[CLE_ETATS] = suivi
@@ -227,6 +234,9 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
         "reponses": {k: v for k, v in reponses.items() if not k.startswith("_")},
         # P4-a : d'où vient une case pré-remplie (« demande ») -- l'écran le dit sur la pastille
         "sources": dict(reponses.get(CLE_SOURCES) or {}),
+        # P4-b : les cases à vérifier, la fiche lue (sans ses coordonnées : elles sont au coffre)
+        "doutes": dict(reponses.get(CLE_DOUTES) or {}),
+        "fiche": dict(reponses.get(CLE_FICHE) or {}) or None,
         "fin": q is None,
     }
 

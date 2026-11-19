@@ -407,11 +407,15 @@ class OpenAIListingSheetService:
                 message = response.text.strip()
             raise HTTPException(status_code=502, detail=message or "Erreur OpenAI Vision")
 
-        output_text = _extract_output_text(response.json())
+        corps = response.json()
+        output_text = _extract_output_text(corps)
         try:
             parsed = json.loads(output_text)
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=502, detail="Reponse OpenAI non JSON") from exc
         if not isinstance(parsed, dict):
             raise HTTPException(status_code=502, detail="Reponse OpenAI inattendue")
-        return _normalize_extraction(parsed, model)
+        resultat = _normalize_extraction(parsed, model)
+        # 19/11 (étape 4 P4-b) : les jetons consommés, pour mesurer enfin le coût d'un scan (jamais mesuré jusqu'ici)
+        resultat["usage"] = corps.get("usage") if isinstance(corps, dict) else None
+        return resultat

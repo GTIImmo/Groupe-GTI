@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 import unicodedata
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -21,6 +23,8 @@ from .google_workspace_service import (MAX_GMAIL_ATTACHMENT_BYTES, MAX_GMAIL_ATT
                                        MAX_GMAIL_ATTACHMENT_FILE_BYTES, GoogleWorkspaceService)
 from .openai_listing_sheet_service import FIELD_KEYS as _CASES_DU_SCAN
 from . import assistant_parcours as parcours_moteur  # P4-a (19/11) : le parcours guidé, démarré rempli de la demande
+from .agent_tarifs import cout_usd  # P4-b : le coût d'une fiche lue
+from .openai_listing_sheet_service import OpenAIListingSheetService  # P4-b : le scan de la fenêtre, côté serveur
 from . import parcours_traduction
 from .rapprochement_email import RapprochementEmailService
 from .rapprochement_sender import RapprochementSender
@@ -2441,9 +2445,86 @@ def _parametres_de_la_carte(c: dict[str, Any]) -> dict[str, Any]:
     return parametres
 
 
+# ── P4-b (19/11) : LA FICHE PAPIER, LUE PAR LE SCAN DE LA FENÊTRE, CÔTÉ SERVEUR ──────────────────────────────────────
+# La personne joint les photos de sa fiche (le trombone : le coffre, SON dossier) à sa demande ou pendant le parcours.
+# Chaque page est lue par le MÊME service que la fenêtre (openai_listing_sheet_service), les pages en parallèle. Ce
+# que la personne a dit l'emporte (la fiche ne remplace aucune réponse). Les coordonnées lues partent au coffre privé
+# avec SON jeton (app_assistant_mandant_deposer) : ni l'IA, ni les réponses, ni le journal ne les voient.
+def _photos_de_fiche(ctx: ContexteAssistant, fichiers: Any) -> list[dict[str, Any]]:
+    photos = _fichiers_joints(ctx, "|".join(fichiers) if isinstance(fichiers, list) else fichiers)
+    if len(photos) > MAX_PAGES_SCAN:
+        raise Refus(f"{MAX_PAGES_SCAN} photos au plus pour la fiche papier (une photo par page).")
+    autres = [f["nom"] for f in photos if f["type"] not in TYPES_SCAN or f["taille"] > TAILLE_MAX_SCAN]
+    if autres:
+        raise Refus("Le scan ne lit que des photos JPEG, PNG ou WebP de 12 Mo au plus : " + ", ".join(autres) + ".")
+    return photos
+
+
+def _lire_la_fiche(ctx: ContexteAssistant, photos: list[dict[str, Any]]) -> dict[str, Any]:
+    service = OpenAIListingSheetService(ctx.settings)
+
+    def une_page(f: dict[str, Any]) -> dict[str, Any] | None:
+        try:
+            lien = fichiers_service.lien_lecture(ctx.settings, f["chemin"])
+            r = requests.get(lien, timeout=60)
+            r.raise_for_status()
+            image = base64.b64encode(r.content).decode("ascii")
+            return service.extract({"imageBase64": f"data:{f['type']};base64,{image}", "mimeType": f["type"],
+                                    "filename": f["nom"], "formVersion": "parcours_guide_v1"})
+        except Exception:  # noqa: BLE001 -- une page illisible ne coule pas les autres (comme l'écran)
+            return None
+
+    with ThreadPoolExecutor(max_workers=max(1, min(MAX_PAGES_SCAN, len(photos)))) as pool:
+        pages = list(pool.map(une_page, photos))
+    lues = [p for p in pages if p]
+    if not lues:
+        raise Refus("La fiche n'a pas pu être lue : reprends les photos (nettes, une page par photo).")
+    cout = 0.0
+    for p in lues:
+        c = cout_usd(p.get("model"), p.get("usage") or {}) if isinstance(p.get("usage"), dict) else None
+        cout += c or 0.0
+    lecture = parcours_traduction.lire_fiche(parcours_traduction.fusionner_pages(lues))
+    lecture["mesure"] = {"pages": len(photos), "lues": len(lues), "cout_usd": round(cout, 5),
+                         "modele": lues[0].get("model"), "le": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    return lecture
+
+
+def _appliquer_la_fiche(reponses: dict[str, Any], lecture: dict[str, Any], annee: int) -> dict[str, Any]:
+    valeurs = dict(lecture["valeurs"])
+    if lecture["coordonnees"] and not reponses.get("mandant_choix"):
+        valeurs["mandant_choix"] = "nouveau"  # un mandant lu sur la fiche, pas encore dans les contacts
+    nouvelles = parcours_moteur.appliquer_depart(reponses, valeurs, "scan", annee, lecture["doutes"])
+    fiche = dict(nouvelles.get(parcours_moteur.CLE_FICHE) or {})
+    fiche.update({"mesure": lecture["mesure"], "doutes": len(lecture["doutes"])})
+    if lecture["avis"]:
+        fiche["avis"] = lecture["avis"]  # les pages de l'avis de valeur : la fenêtre les reprendra (son brouillon)
+    nouvelles[parcours_moteur.CLE_FICHE] = fiche
+    return nouvelles
+
+
+def _deposer_au_coffre(ctx: ContexteAssistant, parcours_id: str, coordonnees: dict[str, str]) -> bool:
+    r = requests.post(f"{ctx.settings.supabase_url}/rest/v1/rpc/app_assistant_mandant_deposer",
+                      headers={**_entetes(ctx), "Content-Type": "application/json"},
+                      json={"p_parcours_id": parcours_id, "p_coordonnees": coordonnees}, timeout=15)
+    return r.ok
+
+
+def lire_fiche_du_parcours(ctx: ContexteAssistant, ligne: dict[str, Any], fichiers: Any) -> dict[str, Any] | None:
+    """La route « lire la fiche » d'un parcours en cours : lit, applique (sans rien remplacer), dépose les coordonnées,
+    écrit sous condition (même maj_le). Rend la ligne écrite, ou None si le parcours a bougé ailleurs."""
+    photos = _photos_de_fiche(ctx, fichiers)
+    lecture = _lire_la_fiche(ctx, photos)
+    annee = parcours_moteur.annee_a_paris()
+    nouvelles = _appliquer_la_fiche(dict(ligne.get("reponses") or {}), lecture, annee)
+    if lecture["coordonnees"] and _deposer_au_coffre(ctx, str(ligne["id"]), lecture["coordonnees"]):
+        nouvelles[parcours_moteur.CLE_FICHE]["coffre"] = True
+    prochaine = parcours_moteur.suivante(nouvelles, annee)
+    return parcours_moteur.ParcoursStore(ctx.settings).ecrire_reponses(ligne, nouvelles, prochaine["id"] if prochaine else None)
+
+
 def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     _parcours_ouvert(ctx)
-    c = _controler_creation(ctx, {**p, "fichiers": ""}, exiger=False)
+    c = _controler_creation(ctx, p, exiger=False)
     annee = parcours_moteur.annee_a_paris()
     depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)
     suivi = parcours_moteur.etats(depart)
@@ -2453,19 +2534,31 @@ def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tup
     quoi = "une estimation" if c["genre"] == "estimation" else "une annonce"
     resume = (f"Créer {quoi} par questions guidées. "
               + (f"Déjà dit, pas reposé : {', '.join(connues)}. " if connues else "")
-              + f"{reste} question{'s' if reste > 1 else ''} à boutons ensuite, sans l'IA ; à la fin, la fenêtre de "
-              "création s'ouvre remplie et rien n'est créé avant ton clic « Créer »")
-    return resume, _parametres_de_la_carte(c)
+              + (f"La fiche papier ({len(c['photos'])} photo{'s' if len(c['photos']) > 1 else ''}) sera lue au clic : "
+                 "il ne restera que ce qu'elle ne dit pas. " if c["photos"]
+                 else f"{reste} question{'s' if reste > 1 else ''} à boutons ensuite, sans l'IA. ")
+              + "À la fin, la fenêtre de création s'ouvre remplie et rien n'est créé avant ton clic « Créer »")
+    parametres = _parametres_de_la_carte(c)
+    if c["photos"]:
+        parametres["fichiers"] = [f["id"] for f in c["photos"]]
+    return resume, parametres
 
 
 def executer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     _parcours_ouvert(ctx)  # re-vérifié AU CLIC, comme le contact et le négociateur
-    c = _controler_creation(ctx, {**p, "fichiers": ""}, exiger=False)
+    c = _controler_creation(ctx, p, exiger=False)
     annee = parcours_moteur.annee_a_paris()
-    depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)
+    depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)  # la demande d'abord : elle prime
+    lecture = _lire_la_fiche(ctx, c["photos"]) if c["photos"] else None
+    if lecture:
+        depart = _appliquer_la_fiche(depart, lecture, annee)
     premiere = parcours_moteur.suivante(depart, annee)
     store = parcours_moteur.ParcoursStore(ctx.settings)
     ligne = store.creer(ctx.user_id, ctx.conversation_id, f"creation_{c['genre']}", premiere["id"] if premiere else None, depart)
+    if lecture and lecture["coordonnees"] and _deposer_au_coffre(ctx, str(ligne["id"]), lecture["coordonnees"]):
+        reponses = dict(ligne.get("reponses") or {})
+        reponses[parcours_moteur.CLE_FICHE] = {**(reponses.get(parcours_moteur.CLE_FICHE) or {}), "coffre": True}
+        ligne = store.ecrire_reponses(ligne, reponses, ligne.get("etape")) or ligne
     return {"ouvrir": "parcours", "parcours": parcours_moteur.vue(ligne, annee)}
 
 
@@ -4055,7 +4148,9 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "hektor_contact_id": {"type": "string", "description": "le mandant EXISTANT (numéro du contact), ou vide"},
                    "mandant_nouveau": {"type": "boolean", "description": "true si la personne a dit que le mandant est "
                                        "NOUVEAU (pas encore dans les contacts) ; false sinon"},
-                   "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"}}),
+                   "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
+                   "fichiers": {"type": "string", "description": "photos de la FICHE PAPIER jointes (fichier:…, 5 au plus, "
+                                "séparées par |) : lues au clic, il ne restera que ce qu'elle ne dit pas ; ou vide"}}),
           preparer_parcours_creation, executer_parcours_creation),
     Geste("ouvrir_avis_de_valeur",
           "Prépare l'OUVERTURE de l'ÉDITEUR « Avis de valeur » d'un bien EXISTANT (« fais l'estimation / l'avis de valeur "

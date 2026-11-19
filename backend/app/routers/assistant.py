@@ -14,7 +14,7 @@ from ..auth import get_authenticated_user, require_request_user
 from ..services import assistant_fichiers as fichiers_service
 from ..services import assistant_parcours as parcours_moteur
 from ..services.assistant_catalogue import ContexteAssistant, Refus
-from ..services.assistant_gestes import GESTES
+from ..services.assistant_gestes import GESTES, lire_fiche_du_parcours
 from ..services.assistant_service import AGENT_KEY, MAX_QUESTION_CARACTERES, AssistantService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
@@ -560,6 +560,43 @@ def parcours_de_la_conversation(
     annee = parcours_moteur.annee_a_paris()
     lignes = store.lister_conversation_avec_jeton(_jeton(authorization), conversationId)
     return {"ok": True, "parcours": [parcours_moteur.vue(ligne, annee) for ligne in lignes]}
+
+
+class ParcoursFichePayload(BaseModel):
+    fichiers: str = Field(min_length=1, max_length=400)
+
+
+@router.post("/parcours/{parcours_id}/fiche")
+def parcours_lire_fiche(
+    parcours_id: str,
+    payload: ParcoursFichePayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P4-b (19/11) : la fiche papier jointe PENDANT le parcours (trombone) est lue par le scan de la fenêtre ; ce qui est
+    # déjà répondu n'est pas remplacé ; les coordonnées du mandant vont au coffre privé
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
+        raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=(user.email or "").strip().lower(),
+                            role=str(profile.get("role") or ""), jeton=_jeton(authorization),
+                            conversation_id=ligne.get("conversation_id"), nom=profile.get("display_name") or None)
+    try:
+        ecrite = lire_fiche_du_parcours(ctx, ligne, payload.fichiers)
+    except Refus as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    if not ecrite:
+        raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
+    return {"ok": True, "parcours": parcours_moteur.vue(ecrite)}
 
 
 class ParcoursCreePayload(BaseModel):

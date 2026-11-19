@@ -83,4 +83,29 @@ voir(set(hors) == JAMAIS_MONTREES, f"chaque case traduite ({len(complete)}) est 
 voir(not (set(complete) & moteur.COORDONNEES), "aucune coordonnée de mandant")
 voir(tr.traduire({}) == {} and tr.traduire({"propertyType": "zzz"}) == {}, "rien de dit -> rien de traduit")
 
+print("4) P4-b : une fiche de deux pages, lue par le scan")
+page1 = {"fields": {"propertyType": {"value": "Maison", "confidence": 0.95}, "surface": {"value": "118", "confidence": 0.6},
+                    "address": {"value": "12 rue des Tilleuls", "confidence": 0.7}, "mandantLastName": {"value": "Durand", "confidence": 0.9},
+                    "mandantEmail": {"value": "durand@exemple.invalid", "confidence": 0.9}, "estimationAmount": {"value": "240000", "confidence": 0.8}},
+         "pieces": [{"type": "Cuisine", "surface": "12", "etage": None, "detail": None, "note": None}], "statePosts": [], "rawNotes": "fiche p1"}
+page2 = {"fields": {"surface": {"value": "112", "confidence": 0.9}, "roomCount": {"value": "5", "confidence": 0.5},
+                    "strongPoints": {"value": "jardin plat", "confidence": 0.8}},
+         "pieces": [{"type": "Séjour", "surface": "30", "etage": None, "detail": None, "note": None}],
+         "statePosts": [{"poste": "toiture", "niveau": "bon"}], "rawNotes": None}
+fusion = tr.fusionner_pages([page1, page2])
+voir(fusion["fields"]["surface"]["value"] == "112" and len(fusion["pieces"]) == 2,
+     "deux pages : la meilleure confiance case par case (112 lu à 90 % bat 118 à 60 %), les pièces mises bout à bout")
+lu = tr.lire_fiche(fusion)
+voir(lu["valeurs"]["type"] == "1" and lu["valeurs"]["surfappart"] == "112" and lu["valeurs"]["note"] == "fiche p1"
+     and len(lu["valeurs"]["composition"]) == 2, "les valeurs traduites, la note brute à défaut de note, les pièces")
+voir(lu["doutes"].get("nbpieces") == 0.5 and lu["doutes"].get("adresse_haut") == 0.7 and lu["doutes"].get("adresse") == 0.7
+     and "type" not in lu["doutes"] and "surfappart" not in lu["doutes"],
+     "à moins de 75 % : « à vérifier » (pièces, l'adresse et sa recopie) ; le reste est sûr")
+voir(lu["coordonnees"] == {"nom": "Durand", "email": "durand@exemple.invalid"}
+     and not any("exemple" in str(v) or v == "Durand" for v in lu["valeurs"].values()),
+     "les coordonnées du mandant : À PART (pour le coffre), jamais dans les valeurs")
+voir(lu["avis"]["fields"]["estimationAmount"] == "240000" and lu["avis"]["fields"]["strongPoints"] == "jardin plat"
+     and lu["avis"]["statePosts"] == [{"poste": "toiture", "niveau": "bon"}], "les pages de l'avis de valeur : gardées à part")
+voir(tr.lire_fiche(tr.fusionner_pages([{"fields": {}, "pieces": [], "statePosts": []}]))["avis"] is None, "une fiche vide : rien")
+
 print(f"\nTOUT EST VERT ({ok} contrôles)")

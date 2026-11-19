@@ -135,11 +135,19 @@ class Reponse:
 
 appels = []
 table = {}
+coffre = []
 
 
 def faux(methode, url, **kw):
     params, corps, ent = kw.get("params") or {}, kw.get("json"), kw.get("headers") or {}
     appels.append({"methode": methode, "url": url, "params": params, "corps": corps, "entetes": ent})
+    if "lien-fiche" in url:  # P4-b : le lien signé d'une photo du trombone
+        r = Reponse(None)
+        r.content, r.raise_for_status = b"image", (lambda: None)
+        return r
+    if "/rpc/app_assistant_mandant_deposer" in url:  # P4-b : le coffre privé, avec le jeton de la personne
+        coffre.append({"jeton": ent.get("Authorization"), **(corps or {})})
+        return Reponse(len((corps or {}).get("p_coordonnees") or {}))
     if "app_setting" in url:
         return Reponse([{"value": interrupteur["valeur"]}] if interrupteur["valeur"] else [])
     if "app_assistant_parcours" not in url:
@@ -326,10 +334,10 @@ voir("mandant" not in moteur.etats(d3), "un mandant « nouveau » : la question 
 d4 = moteur.appliquer_depart({}, {"mandant_choix": "existant", "mandant": "10059959"}, "demande", ANNEE)
 voir(moteur.etats(d4).get("mandant") == "connue", "un mandant EXISTANT dit : la question est connue")
 try:
-    moteur.appliquer_depart({}, dit, "scan", ANNEE)
+    moteur.appliquer_depart({}, dit, "devine", ANNEE)
     voir(False, "une source inconnue est refusée")
 except moteur.RefusParcours:
-    voir(True, "une source inconnue est refusée (le scan viendra avec P4-b)")
+    voir(True, "une source inconnue est refusée (seules : la demande, la fiche lue)")
 
 print("6 quater) P4-a : le geste « créer par questions guidées »")
 UID_G = "33333333-3333-3333-3333-333333333333"
@@ -369,6 +377,63 @@ voir(ligne["reponses"]["type"] == "1" and ligne["reponses"]["mandant_choix"] == 
      and r["parcours"]["question"]["id"] == "quartier", "il démarre rempli : la première question est la première NON dite")
 voir(len(ges.FONCTIONS_GESTES) == len(ges.GESTES) and "proposer_parcours_creation" in [f.nom for f in ges.FONCTIONS_GESTES],
      "le geste est proposé à l'IA sous le nom proposer_parcours_creation")
+interrupteur["valeur"] = "on"
+
+print("6 quinquies) P4-b : la fiche papier, lue par le scan de la fenêtre, côté serveur")
+from app.services import assistant_fichiers as fsvc  # noqa: E402
+
+FICHE = {"model": "gpt-4.1-mini", "usage": {"input_tokens": 1500, "output_tokens": 400},
+         "fields": {"propertyType": {"value": "Appartement", "confidence": 0.9}, "surface": {"value": "64", "confidence": 0.95},
+                    "roomCount": {"value": "3", "confidence": 0.55}, "landSurface": {"value": "", "confidence": None},
+                    "mandantLastName": {"value": "Lefèvre", "confidence": 0.9}, "mandantEmail": {"value": "lefevre@exemple.invalid", "confidence": 0.9},
+                    "advisorOpinion": {"value": "bien lumineux", "confidence": 0.8}},
+         "pieces": [], "statePosts": [], "rawNotes": None}
+pages_lues = []
+ges._fichiers_joints = lambda c, texte: [{"id": i, "nom": f"page{i}.jpg", "type": "image/jpeg", "taille": 1000, "chemin": f"temp/assistant/u/{i}"}
+                                        for i in str(texte).split("|") if i]
+fsvc.lien_lecture = lambda s, chemin, *a, **k: "https://coffre/lien-fiche/" + chemin
+ges.OpenAIListingSheetService.extract = lambda self, p: (pages_lues.append(p["filename"]) or json.loads(json.dumps(FICHE)))
+interrupteur["valeur"] = "admin"
+table.clear()
+coffre.clear()
+avec_fiche = {**lecture, "cases": [{"cle": "propertyType", "valeur": "maison"}, {"cle": "surface", "valeur": "118"}],
+              "mandant_nouveau": False, "fichiers": "a1|a2"}
+resume_f, param_f = ges.preparer_parcours_creation(ctx, avec_fiche)
+voir("fiche papier (2 photos) sera lue au clic" in resume_f and param_f["fichiers"] == ["a1", "a2"] and not pages_lues,
+     "la carte annonce la fiche ; RIEN n'est lu avant le clic (pas de coût sans geste)")
+r = ges.executer_parcours_creation(ctx, param_f)
+lf = table[r["parcours"]["id"]]["reponses"]
+voir(sorted(pages_lues) == ["page1.jpg" if False else "pagea1.jpg", "pagea2.jpg"], "au clic : les 2 pages lues par le scan")
+voir(lf["type"] == "1" and lf["surfappart"] == "118" and lf["_sources"]["type"] == "demande",
+     "ce que la personne a DIT prime sur la fiche (maison, 118 m² ; la fiche disait appartement, 64)")
+voir(lf["nbpieces"] == "3" and lf["_sources"]["nbpieces"] == "scan" and lf["_doutes"] == {"nbpieces": 0.55}
+     and "interieur" not in lf.get("_questions", {}), "une case lue à 55 % : « à vérifier », sa question (l'intérieur) est REPOSÉE")
+voir(lf["mandant_choix"] == "nouveau" and coffre and coffre[-1]["p_coordonnees"] == {"nom": "Lefèvre", "email": "lefevre@exemple.invalid"}
+     and coffre[-1]["jeton"] == "Bearer jeton-de-paul" and "lefevre" not in json.dumps(lf).lower(),
+     "le mandant lu : « nouveau » ; ses coordonnées au coffre avec SON jeton, nulle part dans les réponses")
+voir(lf["_fiche"]["coffre"] is True and lf["_fiche"]["mesure"]["pages"] == 2 and lf["_fiche"]["avis"]["fields"]["advisorOpinion"] == "bien lumineux",
+     "la fiche gardée : sa mesure, les pages de l'avis à part, le coffre noté")
+v = r["parcours"]
+voir(v["doutes"] == {"nbpieces": 0.55} and v["fiche"]["coffre"] is True and "lefevre" not in json.dumps(v).lower(),
+     "la vue : les doutes et la fiche, sans une coordonnée")
+# la route « lire la fiche » pendant le parcours
+table.clear()
+coffre.clear()
+pages_lues.clear()
+r0 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST, role="admin")
+p0 = r0["parcours"]["id"]
+appeler(route.parcours_repondre, p0, route.ParcoursReponsePayload(question="bien", geste="repondre", valeurs={"type": "1"}),
+        "Bearer j", Settings(), None, S, ST, role="admin")
+rf = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers="b1"), "Bearer j", Settings(), None, S, ST, role="admin")
+l0 = table[p0]["reponses"]
+voir(rf["ok"] and l0["type"] == "1" and l0["surfappart"] == "64" and l0["_sources"]["surfappart"] == "scan" and pages_lues == ["pageb1.jpg"],
+     "pendant le parcours : la fiche lue remplit ce qui manque, sans remplacer « Maison » déjà répondu")
+rf2 = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers="b1"), "Bearer j", Settings(), None, S, ST,
+              uid=AUTRE_UID, role="admin")
+voir(rf2[0] == 404, "lire une fiche dans le parcours d'un AUTRE : introuvable, même pour l'admin")
+ges.OpenAIListingSheetService.extract = lambda self, p: (_ for _ in ()).throw(RuntimeError("illisible"))
+rf3 = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers="b2"), "Bearer j", Settings(), None, S, ST, role="admin")
+voir(rf3[0] == 400 and "pas pu être lue" in rf3[1], "une fiche illisible : refusée avec la phrase, rien n'est écrit")
 interrupteur["valeur"] = "on"
 
 print("7) aucun appel au modèle")

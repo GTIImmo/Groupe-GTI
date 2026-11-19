@@ -187,7 +187,9 @@ CONSIGNE_PARCOURS = (
     "- PARCOURS GUIDE (ouvert a ton compte) : pour CREER une estimation ou une annonce SANS fiche papier jointe, propose "
     "proposer_parcours_creation et NON la carte de creation : passe tout ce que la personne a deja dit (et l'agenda, le "
     "contact), puis dis en une phrase que les questions suivent a boutons. Ne pose PAS toi-meme les questions des "
-    "essentiels : le parcours pose ce qui manque. Avec la fiche papier jointe : la carte de creation (le scan la lit). "
+    "essentiels : le parcours pose ce qui manque. Avec la fiche papier jointe (photos JPEG / PNG / WebP) : le meme "
+    "proposer_parcours_creation, ses photos dans « fichiers » (elle est lue au clic, il ne reste que ce qu'elle ne dit "
+    "pas). Sans fiche jointe, dis en une phrase que photographier la fiche (Joindre) evite la plupart des questions. "
     "Pour tout autre sujet (prix, statut, contact, recherche…), jamais de parcours.\n"
 )
 

@@ -97,6 +97,75 @@ def type_de_piece(libelle: Any) -> str:
     return ""
 
 
+# ── P4-b (19/11) : LA FICHE PAPIER LUE PAR LE SCAN ───────────────────────────────────────────────────────────────
+# Le même service que la fenêtre (openai_listing_sheet_service), une page par appel. Comme l'écran :
+#   - plusieurs pages = pour chaque case, la valeur lue avec la plus forte confiance (mergeDraftAnnonceScanPayloads) ;
+#   - une case lue à moins de 75 % est « à vérifier » (la revue du scan de la fenêtre, App.tsx) ;
+#   - les coordonnées du mandant NE vont PAS dans les réponses : elles partent au coffre privé (P3) ;
+#   - les pages de l'AVIS DE VALEUR (fourchette, état, points…) sont gardées à part : la fenêtre les reprend comme son
+#     scan le fait (le brouillon de l'avis, relu par l'éditeur après la création).
+SEUIL_DOUTE = 0.75
+COORDONNEES_SCAN = {"mandantCivility": "civilite", "mandantLastName": "nom", "mandantFirstName": "prenom",
+                    "mandantEmail": "email", "mandantPhone": "telephone", "mandantAddress": "adresse",
+                    "mandantPostalCode": "cp", "mandantCity": "ville"}
+CLES_AVIS = ("estimationLow", "estimationAmount", "estimationHigh", "stateNote", "stateLabel", "stateAppreciation",
+             "strongPoints", "watchPoints", "priceArgument", "advisorOpinion", "chargeEnergy", "chargeWater",
+             "chargeInsurance", "propertyTax", "dpeValue", "gesValue", "exposure", "heatingEnergy", "heatingFormat",
+             "heatingType")
+
+
+def fusionner_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
+    """mergeDraftAnnonceScanPayloads : la meilleure confiance case par case ; les pièces et les postes mis bout à bout."""
+    champs: dict[str, dict[str, Any]] = {}
+    for page in pages:
+        for cle, f in (page.get("fields") or {}).items():
+            if not isinstance(f, dict) or not str(f.get("value") or "").strip():
+                continue
+            meilleur = champs.get(cle)
+            if meilleur is None or (f.get("confidence") or 0) > (meilleur.get("confidence") or 0):
+                champs[cle] = f
+    return {"fields": champs, "pieces": [p for page in pages for p in (page.get("pieces") or [])],
+            "statePosts": [p for page in pages for p in (page.get("statePosts") or [])],
+            "rawNotes": " | ".join(str(page["rawNotes"]) for page in pages if page.get("rawNotes")) or None}
+
+
+def champs_de(cle: str) -> set[str]:
+    """Les cases de la FENÊTRE que remplit une clé du scan (champsFenetreDesCases), recopies d'adresse comprises."""
+    champs = set()
+    if DONNEES["directes"].get(cle):
+        champs.add(DONNEES["directes"][cle])
+    champs |= {nom for nom, source in DONNEES["miroir"].items() if source == cle}
+    champs |= {e["fenetre"] for e in DONNEES["carte"] if e["scan"] == cle}
+    for source, cibles in RECOPIES.items():
+        if source in champs:
+            champs |= set(cibles)
+    return champs
+
+
+def lire_fiche(fiche: dict[str, Any]) -> dict[str, Any]:
+    """Une fiche lue (pages fusionnées) -> ce que le parcours en garde, chaque chose à sa place."""
+    champs = fiche.get("fields") or {}
+    valeurs_scan = {k: str(f.get("value") or "").strip() for k, f in champs.items()
+                    if k not in COORDONNEES_SCAN and str(f.get("value") or "").strip()}
+    if not valeurs_scan.get("note") and fiche.get("rawNotes"):
+        valeurs_scan["note"] = str(fiche["rawNotes"])  # comme la fenêtre : la note, sinon les notes brutes de la fiche
+    valeurs = traduire(valeurs_scan, [{"type": p.get("type"), "surface": p.get("surface"), "etage": p.get("etage"),
+                                       "detail": p.get("detail"), "note": p.get("note")} for p in fiche.get("pieces") or []])
+    doutes: dict[str, float] = {}
+    for cle, f in champs.items():
+        conf = f.get("confidence")
+        if cle in COORDONNEES_SCAN or not str(f.get("value") or "").strip() or not isinstance(conf, (int, float)) or conf >= SEUIL_DOUTE:
+            continue
+        for champ in champs_de(cle):
+            if champ in valeurs:
+                doutes[champ] = round(float(conf), 2)
+    coordonnees = {cle_coffre: str(champs[cle_scan].get("value")).strip() for cle_scan, cle_coffre in COORDONNEES_SCAN.items()
+                   if cle_scan in champs and str(champs[cle_scan].get("value") or "").strip()}
+    avis = {k: str(champs[k].get("value")).strip() for k in CLES_AVIS if k in champs and str(champs[k].get("value") or "").strip()}
+    return {"valeurs": valeurs, "doutes": doutes, "coordonnees": coordonnees,
+            "avis": {"fields": avis, "statePosts": fiche.get("statePosts") or []} if avis or fiche.get("statePosts") else None}
+
+
 def _virgule(v: str) -> str:
     return v.replace(",", ".", 1)  # comme `.replace(',', '.')` en JavaScript : la PREMIÈRE seulement
 
