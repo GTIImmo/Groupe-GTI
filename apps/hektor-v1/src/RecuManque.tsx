@@ -28,6 +28,7 @@ import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
 import { bilansDuDossier, estGenreFiche, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition, type GenreBilan } from './lib/gedBilanCompromis'
 import { bilansFiche } from './lib/gedBilanFiche'
+import { useFenetreDepotOuverte } from './lib/gedFenetreDepot'
 import BilanCompromis, { MOTS, type ChoixBilan, type ResultatBilan } from './BilanCompromis'
 import type { LigneBilan } from './lib/gedBilanCompromis'
 import type { ConsoleDocument } from './types'
@@ -449,8 +450,12 @@ export function RecuManque({
   //   neuves (toutes marquées vues ensemble ; les autres restent sur leurs cartes).
   const neufs = bilans.filter((b) => b.lectureId && aTrancherDe(b).length && b.luLe && Date.now() - new Date(b.luLe).getTime() < 30 * 60 * 1000)
   const cleOuverture = neufs.length ? neufs.map((b) => `ged-bilan-vu:${b.lectureId}`).join('|') : null
+  // ⚠ essai réel du 19/11 (§12.53-54) : elle s'ouvrait PENDANT la fenêtre de dépôt, son « Enregistrer » à la place du
+  //   « Fermer » / « Envoyer » du dépôt, ses lignes cochées d'avance -> un clic de trop écrivait chez Hektor. Désormais elle
+  //   attend que le dépôt soit fermé (rien n'est marqué vu avant : elle s'ouvre à la fermeture).
+  const depotOuvert = useFenetreDepotOuverte()
   useEffect(() => {
-    if (!cleOuverture || bilanOuvert) return
+    if (!cleOuverture || bilanOuvert || depotOuvert) return
     const cles = cleOuverture.split('|')
     try {
       const pasVues = cles.filter((c) => !window.localStorage.getItem(c))
@@ -460,7 +465,7 @@ export function RecuManque({
       if (premier) setBilanOuvert(cleBilan(premier))
     } catch { if (neufs[0]) setBilanOuvert(cleBilan(neufs[0])) /* sans mémoire : on ouvre */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cleOuverture])
+  }, [cleOuverture, depotOuvert])
   // la modale « Modifier le compromis » a envoyé : ses lignes sont notées (écran principal) -> on relit journal et registre
   useEffect(() => {
     const relu = () => { setRelire((n) => n + 1); setRelireAffaires((n) => n + 1) }
