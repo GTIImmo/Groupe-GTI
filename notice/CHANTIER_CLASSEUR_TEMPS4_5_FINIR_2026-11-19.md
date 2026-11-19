@@ -54,8 +54,11 @@ Q  SUJET                         ETAT        VERDICT EN UNE LIGNE               
                                              semes 1/1/1 ; il corrige EXACTEMENT les 2     (je recommande : demain,
                                              erreurs du gel de 5.4 ; ⑥ : 16 reglees, 4      apres le controle des
                                              revelees (pas des regressions)                10, pas cette nuit)
-⑧  ECRIRE DANS LE SHEET          A FAIRE     ⭐ LE BUT                                      le critere de fin, AVANT
-                                                                                           la 1re ligne
+⑧  ECRIRE DANS LE SHEET          FAIT (la    ⭐ LE BUT. Mesure : 3 994 lignes sur 4 797     LE CRITERE DE FIN (§ 8.5)
+                                 methode)    (83 %) en vague 1, sans aucun doute.          AVANT la 1re ligne ;
+                                             Vagues 0 (3 lignes), 1a (50), 1b, 2, 3.       les 3 prealables : P0 le
+                                             ⚠ un VIEL ECRIVAIN dort dans scheduled/ et     vieil ecrivain, V1 tes
+                                             prendrait nos lignes pour les siennes (P0)    Apps Script, V2 la memoire
 ⑨  ce qu'il ne m'a pas demande   A FAIRE
 ```
 
@@ -914,4 +917,140 @@ puis la règle E une nuit suivante. ⛔ **Je ne le joue pas sans ton « vas-y »
 . f90b0418 : pourquoi 19049 (compromis SANS DATE, meme acquereur que 19050) reste seul avec E
 . l'ordre de collage contre la descente de 07:45 : le gel est maitre chez Supabase et la descente le
   RECOPIE en local -- un collage avant 07:45 serait recopie le matin meme, apres, le lendemain
+```
+
+---
+
+## ⑧ ÉCRIRE NOS ÉTIQUETTES DANS LE SHEET — ⭐ LE BUT : la méthode, l'ordre, le critère de fin
+
+> ⛔ **RIEN N'EST ÉCRIT DANS LE SHEET.** Ce chapitre est à valider par toi **avant la première ligne**.
+> Le Sheet n'a été que LU (des GET) : la colonne A `affair_uuid` est **vide sur ses 4 797 lignes** ce 19/11.
+
+### 8.1 La mesure avant — chaque ligne du Sheet dans UNE case
+
+`phase2/checks/temps5_q8_les_vagues_d_ecriture_du_sheet_2026-11-19.py` (lecture seule, moins de 10 min) →
+`notice/TEMPS5_Q8_LES_LIGNES_DU_SHEET_ET_LEUR_VAGUE_2026-11-19.csv` (une ligne par ligne du Sheet : sa case
+aujourd'hui, sa case après, l'étiquette qu'on y écrirait). Une ligne prend la **première** raison qui
+l'empêche d'entrer dans la vague 1 :
+
+```
+                                                   AUJOURD'HUI   APRES la nuit des 10 + le patch V2
+A deja remplie (on n'ecrase JAMAIS)                       0          0
+SANS LIEN (rien a ecrire)                                94         74
+EN ATTENTE de ta decision (33 questions, incertaines,    23         23
+   lignes sorties du patch)
+PATCH V2 (elle attend qu'il soit joue)                   39          0
+CETTE NUIT (une transaction change de dossier)            4          0
+PLUSIEURS DOSSIERS (⑥ : quelle etiquette ?)             224        233
+ETIQUETTE PARTAGEE (son dossier porte une autre ligne : 296        307
+   le meme UUID sur deux affaires)
+LIEN A VALIDER (un lien du gel n'est pas « sure »)      100        112
+AUDIT NON JUSTE (l'audit du 18/11 l'a jugee autrement)    0         28
+C5 SEULE (que des creations du Sheet)                     0          0
+GEL SEUL (le juge de ⑤ ne retrouve rien par les          23         23
+   colonnes independantes)
+⭐ VAGUE 1                                             3 994      3 997      (83 %)
+TOTAL                                                 4 797      4 797
+TEMOINS (verts) : une etiquette = un dossier sur la base (0 ecart) ; 10 transactions changent de
+dossier cette nuit, pas une de plus ; la vague 1 porte 3 994 etiquettes DISTINCTES pour 3 994 lignes.
+VERIFIE EN PLUS : les etiquettes locales = celles de Supabase (11 590, empreinte 420f6a06...) ;
+aucune ligne de la vague 1 n'appartient a une chaine morte chez Hektor (app_affaire_compte_encore) ;
+0 ID Unique vide, 0 en double ; les numeros de ligne du gel ne derivent pas (le Sheet grandit PAR LA FIN).
+```
+**Une ligne de la vague 1, c'est** : ses transactions dans **un seul** dossier ; ce dossier ne porte
+**aucune autre** ligne ; tous ses liens « sûrs » ; pas jugée autrement que JUSTE ; et le juge de ⑤
+retrouve, **par les colonnes indépendantes** (S, T, V/W/X, AB, AF, C), au moins une de ses transactions.
+
+### 8.2 ⛔ LES PRÉALABLES — trois verrous, dont un que je viens de trouver
+
+```
+P0  ⚠⚠ LE VIEL ECRIVAIN -- TROUVE AUJOURD'HUI. scheduled/push_suivi_appsheet.py (13/10) ECRIT DEJA
+    dans le Sheet, a la main seulement (--envoyer ; aucune tache planifiee ne le lance, verifie sur les
+    174). SA REGLE : « une ligne qui porte un affair_uuid est A NOUS » -> il la FAIT AVANCER (remplit
+    ses vides, monte son Etat Actuel). Et il y met le NUMERO DE CHAINE, qui bouge.
+    ➡ Si on ecrit 3 994 UUID, puis que quelqu'un le lance, il prendra 3 994 lignes HUMAINES pour les
+      siennes. Il faut, AVANT la vague 0, soit le RETIRER, soit lui apprendre l'UUID et lui interdire
+      les lignes qu'il n'a pas creees. C'est du code existant : ton « vas-y ».
+V1  LIRE LES APPS SCRIPT DU CLASSEUR (TON geste, 10 min, deja au plan) : Sheet1 nourrit la paie, et
+    un script remplit les onglets CA Mensuel / Reporting / 12 mois / Agence. On ne sait pas s'il lit
+    la colonne A.
+V2  LA MEMOIRE DE CE QUE NOUS ECRIVONS (supabase/patch_sheet_memoire_ecriture_2026-10-16.sql) :
+    ⛔ la table app_sheet_ecrit N'EXISTE PAS chez Supabase (verifie ce 19/11). Sans elle, on ne
+    distingue pas « la case porte encore NOTRE valeur » de « un humain l'a corrigee ». A coller avant.
+```
+
+### 8.3 La méthode d'écriture
+
+```
+L'OUTIL     un script NEUF, DORMANT : a blanc par defaut ; il n'ecrit qu'avec l'interrupteur
+            APP_SHEET_ECRIRE_AFFAIR_UUID=1 ET un fichier de vague ET une empreinte d'avant qui
+            concorde. Une seule colonne : A. Ecrit en RAW (jamais une formule).
+L'ADRESSE   par l'ID UNIQUE (AL), relu au moment d'ecrire -- JAMAIS par le numero de ligne (le
+            Sheet bouge : 4 794 lignes le 18/11, 4 797 aujourd'hui ; un tri humain deplacerait tout).
+            Avant CHAQUE paquet de 100 : on relit AL et A des lignes visees ; si AL n'est plus la
+            ou si A n'est plus vide -> la ligne est SAUTEE et nommee, jamais forcee.
+L'ETIQUETTE lue chez Supabase AU MOMENT D'ECRIRE (pas dans le CSV de la mesure), et exigee
+            IDENTIQUE sur TOUTES les transactions de la ligne -- sinon la ligne est sautee.
+LA SAUVEGARDE  avant chaque vague, datee, dans C:\Hektor\Backups : la colonne A et AL de TOUTES
+            les lignes + l'empreinte de B..AL par ID Unique + les etiquettes de la vague.
+LE RETOUR ARRIERE  un script inverse qui ne juge que SA part (lecon 31) : il vide les cases A
+            qu'il a ecrites (retrouvees par AL), SEULEMENT si elles portent encore notre UUID ;
+            toute autre valeur est NOMMEE et laissee.
+LE MOMENT   hors du run de nuit (05:00) et de la descente (07:45), et quand personne ne saisit :
+            un soir apres 19:00 -- A TOI de dire.
+```
+
+### 8.4 L'ordre — la plus sûre d'abord, chaque vague avec sa mesure, ton accord, sa mesure après
+
+```
+VAGUE 0   L'ESSAI : 3 lignes que TU choisis dans la vague 1. Ecrire, relire, verifier le reste
+          intact, DEFAIRE, verifier, re-ecrire. Elle prouve l'ecriture ET le retour arriere.
+VAGUE 1a  50 lignes, les plus sures de la vague 1 : « Vente reglee » au Sheet, une vente au
+          dossier, et le juge retrouve CHACUNE des transactions de la ligne (pas une seule).
+VAGUE 1b  le reste de la vague 1, mesure le jour meme (3 994 - 53 = 3 941 aujourd'hui), par
+          paquets de 100, en une seance.
+VAGUE 2   apres la nuit des 10 ET le patch V2 joue : ce qui entre en vague 1 a ce moment-la
+          (+3 aujourd'hui, et les lignes liberees par le patch), mesure le jour meme.
+VAGUE 3   apres relecture : GEL SEUL (23, relus a la main), LIEN A VALIDER (100 a 112 : les liens
+          « a valider » du gel, ta validation), AUDIT NON JUSTE (28, apres ses corrections).
+ATTENDENT UNE DECISION, et on N'ECRIT RIEN dessus d'ici la : PLUSIEURS DOSSIERS (224-233) et
+          ETIQUETTE PARTAGEE (296-307) -- le noyau de ⑥ : le choix C5 a l'export, l'outil de
+          scission (⑨), les doublons du classeur -- et EN ATTENTE (23, tes 33 questions).
+```
+
+### 8.5 ⭐ LE CRITÈRE DE FIN, CHIFFRÉ — à valider AVANT la première ligne
+
+```
+POUR CHAQUE VAGUE DE N LIGNES -- elle est FINIE quand les six sont vrais :
+  ①  N cases de la colonne A ecrites ; relues : N sur N portent l'UUID prevu, chacune sur la ligne
+     dont l'ID Unique est celui prevu
+  ②  0 case de A modifiee en dehors des N : toutes les autres lignes ont A VIDE, comme avant
+  ③  0 case hors de la colonne A modifiee par nous : l'empreinte B..AL par ID Unique est identique
+     avant/apres, sauf les lignes qu'un humain a touchees entre-temps -- NOMMEES une par une, et
+     aucune parmi les N
+  ④  LIGNE PAR LIGNE, l'UUID ecrit = l'etiquette que portent, a cet instant, TOUTES les transactions
+     de la ligne chez Supabase : N sur N (la lecon du temps 2 et de ④ : un compteur de fusions
+     ment -- un transfert en est compte un ; on ne compte pas, on compare)
+  ⑤  0 UUID present sur deux lignes du Sheet
+  ⑥  LE LENDEMAIN MATIN, apres la pose de nuit : ④ et ⑤ rejoues -> N sur N, et 0
+  + le retour arriere EPROUVE (vague 0) et pret pour la vague en cours
+LE BUT ⑧ EST ATTEINT QUAND :
+  .  toutes les lignes que la mesure DU JOUR range en VAGUE 1 sont ecrites (3 994 aujourd'hui,
+     ~4 000 apres la nuit et le patch), ①-⑥ verts ;
+  .  ④ et ⑤ verts TROIS NUITS DE SUITE ;
+  .  chaque ligne NON ecrite est listee avec sa case (803 aujourd'hui), et AUCUNE ne porte rien en A ;
+  .  une SENTINELLE de nuit est posee : une ligne dont l'UUID n'est plus l'etiquette de ses
+     transactions crie (l'etiquette ne bouge pas, l'APPARTENANCE si : une transaction qui quitte le
+     dossier rend la ligne fausse sans que l'UUID change).
+```
+
+### 8.6 Ce que je n'ai pas mesuré
+
+```
+. les Apps Script du Sheet (V1, ton geste) : s'ils lisent la colonne A, ou s'ils reagissent a une
+  ecriture par l'API (un declencheur « onChange » le peut ; « onEdit » non)
+. l'empreinte B..AL d'un jour normal : combien de lignes un humain touche dans l'heure d'une vague
+  -- donc le bruit attendu au point ③
+. la vague 1a exacte (les 50) : elle se tire le jour de l'ecriture, de la mesure du jour
+. si le routeur de 5.3 (l'app lit le Sheet par l'UUID) a besoin d'autre chose que la colonne A
 ```
