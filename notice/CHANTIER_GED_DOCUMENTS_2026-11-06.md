@@ -3542,3 +3542,33 @@ sur 63331 et éprouver.
 ⚠ **Trouvé en passant** : (1) un couple qu'on vient de relier à un bien n'a son conjoint « conjoint » qu'à la nuit suivante --
 le lot G attend donc une nuit pour lui ; (2) `conjoints_des_couples.py` marque **4 804** conjoints nommés à envoyer, alors que
 Supabase n'en porte que **330** actifs nommés au rôle « conjoint » -- écart NON expliqué, non mesuré plus loin.
+
+### 12.52 LOT G' ÉPROUVÉ EN RÉEL (19/11, 07:00-07:27, 63331, couple fictif 20000050/51)
+
+**Mise en ligne** : `origin/main` fusionné ici (2 commits de l'étape 4 chap. 6 lot 0), poussé `757489c` avec `a7c560c` et 7
+commits du Classeur (notes, CSV, contrôles, patchs SQL DORMANTS). Vercel : bundle `index-bHtjuVlj.js`, qui porte la requête
+`.eq("couple_role","conjoint").eq("nature_fiche","conjoint")`.
+⚠ **Fausse alerte en route** : après la fusion, 2 essais GED (`test_ged_remplir*.cjs`) sont sortis ROUGES sur le disque. Cause :
+la fusion a réécrit `App.tsx` en CRLF (`core.autocrlf=true`), et ces essais cherchent des `\n`. Le fichier COMMITÉ est en LF :
+les 13 essais GED rejoués sur `git archive` (LF) sont VERTS. Rien n'a été corrigé, rien n'était cassé.
+**Le blocage du §12.51 était levé au matin** : 20000051 portait `conjoint` / `conjoint`, lien 20000050 (étape qui l'a posé
+non mesurée). Sur 63331, seule 20000050 est reliée (`app_contact_relation_current`) : c'est le cas du lot G'.
+**L'écran, avant le dépôt** (état React relu dans l'onglet) : `conjointsLus` = {606429 -> 20000053, 606427 -> 20000051} ;
+`conjointsEnPlus` = [20000051] (20000053 écarté : déjà relié, couple fusionné) ; `personnesCompletes` porte « Deux ESSAI GED ».
+⚠ **P6 ne réclame pas sa pièce** -- ce n'est PAS le lot G' : `personneSurLaFiche` (gedComparer.ts:219) dit « egal » dès qu'UN
+mot du nom est commun et le prénom égal ; la carte de « Deux ESSAI LOTG » « couvre » donc « Deux ESSAI GED » (mot « ESSAI »).
+Artefact des noms d'essai ; en vrai, deux personnes du bien au même prénom partageant un mot du nom (« Jean MARTIN » /
+« Jean MARTIN DUPONT ») seraient confondues de même -- noté, non traité. La fenêtre, elle, exige le nom ENTIER (`memePersonne`).
+**Pièce** : carte SPÉCIMEN de « Deux ESSAI GED », SANS MRZ, née le 05/05/1964 à FEURS (42) (`scratchpad/lotGprime/fabriquer.py`),
+déposée par la fenêtre de dépôt, type « Pièce d'identité », privée -> `upload_document_to_hektor` done (07:14).
+**L'écran** : « Ce que dit la pièce d'identité » s'ouvre seul, « À ajouter 2 » : date et lieu de naissance de Deux ESSAI GED, la
+fiche du contact « vide ». Les deux pris, « Enregistrer et envoyer à Hektor » -> « envoyé à Hektor … (par la fiche principale du
+couple) ». **Chez nous à la seconde** : 20000051 `1964-05-05` / `FEURS (42)` ; calque `app_contact_pending` sur 20000050
+(`spouse_birth_date`, `spouse_birth_place`, départ 07:25).
+**Chez Hektor** : `update_hektor_contact` done 07:26:11, `status: updated`, `couple: true`, formulaire
+`mefContacts/contactCoupleAll`, `conjoint_date_naissance: 05-05-1964`, `conjoint_lieu_naissance: FEURS (42)`, rien d'autre
+envoyé (nom seul). Calque soldé. Relecture `refresh_console_contact_data` done 07:26:49 : 20000050 « couple », 20000051
+« conjoint », sa naissance INCHANGÉE chez nous.
+➡ **Le lot G' est PROUVÉ EN RÉEL** : le conjoint d'une première seule reliée au bien est lu, proposé, écrit chez nous, et part chez
+Hektor par la fiche principale.
+**Au nettoyage (à décider)** : les deux couples fictifs (§12.49) et la carte SPÉCIMEN « Deux ESSAI GED » sur 63331.
