@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la mémoire app_sheet_ecrit à coller ; la 3e lecture de 4126/4496)** — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19)** — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2218,6 +2218,132 @@ CE QUE CA FAIT AU SHEET : P252U1JH (gel : 4126 + 4128) passe de PLUSIEURS DOSSIE
    fichier des rattachements (ta decision) -> une nuit, 2 fusions. Pas de date imposee : rien ne l'attend.
 3  INCHANGES : les 8 lignes ; le patch V2 (je te le redemande avec sa sauvegarde prete) ; la vague 0 -- TES
    3 lignes et TES Apps Script ; samedi matin, A ou B pour le controle de E.
+```
+
+
+### 13.7 ⭐ LA TABLE EST COLLÉE — 20/11, 09:56, sur son accord (« colle-la toi-même »)
+
+```
+SES TROIS CONDITIONS : la repetition juste apres, montree ; aucune garde forcee ; l'inverse pret. Et « rien
+  d'autre que cette table ne doit bouger chez Supabase ».
+LE GESTE : le patch, TEL QUEL, en UN envoi (une garde qui s'arrete annule tout). AUCUNE garde ne s'est arretee.
+LA REPETITION (12 points, chacun = son attendu) : 10 colonnes au bon type . clef (id_unique, colonne) .
+  4 contraintes CHECK . RLS active . 1 politique (SELECT, authenticated) . anon ne lit pas . anon n'ecrit pas .
+  authenticated n'ecrit pas . la cle de service ecrit . 0 ligne . pas de forme du 16/10.
+RIEN D'AUTRE N'A BOUGE -- photo AVANT (08:56:10 UTC) / APRES (08:56:53 UTC) :
+  tables 255 -> 256 . politiques 153 -> 154 . index 501 -> 503 (la clef et l'index de vague) .
+  droits 4 694 -> 4 711 (+17, TOUS sur app_sheet_ecrit : 3 authenticated, 7 postgres, 7 service_role) .
+  fonctions 287 -> 287 . EMPREINTE des droits hors de la table : 1ec9f9de... = 1ec9f9de... .
+  EMPREINTE des politiques hors de la table : 6ca94b14... = 6ca94b14...
+L'INVERSE, si tu en as besoin : coller supabase/patch_sheet_ecrit_memoire_colonne_a_2026-11-20_INVERSE.sql
+  dans l'editeur SQL (ou me le demander). Il REFUSE si la table porte une seule ligne : d'abord defaire la
+  vague par l'outil (ecrire_colonne_a_du_sheet_2026-11-20.py defaire --nom <vague>), ensuite seulement.
+```
+
+### 13.8 ⭐⭐ LA QUESTION QUI TRANCHE — « si on faisait ces coupes, combien de lignes de la vague 1 changeraient d'étiquette ? »
+
+> **Sa question (20/11)** : *« Je ne veux pas écrire 3 994 lignes et découvrir À LA FIN que le chaînage ou les
+> étiquettes étaient faux sur les 803 qui restent… la même mesure que pour G2, sur une copie, sans rien écrire. »*
+> ⚠ Le § 11.6 l'avait dit « par construction » (*« aucun dossier d'un mélange ne porte de ligne en vague 1 »*) :
+> c'était une DÉDUCTION. La voici MESURÉE — et la mesure large a trouvé ce que la déduction ne voyait pas.
+
+```
+LE SCRIPT  phase2/checks/temps7_effet_des_coupes_sur_la_vague_1_2026-11-20.py (lecture seule, copies), nourri
+           par un EXPORT ajoute a temps6 (T6_EXPORT_COUPES=1 : l'etape s'arrete apres l'export, rien de reecrit
+           dans notice/ ; sans la variable, temps6 est inchange). Photo du Sheet et du registre : 19/11 20:09.
+LA POSE    la COPIE FIDELE de app_poser_etiquettes_dossier (relue chez Supabase ce matin) : FUSION -> la plus
+           petite transaction garde ; SCISSION -> le groupe de la plus petite transaction garde, les autres
+           recoivent une NEUVE. TEMOIN : elle redonne les 31 359 etiquettes connues de l'etat 3, 0 ecart.
+LA VAGUE 1 REFERENCE (etat 5 : V2 + E + 8 lignes + C5) 4 082 - les 9 de B = 4 073 ;
+           MARDI (E + C5, sans V2 ni les 8)                4 075 - 9 = 4 066.
+
+M1  LES COUPES DES 183 MELANGES (couche 9 : les 178 + les 5 qu'apporte l'etat 5 ; 381 lignes ; 162 coupes
+    NETTES, 13 DISPUTEES, 8 A COMPLETER), appliquees TOUTES ensemble, telles que le Sheet les propose (858
+    transactions vont a la ligne qui les designe) :
+        ⭐ LIGNES DE LA VAGUE 1 QUI CHANGERAIENT D'ETIQUETTE : 0 SUR 4 073.
+    + les 7 reunions de la couche 7 (M1b) : toujours 0.
+    TEMOIN POSITIF : 241 des 381 lignes des melanges changent d'etiquette, 216 etiquettes NEUVES -- la
+      simulation coupe vraiment.
+    TEMOINS INVERSES : une coupe SEMEE dans un dossier de la vague 1 (sa plus petite transaction sortie) ET une
+      piece plus petite SEMEE dans un autre -> les DEUX sont vues.
+    ➡ LES COUPES DES MELANGES PEUVENT VENIR APRES L'ECRITURE : elles ne rouvrent AUCUNE ligne ecrite.
+
+M2  LA MESURE LA PLUS LARGE, sans modele de coupe : pour chaque ligne de la vague 1, le Sheet (la DATE de sa
+    case, colonnes independantes, MEME BIEN) designe-t-il une piece d'un AUTRE acheteur DANS son dossier, ou une
+    de SES pieces rangee AILLEURS -- et la reparer changerait-il son etiquette ?
+        ⭐ 19 LIGNES SUR 4 073 (0,5 %) -- les MEMES 19 a l'etat de reference et a celui de mardi.
+    ELLES NE VIENNENT PAS DES 178 : le classement les croyait propres parce que LE GEL les relie autrement que
+    la date du Sheet (la vague 1 exige qu'une SEULE des transactions soit retrouvee par le juge).
+    Lues a la main, une par une -- trois natures :
+    a) 5 PAIRES DE LIGNES CROISEES (10 lignes) -- le compromis de l'un range dans le dossier de l'autre, sous
+       le contact de l'autre (le defaut de Hektor), et LE MONTANT le confirme :
+         9KHYVR1M SCIORTINO / RF9KYWSY PROST DILLARD   compromis 24380 a 30 000 (= SCIORTINO ; PROST : 39 000)
+         SWSN80FQ GORRY / FJS4IJGZ MICHAU              compromis 14813 a 27 000 (= l'offre de GORRY), le 16/03/2023
+         JRN2I7TM BASTIDE / H78FD3YN VEROT             compromis 27445 a 92 000 (= BASTIDE ; VEROT : 95 000)
+         FWCFAN6O BELMONT / TL9AFW0O MALEYSSON         compromis 4370 a 30 000 (= BELMONT ; MALEYSSON : 34 000)
+         2FBR2M9U / E6RLLKMN DESCOURS                  compromis 1101
+       Si on le remettait a sa place : il est la PLUS PETITE transaction des deux cotes -> LES DEUX lignes
+       changent d'etiquette.
+    b) 4 DOUBLONS DE HEKTOR -- un second compromis a la MEME date, seul dans son dossier, plus petit :
+         3250892d HOLTZRITTER (25699, meme contact) . dfb32f2b SCI 2B IMMO (19543 ACTIF a cote du 19544
+         annule, meme contact) . 0bc98552 MOREL GRANGE (21803 + 21805, probablement un menage sur deux fiches) .
+         87eb399e BOUZENAD (998, sous un autre contact ; le patch V2 le detache deja d'une autre ligne)
+    c) 5 « TENTATIVES RATEES SUR DEUX FICHES » -- ligne Annulee : l'offre refusee d'un contact, le compromis
+       annule du MEME jour du Sheet sous un AUTRE contact, seul ou relie a une autre ligne :
+         6U5DQQ4J BRYCKAERT . 8NZ6V6XB LOPEZ MONOIR . EO8MXFE9 MARTIN COTTIER . LKBO1TOH PARFAIT . S3HOG6UL CHEYNE
+       (la forme des 10 menages du 19/11 : deux fiches, une seule affaire)
+    LE FICHIER : notice/TEMPS7_EFFET_DES_COUPES_SUR_LA_VAGUE_1_2026-11-20.csv -- chaque ligne exposee, ses
+      transactions, la piece en cause, et si l'etiquette changerait.
+    TEMOIN POSITIF : sur les 381 lignes des melanges, la meme detection voit une piece croisee pour 379.
+    DEUX FAUX POSITIFS TROUVES A LA LECTURE et retires par une regle, pas a la main : le juge designe parfois,
+      par la seule date, une piece d'un AUTRE BIEN (28833 du bien 61599 pour une ligne du bien 61637 ;
+      OQQA94LZ « designee » par une ligne du bien 54974) -> 30 lignes au 1er passage, 21 au 2e, 19 au 3e.
+
+LA REPONSE A TA REGLE : « une poignee » -- 19 lignes, a sortir de la vague 1 comme les 9 de G2. Elles
+  rejoignent les groupes a traiter (leur reparation est un rattachement ou une coupe : TA decision, plus
+  tard). Le reste de la vague 1 (4 054 a la reference, 4 047 mardi) n'est expose a AUCUNE reparation que le
+  Sheet designe.
+⚠ CE QUI N'EST PAS MESURE : les reparations que le Sheet ne VOIT PAS (G2 et ses 281 coupes invisibles -- deja
+  traitees par B) ; les designations par la « case vide » ou le nom seul (M2 ne retient que la DATE) ; le Sheet
+  et le registre depuis le 19/11 20:09 (5 lignes et 4 transactions de plus) -- la mesure se rejoue le jour de
+  la vague 1b avec la photo du jour (deux commandes, ~2 min).
+```
+
+### 13.9 Les 803 en parallèle de l'écriture — la forme, l'ordre, le délai
+
+```
+LA FORME   un classeur (xlsx, comme celui des 803 que tu as ouvert, + le meme en csv suivi par git) : UNE LIGNE
+           PAR GROUPE, pas par ligne du Sheet -- 183 melanges + les 33 questions + les 19 de 13.8. Pour chaque
+           groupe, sous tes yeux :
+             . ses lignes du Sheet : ID, Etat, dates d'offre et de compromis, acquereur, prix ;
+             . ses transactions : genre, etat, date, montant, CONTACT chez Hektor ;
+             . ce que ton classeur en dit (quelle date designe quelle piece, le montant qui confirme) ;
+             . LA COUPE PROPOSEE (quelle piece va a quelle ligne, quel morceau garde l'etiquette) ;
+             . MA RECOMMANDATION (valider la coupe / laisser / me laisser relire) et pourquoi, en une phrase ;
+             . une colonne « TA DECISION » (OUI / NON / A REVOIR + un mot) : UNE decision regle le groupe ENTIER.
+           Je relis tes decisions par un script : elles deviennent, le jour venu, les lignes du fichier de
+           scission ou de rattachement -- sans retaper.
+L'ORDRE    1 LES 19 DE 13.8 -- d'abord, parce que ce sont les SEULS qui touchent l'ecriture de mardi (ta
+             decision « les sortir de la vague 1 » suffit pour mardi ; leur reparation vient apres) ;
+           2 LES 13 COUPES DISPUTEES et les 8 A COMPLETER (le plus risque : une piece designee par deux acheteurs,
+             ou par personne) -- ma relecture faite AVANT de te les montrer ;
+           3 F2 -- 50 groupes, 98 lignes : le nom du nouvel acheteur sur la piece de l'ancien, la date du Sheet le
+             dement ; 49 coupes nettes : une decision par FAMILLE possible, avec les exceptions nommees ;
+           4 F3 et F4 -- 20 groupes, 43 lignes : les cas qui ne viennent pas du defaut de Hektor ;
+           5 LES 33 QUESTIONS (23 lignes) -- chacune a sa reponse proposee, comme BISCH ce matin ;
+           6 F1 -- 108 groupes, 222 lignes, le plus nombreux, MAIS 93 groupes se reglent par G2 (une regle, une
+             nuit, apres l'ecriture, aucune decision ligne a ligne) : il ne reste a lire que les 15 autres.
+LE DELAI   le paquet 1 (les 19) : dans l'heure qui suit ta reponse. Le classeur complet : ~3 h de travail.
+```
+
+### 13.10 Ce qui attend ta décision
+
+```
+1  LES 19 LIGNES DE 13.8 : les sortir de la vague 1, comme les 9 de G2 ? (ma recommandation : OUI -- elles
+   restent dans les groupes, leur reparation est ta decision plus tard)
+2  le classeur des groupes : la forme et l'ordre de 13.9 te vont-ils ?
+3  INCHANGES : la piece de 4126/4496 apres le controle de samedi (« un geste par nuit ») ; les 8 lignes ; le
+   patch V2 ; la vague 0 (TES 3 lignes, TES Apps Script) ; samedi matin, A ou B.
 ```
 
 

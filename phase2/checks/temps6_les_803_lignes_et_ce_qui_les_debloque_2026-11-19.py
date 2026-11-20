@@ -597,6 +597,29 @@ def etape_classer() -> int:
     if not gardes_mesurees:
         print("⚠ aucune variante de la garde rejouee (etape « garde ») : la mesure de la garde est SAUTEE", flush=True)
     v1_5 = [i for i in LIG if etats[5][i][0] == "VAGUE_1"]
+    # ⭐ 20/11 (⑬), LA QUESTION DE FREDERIC : « si on faisait ces coupes, combien de lignes de la vague 1
+    #   changeraient d'etiquette ? » -- on EXPORTE tout ce que la coupe connait, pour la mesure a part
+    #   (temps7_effet_des_coupes_sur_la_vague_1_2026-11-20.py). Avec T6_EXPORT_COUPES=1 l'etape s'arrete
+    #   APRES l'export : aucun fichier de notice/ n'est reecrit. Sans la variable : RIEN ne change.
+    if os.environ.get("T6_EXPORT_COUPES") == "1":
+        mardi = ranger(gel, conf, S[2], False, True, c5=True)
+        ecrire_json(CACHE / "t7_export_coupes.json", {
+            "photo_du": P["lu_le"],
+            "groupes": {"%s:%s" % k: {"lignes": sorted(g_["lignes"]), "dossiers": sorted(g_["dossiers"]),
+                                      "verdict": verdict_groupe.get(k), "famille": famille.get(k),
+                                      "coupe_etat": coupe_etat.get(k), "coupe": coupe.get(k),
+                                      "proprio": {str(a): c for a, c in proprio.get(k, {}).items()}}
+                        for k, g_ in groupes.items()},
+            "etat5": {i: [etats[5][i][0], list(etats[5][i][1]), list(etats[5][i][2])] for i in LIG},
+            "mardi": {i: [mardi[i][0], list(mardi[i][1]), list(mardi[i][2])] for i in LIG},
+            "ds_date": {i: sorted(a for a in v if par_la_date(i, a)) for i, v in DS.items() if v and i in LIG},
+            "ds": {i: sorted(v) for i, v in DS.items() if v and i in LIG},
+            "lab2": {str(a): l_ for a, l_ in lab[2].items()},
+            "lab3": {str(a): l_ for a, l_ in lab[3].items()},
+        })
+        print("EXPORT pour la mesure des coupes : %s -- l'etape s'arrete ici (rien de reecrit dans notice/)"
+              % (CACHE / "t7_export_coupes.json"), flush=True)
+        return 0
     les_9 = [i for i in LIG if verdict_groupe.get(trouve(("L", i))) == 9 and i in E2 and E2[i]]
     lignes_tx_v2 = defaultdict(set)
     for i, ts in gel_v2.items():
