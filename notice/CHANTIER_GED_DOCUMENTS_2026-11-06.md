@@ -3820,3 +3820,7 @@ verdict inconnu est refusé, les anciens verdicts passent, `authenticated` n'éc
 ⚠ Une limite vue en répétition : dans UNE transaction les deux lignes ont le même `juge_le` ; à l'écran chaque clic est sa
 propre transaction (le plus récent fait foi). ⚠ Tant que l'écran (morceau 4) n'écrit pas ces mots, ce patch ne change RIEN
 à ce que voit un utilisateur. **Reste : le poser en base (accord de Frédéric), puis le morceau 2.**
+**✅ POSÉ EN BASE le 20/11 (« Oui, pose-le »)** : état revérifié juste avant (empreinte `4d945b66…`, CHECK d'origine,
+8 jugements, `ged_propositions = admin`) ; patch passé d'un bloc ; **5 contrôles sur 5 VERTS** (CHECK et porte acceptent
+`masque` / `reaffiche`, porte SECURITY DEFINER fermée à `anon`, 8 jugements intacts, interrupteur inchangé). Aucun écran ne
+l'utilise encore (morceau 4). Retour arrière : `supabase/patch_ged_masquer_2026-11-20_INVERSE.sql`.
