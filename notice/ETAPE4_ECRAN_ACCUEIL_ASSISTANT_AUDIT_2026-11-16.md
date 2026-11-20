@@ -3488,7 +3488,7 @@ une fausse alerte CRLF de son essai) ; Render et Vercel vérifiés sur c8f0a9d a
 
 **Reste** : P4-b (par photo), P4-c (services publics), P4-d (phrases libres).
 
-## 96. La pastille corrigée, puis P4-b — LA FICHE PAPIER LUE DANS LE PARCOURS (19/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+## 96. La pastille corrigée, puis P4-b — LA FICHE PAPIER LUE DANS LE PARCOURS (19-20/11) : POUSSÉ (f1ff8a7) et ÉPROUVÉ EN RÉEL, vert
 
 **Ses mots** : « ok corrige le petit détail : la pastille, et ensuite enchaîne dans le chantier ».
 
@@ -3534,4 +3534,27 @@ serveur donne maintenant les `essentiels` de chaque question à l'écran.
   sera lu dans `_fiche.mesure`.
 - La lecture prend ~30 s par lot de pages (le scan de la fenêtre aussi) ; une page illisible ne coule pas les autres.
 
-**Reste** : pousser (son accord) et l'essai réel avec une fiche photographiée ; puis P4-c (services publics), P4-d.
+### 96.5 L'ESSAI RÉEL (20/11, 08:48-08:51, heure de Paris) — VERT, dans son Chrome, avec son accord
+
+**Ses mots** : « Pousse et essaie n'importe, utilise une photo du test ». Poussé f1ff8a7 après fusion de 4 commits de
+l'autre session (GED P6, le double-clic de « Nouveau contact » ; App.tsx touché des deux côtés, fusion automatique sans
+conflit ; tous les essais verts dont `test_contact_double_clic` et la table de traduction toujours à jour). Render et
+Vercel vérifiés sur f1ff8a7.
+- **La fiche** : la fiche d'essai générée « FICHE_A_SCANNER_V2 » (Téléchargements ; données inventées : Mme Sophie
+  Marchand, une longère au Puy-en-Velay), pages 1 et 2, jointes par le trombone.
+- **La demande** (« Nouvelle estimation d'essai à partir de la fiche papier jointe (2 pages)… ») : l'IA a mis les deux
+  photos dans la carte du parcours (« La fiche papier (2 photos) sera lue au clic ») ; rien lu avant le clic.
+- **Au clic** : lue en **32 s**, **62 cases** remplies par la fiche ; « Le bien » (Maison · 12 chemin des Vignes —
+  « Longère » reconnue par les synonymes de la fenêtre), « L'intérieur » (165 m², 7 pièces), « La composition »
+  (7 pièces) en pastilles « lu » ; première question posée : le quartier (2 sur 16).
+- **En base** : terrain 1 500, piscine oui, mandant « nouveau » ; ⭐ les 7 coordonnées lues (civilité, nom, prénom,
+  téléphone, adresse, CP, ville) AU COFFRE seulement — 0 dans les réponses, 0 dans les messages de l'assistant ; aucune
+  case à moins de 75 %.
+- ⭐ **Le coût d'un scan, mesuré pour la première fois** : **0,0118 $ pour 2 pages** (gpt-4.1-mini), ≈ 0,006 $ la page.
+- **La fenêtre remplie** : « Pré-rempli par l'assistant : 51 cases » (Offre 12, Secteur 9, Composition 1, Détails 26,
+  Mandat 2, Diffusion 1) ; à l'étape Mandat, « Ajouter un nouveau mandant » avec Mme., Marchand, Sophie, 0622334455 —
+  venus du coffre. Capture : `notice/preuve_parcours_fiche_lue_2026-11-20.jpg`. Fermée SANS « Créer ».
+- **Après** : le coffre est VIDE ; 0 travail d'annonce ; le parcours d'essai `9ba5f308…` reste « en cours » (purge 30 j).
+- Non éprouvé en réel : les pages 3-4 de la fiche (l'avis) — seule l'exposition a été gardée à part, faute de ces pages.
+
+**Reste** : P4-c (services publics, proposés à confirmer), P4-d (phrases libres).
