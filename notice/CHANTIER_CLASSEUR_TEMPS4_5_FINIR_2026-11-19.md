@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00)** — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2667,6 +2667,121 @@ LU 23
 ⚠ CE QUI PEUT DECALER : un controle rouge (E samedi, ① dimanche) -- il attend ta decision lundi ; l'outil plus
   long que mes ~4 h ; une reponse manquante (son groupe reste non ecrit, la date ne bouge pas).
 ⚠ NON MESURE : le temps reel de l'ecriture de ~4 700 lignes ; le compte final par case (il depend de tes reponses).
+```
+
+---
+
+## ⑮ Le 20/11, après-midi — V2 et « confiance » JOUÉS, le classeur des groupes LIVRÉ, G2 et l'outil CODÉS (éteints)
+
+> Ses mots (20/11, ~13:00) : « PLUS DE CALENDRIER. Avance au plus vite, dis-moi quand c'est prêt » ; « LES 97 LIGNES
+> DE CONFIANCE : OUI, colle-les, avec la répétition montrée comme pour la table. Les 40 autres après V2 » ; « NKDC0I1M :
+> garde-la » ; « LE PATCH V2 : VAS-Y. Sauvegarde datée avant, inverse prêt, et tu me montres ce qu'il a touché » ;
+> « CODE G2 ET L'OUTIL DE COUPE MAINTENANT […] Je donnerai le « vas-y » pour les ALLUMER, avec leur compte avant » ;
+> « LE CHAÎNAGE EN JOURNÉE : possible, mais UNIQUEMENT SI C'EST INDISPENSABLE. Tu me demandes avant ».
+
+### 15.1 V2 — joué à 12:26 (heure de Paris), tel qu'il est sur disque
+
+```
+AVANT     sauvegarde datee sur disque : C:\Hektor\Backups\classeur_gel\2026-11-20_122550_app_classeur_lien_AVANT_V2_ET_
+          CONFIANCE.json (12 787 liens, empreinte 8084e535 = celle de sa garde) ; + la sienne en base,
+          app_classeur_lien_avant_audit_v2_20261119 (fermee : RLS, aucun droit pour anon ni authenticated).
+JOUE      par le pooler (le chemin de secours : l'hote direct ne se resout pas), en UNE transaction, ses messages
+          gardes : « ✅ gel corrige : -45 +78 = 12820 liens, exclusivite tenue, voisins intacts ».
+          Journal : C:\Hektor\Backups\classeur_gel\2026-11-20_V2_JOUE.log
+CE QU'IL A TOUCHE  65 lignes du Sheet : 45 liens retires, 78 poses (17 a 2 preuves, 27 a 3, 3 a 4, 8 a 5, 11 a 6,
+          12 a 7). Par verdict du 18/11 : 28 PARTIEL, 11 FAUX, 26 A RATTACHER. Le detail, operation par operation :
+          notice/AUDIT_INDEPENDANT_V2_OPERATIONS_AFFINEES_2026-11-19.csv (decision_v2 = GARDEE).
+SA REPETITION  liens 12 820 = 12 820 · poses 78 = 78 · transactions prises deux fois 0 · lignes sans lien 71 = 71 ·
+          liens casses « disparue » 0 · sauvegarde 12 787 = 12 787.
+RIEN D'AUTRE  photo avant / apres : +1 table (la sauvegarde), politiques, index et fonctions inchanges ; droits et
+          politiques hors de la sauvegarde : empreintes IDENTIQUES ; registre 31 363 ; app_sheet_ecrit vide.
+L'INVERSE  supabase/patch_correction_gel_audit_v2_2026-11-19_INVERSE.sql (il ne juge que sa part).
+⚠ RESTE (son « correction 3 », pas joue, pas accorde) : 10 transactions detachees portent une valeur posee par nous
+          et 15 une note du Sheet -- elles doivent « descendre ». Un geste a part, ton accord.
+```
+
+### 15.2 Le patch « confiance » — joué à 12:28, 284 liens sur 137 lignes
+
+```
+LE GENERATEUR  phase2/checks/generer_patch_confiance_137_lignes_2026-11-20.py relit le gel VIVANT et exige que chaque
+          ligne porte EXACTEMENT les liens mesures : 0 ecart -- y compris les 40 que V2 venait de corriger (la preuve que
+          V2 a fait ce que la mesure supposait). Liste : notice/TEMPS8_LES_137_LIGNES_DU_PATCH_CONFIANCE_2026-11-20.csv.
+LE PATCH  supabase/patch_confiance_gel_137_lignes_2026-11-20.sql (+ _INVERSE, _REPETITION) : la confiance SEULE passe a
+          « sure » (242 « a valider », 42 « bonne ») ; etage, preuves, gele_par, gele_le, role, ligne : intacts. Garde
+          par compte + empreinte du gel apres V2 (f63e54db) et par la confiance d'avant de chaque lien. Sauvegarde
+          app_classeur_lien_avant_confiance_20261120, fermee.
+SA REPETITION  284 changes = 284, tous vers « sure » · 0 lien non sur sur les 137 · 0 autre colonne changee · 0 change
+          hors des 137 · 137 lignes presentes · 0 transaction prise deux fois · sauvegarde fermee : vrai.
+          Le gel : « sure » 12 770, « a valider » 28, « bonne » 22.
+RIEN D'AUTRE  droits et politiques hors des deux sauvegardes : empreintes identiques ; registre et memoire inchanges.
+```
+
+### 15.3 Le classeur des groupes — livré
+
+`notice/TEMPS9_LE_CLASSEUR_DES_GROUPES_2026-11-20.xlsx` (envoyé ; ignoré par git) et `.csv` (suivi), par
+`phase2/checks/temps9_le_classeur_des_groupes_2026-11-20.py`. 180 groupes, une décision par groupe, une feuille « PAR OÙ
+COMMENCER ».
+
+```
+1 les 29 coupes « nom seul / case vide »   59 lignes   OUI 21 · A TOI 3 (16382, 27133, 4649) · ATTENDRE 3 (20264 lie a
+                                                       EO8MXFE9 des 19 ; 4480 et 4541 lies a ses questions) · NON 2
+                                                       (16015 : G2 voit juste, la coupe se trompe ; 4621 : 50 000 = le
+                                                       prix de PLE)
+2 les 13 disputees + 8 a completer           45 lignes   OUI 21 (la vente a la ligne « Vente reglee » ; ISSARTEL 2019 =
+                                                       un 3e dossier sans ligne)
+3 ses questions ouvertes                     25 lignes   P252U1JH / XC761R8Z reglees par la piece 4126/4496
+4 la reparation des 19                       19 lignes   5 paires (le montant tranche), 4 doublons, 5 tentatives
+5 les 8 lignes « pures »                      8 lignes
+6 les 7 reunions                              7 lignes   OUI 5, A TOI 2 (une autre ligne designe aussi les pieces)
+7-8 couche 6 et « gel seul »                 76 lignes   MA relecture d'abord
+```
+
+### 15.4 G2 et l'outil de coupe — codés, ÉTEINTS, éprouvés sur copie
+
+```
+LE CODE   phase2/sync/affaire_ledger.py, additif :
+          . APP_CHAINAGE_GARDE_G2 -- dans la regle D, apres la garde de E : le code de la mesure du 19/11, a l'identique ;
+          . APP_CHAINAGE_DETACHEMENTS -- phase2/sync/detachements_manuels.csv, une ligne = un morceau = un dossier a lui
+            seul, lu EN DERNIER (apres les rattachements). Refus comptes et dits : bien inconnu (ajoute apres un temoin
+            inverse qui l'a trouve muet), transaction introuvable, transaction dans deux lignes, deja obtenu.
+          Le fichier porte les 132 coupes validees (274 morceaux).
+LES TEMOINS (phase2/checks/temps10_g2_et_l_outil_rejeu_2026-11-20.py, copie en memoire)
+          . ETEINTS : le module d'avant et celui-ci rejouent la nuit de ce soir A L'IDENTIQUE -- 11 550 dossiers, 0
+            transaction differente, meme ligne de compte rendu (rejoue apres chaque retouche) ;
+          . G2 : 11 550 -> 11 992 dossiers, 775 transactions changent de dossier -- EXACTEMENT les 775 de la mesure ;
+          . G2 + l'outil : 274 morceaux sur 274 finissent comme ecrits ; 0 transaction hors des dossiers nommes ;
+            101 morceaux appliques, 173 deja obtenus par G2 ; 11 992 -> 12 004 ; les 3 temoins inverses vus une fois.
+          . test_chainage_offre_regularisee : TOUT VERT.
+⚠ LE MODULE QUI TOURNE CETTE NUIT est celui-ci (eteint) : c'est pour ca que le temoin « eteints » est rejoue apres
+  chaque retouche. Sauvegarde du module d'avant : C:\Hektor\chantier_classeur_q6_cache\sauvegardes\affaire_ledger_
+  AVANT_G2_ET_OUTIL_2026-11-20_123722.py.
+LE CHAINAGE EN JOURNEE : rien ne l'a rendu indispensable ; pas demande.
+```
+
+### 15.5 La vague 0 — ce que j'attends de lui
+
+```
+TES 3 LIGNES   trois ID Unique, ton choix. Ce qui m'aiderait : trois lignes que tu regardes souvent, de la vague 1
+               (une vendue, une annulee, une recente), qu'aucun geste a venir ne touche (je te le confirme avant).
+TES APPS SCRIPT  Extensions -> Apps Script, sur CE classeur. Ce que je dois savoir, pour chaque script :
+   1 LES DECLENCHEURS (l'ecran « Declencheurs », l'icone reveil) : leur type -- a l'ouverture, a la modification
+     (onEdit), au changement (onChange), minute (et a quelles heures) -- et ce qu'ils font ;
+   2 S'IL ECRIT dans la colonne A (affair_uuid), ou s'il ecrit des lignes ENTIERES (setValues sur A:AL), ou s'il
+     TRIE, insere, supprime ou deplace des lignes -- l'ecrivain s'arrete s'il voit une ligne bouger, mais un tri
+     pendant l'ecriture le ferait s'arreter au milieu ;
+   3 S'IL LIT la colonne A (un export, un envoi, une formule qui s'en sert) ;
+   4 si la colonne A porte une formule (ARRAYFORMULA en A1), une protection ou une validation.
+   Le plus simple : m'envoyer le code (copier-coller). Je le lis et je te dis ce qu'il ferait de nos ecritures.
+```
+
+### 15.6 Ce qui attend sa décision
+
+```
+1  LE CLASSEUR DES GROUPES : « OUI a tes recommandations de la section N, sauf X » -- en commencant par la section 1.
+2  ALLUMER G2 ET L'OUTIL : leur compte avant est en 15.4 (775 transactions pour G2 ; 173 de plus pour l'outil avec les
+   132 coupes) ; je te redemanderai ton « vas-y » avec le compte du soir meme, rejoue sur la photo du jour.
+3  LA VAGUE 0 : tes 3 lignes, tes Apps Script.
+4  INCHANGES : la piece 4126/4496 (ton « vas-y » d'allumage, apres le controle de E samedi) ; la « correction 3 » de V2.
 ```
 
 ---
