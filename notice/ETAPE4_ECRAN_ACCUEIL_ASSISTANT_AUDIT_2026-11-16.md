@@ -3888,3 +3888,53 @@ Dans son Chrome, une conversation NEUVE, la MÊME demande et la MÊME phrase qu'
   0,00271 $. Preuve : `notice/preuve_parcours_phrase_consigne_reel_2026-11-20.jpg`.
 
 **Reste** : P6 (photos du bien), puis P5, P7, P8 et l'épreuve case par case.
+
+## 100. P6 — LES PHOTOS DU BIEN DEPUIS LE PARCOURS (20/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P6 ». Le plan (§89) : « un second paramètre « photos du bien » de la carte, versé dans l'étape 2
+APRÈS l'ouverture (l'ouverture les vide aujourd'hui) ». La maquette v27, planche 13 : vignettes, une « masquée », la
+1re en couverture, « En ajouter », « Elles vont à l'étape 2 Photos de la fenêtre (20 au plus) et partent comme
+aujourd'hui, une par une, après Créer ». ⛔ Les PHOTOS DU BIEN ne sont jamais lues (ni scan, ni modèle) — règle du 20/11.
+
+**Ce qui est écrit.**
+- La question « Les photos du bien » (forme `fichiers`) : quand le trombone est ouvert au compte, « Joindre les photos du
+  bien » les dépose au coffre de l'assistant (le même que le trombone ; WebP passe en JPEG au dépôt, comme la fenêtre),
+  vignettes, « Masquer / Afficher », « En couverture » (la 1re), « Retirer », 20 au plus ; « Valider » garde la liste.
+  Sans trombone : la phrase d'avant (à l'étape Photos de la fenêtre).
+- La réponse `photos` garde l'ORDRE et la visibilité (`[{id, visible}]` ; un numéro seul, l'ancienne forme, vaut
+  visible ; une entrée vide est ignorée ; un numéro qui n'est pas celui du coffre est refusé) ; la pastille dit
+  « 3 photos · 1 masquée ».
+- Le **second paramètre de la carte** du parcours, `photos_du_bien` (À PART de `fiche_de_visite`) : des photos du bien
+  jointes avec la demande vont dans cette question (relues au coffre au clic, JPEG/PNG/WebP, 20 au plus) ; un même
+  fichier dans les deux paramètres est REFUSÉ (l'IA doit demander) ; la carte le dit (« Les 2 photos du bien iront à
+  l'étape Photos de la fenêtre (jamais lues) »). La consigne du parcours y envoie les photos du bien.
+- La route `GET /assistant/parcours/{id}/photos` (l'auteur seul, même l'admin ne lit pas celles d'un autre) : relit
+  chaque photo au coffre DANS LE DOSSIER DE L'AUTEUR, rend un lien de lecture court ; une photo purgée (les dépôts sont
+  gardés 2 jours) ou qui n'est pas une image est COMPTÉE (`absentes`), jamais inventée.
+- À l'ouverture de la fenêtre (`assistantOuvrirParcours`), APRÈS la remise à zéro : les photos sont relues, mises dans
+  l'étape 2 « Photos » dans leur ordre avec leur visibilité ; elles partent comme aujourd'hui après « Créer » ; une
+  photo manquante est DITE (« … n'a pas pu être reprise (les dépôts sont gardés 2 jours) : ajoute-la à l'étape Photos »).
+
+**Ce que ça pourrait casser ailleurs, et ce qui est fait contre.**
+- La case `photos` du parcours change de forme : l'ancienne (une liste de numéros) reste acceptée.
+- L'outil `parcours_creation` gagne un paramètre (requis par le schéma, vide s'il n'y a rien) ; l'essai du P4-b bis qui
+  interdisait `photos_du_bien` sur le parcours est mis à jour : la séparation reste (deux paramètres, refus d'un même
+  fichier dans les deux, la carte de création directe n'a toujours que `fiche_de_visite`).
+- La carte de création DIRECTE (hors parcours, `ouvrir_creation_annonce`) n'est PAS touchée : des photos du bien n'y vont
+  toujours pas (l'IA dit qu'elles s'ajoutent à l'étape Photos).
+- La fenêtre : rien ne change dans son étape Photos ni dans l'envoi après « Créer » ; elle reçoit des fichiers comme si
+  la personne les avait choisis.
+
+**Preuves.** Hors ligne : parcours **171 verts** (+13 : l'ordre et la visibilité, 20 au plus, un numéro mal formé, la
+question, la carte qui annonce les photos, le clic qui les range, pas « connue », un même fichier deux fois, un PDF, 21
+photos, l'outil, la route : le dossier de l'auteur, la photo purgée comptée, le parcours d'un autre) ; lecteur **77**
+(+1) ; gestes 415, socle 31, traduction 39, fichiers 28, DPE 11, catalogue, couverture, build.
+Maquette (trois images fabriquées injectées dans le choix de fichiers) : `notice/preuve_parcours_photos_du_bien_2026-11-20.jpg`
+(jardin en couverture, salon masqué, « 3 photos jointes · 1 masquée ») ; pastille « 3 photos · 1 masquée » ; la fenêtre
+ouverte : `notice/preuve_parcours_photos_dans_la_fenetre_2026-11-20.jpg` (étape 2 : jardin, façade visibles, salon masqué,
+dans l'ordre).
+
+**Non éprouvé en réel** : le dépôt au vrai coffre, les liens de lecture, la fenêtre de production, et l'IA qui passe des
+photos du bien jointes à la demande dans `photos_du_bien`.
+
+**Reste** : P5 (listes du rapport et de l'envoi), P7 (documents, voie A), P8, et l'épreuve case par case.

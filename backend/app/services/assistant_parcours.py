@@ -15,6 +15,7 @@ Couverture vérifiée contre App.tsx : apps/hektor-v1/test_etape4_parcours_couve
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -58,7 +59,7 @@ COORDONNEES = frozenset({"civilite", "nom", "prenom", "email", "telephone", "man
 MANDANT_CHOIX = frozenset({"", "existant", "nouveau"})
 MAX_VALEUR = 4000          # caractères d'une case (le texte de l'annonce est la plus longue)
 MAX_PIECES = 60
-MAX_PHOTOS = 40
+MAX_PHOTOS = 20            # P6 (20/11) : les photos du bien, 20 au plus = l'étape Photos de la fenêtre
 MAX_REPONSES = 200_000     # taille du JSON des réponses
 
 
@@ -133,13 +134,21 @@ def _pieces(valeur: Any) -> list[dict[str, str]]:
     return pieces
 
 
-def _photos(valeur: Any) -> list[str]:
+def _photos(valeur: Any) -> list[dict[str, Any]]:
+    """P6 (20/11) : les PHOTOS DU BIEN, dans leur ORDRE (la première = la couverture), chacune visible ou masquée. Un
+    numéro seul (l'ancienne forme) vaut « visible ». Jamais une fiche de visite : ces fichiers ne sont lus par personne."""
     if not isinstance(valeur, list) or len(valeur) > MAX_PHOTOS:
-        raise RefusParcours(f"Les photos attendent une liste de {MAX_PHOTOS} fichiers au plus.")
-    numeros = [_valeur_simple("photos", v) for v in valeur]
-    if any(len(n) > 64 for n in numeros):
-        raise RefusParcours("Numéro de fichier invalide.")
-    return [n for n in numeros if n]
+        raise RefusParcours(f"Les photos du bien : {MAX_PHOTOS} au plus (comme l'étape Photos de la fenêtre).")
+    propres: list[dict[str, Any]] = []
+    for v in valeur:
+        numero = _valeur_simple("photos", v.get("id") if isinstance(v, dict) else v)
+        if not numero:
+            continue  # une entrée vide est ignorée (comme avant)
+        if not re.fullmatch(r"[0-9a-f]{32}", numero):
+            raise RefusParcours("Numéro de fichier invalide.")
+        if numero not in {p["id"] for p in propres}:
+            propres.append({"id": numero, "visible": not (isinstance(v, dict) and v.get("visible") is False)})
+    return propres
 
 
 def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste: str) -> dict[str, Any]:

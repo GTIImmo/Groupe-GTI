@@ -149,7 +149,9 @@ export async function deposerFichier(fichier: File): Promise<FichierJoint> {
   fichier = await webpEnJpeg(fichier)  // 19/11 (§89, D10) : la carte « Ajouter des photos » ne prend que JPEG / PNG
   if (MAQUETTE) {
     await attendre(400)
-    return { id: Math.random().toString(16).slice(2).padEnd(32, '0').slice(0, 32), nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
+    const id = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+    if (fichier.type.startsWith('image/')) apercusMaquette.set(id, { nom: fichier.name, type: fichier.type, url: URL.createObjectURL(fichier) })
+    return { id, nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
   }
   const depot = await appelerJson<{ id: string; bucket: string; chemin: string; jeton: string; type: string }>(
     '/assistant/fichiers/preparer', 'POST', { nom: fichier.name, type: fichier.type || 'application/octet-stream', taille: fichier.size })
@@ -159,6 +161,26 @@ export async function deposerFichier(fichier: File): Promise<FichierJoint> {
     throw new RefusAssistant(0, `« ${fichier.name} » n'a pas pu être envoyé au coffre : ${error.message}`)
   }
   return appelerJson<FichierJoint>(`/assistant/fichiers/${depot.id}/confirmer`, 'POST')
+}
+
+// maquette : les aperçus des images déposées (le vrai coffre rend un lien de lecture signé)
+const apercusMaquette = new Map<string, { nom: string; type: string; url: string }>()
+
+/** P6 (20/11) : une photo du bien du parcours, dans son ordre (la 1re = couverture), visible ou masquée. */
+export type PhotoDuBien = { id: string; visible: boolean }
+export type PhotoDuBienLue = PhotoDuBien & { nom: string; type: string; url: string; taille?: number }
+
+/** P6 : les photos du bien du parcours, relues au coffre (dossier de l'auteur) avec un lien de lecture court ; une photo
+ *  purgée du coffre (dépôts gardés 2 jours) est COMPTÉE dans `absentes`, jamais inventée. */
+export async function photosDuBienParcours(id: string): Promise<{ photos: PhotoDuBienLue[]; absentes: number }> {
+  if (MAQUETTE) {
+    const p = fauxParcours.find((x) => x.id === id)
+    const liste = (Array.isArray(p?.reponses.photos) ? p!.reponses.photos : []) as PhotoDuBien[]
+    const photos = liste.filter((x) => apercusMaquette.has(x.id)).map((x) => ({ ...x, ...apercusMaquette.get(x.id)! }))
+    return { photos, absentes: liste.length - photos.length }
+  }
+  const r = await appeler<{ photos: PhotoDuBienLue[]; absentes: number }>(`/assistant/parcours/${encodeURIComponent(id)}/photos`, 'GET')
+  return { photos: r.photos ?? [], absentes: r.absentes ?? 0 }
 }
 
 export async function retirerFichier(id: string): Promise<void> {
@@ -516,6 +538,7 @@ const FAUSSES_QUESTIONS: QuestionParcours[] = [
   { id: 'dehors', titre: 'Le dehors', phrase: "Qu'y a-t-il dehors ?", forme: 'cocher', champs: ['JARDIN-', 'PISCINE-', 'surfterrain', 'GARAGE_BOX'] },
   { id: 'energie', titre: "L'énergie", phrase: "L'année, le DPE.", forme: 'cases', champs: ['ANNEE_CONS', 'dpe_date', 'dpe_cons', 'dpe_ges'] },
   { id: 'mandant', titre: 'Le mandant', phrase: 'Qui vend ?', forme: 'mandant', champs: ['mandant_choix', 'mandant'] },
+  { id: 'photos', titre: 'Les photos du bien', phrase: 'Les photos du bien (la galerie de l’annonce) — pas la fiche de visite.', forme: 'fichiers', champs: ['photos'] },
 ]
 /** maquette P4-a : le parcours qu'ouvre la carte, déjà rempli de la demande (le bien et l'intérieur « connus ») */
 function parcoursFauxRempli(): ParcoursVue {

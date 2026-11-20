@@ -655,6 +655,44 @@ def parcours_services_publics(
     raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
 
 
+TYPES_PHOTOS_DU_BIEN = {"image/jpeg", "image/png", "image/webp"}  # = l'étape Photos de la fenêtre
+
+
+@router.get("/parcours/{parcours_id}/photos")
+def parcours_photos_du_bien(
+    parcours_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P6 (20/11) : les PHOTOS DU BIEN du parcours, relues au coffre dans le dossier de SON AUTEUR, avec un lien de lecture
+    #   court : les vignettes de la question, et l'étape 2 « Photos » de la fenêtre à son ouverture. ⛔ Jamais lues par
+    #   personne (ni scan ni modèle). Une photo purgée du coffre (dépôts gardés 2 jours) est comptée, jamais inventée.
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    rendues, absentes = [], 0
+    for p in (ligne.get("reponses") or {}).get("photos") or []:
+        numero = str(p.get("id") if isinstance(p, dict) else p)
+        try:
+            f = fichiers_service.decrire(settings, str(user.id), numero)
+            if f["type"] not in TYPES_PHOTOS_DU_BIEN:
+                absentes += 1
+                continue
+            rendues.append({"id": numero, "nom": f["nom"], "type": f["type"], "taille": f["taille"],
+                            "url": fichiers_service.lien_lecture(settings, f["chemin"]),
+                            "visible": not (isinstance(p, dict) and p.get("visible") is False)})
+        except fichiers_service.RefusFichier:
+            absentes += 1
+    return {"ok": True, "photos": rendues, "absentes": absentes}
+
+
 class ParcoursPhrasePayload(BaseModel):
     question: str = Field(min_length=1, max_length=60)
     texte: str = Field(min_length=1, max_length=4000)

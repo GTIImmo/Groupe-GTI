@@ -295,7 +295,7 @@ import PilotageScreen from './PilotageScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
-import { EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, contactDeLaRecherche, noterCreationCarte, noterParcoursCree, prendreCoordonneesMandant, transactionPourLien, type CaseParcours, type CatalogueParcours, type CreationFaite, type OuvertureCreation, type ParcoursVue } from './lib/assistant'
+import { EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, contactDeLaRecherche, noterCreationCarte, noterParcoursCree, photosDuBienParcours, prendreCoordonneesMandant, transactionPourLien, type CaseParcours, type CatalogueParcours, type CreationFaite, type OuvertureCreation, type ParcoursVue, type PhotoDuBien } from './lib/assistant'
 import { bvBoot } from './lib/bienvuBoot'
 import { webpEnJpeg } from './lib/photoJpeg'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
@@ -18584,6 +18584,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         })
       }))
       champs.push('composition')
+    }
+    // P6 (20/11) : les PHOTOS DU BIEN du parcours vont dans l'étape 2 « Photos », APRÈS la remise à zéro ci-dessus (qui les
+    //   vide), dans leur ordre (la 1re = couverture) et avec leur visibilité ; elles partiront comme aujourd'hui, une par une,
+    //   après « Créer ». Une photo purgée du coffre (dépôts gardés 2 jours) ou illisible est DITE, jamais perdue en silence.
+    const photosDuBien = Array.isArray(r.photos) ? (r.photos as PhotoDuBien[]).filter((p) => p && p.id) : []
+    if (photosDuBien.length) {
+      try {
+        const lues = await photosDuBienParcours(vue.id)
+        const ordre = new Map(photosDuBien.map((p, i) => [p.id, i]))
+        const triees = [...lues.photos].sort((a, b) => (ordre.get(a.id) ?? 0) - (ordre.get(b.id) ?? 0)).slice(0, 20)
+        const prises = await Promise.allSettled(triees.map(async (p) => {
+          const reponse = await fetch(p.url)
+          if (!reponse.ok) throw new Error(String(reponse.status))
+          const fichier = await webpEnJpeg(new File([await reponse.blob()], p.nom, { type: p.type }))
+          return { id: crypto.randomUUID(), file: fichier, previewUrl: URL.createObjectURL(fichier), visible: p.visible !== false }
+        }))
+        const photos = prises.flatMap((x) => (x.status === 'fulfilled' ? [x.value] : []))
+        setDraftAnnoncePhotoDrafts(photos)
+        if (photos.length) champs.push('photos')
+        const manquent = photosDuBien.length - photos.length
+        if (manquent) setErrorMessage(`${manquent} photo${manquent > 1 ? 's' : ''} du bien n'${manquent > 1 ? 'ont' : 'a'} pas pu être reprise${manquent > 1 ? 's' : ''} (les dépôts sont gardés 2 jours) : ajoute-la${manquent > 1 ? 's' : ''} à l'étape Photos.`)
+      } catch (erreur) {
+        setErrorMessage(`Les photos du bien n'ont pas pu être reprises (${erreur instanceof Error ? erreur.message : 'erreur'}) : ajoute-les à l'étape Photos.`)
+      }
     }
     setDraftAnnonceScanEstimation(vue.genre === 'creation_estimation')
     setDraftPrefillAssistant({ carteId: '', parcoursId: vue.id, champs: [...champs], nombre: champs.length, heure, desaccords: [], lecture: null })

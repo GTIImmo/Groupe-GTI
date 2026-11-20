@@ -2544,9 +2544,40 @@ def lire_fiche_du_parcours(ctx: ContexteAssistant, ligne: dict[str, Any], fichie
     return ecrite
 
 
+# P6 (20/11) : les PHOTOS DU BIEN jointes avec la demande (la galerie : JPEG, PNG, WebP comme l'étape Photos de la
+#   fenêtre ; 20 au plus) vont dans la question « Les photos du bien » du parcours, puis dans l'étape 2 de la fenêtre.
+#   ⛔ Jamais lues par le scan, jamais une page de la fiche de visite (un même fichier ne peut pas être les deux).
+TYPES_PHOTOS_DU_BIEN = {"image/jpeg", "image/png", "image/webp"}
+
+
+def _photos_du_bien(ctx: ContexteAssistant, p: dict[str, Any], fiche: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    brut = p.get("photos_du_bien")
+    if not brut:
+        return []
+    photos = _fichiers_joints(ctx, "|".join(brut) if isinstance(brut, list) else brut)
+    if len(photos) > parcours_moteur.MAX_PHOTOS:
+        raise Refus(f"{parcours_moteur.MAX_PHOTOS} photos du bien au plus (comme l'étape Photos de la fenêtre).")
+    autres = [f["nom"] for f in photos if f["type"] not in TYPES_PHOTOS_DU_BIEN]
+    if autres:
+        raise Refus("Les photos du bien sont des images JPEG, PNG ou WebP : " + ", ".join(autres) + ".")
+    deux_fois = {f["id"] for f in photos} & {f["id"] for f in fiche}
+    if deux_fois:
+        raise Refus("Un même fichier ne peut pas être à la fois une page de la fiche de visite et une photo du bien : "
+                    "demande à la personne ce qu'il est.")
+    return photos
+
+
+def _depart_avec_photos(depart: dict[str, Any], photos: list[dict[str, Any]], annee: int) -> dict[str, Any]:
+    if not photos:
+        return depart
+    return parcours_moteur.appliquer_depart(depart, {"photos": [{"id": f["id"], "visible": True} for f in photos]},
+                                            "demande", annee)
+
+
 def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     _parcours_ouvert(ctx)
     c = _controler_creation(ctx, p, exiger=False)
+    photos_bien = _photos_du_bien(ctx, p, c["photos"])
     annee = parcours_moteur.annee_a_paris()
     depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)
     suivi = parcours_moteur.etats(depart)
@@ -2559,18 +2590,25 @@ def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tup
               + (f"La fiche de visite ({len(c['photos'])} page{'s' if len(c['photos']) > 1 else ''}) sera lue au clic : "
                  "il ne restera que ce qu'elle ne dit pas. " if c["photos"]
                  else f"{reste} question{'s' if reste > 1 else ''} à boutons ensuite, sans l'IA. ")
+              + (f"Les {len(photos_bien)} photos du bien iront à l'étape Photos de la fenêtre (jamais lues). "
+                 if len(photos_bien) > 1 else "La photo du bien ira à l'étape Photos de la fenêtre (jamais lue). "
+                 if photos_bien else "")
               + "À la fin, la fenêtre de création s'ouvre remplie et rien n'est créé avant ton clic « Créer »")
     parametres = _parametres_de_la_carte(c)
     if c["photos"]:
         parametres["fichiers"] = [f["id"] for f in c["photos"]]
+    if photos_bien:
+        parametres["photos_du_bien"] = [f["id"] for f in photos_bien]
     return resume, parametres
 
 
 def executer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
     _parcours_ouvert(ctx)  # re-vérifié AU CLIC, comme le contact et le négociateur
     c = _controler_creation(ctx, p, exiger=False)
+    photos_bien = _photos_du_bien(ctx, p, c["photos"])  # relues au coffre AU CLIC, dans SON dossier
     annee = parcours_moteur.annee_a_paris()
     depart = parcours_moteur.appliquer_depart({}, _depart_du_parcours(c), "demande", annee)  # la demande d'abord : elle prime
+    depart = _depart_avec_photos(depart, photos_bien, annee)
     lecture = _lire_la_fiche(ctx, c["photos"]) if c["photos"] else None
     if lecture:
         depart = _appliquer_la_fiche(depart, lecture, annee)
@@ -4176,7 +4214,10 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
                    "fiche_de_visite": {"type": "string", "description": "pages de la FICHE DE VISITE jointes (le patron "
                                        "rempli à la main ; fichier:…, 5 au plus, séparées par |) : lues au clic, il ne restera "
-                                       "que ce qu'elle ne dit pas ; JAMAIS des photos du bien ; ou vide"}}),
+                                       "que ce qu'elle ne dit pas ; JAMAIS des photos du bien ; ou vide"},
+                   "photos_du_bien": {"type": "string", "description": "les PHOTOS DU BIEN jointes (la galerie : salon, façade, "
+                                      "jardin… ; fichier:…, 20 au plus, séparées par |) : elles iront à l'étape Photos de la "
+                                      "fenêtre, JAMAIS lues ; jamais la fiche de visite ; ou vide"}}),
           preparer_parcours_creation, executer_parcours_creation),
     Geste("ouvrir_avis_de_valeur",
           "Prépare l'OUVERTURE de l'ÉDITEUR « Avis de valeur » d'un bien EXISTANT (« fais l'estimation / l'avis de valeur "

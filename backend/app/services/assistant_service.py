@@ -196,8 +196,9 @@ CONSIGNE_PARCOURS = (
     "contact), puis dis en une phrase que les questions suivent a boutons. Ne pose PAS toi-meme les questions des "
     "essentiels : le parcours pose ce qui manque. Avec la FICHE DE VISITE jointe (le patron rempli, photos JPEG / PNG / "
     "WebP) : le meme proposer_parcours_creation, ses pages dans « fiche_de_visite » (lue au clic, il ne reste que ce "
-    "qu'elle ne dit pas). Des PHOTOS DU BIEN jointes a une creation ne vont PAS dans « fiche_de_visite » : dis qu'elles "
-    "s'ajoutent a l'etape Photos de la fenetre. Sans fiche jointe, dis en une phrase que photographier la fiche de "
+    "qu'elle ne dit pas). Des PHOTOS DU BIEN jointes a une creation ne vont PAS dans « fiche_de_visite » : passe-les "
+    "dans « photos_du_bien » du meme proposer_parcours_creation (elles iront a l'etape Photos de la fenetre, jamais "
+    "lues). Sans fiche jointe, dis en une phrase que photographier la fiche de "
     "visite remplie (Joindre) evite la plupart des questions. "
     "Pour tout autre sujet (prix, statut, contact, recherche…), jamais de parcours.\n"
 )

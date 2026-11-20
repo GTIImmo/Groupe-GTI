@@ -317,9 +317,13 @@ voir("DEUX CHOSES A NE JAMAIS CONFONDRE" in consignes and "Ce sont des photos du
 from app.services import assistant_gestes as ges_lb  # noqa: E402
 props = {n: set(ges_lb.GESTES[n].parametres["properties"]) for n in ("ajouter_photo", "ouvrir_creation_annonce", "parcours_creation")}
 voir("photos_du_bien" in props["ajouter_photo"] and "fiche_de_visite" not in props["ajouter_photo"]
-     and all("fiche_de_visite" in props[n] and "photos_du_bien" not in props[n] and "fichiers" not in props[n]
-             for n in ("ouvrir_creation_annonce", "parcours_creation")),
+     and all("fiche_de_visite" in props[n] and "fichiers" not in props[n] for n in ("ouvrir_creation_annonce", "parcours_creation"))
+     and "photos_du_bien" not in props["ouvrir_creation_annonce"],
      "les outils : « photos_du_bien » pour la galerie, « fiche_de_visite » pour les créations, jamais l'un pour l'autre")
+# P6 (20/11) : le PARCOURS reçoit aussi les photos du bien, dans un paramètre À PART (étape Photos, jamais lues)
+voir("photos_du_bien" in props["parcours_creation"] and "JAMAIS lues" in ges_lb.GESTES["parcours_creation"].parametres["properties"]["photos_du_bien"]["description"]
+     and "dans « photos_du_bien » du meme proposer_parcours_creation" in " ".join(svc.CONSIGNE_PARCOURS.split()),
+     "P6 : le parcours a « photos_du_bien » À PART de « fiche_de_visite », et la consigne y envoie les photos du bien")
 voir(len(obj.OBJETS) == 15, "15 objets dans la liste fermée (13/11 : + dossiers, le registre des transactions)")
 
 print(f"\n{ok} contrôles verts")

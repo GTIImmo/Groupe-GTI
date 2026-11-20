@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  RefusAssistant, chercherPublicsParcours, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, repondreParcours,
-  type CaseParcours, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type PropositionPublique, type QuestionParcours,
+  RefusAssistant, chercherPublicsParcours, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, photosDuBienParcours, repondreParcours,
+  type CaseParcours, type PhotoDuBien, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type PropositionPublique, type QuestionParcours,
 } from './lib/assistant'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,6 +67,11 @@ function resume(q: QuestionParcours & { etat: string | null }, reponses: Valeurs
     return n ? `${n} pièce${n > 1 ? 's' : ''}` : 'aucune pièce'
   }
   if (q.forme === 'mandant') return texte(reponses.mandant_choix) === 'nouveau' ? 'nouveau mandant' : texte(reponses.mandant_choix) === 'existant' ? 'mandant existant' : 'plus tard'
+  if (q.forme === 'fichiers') {  // P6 : « 8 photos · 1 masquée »
+    const photos = Array.isArray(reponses.photos) ? reponses.photos as PhotoDuBien[] : []
+    const masquees = photos.filter((x) => x && x.visible === false).length
+    return photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''}${masquees ? ` · ${masquees} masquée${masquees > 1 ? 's' : ''}` : ''}` : 'aucune photo'
+  }
   // ses ESSENTIELS d'abord (le bien : le type, puis la rue -- pas « Vente classique »), puis le reste ; une même valeur
   // (l'adresse recopiée en privée et en publique) ne compte qu'une fois
   const essentiels = q.essentiels ?? []
@@ -270,9 +275,91 @@ const RECOPIES: Record<string, string[]> = {
   adresse_haut: ['adresse'], cp: ['codeprive', 'codepublique'], ville: ['villeprivee', 'villepublique'],
 }
 
+// P6 (20/11) : LES PHOTOS DU BIEN dans le parcours (maquette v27, planche 13) -- la galerie de l'annonce, JAMAIS la fiche
+//   de visite : déposées au coffre de l'assistant (comme le trombone), dans leur ordre (la 1re = couverture), visibles ou
+//   masquées ; à l'ouverture, la fenêtre les reçoit à son étape 2 « Photos ». Personne ne les lit (ni scan, ni modèle).
+const MAX_PHOTOS_DU_BIEN = 20
+function QuestionPhotos({ parcoursId, photos, onChange }: { parcoursId: string; photos: PhotoDuBien[]; onChange: (l: PhotoDuBien[]) => void }) {
+  const [apercus, setApercus] = useState<Record<string, { url: string; nom: string }>>({})
+  const [absentes, setAbsentes] = useState(0)
+  const [depot, setDepot] = useState<{ en: number; erreur: string | null }>({ en: 0, erreur: null })
+  const choix = useRef<HTMLInputElement | null>(null)
+  const derniere = useRef(photos)
+  derniere.current = photos
+  // les photos déjà gardées : relues au coffre (lien de lecture court) ; une photo purgée est comptée
+  useEffect(() => {
+    if (!photos.some((p) => !apercus[p.id])) return
+    let annule = false
+    photosDuBienParcours(parcoursId).then((r) => {
+      if (annule) return
+      setApercus((avant) => ({ ...Object.fromEntries(r.photos.map((p) => [p.id, { url: p.url, nom: p.nom }])), ...avant }))
+      setAbsentes(r.absentes)
+    }).catch(() => undefined)
+    return () => { annule = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parcoursId])
+  const joindre = async (liste: FileList | null) => {
+    const tous = Array.from(liste ?? [])
+    const place = MAX_PHOTOS_DU_BIEN - photos.length
+    const images = tous.filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type))
+    const refusees = tous.length - images.length
+    const prises = images.slice(0, Math.max(0, place))
+    if (!prises.length) {
+      setDepot({ en: 0, erreur: refusees ? 'Seules les images JPEG, PNG ou WebP sont des photos du bien.' : `${MAX_PHOTOS_DU_BIEN} photos au plus, comme la fenêtre.` })
+      return
+    }
+    setDepot({ en: prises.length, erreur: null })
+    const deposees: PhotoDuBien[] = []
+    const erreurs: string[] = []
+    for (const f of prises) {
+      try {
+        const d = await deposerFichier(f)
+        setApercus((avant) => ({ ...avant, [d.id]: { url: URL.createObjectURL(f), nom: f.name } }))
+        deposees.push({ id: d.id, visible: true })
+      } catch (e) {
+        erreurs.push(e instanceof Error ? e.message : `« ${f.name} » n'a pas pu être déposée.`)
+      }
+    }
+    onChange([...derniere.current, ...deposees].slice(0, MAX_PHOTOS_DU_BIEN))
+    setDepot({ en: 0, erreur: erreurs.length ? erreurs.join(' ') : refusees ? `${refusees} fichier(s) ignoré(s) : ce ne sont pas des images.`
+      : images.length > prises.length ? `${MAX_PHOTOS_DU_BIEN} photos au plus : ${images.length - prises.length} non jointe(s).` : null })
+  }
+  const masquees = photos.filter((p) => !p.visible).length
+  return (
+    <div className="asp-photos">
+      <input ref={choix} type="file" hidden multiple accept="image/jpeg,image/png,image/webp"
+        onChange={(e) => { void joindre(e.target.files); e.target.value = '' }} />
+      {photos.length ? (
+        <ul className="asp-galerie" aria-label="Les photos du bien">
+          {photos.map((p, i) => (
+            <li key={p.id} className={p.visible ? '' : 'is-masquee'}>
+              {apercus[p.id] ? <img src={apercus[p.id].url} alt={apercus[p.id].nom} /> : <span className="asp-galerie-vide" aria-hidden="true" />}
+              {i === 0 ? <em className="asp-couv">couverture</em> : null}
+              {!p.visible ? <em className="asp-masq">masquée</em> : null}
+              <span className="asp-galerie-actions">
+                <button type="button" onClick={() => onChange(photos.map((x) => (x.id === p.id ? { ...x, visible: !x.visible } : x)))}>{p.visible ? 'Masquer' : 'Afficher'}</button>
+                {i > 0 ? <button type="button" onClick={() => onChange([p, ...photos.filter((x) => x.id !== p.id)])}>En couverture</button> : null}
+                <button type="button" onClick={() => onChange(photos.filter((x) => x.id !== p.id))} aria-label={`Retirer ${apercus[p.id]?.nom ?? 'la photo'}`}>Retirer</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="asp-note">Les <b>photos du bien</b> : la galerie de l'annonce (salon, façade, jardin…). Pas la fiche de visite : elle se lit plus haut.</p>}
+      <div className="asp-photos-pied">
+        <span>{photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''} jointe${photos.length > 1 ? 's' : ''}${masquees ? ` · ${masquees} masquée${masquees > 1 ? 's' : ''}` : ''} · la 1re en couverture` : ''}
+          {depot.en ? ` Je dépose ${depot.en} photo${depot.en > 1 ? 's' : ''}…` : ''}</span>
+        <button type="button" className="asp-sec" disabled={!!depot.en || photos.length >= MAX_PHOTOS_DU_BIEN} onClick={() => choix.current?.click()}>
+          {photos.length ? 'En ajouter' : 'Joindre les photos du bien'}</button>
+      </div>
+      {absentes ? <p className="asp-note asp-photos-ko">{absentes > 1 ? `${absentes} photos n'étaient plus au coffre (les dépôts sont gardés 2 jours) : rejoins-les.` : "Une photo n'était plus au coffre (les dépôts sont gardés 2 jours) : rejoins-la."}</p> : null}
+      {depot.erreur ? <p className="asp-note asp-photos-ko" role="alert">{depot.erreur}</p> : null}
+    </div>
+  )
+}
+
 function valeursDe(q: QuestionParcours, reponses: Valeurs): Valeurs {
   const v: Valeurs = {}
-  for (const c of q.champs) v[c] = c === 'composition' ? (Array.isArray(reponses.composition) ? reponses.composition : []) : texte(reponses[c])
+  for (const c of q.champs) v[c] = c === 'composition' || c === 'photos' ? (Array.isArray(reponses[c]) ? reponses[c] : []) : texte(reponses[c])
   return v
 }
 
@@ -403,7 +490,7 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
             corps[c] = texte(valeurs[c]).trim()
           }
         }
-        if (q.forme === 'fichiers') corps = {}
+        if (q.forme === 'fichiers') corps = { photos: (valeurs.photos as PhotoDuBien[]) ?? [] }  // P6 : l'ordre et la visibilité
       }
       onVue(await repondreParcours(vue.id, q.id, geste, corps))
       setOuverte(null)
@@ -423,7 +510,10 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       return <EditeurPieces pieces={(valeurs.composition as Piece[]) ?? []} types={cat.typesPiece} onChange={(p) => setValeur('composition', p)} />
     }
     if (q.forme === 'fichiers') {
-      return <p className="asp-note">Les <b>photos du bien</b> (la galerie de l'annonce : visibles ou masquées, la couverture) se déposent dans la fenêtre de création, à son étape Photos. Les joindre ici viendra plus tard. Ce n'est pas la fiche de visite.</p>
+      if (!ficheOuverte) {
+        return <p className="asp-note">Les <b>photos du bien</b> (la galerie de l'annonce : visibles ou masquées, la couverture) se déposent dans la fenêtre de création, à son étape Photos. Ce n'est pas la fiche de visite.</p>
+      }
+      return <QuestionPhotos parcoursId={vue.id} photos={(valeurs.photos as PhotoDuBien[]) ?? []} onChange={(l) => setValeur('photos', l)} />
     }
     if (q.forme === 'mandant') {
       return <QuestionMandant valeurs={valeurs} setValeur={setValeur} coordonnees={coordonnees} setCoordonnees={setCoordonnees}
@@ -545,7 +635,7 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           </div>
           {erreur ? <div className="asp-ko" role="alert">{erreur}</div> : null}
           <footer className="asp-pied">
-            <span>Les listes sont celles de la fenêtre de création. Un clic ici n'appelle pas l'IA.</span>
+            <span>{q.forme === 'fichiers' && ficheOuverte ? "Elles vont à l'étape 2 « Photos » de la fenêtre (20 au plus) et partent comme aujourd'hui, une par une, après « Créer »." : "Les listes sont celles de la fenêtre de création. Un clic ici n'appelle pas l'IA."}</span>
             <div>
               {ouverte ? <button type="button" className="asp-sec" onClick={() => setOuverte(null)} disabled={envoi}>Annuler</button> : null}
               <button type="button" className="asp-sec" onClick={() => void envoyer('nsp')} disabled={envoi}>Je ne sais pas</button>

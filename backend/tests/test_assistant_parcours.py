@@ -92,8 +92,9 @@ voir(p["composition"] == [{"idTypePiece": "3", "typeLabel": "Chambre", "surfaceP
      "la composition : les pièces gardées sans leurs cases vides, une pièce vide est retirée")
 voir(refuse(lambda: moteur.enregistrer({}, "composition", {"composition": [{"prix": "1"}]}, "repondre"), "inconnue"),
      "une case de pièce inconnue : refusée")
-f = moteur.enregistrer({}, "photos", {"photos": ["12", "", "13"]}, "repondre")
-voir(f["photos"] == ["12", "13"], "les photos : des numéros de fichiers")
+f = moteur.enregistrer({}, "photos", {"photos": ["1" * 32, "", "2" * 32]}, "repondre")
+voir(f["photos"] == [{"id": "1" * 32, "visible": True}, {"id": "2" * 32, "visible": True}],
+     "les photos : des numéros de fichiers du coffre (une entrée vide ignorée) ; P6 : visibles par défaut")
 
 print("3) « je ne sais pas » et « plus tard » font avancer")
 n = moteur.enregistrer(r, "quartier", {}, "nsp")
@@ -757,6 +758,72 @@ voir(ext["fields"]["kitchen"]["value"] is None and ext["fields"]["livingSurface"
 interrupteur["valeur"] = ""
 r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
 voir(r[0] == 403, "interrupteur absent : refusé")
+interrupteur["valeur"] = "on"
+
+print("6 octies) P6 : les photos du bien, dans le parcours puis l'étape Photos de la fenêtre")
+H = lambda n: f"{n:032x}"  # noqa: E731 -- un numéro de fichier du coffre (32 caractères hexadécimaux)
+
+
+def refuse_g(fonction, morceau=""):
+    try:
+        fonction()
+    except ges.Refus as exc:
+        return morceau in str(exc)
+    return False
+
+
+voir(moteur._photos([H(1), {"id": H(2), "visible": False}, H(1)]) == [{"id": H(1), "visible": True}, {"id": H(2), "visible": False}],
+     "les photos du bien : leur ORDRE (la 1re = couverture), visible ou masquée ; l'ancienne forme vaut « visible » ; un doublon retiré")
+voir(refuse(lambda: moteur._photos([H(i) for i in range(21)]), "20 au plus") and refuse(lambda: moteur._photos(["../x"]), "invalide"),
+     "21 photos ou un numéro mal formé : refusés (20 au plus, comme la fenêtre)")
+rp = moteur.enregistrer({}, "photos", {"photos": [{"id": H(3), "visible": False}, H(4)]}, "repondre")
+voir(rp["photos"] == [{"id": H(3), "visible": False}, {"id": H(4), "visible": True}] and rp["_questions"]["photos"] == "faite",
+     "la question « Les photos du bien » garde l'ordre et la visibilité")
+# le geste : des photos du bien jointes avec la demande
+interrupteur["valeur"] = "admin"
+table.clear()
+ges._fichiers_joints = lambda c, texte: [{"id": i, "nom": f"salon{i[-1]}.jpg", "type": "image/jpeg", "taille": 1000,
+                                         "chemin": f"temp/assistant/u/{i}"} for i in str(texte).split("|") if i]
+avec_photos = {**lecture, "fiche_de_visite": "", "photos_du_bien": f"{H(5)}|{H(6)}"}
+res6, par6 = ges.preparer_parcours_creation(ctx, avec_photos)
+voir("Les 2 photos du bien iront à l'étape Photos" in res6 and "jamais lues" in res6 and par6["photos_du_bien"] == [H(5), H(6)]
+     and "fichiers" not in par6, "la carte annonce les photos du bien (étape Photos, jamais lues) ; aucune n'est une page de fiche")
+r6 = ges.executer_parcours_creation(ctx, par6)
+l6 = table[r6["parcours"]["id"]]["reponses"]
+voir(l6["photos"] == [{"id": H(5), "visible": True}, {"id": H(6), "visible": True}] and l6["_sources"]["photos"] == "demande",
+     "au clic : les photos du bien sont dans la question « Les photos du bien », dans l'ordre")
+voir("photos" not in l6.get("_questions", {}),
+     "la question n'est pas marquée « connue » : la personne voit ses photos et les valide (masquer, couverture)")
+voir(refuse_g(lambda: ges.preparer_parcours_creation(ctx, {**lecture, "fiche_de_visite": H(5), "photos_du_bien": H(5)}), "à la fois"),
+     "un même fichier en fiche de visite ET en photo du bien : refusé, l'IA doit demander")
+ges._fichiers_joints = lambda c, texte: [{"id": i, "nom": "mandat.pdf", "type": "application/pdf", "taille": 1000,
+                                         "chemin": f"temp/assistant/u/{i}"} for i in str(texte).split("|") if i]
+voir(refuse_g(lambda: ges.preparer_parcours_creation(ctx, {**lecture, "fiche_de_visite": "", "photos_du_bien": H(7)}), "JPEG, PNG ou WebP"),
+     "un PDF passé pour une photo du bien : refusé")
+voir(refuse_g(lambda: ges.preparer_parcours_creation(ctx, {**lecture, "fiche_de_visite": "", "photos_du_bien": "|".join(H(i) for i in range(21))}), "20 photos"),
+     "21 photos du bien : refusées")
+voir("photos_du_bien" in ges.GESTES["parcours_creation"].parametres["properties"],
+     "l'outil du parcours offre « photos_du_bien » à l'IA")
+# la route des liens de lecture
+lus_coffre = []
+
+
+def faux_decrire(settings, user_id, numero, *a, **k):
+    lus_coffre.append((user_id, numero))
+    if numero == H(6):
+        raise route.fichiers_service.RefusFichier("plus au coffre")
+    return {"id": numero, "nom": f"salon{numero[-1]}.jpg", "type": "image/jpeg", "taille": 1000, "chemin": f"temp/assistant/{user_id}/{numero}/x.jpg"}
+
+
+route.fichiers_service.decrire = faux_decrire
+route.fichiers_service.lien_lecture = lambda settings, chemin, *a, **k: "https://coffre/lien/" + chemin
+p6 = r6["parcours"]["id"]
+table[p6]["user_id"] = UID
+rl = appeler(route.parcours_photos_du_bien, p6, "Bearer j", Settings(), None, S, ST, role="admin")
+voir(rl["ok"] and [x["id"] for x in rl["photos"]] == [H(5)] and rl["absentes"] == 1 and rl["photos"][0]["url"].startswith("https://coffre/lien/")
+     and all(u == UID for u, _ in lus_coffre), "les liens : relus dans le dossier de L'AUTEUR ; une photo purgée du coffre est COMPTÉE, pas inventée")
+rl = appeler(route.parcours_photos_du_bien, p6, "Bearer j", Settings(), None, S, ST, uid=AUTRE_UID, role="admin")
+voir(rl[0] == 404, "les photos du parcours d'un AUTRE : introuvables, même pour l'admin")
 interrupteur["valeur"] = "on"
 
 print("7) aucun appel au modèle")
