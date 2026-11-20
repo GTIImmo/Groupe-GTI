@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2782,6 +2782,88 @@ TES APPS SCRIPT  Extensions -> Apps Script, sur CE classeur. Ce que je dois savo
    132 coupes) ; je te redemanderai ton « vas-y » avec le compte du soir meme, rejoue sur la photo du jour.
 3  LA VAGUE 0 : tes 3 lignes, tes Apps Script.
 4  INCHANGES : la piece 4126/4496 (ton « vas-y » d'allumage, apres le controle de E samedi) ; la « correction 3 » de V2.
+```
+
+---
+
+## ⑯ Le 20/11, soir — tes 23 questions en deux, et la correction de mon classeur des groupes
+
+> Ses mots (20/11, soir) : « TES 67 « OUI » FRANCS : je les valide en bloc » ; « les 5 que tu désapprouves (4, 11, 20,
+> 23, 24) et les 2 où tu doutes (8 et 81) : je les regarde à part » ; « partage mes 23 questions EN DEUX. A : ta
+> lecture, SUR QUOI elle repose, à quel point tu y crois. B : celles qui sont hors de portée. ⛔ NE FORCE RIEN. Je préfère
+> 82 lignes orphelines qu'une seule étiquette inventée. »
+
+### 16.1 Sa vérification — confirmée à l'identique
+
+```
+EN_ATTENTE   22 sur 23 (la 23e, d2108609 CHOUVELLON, est GEL_SEUL).
+SES « 4 »    liens sûrs + un seul dossier + personne d'autre + aucun audit contre = 2dfa6ef3, d1cb8dd7, HUY49KEC, d2108609.
+             Les trois premières : JUSTE, leur étiquette ne dépend pas de la question.
+             ⛔ d2108609 : NON. Sa seule pièce chez Hektor (21520) est justement l'objet de la question : l'écrire, ce
+             serait risquer l'étiquette inventée qu'il refuse.
+```
+
+### 16.2 La règle qui décide si une question bloque la colonne A
+
+La pose des étiquettes (lue EN PRODUCTION le 20/11, `app_poser_etiquettes_dossier`) : à la fusion comme à la scission,
+**le groupe qui garde la PLUS PETITE transaction garde l'étiquette**. Donc une question ne bloque la colonne A que si sa
+réponse déplace la plus petite transaction d'un dossier. Et une pièce douteuse **mise à part, seule dans son dossier**,
+ne peut plus faire bouger l'étiquette de personne : c'est ce que font déjà les exclusions de E (26613, 21520).
+
+### 16.3 Le partage (`notice/TEMPS10_TES_23_QUESTIONS_EN_DEUX_2026-11-20.md`, `.csv`, `.xlsx`)
+
+```
+A — MA LECTURE (16 lignes)
+  A1 1D7EIYKW GANDON-BERAUD          une seule affaire, 27512 jamais signé                    forte
+  A2 87QOXR64 RIGAUD                 l'annulation du 22/01 est bonne ; 11/02 = prévu         forte     étiquette indépendante
+  A3 E9GL6MUS + H6CTRVR6             11414 = l'offre SOUBEYRAND (FIGARI = intermédiaire)    forte     étiquettes indépendantes
+  A4 V3FO5NDA BAUDOIN                la vente est celle de POCHELON (6FQO29C8)                forte
+  A5 5QE9107L + ZW7MKTWH DEBARD      20088 suit la 2e offre                                   moyenne   → 20088 À PART
+  A6 RGCEC677 MEJEAN                 4542 est à FAU-PIETTE                                    moyenne   → 4542 À PART
+  A7 2dfa6ef3, 5a956cad, d1cb8dd7    UNE doctrine : le rôle offre = l'offre ACCEPTÉE          convention, étiquettes indépendantes
+  A8 3308P0UX, 9WQ204HP, O6R10ZQA,   les jumelles : celle que le gel tient déjà ; l'autre     convention, étiquettes indépendantes
+     T2GZOY5O                        sans étiquette (même affaire : juste sur l'une comme l'autre)
+  A9 QJQ9M4OF                        pas de question à elle ; 17365 reste chez elle            étiquette indépendante
+B — HORS DE PORTÉE, LA LIGNE ATTEND SA RÉPONSE (3)
+  B1 SHN6RKDI MOSNIER (26613) · B2 d2108609 CHOUVELLON (21520) — déjà à part ; sans réponse, rien d'écrit, rien ne bouge
+  B3 ea6a28a7 DONNADIEU (14033) — prix ET honoraires = DONNADIEU, mais aussi = l'annonce ; noms COLAS
+     → proposition : 14033 À PART, la vente COLAS (205f62be) s'écrit sans attendre
+B — HORS DE PORTÉE, MAIS L'ÉCRITURE N'EN DÉPEND PAS (4)
+  B4 TA5QUCD4 (date d'offre) · B5 Y9A2L3X4 (date de compromis) · B6 HUY49KEC (compromis à créer ?) ·
+  B7 c0a73edd (doublon ou 2e lot ?) — et les dates d'annulation des jumelles (VIALLARD, PAOLONE)
+```
+
+### 16.4 ⛔ Ma faute, trouvée en relisant : le défaut des coupes « nom seul » — et ce qu'il touche
+
+```
+LE DEFAUT  l'outil de coupe, puis moi, n'avons regardé que les DEUX lignes de la coupe et donné le compromis sans date
+           AU NOM. Or Hektor recopie le nom du premier acheteur sur TOUS les compromis du bien : sur 22, 29, 50 et 40
+           le nom « qui départageait » est AUSSI sur le compromis signé de l'autre acheteur. Et d'AUTRES lignes du même
+           bien avaient fait une offre au prix exact de ces compromis.
+MES TROIS « MA LECTURE » DE LA SECTION 1 ETAIENT FAUSSES
+           7  16378 = COMI (RX6J289Y), certaine : acte prévu = sa vente prévue au jour près, 244 000 et 10 000 =
+              son offre et sa commission. La coupe se fait en TROIS. (Le gel le porte déjà juste.)
+           17 ALONSO n'a pas eu de compromis : 27135 = GENESTAS (94 000 / 7 000), 27134 = ARMAND TORE (90 000).
+           25 DUVET s'est retiré 5 jours après son offre : 4649 = MULLER (« RDV ACQ 22/1 », 32 000 / 3 500),
+              4651 = CHECCONI (31 000 / 3 500).
+LE CONTROLE SUR TOUT LE CLASSEUR (montant de l'offre de CHAQUE ligne du bien, honoraires contre commission, date
+           contre annulation et offre, lignes du bien hors du groupe) :
+           62 des 67 « OUI » validés TIENNENT (montant et honoraires uniques, ou date au jour près).
+           À CORRIGER : 28 (7450 = DURIEUX : 143 000 et 3 500 = son offre et SA commission, « CPMIS 29/10 reporté »),
+                        22, 29, 50, 40 (indécidables : même prix, mêmes honoraires, le nom partout → À PART),
+                        et 8, qu'il regarde (17131 = MELKI : 47 500 et 4 500, « rdv du 03/4 reporté »).
+           LIMITE : une ligne du Sheet qui n'a AUCUNE pièce chez nous sur le bien n'est pas vue par ce contrôle.
+⛔ RIEN N'EST TRANSFORME EN LIGNE DE COUPE avant son mot sur ces corrections.
+```
+
+### 16.5 Ce qui attend sa décision
+
+```
+1  A en bloc (16 lignes), marquées « TRANCHÉE AU PLUS PROBABLE » dans la mémoire des écritures.
+2  LA RÈGLE « À PART » : une pièce douteuse est mise seule dans son dossier (l'outil de coupe) et ne sera JAMAIS
+   rattachée à un dossier déjà écrit -- pour 20088, 4542, 14033, et 4533, 7710, 4560, 14110 du classeur.
+3  Les corrections du classeur des groupes (28, 22, 29, 50, 40 ; et 8) et les trois lectures refaites (7, 17, 25).
+4  B : quand il veut, au calme. Sans réponse : rien d'écrit sur B1-B3, rien d'autre ne bouge.
 ```
 
 ---
