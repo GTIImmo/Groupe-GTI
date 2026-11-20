@@ -176,3 +176,61 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: var(--bv-magenta,
 /* lot 10c (17/11) : la carte « Ce que dit le compromis » et « Revoir ce qu'il dit » dans « Lu par l'IA » */
 .gm2-cpv .gm2-pv span:first-child { color: var(--bv-ink, #1f2121); font-weight: 700; }
 .gm2-revoir { margin-left: 8px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   Visuel V3, morceau 3 (20/11/2026) : « LE DOSSIER » -- la liste des documents du cockpit, rangée par moment.
+   Classes NEUVES (gd3-…) : aucune règle existante n'est réécrite. Couleurs de la charte (jetons --bv-*, avec repli).
+   La carte dépliée garde ses propres classes (fa-ck-docitem…) : elle s'affiche comme aujourd'hui.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+.gd3-dossier { display: flex; flex-direction: column; border: 1px solid var(--bv-line, #e2e5e6); border-radius: 16px; background: var(--bv-surface, #ffffff); overflow: hidden; margin-top: 10px; font-family: var(--bv-font-ui, 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif); }
+.gd3-groupe + .gd3-groupe { border-top: 1px solid var(--bv-line, #e2e5e6); }
+.gd3-gtete { width: 100%; display: flex; align-items: center; gap: 10px; padding: 13px 16px; border: 0; background: transparent; text-align: left; cursor: pointer; color: var(--bv-ink, #1f2121); font: inherit; transition: background-color 150ms; }
+.gd3-gtete:hover { background: var(--bv-brume, #f6f7f8); }
+.gd3-gtete b { font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.gd3-gtete small { margin-left: auto; color: var(--bv-subtle, #7c8082); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.gd3-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.gd3-tag.is-cours { background: var(--bv-rose-soft, #fdf0f6); color: var(--bv-framboise, #8c0044); }
+.gd3-tag.is-fait { background: var(--bv-ok-soft, #e6f3ec); color: #1f6b45; }
+.gd3-tag.is-manque { background: var(--bv-warn-soft, #fff1dc); color: #7a4a0e; }
+.gd3-tag.is-autre { background: var(--bv-brume, #f6f7f8); color: var(--bv-mute, #5c6163); }
+.gd3-chev { width: 8px; height: 8px; flex: none; border-right: 2px solid var(--bv-subtle, #7c8082); border-bottom: 2px solid var(--bv-subtle, #7c8082); transform: rotate(-45deg); transition: transform 200ms var(--bv-ease, ease); }
+.gd3-chev.is-ouvert { transform: rotate(45deg); }
+.gd3-lignes { padding: 0 0 8px; }
+.gd3-doc { border-top: 1px solid var(--bv-brume, #f6f7f8); }
+.gd3-doc.is-ouverte { background: var(--bv-rose-soft, #fdf0f6); }
+.gd3-dl, .gd3-manque { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 14px; gap: 12px; align-items: center; padding: 10px 16px 10px 34px; border: 0; background: transparent; text-align: left; font: inherit; color: var(--bv-ink, #1f2121); }
+.gd3-dl { cursor: pointer; transition: background-color 150ms; }
+.gd3-dl:hover { background: var(--bv-brume, #f6f7f8); }
+.gd3-doc.is-ouverte .gd3-dl:hover { background: transparent; }
+.gd3-manque { grid-template-columns: 30px minmax(0, 1fr) auto; }
+.gd3-page { position: relative; width: 26px; height: 33px; border-radius: 4px; background: var(--bv-surface, #ffffff); border: 1px solid var(--bv-line-strong, #cfd3d4); box-shadow: 0 2px 5px -3px rgba(34, 35, 35, 0.25); }
+.gd3-page::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; border-radius: 3px 3px 0 0; background: var(--bv-magenta, #c5005f); }
+.gd3-page.is-lu::after { content: ""; position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--bv-ok, #2e8a5c) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 9px no-repeat; box-shadow: 0 0 0 2px var(--bv-surface, #ffffff); }
+.gd3-page.is-vide { background: var(--bv-brume, #f6f7f8); border: 1.5px dashed var(--bv-line-strong, #cfd3d4); box-shadow: none; }
+.gd3-page.is-vide::before { display: none; }
+.gd3-dt { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gd3-dt b { font-size: 14px; font-weight: 700; }
+.gd3-dt small { color: var(--bv-subtle, #7c8082); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd3-puces { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.gd3-puce { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 22px; line-height: 22px; padding: 0 8px; border-radius: 6px; background: var(--bv-brume, #f6f7f8); color: var(--bv-ink, #1f2121); font-size: 12px; font-weight: 600; }
+.gd3-doc.is-ouverte .gd3-puce { background: var(--bv-surface, #ffffff); }
+.gd3-puce.is-refus { background: var(--bv-warn-soft, #fff1dc); color: #7a4a0e; }
+.gd3-etat { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.gd3-sig { color: #7a4a0e; font-size: 11.5px; font-weight: 600; max-width: 220px; }
+.gd3-sig.is-signe { color: #1f6b45; }
+.gd3-detail { padding: 2px 16px 14px 76px; display: flex; flex-direction: column; gap: 10px; animation: gd3-monte 260ms var(--bv-ease, ease) both; }
+.gd3-lu { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--bv-surface, #ffffff); border: 1px solid var(--bv-line, #e2e5e6); }
+.gd3-lu > small { color: var(--bv-mute, #5c6163); font-size: 12px; font-weight: 700; }
+.gd3-lu-gestes { display: flex; flex-wrap: wrap; gap: 12px; }
+.gd3-lien { border: 0; background: none; padding: 0; color: var(--bv-magenta, #c5005f); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.gd3-lien:disabled { opacity: 0.5; cursor: default; }
+.gd3-dep { height: 32px; padding: 0 12px; border: 1.5px solid var(--bv-magenta, #c5005f); border-radius: 10px; background: var(--bv-surface, #ffffff); color: var(--bv-magenta, #c5005f); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color 150ms, color 150ms; }
+.gd3-dep:hover { background: var(--bv-magenta, #c5005f); color: #ffffff; }
+.gd3-dep.is-discret { border-color: transparent; color: var(--bv-mute, #5c6163); }
+.gd3-dep.is-discret:hover { background: var(--bv-brume, #f6f7f8); color: var(--bv-ink, #1f2121); }
+.gd3-manque.is-cas .gd3-dt b { font-weight: 600; color: var(--bv-mute, #5c6163); }
+.gd3-msg { margin: 0; padding: 10px 16px; color: #9e2b28; font-size: 13px; }
+.gd3-dl:focus-visible, .gd3-gtete:focus-visible, .gd3-dep:focus-visible, .gd3-lien:focus-visible { outline: none; box-shadow: var(--bv-focus-ring, 0 0 0 3px rgba(197, 0, 95, 0.4)); }
+@keyframes gd3-monte { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) { .gd3-dl, .gd3-manque { padding-left: 16px; } .gd3-detail { padding-left: 16px; } }
+@media (prefers-reduced-motion: reduce) { .gd3-detail, .gd3-chev { animation: none !important; transition: none !important; } }

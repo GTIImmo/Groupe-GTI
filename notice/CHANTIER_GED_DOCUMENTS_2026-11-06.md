@@ -3842,3 +3842,30 @@ framboise #8c0044, fonds roses unifiés) ; mêmes polices qu'avant.
 chaque police passe par la charte, deux polices) ; témoin inverse sur l'ancien fichier : **13 ROUGE**. Les 14 autres essais GED
 verts (bilan 137, lues 95, remplir contact 80…). `npm run build` passe ; le paquet porte `var(--bv-magenta, #c5005f)` et
 `.bc{--bc-encre: var(--bv-ink, #1f2121)…`. ⚠ Pas vu à l'écran : il faut le déploiement (accord de Frédéric).
+
+### 12.61 VISUEL V3, MORCEAU 3 -- « Le dossier » : la liste du cockpit rangée par moment (20/11, « Oui mais audite de nouveau ») -- ÉCRIT, PAS EN LIGNE
+
+Ré-audit avant le code : `AUDIT_GRAPHIQUE_GED_2026-11-18.md` §10 bis (9 risques, 9 parades). La session signature (Youtrust)
+a été prévenue (`notice/PROMPT_AVERTIR_SESSION_SIGNATURE_GED_2026-11-20.md`) : rien en cours chez elle, DEUX CONDITIONS,
+tenues -- (1) « Voir le suivi » déplie le groupe et la ligne du document PUIS défile (`ouvrirPuisSuivi`, sinon `sst-<id>`
+n'existe pas) ; (2) l'état de signature reste visible ligne REPLIÉE (la pastille d'aujourd'hui + « signée le / en attente /
+expirée … à renvoyer » ; « À envoyer en signature » reste dans la carte, cf. §5.1 de l'audit graphique, non tranché).
+**Le code** :
+- `lib/gedPieces.ts` : fonction NEUVE `dossierParMoment` (le moment en cours d'abord, puis les précédents ; une pièce une
+  seule fois ; au passé, les reçues et les obligatoires non trouvées) -- `recuManque` non touchée ;
+- `RecuManque.tsx` : deux propriétés neuves, `rangeEnListe` (cockpit seulement : plus de grille de feuilles ni de pastille
+  « Lu par l'IA », les moments ne se cliquent plus) et `onDossier` (il transmet à la liste ce qu'il sait DÉJÀ : groupes,
+  lectures en morceaux, « Revoir ce qu'il dit », « garder la lecture ») ; sans elles (fiche « classic ») : l'écran d'avant ;
+- `App.tsx` (`ConsoleDocumentsPanel`, skin `v21`) : au filtre « Tous » (qui s'appelle « Le dossier » quand le rangement est
+  là), les groupes dépliables (le moment en cours ouvert) ; une ligne par document (pièce, nom du fichier, 2 valeurs lues,
+  état) ; dépliée : « Ce que l'IA a lu » puis la carte d'aujourd'hui (`carteDocument`, le MÊME texte qu'avant, sorti de la
+  boucle) ; les manquantes à leur place avec « Déposer » (même geste que les feuilles) ; « Autres documents » pour le reste
+  (calculé dans App : un document absent de chez Hektor ne se perd pas). « À préparer », « Signés », « Cloud » : la liste à
+  plat d'aujourd'hui. Les négociateurs (interrupteurs GED en « admin ») voient la liste d'avant ;
+- `RecuManque.css` : classes neuves `gd3-…`, couleurs de la charte.
+**Contrôles** : `test_ged_dossier_range.cjs` **16 VERT** -- `docRowActions` et la carte IDENTIQUES AU CARACTÈRE à ceux du
+commit `0022771` (lus dans git), suivi des signataires toujours monté 3 fois, fenêtres de signature inchangées, les deux
+conditions, le classic intact, le rangement (moment en cours d'abord, une pièce une fois, aucun document perdu, comptes =
+`recuManque`) ; témoin inverse (un espace ajouté dans la carte) : **2 ROUGE**. Les 15 autres essais GED verts (un « absent »
+dans un commentaire avait fait sonner 3 essais : reformulé) ; les 5 essais de la signature demandés par sa session VERTS
+(choix, état du mandat, expirée, pièces, suivi) ; `npm run build` passe. ⚠ **Pas vu à l'écran** : il faut le déploiement.
