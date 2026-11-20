@@ -5,11 +5,17 @@
 import { normaliserTexte } from './gedComparer'
 import type { Alerte } from './gedRegles'
 
-export type VerdictGed = 'vrai' | 'faux' | 'deja_su'
+// Visuel V3, morceau 4 (20/11/2026) : la période de test est RETIRÉE (décision de Frédéric) -- l'écran n'offre plus
+// « Vrai / Faux / Déjà su ». Un point d'attention s'écarte par « Masquer » (verdict `masque`), POUR TOUT LE MONDE sur le
+// bien, et revient par « Réafficher » (`reaffiche`) ; le plus récent fait foi (patch_ged_masquer_2026-11-20). Les trois
+// anciens verdicts restent lisibles (8 jugements du 17-19/11) : ils ne masquent rien.
+export type VerdictGed = 'vrai' | 'faux' | 'deja_su' | 'masque' | 'reaffiche'
 export const VERDICTS: Array<{ code: VerdictGed; libelle: string }> = [
   { code: 'vrai', libelle: 'Vrai' }, { code: 'faux', libelle: 'Faux' }, { code: 'deja_su', libelle: 'Déjà su' },
 ]
-export const LIBELLE_VERDICT: Record<VerdictGed, string> = { vrai: 'vrai', faux: 'faux', deja_su: 'déjà su' }
+export const LIBELLE_VERDICT: Record<VerdictGed, string> = { vrai: 'vrai', faux: 'faux', deja_su: 'déjà su', masque: 'masqué', reaffiche: 'réaffiché' }
+// Une ligne est MASQUÉE si et seulement si son dernier mot est « masque ».
+export const estMasquee = (verdict: VerdictGed | null | undefined): boolean => verdict === 'masque'
 
 // La CLÉ d'une ligne : la règle et son texte, sans casse, accents ni ponctuation. Une ligne dont le texte change (une
 // date, un nombre de pièces) est une AUTRE ligne : elle se rejuge -- on mesure ce que l'écran a dit, pas la règle en l'air.

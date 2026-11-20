@@ -3878,3 +3878,23 @@ revenaient chacun trois fois, et deux lignes se dépliaient ensemble -- le nom �
 un contrôle de plus dans l'essai, 17 verts), poussé et revu : **20 lignes pour 20 documents**, aucun doublon, 9 pièces
 manquantes à leur place, **aucun élément ne déborde**. Restent à l'ancienne : « À remplir », « À regarder » et « Vrai / Faux /
 Déjà su » (morceau 4).
+
+### 12.62 VISUEL V3, MORCEAU 4 -- « À traiter » : Masquer à la place de la période de test (20/11, « Enchaîne ») -- ÉCRIT, PAS EN LIGNE
+
+**Le code** (`RecuManque.tsx`, `lib/gedMesure.ts`, `RecuManque.css` ; s'applique au cockpit ET au classic : c'est le même bloc) :
+- un en-tête **« À traiter »** magenta avec le NOMBRE (fenêtres « Ce que dit… » à ouvrir + propositions + points d'attention
+  visibles) ; « À remplir » devient « À corriger ou compléter » ; « Voir et trancher » devient **« Voir et corriger »** (une
+  valeur diffère) ou **« Voir et ajouter »** (cases vides) ;
+- « À regarder » devient **« Points d'attention »** : une alerte qu'une fenêtre « Ce que dit… » montre déjà N'A PLUS SA CARTE
+  (le même écart apparaissait deux fois, ex. 18849) ; **plus de « Vrai / Faux / Déjà su »** ; à la place **« Masquer »**
+  (verdict `masque`, pour tout le monde sur le bien, à côté de « Déposer la pièce ») et, en bas, « N point(s) d'attention
+  masqué(s) pour tout le monde -- Réafficher » (verdict `reaffiche` pour chacun) ;
+- **seul « masque » masque** (`estMasquee`) : les 8 jugements vrai / faux du 17-19/11 ne cachent RIEN ; ⛔ correction de ma
+  note du patch (§12.59), qui disait « tout autre dernier mot -> masqué » : c'est l'écran qui décide, et il ne masque que
+  sur « masque » ;
+- enregistrer une fenêtre « Ce que dit… » **n'écrit plus de note de mesure** (la boucle `verdictDesChoix` est retirée ; la
+  fonction et ses essais restent dans la lib).
+**Contrôles** : `test_ged_mesure.cjs` (§④ réécrit sur la décision : Masquer seulement si les jugements se lisent, plus de
+barre, masque / reaffiche, le doublon retiré, plus de note à l'enregistrement, les anciens verdicts ne masquent rien) **26
+VERT** ; témoin inverse (Masquer écrivant « vrai », doublon remis) **2 ROUGE**. Tous les autres essais GED et les 5 de la
+signature verts ; `npm run build` passe. ⚠ Pas vu à l'écran : il faut le déploiement.

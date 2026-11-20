@@ -234,3 +234,15 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: var(--bv-magenta,
 @keyframes gd3-monte { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) { .gd3-dl, .gd3-manque { padding-left: 16px; } .gd3-detail { padding-left: 16px; } }
 @media (prefers-reduced-motion: reduce) { .gd3-detail, .gd3-chev { animation: none !important; transition: none !important; } }
+
+/* Visuel V3, morceau 4 (20/11/2026) : « À TRAITER » -- l'en-tête magenta et son compteur ; « Masquer » / « Réafficher ».
+   Plus de barre « Vrai / Faux / Déjà su » (période de test retirée). Classes neuves, couleurs de la charte. */
+.gm2-traiter-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 16px 0 10px; padding: 16px 18px; border-radius: 18px; background: var(--bv-magenta, #c5005f); color: #ffffff; box-shadow: 0 18px 36px -24px rgba(197, 0, 95, 0.9); }
+.gm2-traiter-h b { font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.gm2-traiter-n { margin-left: auto; font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 34px; font-weight: 800; line-height: 0.9; font-variant-numeric: tabular-nums; animation: gm2-tic 360ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+.gm2-traiter-h small { flex: 1 0 100%; color: rgba(255, 255, 255, 0.86); font-size: 12.5px; line-height: 1.45; }
+@keyframes gm2-tic { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: none; } }
+.gm2-masquer { color: var(--bv-mute, #5c6163); }
+.gm2-masquer:hover { color: var(--bv-ink, #1f2121); }
+.gm2-masquees { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 2px 0; color: var(--bv-subtle, #7c8082); font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .gm2-traiter-n { animation: none !important; } }
