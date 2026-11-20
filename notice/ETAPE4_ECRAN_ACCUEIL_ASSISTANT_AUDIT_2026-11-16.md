@@ -3667,3 +3667,27 @@ année « C'est bien ça ? ») et `notice/preuve_parcours_services_publics_2026-
 lecture. À éprouver après le push, sur une conversation neutre, sans cliquer « Créer ».
 
 **Reste** : P4-d (phrases libres) ; P6 (photos du bien).
+
+### 98.1 POUSSÉ (f515ba9) ET ÉPROUVÉ EN RÉEL (20/11, 10:36-10:40, heure de Paris) — VERT ; une trouvaille hors du parcours
+
+**Ses mots** : « Pousse et essaie ». Poussé f515ba9 (avec la note §97.1) ; Render et Vercel vérifiés. Dans son Chrome, une
+conversation NEUVE : « Nouvelle estimation d'essai par questions : un appartement au 13 rue Vimore 42700 Firminy » (une
+adresse réelle, prise dans les DPE publiés par l'ADEME : il en faut une vraie pour que les services répondent). Rien
+chez Hektor, rien validé dans la carte de l'énergie, jamais « Créer ». Parcours `35dd08ad…` laissé « en cours » (purge 30 j).
+- La lecture publique est partie seule à l'ouverture du parcours (~14 s, en arrière-plan) : géocodage au numéro (score
+  0,96), 0 erreur de service ; propositions gardées : DPE (D · GES D du 06/11/2026, 223 kWh/m², 46 kg) et année (1948) ;
+  ni parcelle (un appartement), ni copropriété (le registre n'a rien trouvé), ni surface (DPE pas à l'adresse) — comme voulu.
+- La surface dite (87 m²) a RELANCÉ la lecture (clé `…|2|87`) ; les deux réponses données PENDANT cette lecture
+  (composition, dehors) sont passées sans 409.
+- À l'écran, dans « L'énergie » : les deux bandeaux, la prudence ; « Oui » sur l'année remplit 1948 dans la carte
+  (« Repris de : base nationale des bâtiments. Vérifie, puis Valider »). En base : AUCUNE case posée (ni ANNEE_CONS, ni
+  dpe_cons). Preuve : `notice/preuve_parcours_services_publics_reel_2026-11-20.jpg`. Coût : un tour d'IA (≈ 0,02 $).
+
+⭐⭐ **LA TROUVAILLE — la route du DPE de l'éditeur d'avis ne trouve plus le DPE À L'ADRESSE.** Le DPE proposé était
+« le plus proche » alors que l'ADEME publie DIX DPE au 13 rue Vimore. Cause, rejouée pas à pas : le RNB rend désormais
+pour chaque adresse `id` = « 42095_2120_00013 » (la forme de l'ADEME) ET `ban_id` = un identifiant d'une autre forme
+(« 0e9ec990-… ») ; `geo.dpe` (l. 396) prend `ban_id` d'abord → l'ADEME rend 0 ligne → repli « proximité » TOUJOURS.
+Mesure dans les avis gardés (`app_dossier_estimation.sources.dpe`) : juillet-août « adresse » 8 fois ; novembre : le seul
+DPE gardé est « proximité ». Le RNB a changé entre-temps ; le défaut touche l'éditeur d'avis ET le parcours.
+Correctif proposé (une ligne, seul lecteur de ce champ dans le serveur) : essayer `id` puis `ban_id`. ⛔ Route partagée :
+NON corrigé, attend son accord.
