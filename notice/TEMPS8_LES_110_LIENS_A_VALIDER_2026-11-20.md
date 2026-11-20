@@ -1,4 +1,4 @@
-# Les 110 liens « a valider » contre l'audit du 18/11 (genere par temps8_les_110_liens_et_l_audit_du_18_2026-11-20.py, 2026-11-20T11:30)
+# Les 110 liens « a valider » contre l'audit du 18/11 (genere par temps8_les_110_liens_et_l_audit_du_18_2026-11-20.py, 2026-11-20T12:27)
 
 ```
 photo du Sheet et du registre : 2026-11-19T20:09:50 ; export temps6 : 2026-11-19T20:09:50
@@ -103,6 +103,7 @@ LE RESTE -- 25 lignes sur 110 (les autres sont confirmees par deux audits indepe
    XMOGLM8G nan COLLARD              18/11 JAMAIS_VUE/ · 19/11 JUSTE/CERTAINE · liens [14229, 14230, 14231] {'bonne': 3} · V2 - · apres C : LIEN_A_VALIDER
    f9b55f79 Mme M. GENILLIER Adrien  18/11 JAMAIS_VUE/ · 19/11 JUSTE/CERTAINE · liens [14823] {'bonne': 1} · V2 - · apres C : LIEN_A_VALIDER
    fa06e4e5 M. BILDINICI Ihsam       18/11 FAUX/forte · 19/11 FAUX/CERTAINE · liens [28931] {'bonne': 1} · V2 ['retire 1001553', 'retire 28930', 'ajoute 28931 (bonne)'] · apres C : AUDIT_NON_JUSTE
+   LISTE DU PATCH « CONFIANCE » : 137 lignes (A 97, B 40) -> TEMPS8_LES_137_LIGNES_DU_PATCH_CONFIANCE_2026-11-20.csv
 
 CSV : TEMPS8_LES_110_LIENS_A_VALIDER_2026-11-20.csv (110 lignes)
 VERDICT DES TEMOINS : VERTS

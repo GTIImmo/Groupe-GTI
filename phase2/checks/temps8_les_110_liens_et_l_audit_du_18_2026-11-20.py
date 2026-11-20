@@ -47,6 +47,7 @@ DECISION_B = RACINE / "notice" / "TEMPS6_DECISION_B_LIGNES_REPORTEES_EN_VAGUE_2_
 LES_19 = RACINE / "notice" / "TEMPS7_EFFET_DES_COUPES_SUR_LA_VAGUE_1_2026-11-20.csv"
 SORTIE_MD = RACINE / "notice" / "TEMPS8_LES_110_LIENS_A_VALIDER_2026-11-20.md"
 SORTIE_CSV = RACINE / "notice" / "TEMPS8_LES_110_LIENS_A_VALIDER_2026-11-20.csv"
+LISTE_CONFIANCE = RACINE / "notice" / "TEMPS8_LES_137_LIGNES_DU_PATCH_CONFIANCE_2026-11-20.csv"
 
 SURE = "sûre"
 
@@ -417,6 +418,20 @@ def main() -> int:
              % (x["id_unique"], LIG[x["id_unique"]]["row"][27][:24],
                 x["v18"], x["c18"], x["v19"], x["c19"], sorted(x["tous"]), x["conf"], x["ops_v2"] or "-",
                 rr_c[x["id_unique"]][0]))
+
+    # ── LA LISTE DU PATCH « CONFIANCE » (accorde le 20/11 : « les 97 : OUI, colle-les ; les 40 autres apres V2 » ;
+    #    « NKDC0I1M : garde-la ») -- A = n'attend rien ; B = ses liens n'existent qu'apres V2 ──
+    patch = sorted(set(accord) | {"NKDC0I1M"})
+    with LISTE_CONFIANCE.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f, delimiter=";")
+        w.writerow(["id_unique", "partie", "case_etat_5", "avis", "liens_hektor_attendus_apres_v2", "tous_les_liens_apres_v2"])
+        for i in patch:
+            hk = sorted(a for (j, a) in lien_v2 if j == i and a in TX and not TX[a]["classeur"])
+            tous = sorted(a for (j, a) in lien_v2 if j == i)
+            w.writerow([i, "B" if i in ops_v2 else "A", e5[i][0], accord.get(i, "les deux audits, sauf l'offre sans date 27741 (garde-la, 20/11)"),
+                        " ".join(map(str, hk)), " ".join(map(str, tous))])
+    dire("   LISTE DU PATCH « CONFIANCE » : %d lignes (A %d, B %d) -> %s"
+         % (len(patch), sum(1 for i in patch if i not in ops_v2), sum(1 for i in patch if i in ops_v2), LISTE_CONFIANCE.name))
 
     # ── LE CSV ──
     with SORTIE_CSV.open("w", encoding="utf-8-sig", newline="") as f:
