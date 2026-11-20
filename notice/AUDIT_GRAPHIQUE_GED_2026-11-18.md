@@ -202,3 +202,20 @@ il faut un geste pour l'écarter -- à confirmer par Frédéric, et à décider 
 **Restent à trancher** (§5) : 1 « À préparer » sur les documents non destinés à la signature ; 3 le bouton « Remplir la
 transaction » ; 4 « Voir et trancher » -> « Voir et corriger / Voir et ajouter » (la maquette le montre) ; 5 l'alerte en
 double d'une ligne de fenêtre (la maquette ne la montre plus). Rien n'est codé.
+
+**V3.1 (20/11, « problème de mise en page, les boutons dépassent ; as-tu ajouté des animations dynamiques ? »)** :
+- **Corrigé, vu à l'écran dans son Chrome** : les « Déposer » sortaient du cadre (une ligne `div` en `width:100%` + marges
+  intérieures, sans `box-sizing:border-box` -> 72 px de trop ; règle posée sur les quatre écrans) ; au téléphone, la liste du
+  Compromis était ÉCRASÉE à zéro de hauteur (enfant `overflow:hidden` d'une colonne flexible -> `flex-shrink:0`) ; la date du
+  DPE tronquée ; l'aperçu des 9 pages qui passait à la ligne ; « Taille : partie 2.pdf » (lu au mauvais endroit).
+- **Les animations, chacune répond à un geste ou raconte l'arrivée** (toutes coupées par `prefers-reduced-motion`) :
+  l'arrivée -- les traits des moments se tracent, les coches sautent, l'anneau du Compromis se remplit, le compteur
+  « À traiter » monte 1, 2, 3, un reflet passe sur le bloc, les cartes arrivent en cascade, un faisceau balaie la miniature
+  des pièces qui viennent d'être lues ; « Voir et ajouter » -- chaque valeur vole dans SA case l'une après l'autre, la case
+  passe au vert, la carte devient « 3 ajoutées » avec une coche tracée et le compteur descend ; « Masquer » -- la carte glisse
+  et se replie ; le dépôt -- le scan tombe dans la liste, « Séparer » pulse, les 9 pages s'écartent en 3 groupes, l'envoi
+  remplit une barre fichier après fichier, « Déposé » saute, les valeurs lues apparaissent une à une ; « Ce que dit… » --
+  les lignes arrivent en cascade, la coche du choix saute, la page tourne quand on change de ligne, « Enregistrer » passe
+  en « Envoi… » puis la coche se trace ; au survol, les cartes se soulèvent.
+- **Les écrans s'enchaînent en lecture** : « Ajouter un document » ouvre le dépôt, « Voir et corriger » ouvre « Ce que
+  dit le compromis », « Fermer » revient au dossier.
