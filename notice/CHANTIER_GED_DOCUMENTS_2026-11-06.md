@@ -39,12 +39,23 @@
 | lecture | « pas ce type » refusé au hasard : la cause (le CODE du type seul dans l'en-tête) prouvée au banc | ✅ **EN PRODUCTION le 18/11** (`9d5a6fd`, Render) : l'en-tête donne le libellé du catalogue ; banc par le vrai code 95/95, **essai réel vert sur 63331** (la fiche synthétique refusée la veille sort « lu ») (§12.34, §12.35) |
 | recours | « C'est bien ce type : garder la lecture » sur une lecture refusée | ✅ **EN PRODUCTION le 18/11** (`5b93490`, patch posé 4/4, répétition 8/8, Vercel) ; ⚠ pas vu sur un vrai cas : il n'existe plus de lecture refusée (§12.36) |
 
-**Reste, au 18/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
-« trop compliqué pour le moment »** ; les essais réels qui attendent une cible choisie par Frédéric (l'envoi direct de
-10c, « Ce que dit l'offre » sur une offre proposée vivante) ; deux options non tranchées (une règle de nommage commune
-§12.26 ; masquer l'IBAN d'un compromis au lieu de tout refuser §12.27) ; puis **les conditions du cran « on »**
-ci-dessous (audit des faits : §12.37). ✅ Les pièces d'essai de 63331 et 63147 sont SUPPRIMÉES (31/31, 18/11, §12.36) ;
-leurs lectures restent en base, invisibles.
+**Reste, au 20/11** (réécrit ; le détail des lots A à G est aux §12.41-12.56, tous ÉPROUVÉS EN RÉEL) :
+- **le visuel** : maquette V2 du 18/11 (`notice/AUDIT_GRAPHIQUE_GED_2026-11-18.md` §7, « la liste DEVIENT le dossier »)
+  livrée, PAS codée, son avis attendu, avec ses points à trancher (§5 de l'audit ; garder la mesure après le 30/11) ;
+- **le dossier « cran on »** (§12.37) : DPA (geste de Frédéric), registre des traitements, analyse d'impact, mention au
+  mandat, et DEUX DÉCISIONS : une durée de conservation des lectures, un chemin d'effacement pour une personne ;
+- ⏰ **la mesure** court jusqu'au 30/11 : au 20/11, **8 jugements** (7 vrais, 1 faux), lectures réelles sur 2 biens
+  seulement (59541, 62850) -- elle ne dira presque rien sans usage réel ;
+- **essais réels qui attendent une cible** : l'envoi direct de 10c, « Ce que dit l'offre » sur une offre vivante, P6 à
+  l'écran ; P7/P8 mis de côté le 17/11 ;
+- **options non tranchées** : règle de nommage commune (§12.26), masquer l'IBAN d'un compromis (§12.27), les types « hors
+  plan » du §12.41 (livret de famille, facture d'honoraires, syndic, fonds de travaux, règlement, adresse et régime) ;
+- ⚠ **un interrupteur a bougé hors de ce chantier** : `ged_depot_multiple = 'on'` depuis le 18/11 21:26, posé par la
+  session Étape 4 chap. 6 (`ffd7483`, §85 de sa note) -- le DÉPÔT est ouvert aux négociateurs, pas la LECTURE par l'IA
+  (`ged_lecture_ia`, `ged_lecture_personnes`, `ged_remplir`, `ged_propositions`, `ged_recu_manque` restent « admin »).
+  Au 20/11 : aucun dépôt par l'app depuis.
+✅ Toutes les pièces d'essai sont SUPPRIMÉES (63331, 63147 le 18/11 ; 63331, 63330 le 20/11, §12.58) ; leurs lectures
+restent en base, invisibles. Les fiches d'essai gardent les valeurs écrites par les preuves.
 
 **Avant les négociateurs (cran « on »)** : le contrat de sous-traitance (DPA) avec le fournisseur d'IA — décision du
 12/11 : « à la fin du dev » —, l'analyse d'impact, le registre des traitements (avec les NOMS lus depuis le lot 2), la
