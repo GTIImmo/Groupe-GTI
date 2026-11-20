@@ -3738,3 +3738,21 @@ jusqu'à 5 appels ADEME de plus dans le pire cas (mesuré : ~0,3 s par appel de 
 
 **Non éprouvé en réel dans l'application** : après le push — le parcours sur une conversation neutre (sans écriture
 ailleurs que sa ligne). « Régénérer le DPE » dans l'éditeur ÉCRIT l'avis d'un bien (sources) : pas sans son accord.
+
+### 98.3 LE CORRECTIF DU DPE POUSSÉ (2ebff77) ET ÉPROUVÉ EN RÉEL (20/11, 10:58-11:00, heure de Paris) — VERT
+
+**Ses mots** : « Pousse et essaie ». Poussé 2ebff77 (avec la note §98.1) ; Render vérifié (`/health` = 2ebff774547c).
+Dans son Chrome, une conversation NEUVE, la MÊME adresse que le §98.1 pour comparer : « Nouvelle estimation d'essai par
+questions : un appartement de 87 m² au 13 rue Vimore 42700 Firminy ». Parcours `ea762ec3…` laissé « en cours » (purge
+30 j) ; rien chez Hektor, rien validé dans l'énergie, jamais « Créer ».
+- Avant (§98.1, 10:36) : « Le DPE le plus proche : il n'y en a pas à cette adresse exacte. Il peut être celui d'un voisin. »
+- Après : « **25 DPE à cette adresse : c'est celui dont la surface est la plus proche.** » (clé `…|2|87`, 0 erreur ;
+  année 1948 ; pas de surface proposée, puisque 25 DPE).
+- « Oui » sur le DPE remplit la carte : date 06/11/2026, consommation 223, GES 46 (« Repris de : ADEME, DPE ») ; en base,
+  AUCUNE case posée (ni dpe_cons, ni dpe_date, ni ANNEE_CONS). Preuve : `notice/preuve_parcours_dpe_a_l_adresse_reel_2026-11-20.jpg`.
+- Coût : un tour d'IA (≈ 0,02 $).
+
+**Non éprouvé en réel** : l'éditeur d'avis (« Régénérer le DPE » écrit l'avis d'un bien — pas sans son accord) ; son
+gain est mesuré sur vraies API au §98.2 (49 « adresse » + 5 « batiment » sur 60, contre 4).
+
+**Reste** : P4-d (phrases libres) ; P6 (photos du bien).
