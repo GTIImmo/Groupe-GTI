@@ -59,7 +59,7 @@ voir(JSON.stringify(decoderConditions('pret@2026-12-01|bidon@|vente_bien@20261|p
 voir(P([dpe], { decisions: new Set(['P1.dpe_cons|199']) }).length === 0, 'lot 3 : plus aucune carte du DPE, avec ou sans décision (la fenêtre garde son propre journal)')
 
 console.log('② les gardes de l\'écriture')
-const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8')
+const app = fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8').replace(/\r\n/g, '\n')
 const fn = app.slice(app.indexOf('const remplirDepuisDocument = async'), app.indexOf('return `Enregistré : ${p.texte}.`\n  }\n', app.indexOf('const remplirDepuisDocument')) + 60)
 const avant = (a, b) => fn.indexOf(a) >= 0 && fn.indexOf(b) > fn.indexOf(a)
 voir(avant('await loadDossierDetail(dossier.app_dossier_id', 'await editAnnonceOptimistic(') && avant('if (!caseVide(actuelle)) return refus(', 'await editAnnonceOptimistic('), 'fiche : relue FRAÎCHE juste avant ; pleine -> rien écrit, la décision dit « echec »')
@@ -73,21 +73,21 @@ voir(/if \(p\.geste === 'affaire'\) return refus\('passe_par_le_compromis'/.test
 voir(/const voulues = p\.cle === 'P4\.conditions' \? decoderConditions\(p\.valeur\) : \[\{ nature: 'pret' as const, date: p\.valeur \}\]/.test(fn) && /if \(!voulues\.length\) return refus\('liste_illisible'/.test(fn)
   && avant('await compterConditionsStrict([id])', 'const voulues =') && avant('const lignesConditions =', 'await ecrireAffaireConditions(id, lignesConditions)'),
   '10b : la liste lue est décodée APRÈS le compte strict (vide exigé) ; illisible -> rien écrit ; le prêt seul comme avant')
-const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8')
+const ged = fs.readFileSync(path.join(__dirname, 'src/lib/ged.ts'), 'utf8').replace(/\r\n/g, '\n')
 const strict = ged.slice(ged.indexOf('export async function compterConditionsStrict'))
 voir(/if \(error\) throw new Error\(error\.message\)/.test(strict.slice(0, 900)) && /if \(error\) return null/.test(ged.slice(ged.indexOf('export async function loadGedDecisions'), ged.indexOf('export async function gedDecider'))), 'lectures : les conditions LÈVENT sur erreur ; les décisions rendent null (rien ne se repropose)')
-const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8').replace(/\r\n/g, '\n')
 voir(/if \(!remplir \|\| !peutRemplir \|\| !decisions \|\| affaires === null\) return \[\]/.test(rm) && !/\[remplir, onRemplir/.test(rm), 'écran : une lecture ratée -> aucune proposition ; les lectures ne se relancent pas à chaque rendu')
 voir(!/tout remplir/i.test(rm) && (rm.match(/'Remplir la fiche'/g) || []).length === 1, 'un clic par proposition : un seul bouton, pas de « tout remplir »')
-voir(!/TAXE_FONCIERE|numero_mandat'|mandat_date|PRIXNETVENDEUR/.test(fs.readFileSync(path.join(__dirname, 'src/lib/gedRemplir.ts'), 'utf8').replace(/numero_mandat'\), faits\.numeroMandat/g, '')), 'jamais la taxe foncière, ni un champ du mandat')
+voir(!/TAXE_FONCIERE|numero_mandat'|mandat_date|PRIXNETVENDEUR/.test(fs.readFileSync(path.join(__dirname, 'src/lib/gedRemplir.ts'), 'utf8').replace(/\r\n/g, '\n').replace(/numero_mandat'\), faits\.numeroMandat/g, '')), 'jamais la taxe foncière, ni un champ du mandat')
 
 console.log('③ le patch')
-const patch = fs.readFileSync(path.join(__dirname, '../../supabase/patch_ged_m8_remplir_2026-11-13.sql'), 'utf8')
+const patch = fs.readFileSync(path.join(__dirname, '../../supabase/patch_ged_m8_remplir_2026-11-13.sql'), 'utf8').replace(/\r\n/g, '\n')
 voir(/\('ged_remplir', 'off'/.test(patch) && /security definer/.test(patch) && /auth\.uid\(\)\)\s*returning id/.test(patch) && /revoke all on table public\.app_ged_decision from public, anon, authenticated/.test(patch), 'interrupteur posé ÉTEINT ; porte SECURITY DEFINER ; l\'auteur est l\'appelant ; table fermée en écriture')
 voir(/decision in \('remplie', 'ignoree', 'echec'\)/.test(patch) && !/update public\.app_ged_decision|delete from public\.app_ged_decision/.test(patch), 'trois décisions possibles ; la table est un journal (ni mise à jour ni effacement)')
 
 console.log('④ habillage H3 (16/11) : la carte, la ligne repliée, « La fiche du bien »')
-const rmH3 = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
+const rmH3 = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8').replace(/\r\n/g, '\n')
 const agirH3 = rmH3.slice(rmH3.indexOf('const agir = async'), rmH3.indexOf('function envoler'))
 voir(/const message = await onRemplir\(p\)/.test(agirH3) && /await gedDecider\(\{ hektorAnnonceId, lectureId: p\.lectureId, cle: p\.cle, champ: p\.champ, valeur: p\.valeur, decision: 'ignoree' \}\)/.test(agirH3),
   'H3 : le geste et la décision « ignorée » passent par les MÊMES portes qu\'avant (rien de neuf n\'écrit)')
