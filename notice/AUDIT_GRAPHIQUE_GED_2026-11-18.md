@@ -254,3 +254,13 @@ Les animations viennent avec chaque morceau (aucune ne bloque un geste ; `prefer
 ⛔ **DÉCISION DE FRÉDÉRIC (20/11) : « Masquer » vaut POUR TOUT LE MONDE sur le bien** (rangé par bien, comme le jugement
 d'aujourd'hui ; « Réafficher » le remet pour tous ; le journal garde qui et quand). Une alerte dont le texte change est une
 alerte neuve et réapparaît. Masquer n'écrit rien sur la fiche ni chez Hektor et ne corrige rien.
+
+**⚠ CORRECTION DE MA V3 (20/11, audit du morceau 2, lu dans le code)** : la charte bienvu est DÉJÀ dans l'app, en jetons
+`--bv-*` sous `:root.bv` (`src/bienvu.css`, interrupteur allumé en production depuis le 19/10). Elle dit : **titres en Plus
+Jakarta Sans, interface en Hanken Grotesk** (deux polices, pas une), encre `#222323`, fond `#f6f7f8`, vert `#2f7d59`, ambre
+`#b66a16`, rouge `#b94a48`, magenta `#c5005f`. Plus Jakarta n'est servie qu'en 400 / 600 / 800. ⛔ J'avais écrit « une police,
+celle de la charte » : c'était FAUX, et ma maquette a pris des teintes voisines au lieu de celles de la charte. Les trois
+feuilles GED (`RecuManque.css`, `DepotDocuments.css`, `BilanCompromis.css`, 642 lignes) n'utilisent aucun jeton `--bv-*` :
+couleurs en dur, déjà Plus Jakarta (titres) + Hanken (texte).
+➡ Le socle (morceau 2) doit BRANCHER la GED sur ces jetons. Reste à trancher par Frédéric : la police du texte -- la charte
+(Hanken, comme tout le reste de bienvu) ou Plus Jakarta partout dans la GED (comme la maquette, mais différente du reste).
