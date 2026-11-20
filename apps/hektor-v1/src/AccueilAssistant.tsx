@@ -378,7 +378,7 @@ function CarteCreation({ carte, onValider, onRefuser, onRouvrir, onAvis }: { car
         {fiche.composition || fiche.photos ? (
           <p className="asi-cr-note">
             {[fiche.composition ? `Composition : ${fiche.composition} pièce${fiche.composition > 1 ? 's' : ''}` : '',
-              fiche.photos ? `Fiche papier : ${fiche.photos} photo${fiche.photos > 1 ? 's' : ''}, lue${fiche.photos > 1 ? 's' : ''} par le scan de la fenêtre (ce que tu as dit l'emporte)` : '']
+              fiche.photos ? `Fiche de visite : ${fiche.photos} page${fiche.photos > 1 ? 's' : ''}, lue${fiche.photos > 1 ? 's' : ''} par le scan de la fenêtre (ce que tu as dit l'emporte)` : '']
               .filter(Boolean).join('. ')}
           </p>
         ) : null}

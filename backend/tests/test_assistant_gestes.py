@@ -2240,7 +2240,8 @@ etat14.pop("contact")
 voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "fichiers": f"{'a' * 32}|{'c' * 32}"}), "JPEG, PNG ou WebP"),
      "⛔ un PDF n'est pas une photo de fiche : refusé (le scan ne lit que des images)")
 ges.MAX_PAGES_SCAN = 1
-voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR), "photos au plus"), "⛔ trop de pages pour le scan : refusé")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR), "pages au plus pour la fiche de visite"),
+     "⛔ trop de pages pour le scan : refusé")
 ges.MAX_PAGES_SCAN = 5
 voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "negociateur": "pereira"}), "c'est toi"),
      "⛔ un COMMERCIAL ne choisit pas le négociateur : c'est lui (la fenêtre le pose)")

@@ -139,7 +139,7 @@
     },
     {
       "id": "photos", "titre": "Les photos",
-      "phrase": "Ajoute les photos du bien.",
+      "phrase": "Les photos du bien (la galerie de l'annonce) — pas la fiche de visite.",
       "forme": "fichiers",
       "champs": ["photos"]
     },

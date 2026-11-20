@@ -399,7 +399,7 @@ coffre.clear()
 avec_fiche = {**lecture, "cases": [{"cle": "propertyType", "valeur": "maison"}, {"cle": "surface", "valeur": "118"}],
               "mandant_nouveau": False, "fichiers": "a1|a2"}
 resume_f, param_f = ges.preparer_parcours_creation(ctx, avec_fiche)
-voir("fiche papier (2 photos) sera lue au clic" in resume_f and param_f["fichiers"] == ["a1", "a2"] and not pages_lues,
+voir("fiche de visite (2 pages) sera lue au clic" in resume_f and param_f["fichiers"] == ["a1", "a2"] and not pages_lues,
      "la carte annonce la fiche ; RIEN n'est lu avant le clic (pas de coût sans geste)")
 r = ges.executer_parcours_creation(ctx, param_f)
 lf = table[r["parcours"]["id"]]["reponses"]
@@ -431,6 +431,17 @@ voir(rf["ok"] and l0["type"] == "1" and l0["surfappart"] == "64" and l0["_source
 rf2 = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers="b1"), "Bearer j", Settings(), None, S, ST,
               uid=AUTRE_UID, role="admin")
 voir(rf2[0] == 404, "lire une fiche dans le parcours d'un AUTRE : introuvable, même pour l'admin")
+# P4-b bis (20/11) : une PHOTO DU BIEN passée pour une fiche de visite -- le scan n'y lit presque rien -> refusée, rien gardé
+avant_photo = json.dumps(table[p0]["reponses"], sort_keys=True)
+ges.OpenAIListingSheetService.extract = lambda self, p: {"model": "gpt-4.1-mini", "usage": {}, "pieces": [], "statePosts": [],
+    "rawNotes": None, "fields": {"propertyType": {"value": "Maison", "confidence": 0.6}, "garden": {"value": "oui", "confidence": 0.5}}}
+rp = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers="salon"), "Bearer j", Settings(), None, S, ST, role="admin")
+voir(rp[0] == 400 and "Ce n'est pas une fiche de visite (2 cases lues)" in rp[1] and "PHOTOS DU BIEN" in rp[1]
+     and json.dumps(table[p0]["reponses"], sort_keys=True) == avant_photo,
+     "une photo du bien passée pour la fiche : « ce n'est pas une fiche de visite », RIEN n'est gardé, la phrase dit où vont les photos")
+r_nom = ges.preparer_parcours_creation(ctx, {**lecture, "fiche_de_visite": "a1"})
+voir("fiche de visite (1 page) sera lue au clic" in r_nom[0] and r_nom[1]["fichiers"] == ["a1"],
+     "l'IA passe la fiche par « fiche_de_visite » (le nom qui ne se confond pas)")
 ges.OpenAIListingSheetService.extract = lambda self, p: (_ for _ in ()).throw(RuntimeError("illisible"))
 rf3 = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers="b2"), "Bearer j", Settings(), None, S, ST, role="admin")
 voir(rf3[0] == 400 and "pas pu être lue" in rf3[1], "une fiche illisible : refusée avec la phrase, rien n'est écrit")

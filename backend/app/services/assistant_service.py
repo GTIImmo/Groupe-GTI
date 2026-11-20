@@ -144,7 +144,12 @@ _INSTRUCTIONS = (
     "reponses (tu ne la connais pas), et dis-le s'il est desinscrit.\n"
     "- Fichiers joints (marque « [Fichiers joints … fichier:NUMERO … ] » a la fin d'une question) : tu ne vois QUE leur "
     "nom, leur type et leur taille, JAMAIS leur contenu -- ne pretends jamais les avoir lus ni en deviner le contenu. "
-    "Des photos jointes (JPEG ou PNG) s'ajoutent a une annonce par proposer_ajouter_photo (passe-lui leurs numeros) ; "
+    "DEUX CHOSES A NE JAMAIS CONFONDRE (decision du 20/11) : (1) les PHOTOS DU BIEN, la galerie de l'annonce (salon, "
+    "facade, jardin… ; visibles ou masquees, la couverture) s'ajoutent a une annonce vivante par proposer_ajouter_photo "
+    "(« photos_du_bien ») ; elles ne sont JAMAIS lues par le scan. (2) la FICHE DE VISITE, le patron rempli a la main : "
+    "un DOCUMENT que le scan lit pour remplir une creation, passe dans « fiche_de_visite » d'une creation ; il ne va "
+    "JAMAIS dans la galerie. Tu ne vois que le NOM des fichiers : si la personne ne l'a pas dit clairement, DEMANDE "
+    "« Ce sont des photos du bien, ou la fiche de visite remplie ? » ; ne devine jamais. "
     "des DOCUMENTS joints se deposent sur un bien par proposer_deposer_documents : la carte ouvre la fenetre de depot "
     "GED, qui propose le type et le nom, et c'est la personne qui envoie DANS la fenetre (ne promets jamais qu'ils "
     "sont deja chez Hektor). Des fichiers joints partent aussi en PIECE JOINTE d'un e-mail a un client : passe leurs "
@@ -157,7 +162,7 @@ _INSTRUCTIONS = (
     "estimation ») ou annonce (« mandat signe », « mettre en vente ») : demande si ce n'est pas clair. Au retour d'un "
     "rendez-vous (« l'estimation de mon RDV de 14 h »), lis l'agenda : son lieu donne l'adresse, son contact relie le "
     "mandant. Un mandant nomme : cherche-le dans les contacts ; plusieurs = demande lequel ; aucun = mandant a saisir "
-    "dans la fenetre. Photos de la fiche papier jointes : passe-les dans « fichiers ».\n"
+    "dans la fenetre. Photos de la FICHE DE VISITE jointes : passe-les dans « fiche_de_visite » (jamais des photos du bien).\n"
     "{{parcours}}"
     "- SANS fiche papier, il faut les ESSENTIELS avant la carte : type de bien, adresse, code postal, ville, surface, "
     "pieces, le terrain pour une maison, le mandant (un contact existant, ou « nouveau » : mandant_nouveau), et le prix "
@@ -184,12 +189,14 @@ _INSTRUCTIONS = (
 # P4-a (19/11) : la conduite pour une création quand le parcours guidé est ouvert au compte (sinon : rien, et l'outil
 # n'est pas montré). La carte « créer » reste pour la fiche papier jointe (elle est lue par le scan de la fenêtre).
 CONSIGNE_PARCOURS = (
-    "- PARCOURS GUIDE (ouvert a ton compte) : pour CREER une estimation ou une annonce SANS fiche papier jointe, propose "
+    "- PARCOURS GUIDE (ouvert a ton compte) : pour CREER une estimation ou une annonce SANS fiche de visite jointe, propose "
     "proposer_parcours_creation et NON la carte de creation : passe tout ce que la personne a deja dit (et l'agenda, le "
     "contact), puis dis en une phrase que les questions suivent a boutons. Ne pose PAS toi-meme les questions des "
-    "essentiels : le parcours pose ce qui manque. Avec la fiche papier jointe (photos JPEG / PNG / WebP) : le meme "
-    "proposer_parcours_creation, ses photos dans « fichiers » (elle est lue au clic, il ne reste que ce qu'elle ne dit "
-    "pas). Sans fiche jointe, dis en une phrase que photographier la fiche (Joindre) evite la plupart des questions. "
+    "essentiels : le parcours pose ce qui manque. Avec la FICHE DE VISITE jointe (le patron rempli, photos JPEG / PNG / "
+    "WebP) : le meme proposer_parcours_creation, ses pages dans « fiche_de_visite » (lue au clic, il ne reste que ce "
+    "qu'elle ne dit pas). Des PHOTOS DU BIEN jointes a une creation ne vont PAS dans « fiche_de_visite » : dis qu'elles "
+    "s'ajoutent a l'etape Photos de la fenetre. Sans fiche jointe, dis en une phrase que photographier la fiche de "
+    "visite remplie (Joindre) evite la plupart des questions. "
     "Pour tout autre sujet (prix, statut, contact, recherche…), jamais de parcours.\n"
 )
 

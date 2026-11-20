@@ -311,6 +311,15 @@ avec = svc.agent_registry.render(svc._INSTRUCTIONS, {"date": "12/11/2026", "obje
                                                     "role": "admin", "parcours": svc.CONSIGNE_PARCOURS})
 voir("proposer_parcours_creation" not in consignes and "proposer_parcours_creation" in avec and "{{" not in avec,
      "P4-a : la conduite du parcours guidé n'est dans la consigne que si l'interrupteur l'ouvre au compte")
+# P4-b bis (20/11, décision de Frédéric) : PHOTOS DU BIEN et FICHE DE VISITE ne se confondent jamais
+voir("DEUX CHOSES A NE JAMAIS CONFONDRE" in consignes and "Ce sont des photos du bien, ou la fiche de visite remplie ?" in consignes
+     and "ne devine jamais" in consignes, "la consigne sépare les photos du bien et la fiche de visite, et fait DEMANDER si doute")
+from app.services import assistant_gestes as ges_lb  # noqa: E402
+props = {n: set(ges_lb.GESTES[n].parametres["properties"]) for n in ("ajouter_photo", "ouvrir_creation_annonce", "parcours_creation")}
+voir("photos_du_bien" in props["ajouter_photo"] and "fiche_de_visite" not in props["ajouter_photo"]
+     and all("fiche_de_visite" in props[n] and "photos_du_bien" not in props[n] and "fichiers" not in props[n]
+             for n in ("ouvrir_creation_annonce", "parcours_creation")),
+     "les outils : « photos_du_bien » pour la galerie, « fiche_de_visite » pour les créations, jamais l'un pour l'autre")
 voir(len(obj.OBJETS) == 15, "15 objets dans la liste fermée (13/11 : + dossiers, le registre des transactions)")
 
 print(f"\n{ok} contrôles verts")

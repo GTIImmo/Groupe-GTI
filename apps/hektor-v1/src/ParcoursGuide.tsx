@@ -273,7 +273,7 @@ export type ParcoursGuideProps = {
   onOuvrirBien?: (appDossierId: string) => void
   /** Morceau 3 : chercher un mandant existant dans tout le réseau (la recherche de la fenêtre) */
   chercherMandants?: (texte: string) => Promise<MandantTrouve[]>
-  /** P4-b : le trombone est ouvert à ce compte -> « Lire la fiche papier » (sinon, la bande ne s'affiche pas) */
+  /** P4-b : le trombone est ouvert à ce compte -> « Lire la fiche de visite » (sinon, la bande ne s'affiche pas) */
   ficheOuverte?: boolean
 }
 
@@ -369,7 +369,7 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       return <EditeurPieces pieces={(valeurs.composition as Piece[]) ?? []} types={cat.typesPiece} onChange={(p) => setValeur('composition', p)} />
     }
     if (q.forme === 'fichiers') {
-      return <p className="asp-note">Les photos du bien se déposent dans la fenêtre de création, à son étape 2. Les joindre ici viendra plus tard.</p>
+      return <p className="asp-note">Les <b>photos du bien</b> (la galerie de l'annonce : visibles ou masquées, la couverture) se déposent dans la fenêtre de création, à son étape Photos. Les joindre ici viendra plus tard. Ce n'est pas la fiche de visite.</p>
     }
     if (q.forme === 'mandant') {
       return <QuestionMandant valeurs={valeurs} setValeur={setValeur} coordonnees={coordonnees} setCoordonnees={setCoordonnees}
@@ -422,15 +422,15 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
         </div>
       ) : null}
       {enCours && ficheOuverte ? (
-        <div className="asp-fiche" role="group" aria-label="La fiche papier">
+        <div className="asp-fiche" role="group" aria-label="La fiche de visite">
           <input ref={choixFiche} type="file" hidden multiple accept="image/jpeg,image/png,image/webp"
             onChange={(e) => { void lireFiche(e.target.files); e.target.value = '' }} />
           {fiche.etat === 'depot' ? <span>Je dépose les photos…</span>
             : fiche.etat === 'lecture' ? <span>Je lis la fiche, une page à la fois (environ 30 secondes)…</span>
-              : vue.fiche ? <span>Fiche lue : {Object.values(vue.sources ?? {}).filter((s) => s === 'scan').length} cases remplies{vue.fiche.doutes ? `, ${vue.fiche.doutes} à vérifier` : ''}{vue.fiche.coffre ? ', le mandant gardé à part' : ''}.</span>
-                : <span>Tu as la fiche papier ? Joins ses photos : je la lis d'un coup et ne te pose que ce qu'elle ne dit pas.</span>}
+              : vue.fiche ? <span>Fiche de visite lue : {Object.values(vue.sources ?? {}).filter((s) => s === 'scan').length} cases remplies{vue.fiche.doutes ? `, ${vue.fiche.doutes} à vérifier` : ''}{vue.fiche.coffre ? ', le mandant gardé à part' : ''}.</span>
+                : <span>Tu as la <b>fiche de visite</b> remplie (le patron, pas les photos du bien) ? Joins ses pages : je la lis d'un coup et ne te pose que ce qu'elle ne dit pas.</span>}
           {fiche.etat === 'repos' ? (
-            <button type="button" className="asp-sec" onClick={() => choixFiche.current?.click()}>{vue.fiche ? 'Lire une autre page' : 'Lire la fiche papier'}</button>
+            <button type="button" className="asp-sec" onClick={() => choixFiche.current?.click()}>{vue.fiche ? 'Lire une autre page' : 'Lire la fiche de visite'}</button>
           ) : null}
           {fiche.erreur ? <span className="asp-fiche-ko" role="alert">{fiche.erreur}</span> : null}
         </div>

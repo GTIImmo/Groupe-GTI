@@ -2046,7 +2046,8 @@ def _controler_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[dict[st
 
 
 def preparer_ajouter_photo(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    bien, photos = _controler_photo(ctx, p)
+    # 20/11 (P4-b bis) : l'IA les passe dans « photos_du_bien » (jamais une fiche de visite) ; rangées sous « fichiers »
+    bien, photos = _controler_photo(ctx, {**p, "fichiers": p.get("photos_du_bien") or p.get("fichiers")})
     n = len(photos)
     resume = (f"Ajouter {n} photo{'s' if n > 1 else ''} à l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » : "
               + ", ".join(f"« {f['nom']} »" for f in photos)
@@ -2218,6 +2219,7 @@ CASES_LONGUES = {"description", "note", "strongPoints", "watchPoints", "priceArg
                  "stateAppreciation", "works", "chargesDetail", "particularities", "poolDetails"}
 TYPES_SCAN = {"image/jpeg", "image/png", "image/webp"}  # = la route de scan de l'écran (openai_listing_sheet_service)
 MAX_PAGES_SCAN = 5  # « une fiche = jusqu'à 5 pages » (handleDraftAnnonceScanFile)
+MIN_CASES_FICHE = 5  # 20/11 (P4-b bis) : en dessous, ce n'est pas une fiche de visite (rien n'est gardé)
 TAILLE_MAX_SCAN = 12 * 1024 * 1024  # = MAX_IMAGE_BYTES de la route de scan
 MAX_PIECES_COMPOSITION = 40
 
@@ -2299,15 +2301,17 @@ def _controler_creation(ctx: ContexteAssistant, p: dict[str, Any], exiger: bool 
                        "hektor_user_id": str(fiche_nego.get("hektor_user_id") or ""), "nom": fiche_nego.get("nom_vu"),
                        "agence": fiche_nego.get("agence_nom")}
     photos = []
-    if p.get("fichiers"):
-        photos = _fichiers_joints(ctx, "|".join(p["fichiers"]) if isinstance(p["fichiers"], list) else p["fichiers"])
+    # 20/11 (P4-b bis) : l'IA les passe dans « fiche_de_visite » ; la carte enregistrée les garde sous « fichiers »
+    fiche = p.get("fiche_de_visite") or p.get("fichiers")
+    if fiche:
+        photos = _fichiers_joints(ctx, "|".join(fiche) if isinstance(fiche, list) else fiche)
         if len(photos) > MAX_PAGES_SCAN:
-            raise Refus(f"{MAX_PAGES_SCAN} photos au plus pour la fiche papier (une photo par page).")
+            raise Refus(f"{MAX_PAGES_SCAN} pages au plus pour la fiche de visite (une photo par page).")
         autres = [f["nom"] for f in photos if f["type"] not in TYPES_SCAN or f["taille"] > TAILLE_MAX_SCAN]
         if autres:
             raise Refus("Le scan ne lit que des photos JPEG, PNG ou WebP de 12 Mo au plus : " + ", ".join(autres) + ".")
     if exiger and not cases and not composition and not mandant and not photos:
-        raise Refus("Rien à pré-remplir : donne au moins une information sur le bien, ou joins la fiche papier.")
+        raise Refus("Rien à pré-remplir : donne au moins une information sur le bien, ou joins la fiche de visite remplie.")
     mandant_nouveau = bool(p.get("mandant_nouveau")) and not mandant
     inconnus = _inconnus_dits(p.get("inconnus"), cases)
     if not photos and exiger:  # la fiche papier jointe : c'est le scan de la fenêtre qui les lira
@@ -2453,7 +2457,7 @@ def _parametres_de_la_carte(c: dict[str, Any]) -> dict[str, Any]:
 def _photos_de_fiche(ctx: ContexteAssistant, fichiers: Any) -> list[dict[str, Any]]:
     photos = _fichiers_joints(ctx, "|".join(fichiers) if isinstance(fichiers, list) else fichiers)
     if len(photos) > MAX_PAGES_SCAN:
-        raise Refus(f"{MAX_PAGES_SCAN} photos au plus pour la fiche papier (une photo par page).")
+        raise Refus(f"{MAX_PAGES_SCAN} pages au plus pour la fiche de visite (une photo par page).")
     autres = [f["nom"] for f in photos if f["type"] not in TYPES_SCAN or f["taille"] > TAILLE_MAX_SCAN]
     if autres:
         raise Refus("Le scan ne lit que des photos JPEG, PNG ou WebP de 12 Mo au plus : " + ", ".join(autres) + ".")
@@ -2477,6 +2481,14 @@ def _lire_la_fiche(ctx: ContexteAssistant, photos: list[dict[str, Any]]) -> dict
     with ThreadPoolExecutor(max_workers=max(1, min(MAX_PAGES_SCAN, len(photos)))) as pool:
         pages = list(pool.map(une_page, photos))
     lues = [p for p in pages if p]
+    # 20/11 (P4-b bis) : presque rien lu sur toutes les pages = ce n'est PAS une fiche de visite (une photo du bien, par
+    # exemple) : rien n'est gardé, et la phrase dit où vont les photos du bien
+    remplies = sum(1 for p in lues for f in (p.get("fields") or {}).values()
+                   if isinstance(f, dict) and str(f.get("value") or "").strip())
+    if lues and remplies < MIN_CASES_FICHE:
+        raise Refus(f"Ce n'est pas une fiche de visite ({remplies} case{'s' if remplies > 1 else ''} lue"
+                    f"{'s' if remplies > 1 else ''}) : rien n'est gardé. Les PHOTOS DU BIEN s'ajoutent à l'étape Photos de "
+                    "la fenêtre de création (ou par la carte « Ajouter des photos » sur une annonce existante).")
     if not lues:
         raise Refus("La fiche n'a pas pu être lue : reprends les photos (nettes, une page par photo).")
     cout = 0.0
@@ -2534,7 +2546,7 @@ def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tup
     quoi = "une estimation" if c["genre"] == "estimation" else "une annonce"
     resume = (f"Créer {quoi} par questions guidées. "
               + (f"Déjà dit, pas reposé : {', '.join(connues)}. " if connues else "")
-              + (f"La fiche papier ({len(c['photos'])} photo{'s' if len(c['photos']) > 1 else ''}) sera lue au clic : "
+              + (f"La fiche de visite ({len(c['photos'])} page{'s' if len(c['photos']) > 1 else ''}) sera lue au clic : "
                  "il ne restera que ce qu'elle ne dit pas. " if c["photos"]
                  else f"{reste} question{'s' if reste > 1 else ''} à boutons ensuite, sans l'IA. ")
               + "À la fin, la fenêtre de création s'ouvre remplie et rien n'est créé avant ton clic « Créer »")
@@ -4068,12 +4080,14 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           preparer_activer_estimation, executer_activer_estimation),
     # 17/11 (§54-55) : ajouter des photos avec des fichiers du trombone
     Geste("ajouter_photo",
-          "Prépare l'AJOUT de photos (JPEG ou PNG, 20 au plus) à une annonce vivante, avec des fichiers que la personne a "
-          "JOINTS à sa question (fichier:NUMERO). Toujours visibles, en dernier dans la galerie ; envoyées chez Hektor par le "
-          "worker. Masquer, couverture, déplacer : les autres cartes photo, ensuite.",
+          "Prépare l'AJOUT de PHOTOS DU BIEN (la galerie de l'annonce : JPEG ou PNG, 20 au plus) à une annonce vivante, "
+          "avec des fichiers que la personne a JOINTS à sa question (fichier:NUMERO). Toujours visibles, en dernier dans la "
+          "galerie ; envoyées chez Hektor par le worker. Masquer, couverture, déplacer : les autres cartes photo, ensuite. "
+          "JAMAIS une fiche de visite (le patron rempli : elle se lit par une création).",
           TOUS_LES_ROLES,
           _schema({"hektor_annonce_id": {"type": "string", "description": "numéro d'annonce"},
-                   "fichiers": {"type": "string", "description": "numéros des fichiers joints séparés par |"}}),
+                   "photos_du_bien": {"type": "string", "description": "numéros des PHOTOS DU BIEN jointes séparés par | "
+                                      "(jamais une fiche de visite)"}}),
           preparer_ajouter_photo, executer_ajouter_photo),
     # 17/11 (§57-59) : déposer des documents = ouvrir la fenêtre GED du bien, garnie des fichiers joints
     Geste("deposer_documents",
@@ -4091,9 +4105,9 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
           "personne a dit ou que tes lectures t'ont rendu (son agenda : lieu, contact relié) ; une case non dite reste "
           "vide, n'en déduis aucune. « Vers 245 000 » = 245000. Le mandant : un contact EXISTANT (son numéro), sinon "
           "vide (il se saisit dans la fenêtre : jamais ses coordonnées ici). Le négociateur : vide pour un commercial "
-          "(c'est lui) ; la direction peut nommer un négociateur. Les photos de la FICHE PAPIER jointes (fichier:…, "
-          "5 au plus) sont lues par le scan de la fenêtre ; ce que la personne dit l'emporte sur la fiche. SANS fiche "
-          "papier, il faut les ESSENTIELS : type, adresse, code postal, ville, surface, pièces, terrain pour une maison, "
+          "(c'est lui) ; la direction peut nommer un négociateur. Les pages de la FICHE DE VISITE jointes (le patron "
+          "rempli ; fichier:…, 5 au plus ; JAMAIS des photos du bien) sont lues par le scan de la fenêtre ; ce que la "
+          "personne dit l'emporte sur la fiche. SANS fiche de visite, il faut les ESSENTIELS : type, adresse, code postal, ville, surface, pièces, terrain pour une maison, "
           "le mandant (existant ou nouveau), et le prix pour une annonce ; sinon la carte est refusée avec la liste.",
           TOUS_LES_ROLES,
           _schema({"genre": {"type": "string", "enum": ["estimation", "annonce"]},
@@ -4118,7 +4132,8 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                                 "répondu « je ne sais pas » (sinon vide)",
                                 "items": {"type": "string", "enum": list(ESSENTIELS_TOUS)}},
                    "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
-                   "fichiers": {"type": "string", "description": "photos de la fiche papier jointes, séparées par |, ou vide"}}),
+                   "fiche_de_visite": {"type": "string", "description": "pages de la FICHE DE VISITE jointes (le patron "
+                                       "rempli à la main ; JAMAIS des photos du bien), séparées par |, ou vide"}}),
           preparer_ouvrir_creation_annonce, executer_ouvrir_creation_annonce),
     # 19/11 (étape 4 chap. 6, P4-a) : créer par le PARCOURS GUIDÉ (questions à boutons, sans l'IA), déjà rempli de la demande
     Geste("parcours_creation",
@@ -4149,8 +4164,9 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                    "mandant_nouveau": {"type": "boolean", "description": "true si la personne a dit que le mandant est "
                                        "NOUVEAU (pas encore dans les contacts) ; false sinon"},
                    "negociateur": {"type": "string", "description": "DIRECTION seulement : le nom du négociateur ; sinon vide"},
-                   "fichiers": {"type": "string", "description": "photos de la FICHE PAPIER jointes (fichier:…, 5 au plus, "
-                                "séparées par |) : lues au clic, il ne restera que ce qu'elle ne dit pas ; ou vide"}}),
+                   "fiche_de_visite": {"type": "string", "description": "pages de la FICHE DE VISITE jointes (le patron "
+                                       "rempli à la main ; fichier:…, 5 au plus, séparées par |) : lues au clic, il ne restera "
+                                       "que ce qu'elle ne dit pas ; JAMAIS des photos du bien ; ou vide"}}),
           preparer_parcours_creation, executer_parcours_creation),
     Geste("ouvrir_avis_de_valeur",
           "Prépare l'OUVERTURE de l'ÉDITEUR « Avis de valeur » d'un bien EXISTANT (« fais l'estimation / l'avis de valeur "
