@@ -51,6 +51,8 @@ voir(/\{!rangeEnListe \? <div className="gm2-feuilles"/.test(rm) && /\{lus\.leng
 voir(/const vueDossier = docFilter === 'tous' && dossierGed !== null/.test(app) && /\{\(vueDossier && dossierGed \? \[\] : shown\)\.map\(\(e\) => carteDocument\(e\)\)\}/.test(app),
   '« À préparer », « Signés », « Cloud » : la liste à plat d\'aujourd\'hui')
 
+voir(/const noms = new Set\(l\.documents\)\s*const docs = enriched\.filter\(\(e\) => noms\.has\(e\.doc\.document_name\)\)/.test(app), 'un fichier ne revient pas autant de fois que son nom est porté par d’autres (vu en ligne le 20/11 sur 18849)')
+
 console.log('④ le rangement par moment (lib/gedPieces.ts, fonction neuve)')
 const code = esbuild.buildSync({ entryPoints: [path.join(__dirname, 'src/lib/gedPieces.ts')], bundle: true, write: false, format: 'cjs', platform: 'node' }).outputFiles[0].text
 const m = { exports: {} }; new Function('module', 'exports', 'require', code)(m, m.exports, require)
