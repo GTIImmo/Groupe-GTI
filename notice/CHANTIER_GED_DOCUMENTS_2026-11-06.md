@@ -3869,3 +3869,12 @@ conditions, le classic intact, le rangement (moment en cours d'abord, une pièce
 `recuManque`) ; témoin inverse (un espace ajouté dans la carte) : **2 ROUGE**. Les 15 autres essais GED verts (un « absent »
 dans un commentaire avait fait sonner 3 essais : reformulé) ; les 5 essais de la signature demandés par sa session VERTS
 (choix, état du mandat, expirée, pièces, suivi) ; `npm run build` passe. ⚠ **Pas vu à l'écran** : il faut le déploiement.
+**✅ EN LIGNE le 20/11 (« Oui, pousse »)** : les 15 commits GED rejoués SEULS sur `origin/main` (rien du Classeur), l'arbre
+rejoué essayé à part (essais GED et signature verts, build), poussé en `e1342f6` ; Vercel a servi la feuille neuve
+(`var(--bv-magenta, #c5005f)`, `gd3-dossier`). **Vu dans le Chrome de Frédéric sur 18849 (62850), lecture seule** : « Le
+dossier 20 », le Compromis ouvert, les pièces lues avec leurs pastilles, la carte d'aujourd'hui dans la ligne dépliée
+(Ouvrir, Signature, Supprimer). ⚠ **Un défaut vu à l'écran et corrigé** : trois fichiers du MÊME nom (« Copie AAE PROMESSE… »)
+revenaient chacun trois fois, et deux lignes se dépliaient ensemble -- le nom était répété dans la pièce. Corrigé (`9ba911a`,
+un contrôle de plus dans l'essai, 17 verts), poussé et revu : **20 lignes pour 20 documents**, aucun doublon, 9 pièces
+manquantes à leur place, **aucun élément ne déborde**. Restent à l'ancienne : « À remplir », « À regarder » et « Vrai / Faux /
+Déjà su » (morceau 4).
