@@ -219,3 +219,34 @@ double d'une ligne de fenêtre (la maquette ne la montre plus). Rien n'est codé
   en « Envoi… » puis la coche se trace ; au survol, les cartes se soulèvent.
 - **Les écrans s'enchaînent en lecture** : « Ajouter un document » ouvre le dépôt, « Voir et corriger » ouvre « Ce que
   dit le compromis », « Fermer » revient au dossier.
+
+⛔ **DÉCISION DE FRÉDÉRIC (20/11) : « Oui, Masquer ».** Un point d'attention s'écarte par « Masquer » (réversible :
+« 1 point d'attention masqué, Réafficher ») ; « Vrai / Faux / Déjà su » disparaît avec la période de test.
+
+## 9. LE DÉCOUPAGE PROPOSÉ POUR CODER LA V3 (20/11) — proposé, RIEN codé, attend le « vas-y » morceau par morceau
+
+**Où ranger « Masquer » (audit)** : aujourd'hui le jugement vit dans `app_ged_jugement` (journal, le plus récent par ligne
+fait foi ; lu par `loadGedJugements`, écrit par `app_ged_juger`) ; 8 jugements en tout (7 vrais, 1 faux, 2 biens, 17-19/11).
+**Proposé** : garder CE journal et lui apprendre deux verdicts, `masque` et `reaffiche` (CHECK de la table et garde de la
+fonction élargis, patch + inverse + répétition). Le dernier mot d'une ligne décide : `reaffiche` -> visible, tout autre
+(y compris les 8 anciens vrai / faux) -> masqué, comme aujourd'hui où une ligne jugée se replie. Rien d'autre ne lit la table
+(seul `requete_mesure_ged_m10` la compte).
+⚠ Ce que la V3 touche AUSSI chez les négociateurs : la fenêtre de dépôt (`ged_depot_multiple = on` depuis le 18/11). Le reste
+de la GED est derrière des interrupteurs « admin ».
+
+**Les morceaux, un à la fois** (chacun : essais hors ligne, build, puis en ligne sur son accord) :
+1. **la base de « Masquer »** -- le patch ci-dessus (petit, nécessaire au morceau 4) ;
+2. **le socle** -- une police (Plus Jakarta Sans), un magenta, les couleurs d'état, la miniature « page » par famille, les
+   pastilles ; CSS seulement, sous les classes GED existantes ;
+3. **l'onglet Documents : « la liste devient le dossier »** -- les moments (coches, anneau), les groupes dépliables, une
+   ligne par document avec ses valeurs, « Ce que l'IA a lu » dépliée, les manquantes à leur place ; le tableau anti-perte du
+   §6 vérifié geste par geste ;
+4. **« À traiter »** -- le bloc magenta et son compteur, les cartes, « Voir et corriger / Voir et ajouter », « Masquer /
+   Réafficher », l'alerte en double d'une fenêtre retirée, plus de « Vrai / Faux / Déjà su » ;
+5. **« Ce que dit… »** -- les deux choix face à face, la page ouverte d'office, « Envoi… » puis la coche ; la plaque
+   « papier » corrigée au passage ;
+6. **la fenêtre de dépôt** -- l'habit, la séparation qui écarte les pages, l'envoi fichier par fichier ;
+7. **le téléphone**.
+Les animations viennent avec chaque morceau (aucune ne bloque un geste ; `prefers-reduced-motion` les coupe).
+**Encore à trancher** : (§5.1) masquer « À préparer / À envoyer en signature » sur les documents qui ne se signent pas ;
+(§5.3) retirer le bouton « Remplir la transaction », toujours refusé.
