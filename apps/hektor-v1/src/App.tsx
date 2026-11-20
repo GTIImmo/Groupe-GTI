@@ -13079,7 +13079,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                     <div className="gd3-lignes">
                       {g.lignes.map((l) => {
                         if (l.etat === 'recu') {
-                          const docs = l.documents.flatMap((nom) => enriched.filter((e) => e.doc.document_name === nom))
+                          // un nom porté par plusieurs fichiers est UNE fois dans la liste des noms (sinon chaque fichier
+                          // revenait autant de fois que son nom : vu en ligne le 20/11 sur 18849, quatre « Copie AAE PROMESSE… »)
+                          const noms = new Set(l.documents)
+                          const docs = enriched.filter((e) => noms.has(e.doc.document_name))
                           return <Fragment key={l.cle}>{docs.map((e) => ligneDocument(e, l.libelle, l.dansUnDossier))}</Fragment>
                         }
                         const cas = l.etat === 'selon_le_cas'
