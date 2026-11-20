@@ -3803,3 +3803,20 @@ et le chemin n'a servi que deux fois, les deux par moi.**
 `test_ged_remplir_contact.cjs`) : **38 verts sur le disque** (7 rouges avant, tous dus au CRLF d'App.tsx).
 ⛔ **DÉCISION DE FRÉDÉRIC (20/11) sur 2b : « Non, laisse ».** On ne corrige pas : la nuit rattrape le lien, rien ne se
 perd. Ne pas relancer.
+
+### 12.59 VISUEL V3, MORCEAU 1 -- la base de « Masquer » (20/11, « Oui, vas-y ») -- ÉCRIT ET RÉPÉTÉ, PAS POSÉ
+
+Décisions de Frédéric (20/11, `notice/AUDIT_GRAPHIQUE_GED_2026-11-18.md` §8-9) : la période de test est retirée ; un point
+d'attention s'écarte par « Masquer », réversible par « Réafficher » ; le masquage vaut POUR TOUT LE MONDE sur le bien.
+**Le patch** `supabase/patch_ged_masquer_2026-11-20.sql` (+ `_INVERSE`, + `_REPETITION`) : le journal `app_ged_jugement`
+apprend deux verdicts, `masque` et `reaffiche` (CHECK de la table + garde de `app_ged_juger`, rien d'autre ne bouge dans la
+fonction ; droits reposés à l'identique). Le plus récent d'une ligne fait foi : `reaffiche` -> visible, tout autre -> masqué.
+Garde à l'entrée : l'empreinte de la fonction (`4d945b66…`) et le CHECK d'origine, sinon ARRÊT. L'inverse refuse s'il
+existe des `masque` / `reaffiche` (le journal ne s'efface pas) et vérifie qu'il défait bien SA fonction.
+**Répétition jouée VERTE (8 contrôles), en Frédéric sur 63331, sans rien garder** : masquer puis réafficher passent, un
+verdict inconnu est refusé, les anciens verdicts passent, `authenticated` n'écrit toujours pas en direct, 3 lignes d'essai
+à son nom, aucun ancien jugement touché, porte fermée à `anon`. **Aller-retour patch + inverse VERT** : la fonction revient
+à l'empreinte exacte du 16/11 et le CHECK d'origine. Après chaque essai, mesuré : porte intacte, CHECK intact, 8 jugements.
+⚠ Une limite vue en répétition : dans UNE transaction les deux lignes ont le même `juge_le` ; à l'écran chaque clic est sa
+propre transaction (le plus récent fait foi). ⚠ Tant que l'écran (morceau 4) n'écrit pas ces mots, ce patch ne change RIEN
+à ce que voit un utilisateur. **Reste : le poser en base (accord de Frédéric), puis le morceau 2.**
