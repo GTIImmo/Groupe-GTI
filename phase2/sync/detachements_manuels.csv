@@ -1,0 +1,279 @@
+# LES DETACHEMENTS DECIDES A LA MAIN -- lu par affaire_ledger.recalculer_les_chaines SEULEMENT si
+# APP_CHAINAGE_DETACHEMENTS=1 (eteint par defaut). Une ligne = UN MORCEAU = une affaire : ses transactions
+# deviennent un dossier a elles seules. Genere le 20/11/2026 12:41 par phase2/checks/temps10_g2_et_l_outil_rejeu_2026-11-20.py
+# depuis les 132 coupes datees VALIDEES par Frederic le 20/11 (« LES 132 COUPES DATEES : OUI »).
+transactions;bien;geste;pourquoi
+1000115 1000147 1000261;43787;coupe_132_n1;LLQHD7MG -- coupe datee validee le 20/11
+1000116 1000148;43787;coupe_132_n1;JEK94D31 -- coupe datee validee le 20/11
+1000125 1000151;52937;coupe_132_n2;KBW3J7DF -- coupe datee validee le 20/11
+1000126;52937;coupe_132_n2;0V00SLEU -- coupe datee validee le 20/11
+1000127 1000150 1000263;52937;coupe_132_n2;MPF7E8N7 -- coupe datee validee le 20/11
+11145;23353;coupe_132_n3;4f7b9749 -- coupe datee validee le 20/11
+11146 11147 11148;23353;coupe_132_n3;e9260960 -- coupe datee validee le 20/11
+11167 11170;23530;coupe_132_n4;GEQKYZCN -- coupe datee validee le 20/11
+11168 11169 11171;23530;coupe_132_n4;UZ7HB9VH -- coupe datee validee le 20/11
+11181 11183 11185;23543;coupe_132_n5;VVMO1423 -- coupe datee validee le 20/11
+11182 11184;23543;coupe_132_n5;UBISDN7Z -- coupe datee validee le 20/11
+11186 11187 11189;23547;coupe_132_n6;SLHR5FHE -- coupe datee validee le 20/11
+11188;23547;coupe_132_n6;MSL64YBY -- coupe datee validee le 20/11
+11355 11357 11359;24059;coupe_132_n7;ZRHW9SPU -- coupe datee validee le 20/11
+11356 11358;24059;coupe_132_n7;N62LJIBY -- coupe datee validee le 20/11
+11373 11375 11377;24100;coupe_132_n8;UV0JWYBL -- coupe datee validee le 20/11
+11374 11376;24100;coupe_132_n8;KZIM88QE -- coupe datee validee le 20/11
+11500 11502 11503;24206;coupe_132_n9;CKISRI2B -- coupe datee validee le 20/11
+11501;24206;coupe_132_n9;DA57BFXT -- coupe datee validee le 20/11
+11546 11548;24361;coupe_132_n10;SXG8691T -- coupe datee validee le 20/11
+11547 11549 11550;24361;coupe_132_n10;X89SXIQZ -- coupe datee validee le 20/11
+11595 11597 11599;24410;coupe_132_n11;717OUUED -- coupe datee validee le 20/11
+11598 29005;24410;coupe_132_n11;GUUVDY2S -- coupe datee validee le 20/11
+1160 1163;2629;coupe_132_n12;G1TVNXJ5 -- coupe datee validee le 20/11
+1161 1162 1164;2629;coupe_132_n12;F6XBD2IU -- coupe datee validee le 20/11
+11654 11657;24479;coupe_132_n13;6NOJ686I -- coupe datee validee le 20/11
+11655 11656 11658;24479;coupe_132_n13;29YBUBYA -- coupe datee validee le 20/11
+11667;24484;coupe_132_n14;13KBCS85 -- coupe datee validee le 20/11
+11668 11669 11671;24484;coupe_132_n14;YMEKXZK3 -- coupe datee validee le 20/11
+117 120;376;coupe_132_n15;7HDK9XOG -- coupe datee validee le 20/11
+118 119 121;376;coupe_132_n15;P0YMQODU -- coupe datee validee le 20/11
+11728 11730 11732;24528;coupe_132_n16;89QMXNNH -- coupe datee validee le 20/11
+11729 11731;24528;coupe_132_n16;HBZQXR67 -- coupe datee validee le 20/11
+11790 11792 11794;24563;coupe_132_n17;QPLE2162 -- coupe datee validee le 20/11
+11791 11793;24563;coupe_132_n17;O9IYE0F0 -- coupe datee validee le 20/11
+1228 1230 1232;3029;coupe_132_n18;DCFLWTF3 -- coupe datee validee le 20/11
+1229 1231;3029;coupe_132_n18;YAML8MHS -- coupe datee validee le 20/11
+1265 1267 1269;3089;coupe_132_n19;RI0D8NZ6 -- coupe datee validee le 20/11
+1266 1268;3089;coupe_132_n19;W4P3UL48 -- coupe datee validee le 20/11
+14141 14142;28673;coupe_132_n20;EC977D21 -- coupe datee validee le 20/11
+14143;28673;coupe_132_n20;6D1WSAK8 -- coupe datee validee le 20/11
+14808 14809 14811;30361;coupe_132_n21;L1ZAEBNM -- coupe datee validee le 20/11
+14810;30361;coupe_132_n21;OCI5ECK2 -- coupe datee validee le 20/11
+14939 14943;30717;coupe_132_n22;ZE9WZW22 -- coupe datee validee le 20/11
+14940 14941 14942 14944;30717;coupe_132_n22;DKTK22F2 -- coupe datee validee le 20/11
+15059 15060;31045;coupe_132_n23;U39MLAJD -- coupe datee validee le 20/11
+15061 15062 29004;31045;coupe_132_n23;5VZDGQC3 -- coupe datee validee le 20/11
+16031 16034;32960;coupe_132_n24;LM6YKKZP -- coupe datee validee le 20/11
+16032 16033 16035;32960;coupe_132_n24;UHVX3QH1 -- coupe datee validee le 20/11
+16341 16345 16346;34007;coupe_132_n25;5494P9OV -- coupe datee validee le 20/11
+16342 16344;34007;coupe_132_n25;ZGNIYS1Z -- coupe datee validee le 20/11
+16343;34007;coupe_132_n25;YATQOEPB -- coupe datee validee le 20/11
+16362 16363;34048;coupe_132_n26;FS22QU5G -- coupe datee validee le 20/11
+16364;34048;coupe_132_n26;1290IIOC -- coupe datee validee le 20/11
+16837 16839 16840;35680;coupe_132_n27;V5TRCLJ8 -- coupe datee validee le 20/11
+16838;35680;coupe_132_n27;TZ7MOW1S -- coupe datee validee le 20/11
+16841 16843;35681;coupe_132_n28;73FOXX2A -- coupe datee validee le 20/11
+16842 16844 16845;35681;coupe_132_n28;DY4JG42E -- coupe datee validee le 20/11
+16869 16872;35716;coupe_132_n29;YB35SKPR -- coupe datee validee le 20/11
+16870 16871;35716;coupe_132_n29;CA2XNF38 -- coupe datee validee le 20/11
+17024 17026;36165;coupe_132_n30;JAW5U9OF -- coupe datee validee le 20/11
+17027;36165;coupe_132_n30;X2714E92 -- coupe datee validee le 20/11
+17208 17210 17212;36477;coupe_132_n31;5XWBF7OE -- coupe datee validee le 20/11
+17209 17211;36477;coupe_132_n31;V0IDTREF -- coupe datee validee le 20/11
+17288 17290;36755;coupe_132_n32;3LMG7EXA -- coupe datee validee le 20/11
+17289 17292 17293;36755;coupe_132_n32;SS4I5EZW -- coupe datee validee le 20/11
+17300 17302 17304;36780;coupe_132_n33;5Q2BQQU4 -- coupe datee validee le 20/11
+17301 17303;36780;coupe_132_n33;39ZNKH9W -- coupe datee validee le 20/11
+17320 17322 17324;36794;coupe_132_n34;5GZVT548 -- coupe datee validee le 20/11
+17321 17323;36794;coupe_132_n34;J1C9PJJP -- coupe datee validee le 20/11
+17524 17527 17528;37402;coupe_132_n35;ODJRIJGW -- coupe datee validee le 20/11
+17525 17526;37402;coupe_132_n35;9JHY3CPQ -- coupe datee validee le 20/11
+17650 17653 17654;37634;coupe_132_n36;GHLNXYFK -- coupe datee validee le 20/11
+17651 17652;37634;coupe_132_n36;XVRCFWCK -- coupe datee validee le 20/11
+19073 19075 19077;39752;coupe_132_n37;OQHE2DK5 -- coupe datee validee le 20/11
+19074 19076;39752;coupe_132_n37;JYOLFY1A -- coupe datee validee le 20/11
+19103 19106 19107;39789;coupe_132_n38;H8VX2LLI -- coupe datee validee le 20/11
+19104 19105;39789;coupe_132_n38;80MU6MMO -- coupe datee validee le 20/11
+19455 19457 19459;40378;coupe_132_n39;OX1XQWC0 -- coupe datee validee le 20/11
+19456;40378;coupe_132_n39;I3R03A11 -- coupe datee validee le 20/11
+19511 19513 19514;40453;coupe_132_n40;A8LNQDOQ -- coupe datee validee le 20/11
+19512;40453;coupe_132_n40;CYZA6GYS -- coupe datee validee le 20/11
+19611 19613 19615;40679;coupe_132_n41;34JO2UUN -- coupe datee validee le 20/11
+19612 19614;40679;coupe_132_n41;644UYQNA -- coupe datee validee le 20/11
+19656 19658 19660;40744;coupe_132_n42;7ITH92WI -- coupe datee validee le 20/11
+19657 19659;40744;coupe_132_n42;5SDJ4B0P -- coupe datee validee le 20/11
+19664 19667 19668;40747;coupe_132_n43;HMVS1CZT -- coupe datee validee le 20/11
+19665 19666;40747;coupe_132_n43;RD4LZYW0 -- coupe datee validee le 20/11
+19690 19694;40792;coupe_132_n44;YKSL5L2U -- coupe datee validee le 20/11
+19691 19692 19695;40792;coupe_132_n44;C0U52ILC -- coupe datee validee le 20/11
+19828 19829 19831;41019;coupe_132_n45;HPOCWXIR -- coupe datee validee le 20/11
+19830;41019;coupe_132_n45;M3LQT4JY -- coupe datee validee le 20/11
+199 202 203;557;coupe_132_n46;J62NO1EG -- coupe datee validee le 20/11
+200 201;557;coupe_132_n46;S3J2JV0O -- coupe datee validee le 20/11
+20072 20074 20076;41467;coupe_132_n47;QW7MPWOM -- coupe datee validee le 20/11
+20073;41467;coupe_132_n47;O6R10ZQA -- coupe datee validee le 20/11
+20246 20248 20249;41672;coupe_132_n48;b4cbb54d -- coupe datee validee le 20/11
+20247;41672;coupe_132_n48;1P6VET6U -- coupe datee validee le 20/11
+20276 20278 20280;41705;coupe_132_n49;S2B9H1VA -- coupe datee validee le 20/11
+20277 20279;41705;coupe_132_n49;FUDJ9CJC -- coupe datee validee le 20/11
+20300 20302 20304;41721;coupe_132_n50;WIA7ITRD -- coupe datee validee le 20/11
+20301 20303;41721;coupe_132_n50;HORVRQ6N -- coupe datee validee le 20/11
+20308 20310 20312;41724;coupe_132_n51;N0P2M218 -- coupe datee validee le 20/11
+20309 20311;41724;coupe_132_n51;676XP6GN -- coupe datee validee le 20/11
+20407 20409 20411;41797;coupe_132_n52;O1M5TV0O -- coupe datee validee le 20/11
+20408 20410;41797;coupe_132_n52;DHG4SD0N -- coupe datee validee le 20/11
+20491 20493 20495;41833;coupe_132_n53;X0U0B171 -- coupe datee validee le 20/11
+20492 20494;41833;coupe_132_n53;XCAUACUJ -- coupe datee validee le 20/11
+20511 20512 20514;41858;coupe_132_n54;8O7W1KRD -- coupe datee validee le 20/11
+20513;41858;coupe_132_n54;MLUTE5I1 -- coupe datee validee le 20/11
+21 27;53;coupe_132_n55;8GIIDS5T -- coupe datee validee le 20/11
+22 24;53;coupe_132_n55;7NI4WKV5 -- coupe datee validee le 20/11
+26;53;coupe_132_n55;CW4IYXO2 -- coupe datee validee le 20/11
+21584 21587;43114;coupe_132_n56;71204JJ6 -- coupe datee validee le 20/11
+21585 21586;43114;coupe_132_n56;XHJF1CC2 -- coupe datee validee le 20/11
+21597 21599 21601;43126;coupe_132_n57;GM8VDVK2 -- coupe datee validee le 20/11
+21598 21600;43126;coupe_132_n57;9K4Y3S4N -- coupe datee validee le 20/11
+2166 2169;5620;coupe_132_n58;1W9FJJLB -- coupe datee validee le 20/11
+2167 2168 2170;5620;coupe_132_n58;ZLY1CLKF -- coupe datee validee le 20/11
+21946 21948;43923;coupe_132_n59;GHX4LA2G -- coupe datee validee le 20/11
+21947 21949;43923;coupe_132_n59;JJPTIU4H -- coupe datee validee le 20/11
+21964 21967 21968;44033;coupe_132_n60;GRUQHIOY -- coupe datee validee le 20/11
+21965 21966;44033;coupe_132_n60;UIM5TBKS -- coupe datee validee le 20/11
+22007 22009 22011;44183;coupe_132_n61;OHRSRQ23 -- coupe datee validee le 20/11
+22008 22010;44183;coupe_132_n61;E071BARG -- coupe datee validee le 20/11
+22017 22020 22021;44198;coupe_132_n62;CEOL50VM -- coupe datee validee le 20/11
+22018 22019;44198;coupe_132_n62;4D2J48XD -- coupe datee validee le 20/11
+22022 22023 22025;44205;coupe_132_n63;ZGY9VWTQ -- coupe datee validee le 20/11
+22024;44205;coupe_132_n63;L86MC4W7 -- coupe datee validee le 20/11
+22085 22088 22091;44308;coupe_132_n64;88PMHJRA -- coupe datee validee le 20/11
+22086 22090;44308;coupe_132_n64;D3MEX415 -- coupe datee validee le 20/11
+22087 22089;44308;coupe_132_n64;KOYNCSYB -- coupe datee validee le 20/11
+2210 2213;5689;coupe_132_n65;HRC324JH -- coupe datee validee le 20/11
+2211 2212 2214;5689;coupe_132_n65;BZDTPD98 -- coupe datee validee le 20/11
+22255 22258 22259;44638;coupe_132_n66;T46M1FP1 -- coupe datee validee le 20/11
+22256 22257;44638;coupe_132_n66;0L1C7AGG -- coupe datee validee le 20/11
+23050 23053;45891;coupe_132_n67;VMWFLLW4 -- coupe datee validee le 20/11
+23051 23052 23055;45891;coupe_132_n67;DBRDHEGH -- coupe datee validee le 20/11
+23054;45891;coupe_132_n67;SBH4QWDW -- coupe datee validee le 20/11
+23056 23059 23060;45892;coupe_132_n68;AYQ5SMMS -- coupe datee validee le 20/11
+23057 23058;45892;coupe_132_n68;HJTL7XCC -- coupe datee validee le 20/11
+23333 23334 23336;46346;coupe_132_n69;G9TTO1MQ -- coupe datee validee le 20/11
+23335;46346;coupe_132_n69;UH6DNQHK -- coupe datee validee le 20/11
+23412 23415;46475;coupe_132_n70;NOPYBDHI -- coupe datee validee le 20/11
+23413 23414 23416;46475;coupe_132_n70;PB3ASE0N -- coupe datee validee le 20/11
+23424 23425 23427;46500;coupe_132_n71;7WC4GUJR -- coupe datee validee le 20/11
+23426;46500;coupe_132_n71;TSIV5DTS -- coupe datee validee le 20/11
+2357;5838;coupe_132_n72;515UT1WG -- coupe datee validee le 20/11
+2358 2359 2360;5838;coupe_132_n72;USL9H5AJ -- coupe datee validee le 20/11
+24004;47571;coupe_132_n73;8c7725f2 -- coupe datee validee le 20/11
+24005 24006 24007;47571;coupe_132_n73;e48a523c -- coupe datee validee le 20/11
+24107 24109 24111;47744;coupe_132_n74;LMV1HON9 -- coupe datee validee le 20/11
+24108 24110;47744;coupe_132_n74;0VASTLW2 -- coupe datee validee le 20/11
+24309 24310 24312;48005;coupe_132_n75;U4O5Q370 -- coupe datee validee le 20/11
+24311;48005;coupe_132_n75;KODULWGN -- coupe datee validee le 20/11
+24406 24409;48112;coupe_132_n76;D7CZQBZG -- coupe datee validee le 20/11
+24407 24408 24410;48112;coupe_132_n76;7P1JJ2PP -- coupe datee validee le 20/11
+24411 24413 24415;48113;coupe_132_n77;7TXZXESY -- coupe datee validee le 20/11
+24412 24414;48113;coupe_132_n77;MEWRMGTU -- coupe datee validee le 20/11
+2449 2450 2452;6025;coupe_132_n78;OVNWXXNF -- coupe datee validee le 20/11
+2451;6025;coupe_132_n78;6W6F4A4R -- coupe datee validee le 20/11
+24499 24502;48239;coupe_132_n79;Q23M98IX -- coupe datee validee le 20/11
+24500 24501 24503;48239;coupe_132_n79;LLR19GDU -- coupe datee validee le 20/11
+24563 24565 24567;48297;coupe_132_n80;BV4BJ0TU -- coupe datee validee le 20/11
+24564 24566;48297;coupe_132_n80;UWNRN6F2 -- coupe datee validee le 20/11
+24571 24572 24574;48301;coupe_132_n81;8J3JDVHM -- coupe datee validee le 20/11
+24573;48301;coupe_132_n81;7T8CMWY6 -- coupe datee validee le 20/11
+24608 24609 24611;48330;coupe_132_n82;EWHWFF0Y -- coupe datee validee le 20/11
+24610;48330;coupe_132_n82;XP8L3DAO -- coupe datee validee le 20/11
+2506 2508 2510;6151;coupe_132_n83;NE17WKHG -- coupe datee validee le 20/11
+2507 2509;6151;coupe_132_n83;5H9BOKWJ -- coupe datee validee le 20/11
+2532 2534 2536;6184;coupe_132_n84;MYEK8UA6 -- coupe datee validee le 20/11
+2533 2535;6184;coupe_132_n84;7PTB8Z3M -- coupe datee validee le 20/11
+25626;49484;coupe_132_n85;44ZVGG8Q -- coupe datee validee le 20/11
+25627 25628 25629;49484;coupe_132_n85;OAQDRTNC -- coupe datee validee le 20/11
+25839;49850;coupe_132_n86;64225027 -- coupe datee validee le 20/11
+25840 25841 25842;49850;coupe_132_n86;46b0a92c -- coupe datee validee le 20/11
+25876 25878 25881;49924;coupe_132_n87;H5YNNNX9 -- coupe datee validee le 20/11
+25877;49924;coupe_132_n87;T0WL4QE7 -- coupe datee validee le 20/11
+25888 25893;49941;coupe_132_n88;IFNAD2KL -- coupe datee validee le 20/11
+25890;49941;coupe_132_n88;6N2UPC4E -- coupe datee validee le 20/11
+25897 25900;49948;coupe_132_n89;J1JRBV76 -- coupe datee validee le 20/11
+25898 25899 25901;49948;coupe_132_n89;81LLHEM6 -- coupe datee validee le 20/11
+26027 26030;50368;coupe_132_n90;YV95DVKD -- coupe datee validee le 20/11
+26028 26031;50368;coupe_132_n90;YFITUAFH -- coupe datee validee le 20/11
+26029 26032 29007;50368;coupe_132_n90;DKH6IOKA -- coupe datee validee le 20/11
+26041 26042 26044;50403;coupe_132_n91;6KGSYGM2 -- coupe datee validee le 20/11
+26043;50403;coupe_132_n91;CPM9OKZE -- coupe datee validee le 20/11
+26071 26073 26075;50581;coupe_132_n92;YLAVM0I7 -- coupe datee validee le 20/11
+26072 26074;50581;coupe_132_n92;M1OIXLBA -- coupe datee validee le 20/11
+26154 26159;50759;coupe_132_n93;RP4HBTQN -- coupe datee validee le 20/11
+26155 26158;50759;coupe_132_n93;ZOZ4VNMQ -- coupe datee validee le 20/11
+26156 26157 26160;50759;coupe_132_n93;L4HEO3NF -- coupe datee validee le 20/11
+2633 2636;6555;coupe_132_n94;TQ17VW5I -- coupe datee validee le 20/11
+2634 2635 2637;6555;coupe_132_n94;QXOCABQG -- coupe datee validee le 20/11
+2641 2644 2645;6585;coupe_132_n95;A5Y59R7M -- coupe datee validee le 20/11
+2642 2643;6585;coupe_132_n95;JTC1I5LJ -- coupe datee validee le 20/11
+26603 26606;52143;coupe_132_n96;HTFNZ9Z2 -- coupe datee validee le 20/11
+26604 26608 26609;52143;coupe_132_n96;1TZEGF2D -- coupe datee validee le 20/11
+26605 26607;52143;coupe_132_n96;G88ISQKI -- coupe datee validee le 20/11
+26614 26616 26617;52166;coupe_132_n97;CC8TJTBR -- coupe datee validee le 20/11
+26615;52166;coupe_132_n97;WW88Z2AC -- coupe datee validee le 20/11
+27483 27485 27487;53699;coupe_132_n98;77VVY2X6 -- coupe datee validee le 20/11
+27484 27486;53699;coupe_132_n98;265KVIXP -- coupe datee validee le 20/11
+27558 27559 27561;53806;coupe_132_n99;98ILQ6JE -- coupe datee validee le 20/11
+27560;53806;coupe_132_n99;9HPGTRWV -- coupe datee validee le 20/11
+27655 27658;53922;coupe_132_n100;Y38WOYGA -- coupe datee validee le 20/11
+27656 27657 27659;53922;coupe_132_n100;E2JTIT1V -- coupe datee validee le 20/11
+27660 27663 27664;53924;coupe_132_n101;P2CPKZZY -- coupe datee validee le 20/11
+27661 27662;53924;coupe_132_n101;MDTBQXVO -- coupe datee validee le 20/11
+27678 27680;53940;coupe_132_n102;YRKPOEXD -- coupe datee validee le 20/11
+27679 27681;53940;coupe_132_n102;F5GA770R -- coupe datee validee le 20/11
+27685 27686 27688;53942;coupe_132_n103;VR1K2NJW -- coupe datee validee le 20/11
+27687;53942;coupe_132_n103;EHQQU5U7 -- coupe datee validee le 20/11
+3587 3589 3590;8330;coupe_132_n104;5L7GSXEB -- coupe datee validee le 20/11
+3588;8330;coupe_132_n104;T58W1AXB -- coupe datee validee le 20/11
+3676;8454;coupe_132_n105;721e650c -- coupe datee validee le 20/11
+3677 3678 3679;8454;coupe_132_n105;c08ff7cb -- coupe datee validee le 20/11
+3719 3722;8544;coupe_132_n106;TQYCQNY4 -- coupe datee validee le 20/11
+3720 3721 3723;8544;coupe_132_n106;ZOJDHHL9 -- coupe datee validee le 20/11
+4131 4133 4136;9247;coupe_132_n107;H1KYESMD -- coupe datee validee le 20/11
+4132 4135;9247;coupe_132_n107;43YX9GLG -- coupe datee validee le 20/11
+4277 4279;9491;coupe_132_n108;HEQZW1KO -- coupe datee validee le 20/11
+4278 4280 4281;9491;coupe_132_n108;WVMPHHDQ -- coupe datee validee le 20/11
+4328 4332 4333;9556;coupe_132_n109;ACB4D8WI -- coupe datee validee le 20/11
+4329 4330;9556;coupe_132_n109;G41FTEZ8 -- coupe datee validee le 20/11
+4351 4352 4354;9582;coupe_132_n110;Q20JKY62 -- coupe datee validee le 20/11
+4353;9582;coupe_132_n110;VM0FHRB3 -- coupe datee validee le 20/11
+4508 4513;9780;coupe_132_n111;TZPT6V9Y -- coupe datee validee le 20/11
+4509 4512 4514;9780;coupe_132_n111;3X3UPF1Q -- coupe datee validee le 20/11
+4510 4511;9780;coupe_132_n111;VHZ88PLB -- coupe datee validee le 20/11
+4595 4597 4599;9946;coupe_132_n112;5SPO8UO2 -- coupe datee validee le 20/11
+4596 4598;9946;coupe_132_n112;RAQTPG0M -- coupe datee validee le 20/11
+4706 4708;10109;coupe_132_n113;KCKQMFIL -- coupe datee validee le 20/11
+4707 4709 4710;10109;coupe_132_n113;VHE3HXC3 -- coupe datee validee le 20/11
+4745 4747 4749;10165;coupe_132_n114;0GV2LNV2 -- coupe datee validee le 20/11
+4746 4748;10165;coupe_132_n114;3W10AEIK -- coupe datee validee le 20/11
+4770 4772 4774;10211;coupe_132_n115;6JAO8UMD -- coupe datee validee le 20/11
+4771 4773;10211;coupe_132_n115;3936NZOO -- coupe datee validee le 20/11
+4908 4910;10375;coupe_132_n116;WBNLIAQD -- coupe datee validee le 20/11
+4909 4911 4912;10375;coupe_132_n116;GD6CVLJB -- coupe datee validee le 20/11
+6156 6158 6159;11786;coupe_132_n117;867f573c -- coupe datee validee le 20/11
+6157;11786;coupe_132_n117;2DUPM26R -- coupe datee validee le 20/11
+6340 6342;12246;coupe_132_n118;08GV8OMZ -- coupe datee validee le 20/11
+6341;12246;coupe_132_n118;O1099YC0 -- coupe datee validee le 20/11
+6433 6436;12414;coupe_132_n119;TCB4ZNQO -- coupe datee validee le 20/11
+6434 6435 6437;12414;coupe_132_n119;7BPVD7K4 -- coupe datee validee le 20/11
+7293 7295 7297;14879;coupe_132_n120;Q5237UOE -- coupe datee validee le 20/11
+7294 7296;14879;coupe_132_n120;MPCRGJI1 -- coupe datee validee le 20/11
+7545 7548 7549;15338;coupe_132_n121;GMWSIZKV -- coupe datee validee le 20/11
+7546 7547;15338;coupe_132_n121;MCMUXOFP -- coupe datee validee le 20/11
+7579 7581 7583;15395;coupe_132_n122;IW3Y1ZZU -- coupe datee validee le 20/11
+7580 7582;15395;coupe_132_n122;BUC1UXJH -- coupe datee validee le 20/11
+7645 7650;15517;coupe_132_n123;WBKHIDHS -- coupe datee validee le 20/11
+7646 7649;15517;coupe_132_n123;MAB7DN65 -- coupe datee validee le 20/11
+7647 7648 7651;15517;coupe_132_n123;D5KU9GNT -- coupe datee validee le 20/11
+7699 7702;15631;coupe_132_n124;IPTGNTAL -- coupe datee validee le 20/11
+7700 7701 7703;15631;coupe_132_n124;U43BNSQW -- coupe datee validee le 20/11
+7719 7722;15682;coupe_132_n125;GPO3PZ76 -- coupe datee validee le 20/11
+7720 7721 7723;15682;coupe_132_n125;BLKP7JFQ -- coupe datee validee le 20/11
+7767 7770 7771;15719;coupe_132_n126;IFQAPGOL -- coupe datee validee le 20/11
+7768 7769;15719;coupe_132_n126;VKEQD9PH -- coupe datee validee le 20/11
+7778 7780 7782;15722;coupe_132_n127;2SCBZXMH -- coupe datee validee le 20/11
+7779 7781;15722;coupe_132_n127;VEP1DVQ4 -- coupe datee validee le 20/11
+7942 7944 7945;15941;coupe_132_n128;8I79G718 -- coupe datee validee le 20/11
+7943;15941;coupe_132_n128;IQFPEZBB -- coupe datee validee le 20/11
+8840;17534;coupe_132_n129;ABDXFMQC -- coupe datee validee le 20/11
+8841 8842 8843;17534;coupe_132_n129;U8739KRW -- coupe datee validee le 20/11
+8856 8859;17556;coupe_132_n130;FTRYKTSC -- coupe datee validee le 20/11
+8857 8858 8860;17556;coupe_132_n130;A94E7E0K -- coupe datee validee le 20/11
+8866 8867 8869;17583;coupe_132_n131;PHYXLBYD -- coupe datee validee le 20/11
+8868;17583;coupe_132_n131;FMVORN8Y -- coupe datee validee le 20/11
+9496 9499;19192;coupe_132_n132;SC55F4MV -- coupe datee validee le 20/11
+9497 9498 9500;19192;coupe_132_n132;JHCF1D3M -- coupe datee validee le 20/11

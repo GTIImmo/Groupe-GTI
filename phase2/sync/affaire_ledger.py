@@ -1613,6 +1613,86 @@ EXCLUES_DE_LA_REGLE_E: dict[int, str] = {
 }
 
 
+def chainage_garde_g2_actif() -> bool:
+    """LA GARDE G2 DE LA REGLE D -- « L'OFFRE ACCEPTEE DATEE BAT LE NOM » (codee le 20/11/2026).
+
+        APP_CHAINAGE_GARDE_G2=1   la garde joue
+        (absent ou 0)             comportement d'avant, A L'IDENTIQUE
+
+    ⛔ POSEE ETEINTE. Frederic (20/11) : « CODE G2 ET L'OUTIL DE COUPE MAINTENANT, sans attendre mon mot :
+      ecrire le code ne touche rien. Je donnerai le « vas-y » pour les ALLUMER, avec leur compte avant. »
+
+    ─── LE DEFAUT DE HEKTOR ───────────────────────────────────────────────────
+    Le contact de l'acheteur PRECEDENT reste sur une piece de l'acheteur SUIVANT (son compromis, sa vente). La
+    boucle datee range la piece dans le bon dossier PAR SA DATE ; la regle D la recolle au dossier de l'ancien
+    acheteur PAR LE NOM. Voir la memoire « hektor-reutilise-le-contact-de-l-acheteur-precedent ».
+
+    ─── LA GARDE ──────────────────────────────────────────────────────────────
+    Dans la regle D, avant de reunir deux dossiers au meme nom : si l'un des deux porte une OFFRE ACCEPTEE DATEE
+    dont l'acquereur n'est PAS dans l'autre, D s'abstient (« [G2] ... abstention »). L'offre acceptee datee est la
+    piece la plus sure du dossier : c'est elle qui dit QUI achete.
+    MESUREE le 19/11 au soir sur une copie (variante « G2 » de temps6, chaines_g2.json) : 98 groupes de melanges
+    coupes sur 178, et 10 lignes de la vague 1 dont l'etiquette changerait (la decision B : vague 2). Le code
+    ci-dessous est celui de la mesure, a l'identique (affaire_ledger_AVEC_GARDE_mesure_seulement.py, branche G2).
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_GARDE_G2", "0") == "1"
+
+
+# LES DETACHEMENTS DECIDES A LA MAIN (l'outil de coupe, 20/11/2026) -- le symetrique des rattachements.
+FICHIER_DETACHEMENTS = Path(__file__).resolve().parent / "detachements_manuels.csv"
+
+
+def chainage_detachements_actif() -> bool:
+    """L'OUTIL DE COUPE -- DES TRANSACTIONS QUE FREDERIC A DECIDE DE METTRE ENSEMBLE, ET SEULES (20/11/2026).
+
+        APP_CHAINAGE_DETACHEMENTS=1   le fichier joue
+        (absent ou 0)                 comportement d'avant, A L'IDENTIQUE
+
+    ⛔ POSE ETEINT (meme mot de Frederic que G2 : le code maintenant, l'allumage sur son « vas-y »).
+
+    LE FICHIER (phase2/sync/detachements_manuels.csv), une ligne = UN MORCEAU = une affaire :
+        transactions;bien;geste;pourquoi
+        7778 7780 7782;15722;coupe_132_n12;DE OLIVEIRA -- la coupe validee le 20/11
+    Le morceau devient UN dossier a lui seul : ses transactions quittent leurs dossiers (meme s'ils sont deux --
+    c'est aussi une reunion), le reste de chaque dossier garde ses autres membres. Il joue EN DERNIER, apres les
+    rattachements a la main : il est construit sur l'etat qu'ils laissent.
+    LES REFUS, chacun compte et dit (jamais un arret du run) : le bien ne correspond pas ; une transaction
+    introuvable (disparue de chez Hektor, ou sans date restee invisible) -- le morceau ENTIER est ignore ; une
+    transaction dans deux lignes -- la seconde ligne est ignoree ; le morceau existe deja tel quel.
+    L'ETIQUETTE : la pose de nuit (app_poser_etiquettes_dossier) la donne au morceau de la plus petite transaction
+    qui la portait ; les autres morceaux recoivent une etiquette NEUVE, journalisee « scission ».
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_DETACHEMENTS", "0") == "1"
+
+
+def lire_detachements_manuels() -> list[tuple[frozenset, int, str, str]]:
+    """Le fichier -> [(transactions, bien, geste, pourquoi)]. Jamais d'exception (un CSV mal tape ne fait pas
+    tomber le run : on rend ce qu'on a pu lire)."""
+    sorties: list[tuple[frozenset, int, str, str]] = []
+    try:
+        texte = FICHIER_DETACHEMENTS.read_text(encoding="utf-8-sig")
+    except OSError:
+        return sorties
+    for brut in texte.splitlines():
+        ligne = brut.strip()
+        if not ligne or ligne.startswith("#"):
+            continue
+        parts = [x.strip() for x in ligne.split(";")]
+        if len(parts) < 2:
+            continue
+        try:
+            ids = frozenset(int(x) for x in parts[0].split())
+            bien = int(parts[1])
+        except ValueError:
+            continue                                  # l'en-tete, ou une ligne mal tapee
+        if not ids:
+            continue
+        sorties.append((ids, bien, parts[2] if len(parts) > 2 else "", parts[3] if len(parts) > 3 else ""))
+    return sorties
+
+
 # REGLE B : l'ecart maximal, en jours, entre un compromis et l'offre acceptee
 # qu'on lui rattache. MESURE le 10/11 -- voir chainage_offre_acceptee_seule_actif.
 FENETRE_OFFRE_REGULARISEE_JOURS = 31
@@ -2073,6 +2153,11 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     regle_compromis_annule_seul = chainage_compromis_annule_seul_actif() # A (10/11)
     regle_meme_acheteur = chainage_meme_acheteur_actif()                 # D (12/11)
     regle_sans_date_visible = chainage_sans_date_visible_actif()         # E (19/11, ETEINTE)
+    garde_g2 = chainage_garde_g2_actif()                                 # G2 dans D (20/11, ETEINTE)
+    detachements_par_bien: dict[str, list[tuple]] = {}                    # l'outil de coupe (20/11, ETEINT)
+    if chainage_detachements_actif():
+        for _d in lire_detachements_manuels():
+            detachements_par_bien.setdefault(str(_d[1]), []).append(_d)
     # LES RATTACHEMENTS A LA MAIN (12/11) : ranges PAR BIEN une fois pour toutes,
     # pour que la boucle n'ouvre pas le fichier a chaque annonce.
     # ⚠ LA CLE EST UN TEXTE, comme celle de `par_annonce` (normalize_text).
@@ -2723,6 +2808,22 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                                     signale("[E] garde : le compromis vivant est a un autre "
                                             "acheteur -- abstention")
                                     continue
+                            # ─── LA GARDE G2 (20/11) -- « l'offre acceptee datee bat le nom ». Voir
+                            #     chainage_garde_g2_actif. Le code de la mesure du 19/11, a l'identique.
+                            if garde_g2:
+                                bloque_g2 = False
+                                for x_, y_ in ((a, b), (b, a)):
+                                    nx_ = acqs_reels(x_)
+                                    oa_: set = set()
+                                    for m in membres_de(y_):
+                                        if m[1] == "offre" and m[2] in ETATS_OFFRE_ACCEPTEE and m[3] is not None:
+                                            oa_ |= m[4]
+                                    if oa_ and not (nx_ & oa_):
+                                        bloque_g2 = True
+                                if bloque_g2:
+                                    signale("[G2] garde : l'offre acceptee datee est a un autre "
+                                            "acheteur -- abstention")
+                                    continue
                             # la cible garde le plus petit numero, comme la
                             # numerotation finale le ferait de toute facon.
                             cible, source = ((a, b) if min(a["membres"]) < min(b["membres"])
@@ -2764,6 +2865,39 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 absorber(ch_source, ch_cible)
                 signale("[M] rattachement decide a la main")
 
+            # --- LES DETACHEMENTS DECIDES A LA MAIN (l'outil de coupe, 20/11) ----
+            #     EN DERNIER, apres les rattachements. Voir chainage_detachements_actif.
+            deja_coupees: set = set()
+            for ids_, bien_attendu, _geste, _pourquoi in detachements_par_bien.get(str(annonce), []):
+                if str(bien_attendu) != str(annonce):
+                    signale("[X] detachement : le bien ne correspond pas")
+                    continue
+                if ids_ & deja_coupees:
+                    signale("[X] detachement : une transaction dans deux lignes -- la seconde est ignoree")
+                    continue
+                place = {m: c for c in toutes for m in c["membres"]}
+                if any(t not in place for t in ids_):
+                    signale("[X] detachement : transaction introuvable -- le morceau est ignore")
+                    continue
+                deja_coupees |= ids_
+                if any(set(c["membres"]) == set(ids_) for c in toutes):
+                    signale("[X] detachement deja obtenu")
+                    continue
+                for c in {id(place[t]): place[t] for t in ids_}.values():
+                    c["membres"] = [m for m in c["membres"] if m not in ids_]
+                    if not c["membres"]:
+                        toutes.remove(c)
+                        if c in ouvertes:
+                            ouvertes.remove(c)
+                mb_ = [info[t] for t in sorted(ids_) if t in info]
+                toutes.append({"membres": sorted(ids_),
+                               "acquereurs": set().union(*[m[4] for m in mb_]) if mb_ else set(),
+                               "offre_acceptee": any(m[1] == "offre" and m[2] in ETATS_OFFRE_ACCEPTEE for m in mb_),
+                               "compromis": any(m[1] == "compromis" for m in mb_),
+                               "offres": [m[2] for m in mb_ if m[1] == "offre"],
+                               "a_une_vente": any(m[1] == "vente" for m in mb_)})
+                signale("[X] detachement decide a la main")
+
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
         # plus bas peut la rejoindre APRES coup. Numeroter au fil de l'eau laissait
@@ -2774,6 +2908,13 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
             for membre in chaine["membres"]:
                 attribution[membre] = tete
 
+    # ⚠ UNE LIGNE DES DETACHEMENTS DONT LE BIEN N'EXISTE PAS n'est jamais lue par la boucle ci-dessus (elle va
+    #   d'annonce en annonce) : on le DIT, sinon une faute de frappe dans le bien se tairait. (20/11, trouve par le
+    #   temoin inverse de l'outil.)
+    for _bien, _lignes in detachements_par_bien.items():
+        if _bien not in par_annonce:
+            for _ in _lignes:
+                signale("[X] detachement : bien inconnu -- la ligne n'est jamais lue")
     con.executemany(f"UPDATE {LEDGER_TABLE} SET app_chaine_id=? WHERE app_affaire_id=?",
                     [(chaine, app_id) for app_id, chaine in attribution.items()])
     con.commit()
@@ -2792,6 +2933,8 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 "chainage_compromis_annule_seul": regle_compromis_annule_seul,
                 "chainage_meme_acheteur": regle_meme_acheteur,
                 "chainage_sans_date_visible": regle_sans_date_visible,
+                "chainage_garde_g2": garde_g2,
+                "chainage_detachements_manuels": sum(len(v) for v in detachements_par_bien.values()),
                 "chainage_rattachements_manuels": sum(
                     len(v) for v in rattachements_par_bien.values())}
     resultat.update(anomalies)
@@ -2806,6 +2949,9 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
           f"{' + compromis annule seul (A)' if regle_compromis_annule_seul else ''}"
           f"{' + meme acheteur (D)' if regle_meme_acheteur else ''}"
           f"{' + sans date visible (E)' if regle_sans_date_visible else ''}"
+          f"{' + garde G2' if garde_g2 else ''}"
+          f"{(' + %d detachement(s) a la main' % resultat['chainage_detachements_manuels'])
+             if resultat['chainage_detachements_manuels'] else ''}"
           f"{(' + %d rattachement(s) a la main' % resultat['chainage_rattachements_manuels'])
              if resultat['chainage_rattachements_manuels'] else ''})")
     return resultat
