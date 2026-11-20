@@ -3875,3 +3875,16 @@ fenêtre fait de même avec son scan).
 **Preuves (hors ligne)** : parcours **159 verts** (+3 : la consigne, les pièces remises en place, « null ») ; gestes 415,
 lecteur 76, socle 31, traduction 39, fichiers 28, DPE 11.
 **Non éprouvé en réel dans l'application** : la nouvelle consigne en production (après le push).
+
+### 99.3 LA CONSIGNE RESSERRÉE, POUSSÉE (559084c) ET ÉPROUVÉE EN RÉEL (20/11, 12:33-12:35, heure de Paris) — VERT
+
+**Ses mots** : « pousse et essai ». Poussé 559084c (avec la note §99.1) ; Render vérifié (`/health` = 559084c74449).
+Dans son Chrome, une conversation NEUVE, la MÊME demande et la MÊME phrase qu'au §99.1, pour comparer. Parcours
+`82371d50…` laissé « en cours » (purge 30 j) ; rien chez Hektor, rien validé, jamais « Créer ».
+- Avant (§99.1) : note = « Quartier calme avec école, commerces, bus proches; terrain 612 m2 avec abri de jardin,
+  construction vers 1975. » ; 2 cases dans la carte (le bus nulle part) ; année sans doute.
+- Après : **note = « abri de jardin »** ; **3 cases dans la carte** (Transport « bus en bas de la rue », Proximité,
+  Environnement « calme ») ; ailleurs : terrain 612, jardin, année 1975 **à vérifier (0,7)** ; le téléphone nulle part ;
+  0,00271 $. Preuve : `notice/preuve_parcours_phrase_consigne_reel_2026-11-20.jpg`.
+
+**Reste** : P6 (photos du bien), puis P5, P7, P8 et l'épreuve case par case.
