@@ -291,3 +291,28 @@ documents). La liste existe aussi dans le skin « classic » (fiches non cockpit
 ⚠ **Ce que ça change pour l'utilisateur** : les boutons de signature et de suppression sont à UN CLIC de plus (la ligne se
 déplie) -- c'est le dessin de la V2 validé (« des boutons à déplier »), mais c'est un geste de plus pour signer.
 **Périmètre proposé** : le cockpit (`v21`) seulement ; le skin « classic » et le téléphone ne bougent pas dans ce morceau.
+
+### 10 bis. RÉ-AUDIT -- ce que le morceau 3 pourrait casser, et la parade (20/11, « audite de nouveau, tu ne dois rien casser »)
+1. **`RecuManque` est monté dans DEUX habillages** (cockpit `v21` ET fiche « classic », `{blocRecuManque}` ×2, essai
+   `test_ged_recu_manque` l. 60). Retirer sa grille de pièces et sa pastille « Lu par l'IA » les retirerait AUSSI du classic.
+   -> **Parade** : une propriété neuve `rangeEnListe`, vraie seulement au cockpit ; sans elle, `RecuManque` rend EXACTEMENT
+   ce qu'il rend aujourd'hui (classic intact).
+2. **Trois essais lisent ce code** : `test_ged_lecture` l. 128 (« Lu par l'IA : ${lus.length} », le filtre des lectures),
+   `test_ged_mesure` l. 73 (découpe entre `{alertes.map(` et `gm2-lus`), `test_ged_bilan` l. 110 (« Revoir ce qu'il dit »).
+   -> **Parade** : ces textes RESTENT (le classic les rend) ; on rejoue les 15 essais GED, sans en affaiblir aucun.
+3. **Les gestes de la signature** (`docRowActions`, `SuiviSignatairesYoutrust`, « Remplacé », mention de dépôt, fenêtres
+   Preuves / Choix / Signature / Envoi Youtrust, montées SOUS la liste). -> **Parade** : la ligne dépliée APPELLE la même
+   fonction `docRowActions(doc)` et les mêmes composants avec les mêmes propriétés ; les fenêtres restent montées au même
+   endroit ; aucune ligne de leur code n'est touchée (vérifié par un essai : le corps de `docRowActions` identique au caractère).
+4. **Le rattachement document -> pièce** se fait par le NOM (`LignePiece.documents` porte des noms) et ne couvre que le moment
+   en cours (+ les manquantes des précédents). -> **Parade** : une fonction NEUVE dans `lib/gedPieces.ts`
+   (`dossierParMoment`), sans toucher `recuManque` ; un document va dans le PREMIER moment, en partant du moment en cours, qui
+   l'attend ; sinon « Autres documents ». Deux documents de même nom vont ensemble (comme aujourd'hui dans la feuille).
+5. **Les filtres et leurs compteurs** (Tous / À préparer / Signés / Cloud) et la ligne « À préparer » du pied de cockpit
+   (App.tsx ~34655) : inchangés ; seul « Tous » devient « Le dossier » rangé ; les trois autres restent la liste à plat.
+6. **Les événements** `ged:lecture-faite`, `ged:decisions-changees`, le défilement vers `.ged-depot`, `onResultat` (contexte du
+   dépôt) : non touchés.
+7. **Les styles** `fa-ck-doc*` ne vivent que dans `fa-cockpit-v2.css` : le rangement ajoute des classes NEUVES (`gd3-…`), il ne
+   réécrit aucune règle existante.
+8. **Le téléphone et le classic** : rien ne change dans ce morceau.
+9. **Retour arrière** : le commit seul (aucune base, aucun worker) ; et la propriété `rangeEnListe` retirée = l'écran d'avant.
