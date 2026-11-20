@@ -3835,3 +3835,43 @@ d'essai par questions : une maison au 12 rue des Tilleuls 42700 Firminy ». Parc
    scan (~6 000 jetons d'entrée). Sans gravité au plafond (3 $/jour = plus de 1 000 phrases).
 - « vers 1975 » n'a pas été marqué « à vérifier » (le lecteur a donné une confiance haute) ; « bus en bas de la rue »
   n'est pas allé dans Transport.
+
+### 99.2 LA CONSIGNE DU PETIT LECTEUR RESSERRÉE (20/11) : mesurée sur 5 phrases inventées, NON poussée
+
+**Ses mots** : « Oui, corrige » (après la réserve du §99.1 : la note répétait toute la phrase).
+
+**La cause** : le schéma du scan a DEUX sorties libres (le champ `note` et `rawNotes`), et la consigne du scan (écrite
+pour une fiche) n'en dit rien ; les cases du quartier n'y sont pas décrites non plus.
+
+**Ce qui change (le petit lecteur SEUL ; le scan de la fiche — `extract`, `scan_fiche` — n'est pas touché).**
+- La consigne `parcours_phrase` dit désormais : la note et `rawNotes` ne gardent QUE le reste, jamais un résumé, null si
+  tout est rangé ; « vers / environ » = confiance 0,6 au plus ; transport / proximité / environnement décrits ;
+  `surface` = la surface HABITABLE, `livingSurface` = le séjour seulement ; l'assainissement s'écrit « egout » ou
+  « fosse septique » ; les pièces citées remplissent le tableau `pieces`, À LA RACINE de la réponse ; un oui/non que la
+  phrase ne dit pas reste null.
+- `extract_texte` remet à leur place le tableau des pièces, les postes et les notes que le lecteur range DANS `fields`
+  (le schéma non strict le lui permet) ; une valeur « null » écrite en toutes lettres n'est pas une valeur.
+
+**Trois défauts trouvés EN MESURANT, et corrigés** (chacun vu sur une vraie réponse du modèle) :
+1. « 118 m² habitables » allait dans la surface du SÉJOUR (le lecteur lisait `livingSurface` comme « habitable »).
+2. « tout-à-l'égout » n'allait nulle part : la traduction (celle de la fenêtre) ne reconnaît ni « tout-a-l'egout » ni
+   « tout a l egout » ; « egout » seul, si.
+3. Après une retouche, la composition sortait VIDE : le lecteur écrivait bien les 7 pièces… dans `fields`, où le
+   nettoyage ne les voit pas. Sortie brute relue, remise en place côté serveur.
+
+**La mesure** (vrais appels au modèle, phrases INVENTÉES, aucune écriture en base, ≈ 0,0028 $ la phrase) :
+- quartier → transport « bus en bas de la rue », proximité, environnement « calme » ; terrain 612 et année 1975
+  (à vérifier, 0,6) ailleurs ; note = « abri de jardin » (au lieu du résumé de toute la phrase) ;
+- dehors → jardin ; l'eau = puits ; note = « abri de jardin » ;
+- intérieur → surface habitable 118, 5 pièces, 3 chambres, sud, cuisine séparée ; note vide ;
+- composition → **7 pièces sur 7** (3 essais sur 3), cheminée, séjour 32 ;
+- énergie → chaudière, gaz, assainissement « tout à l'égout » ; double vitrage ; note = « chaudière refaite il y a deux ans ».
+
+**Hors de ce chantier, noté et non corrigé** : la consigne du SCAN de la fiche (`scan_fiche`) écrit l'assainissement
+« tout-a-l'egout » — une forme que la traduction de la fenêtre ne reconnaît pas : le scan de la fiche perd probablement
+l'assainissement. À vérifier sur une vraie fiche, s'il le demande. Et « cuisine équipée » ne remplit aucune case (la
+fenêtre fait de même avec son scan).
+
+**Preuves (hors ligne)** : parcours **159 verts** (+3 : la consigne, les pièces remises en place, « null ») ; gestes 415,
+lecteur 76, socle 31, traduction 39, fichiers 28, DPE 11.
+**Non éprouvé en réel dans l'application** : la nouvelle consigne en production (après le push).

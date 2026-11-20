@@ -449,6 +449,17 @@ class OpenAIListingSheetService:
             raise HTTPException(status_code=502, detail="Reponse OpenAI non JSON") from exc
         if not isinstance(parsed, dict):
             raise HTTPException(status_code=502, detail="Reponse OpenAI inattendue")
+        # 20/11 (§99.2) : le schéma non strict laisse le lecteur ranger le tableau des pièces (et les postes, les notes)
+        #   DANS `fields` -- mesuré : 7 pièces lues puis perdues au nettoyage. On les remet à leur place.
+        champs = parsed.get("fields") if isinstance(parsed.get("fields"), dict) else {}
+        for cle in ("pieces", "statePosts"):
+            if not parsed.get(cle) and isinstance(champs.get(cle), list):
+                parsed[cle] = champs.pop(cle)
+        if not parsed.get("rawNotes") and isinstance(champs.get("rawNotes"), str):
+            parsed["rawNotes"] = champs.pop("rawNotes")
+        for item in champs.values():  # mesuré : « kitchen: 'null' » -- une chaîne « null » n'est pas une valeur
+            if isinstance(item, dict) and str(item.get("value") or "").strip().lower() in {"null", "none", "n/a", "inconnu"}:
+                item["value"] = None
         resultat = _normalize_extraction(parsed, model)
         resultat["usage"] = corps.get("usage") if isinstance(corps, dict) else None
         return resultat

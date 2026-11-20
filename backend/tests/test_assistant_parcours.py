@@ -735,6 +735,25 @@ requests.get = get_avant
 spec = areg.DEFAULT_SPECS["parcours_phrase"]
 voir("{{question}}" in spec.instructions and "rawNotes" in spec.instructions and "telephone" in spec.instructions
      and "Les montants et surfaces" in spec.instructions, "la consigne du lecteur : la question, le reste en note, pas de coordonnée, les conventions du scan")
+# §99.2 (20/11) : ce que l'essai réel et la mesure ont trouvé
+from app.services import openai_listing_sheet_service as ols  # noqa: E402
+
+voir(all(m in spec.instructions for m in ("RACINE", "'egout'", "HABITABLE", "ne resume jamais", "jamais 'non' par defaut")),
+     "§99.2 : la consigne dit le reste seul dans la note, la surface habitable, l'égout, les pièces à la racine, pas de « non » inventé")
+brut = {"summaryConfidence": 0.9, "rawNotes": None,
+        "fields": {"livingSurface": {"value": "32", "confidence": 0.95}, "kitchen": {"value": "null", "confidence": 0.5},
+                   "pieces": [{"type": "Sejour", "etage": "rez-de-chaussee", "surface": "32", "detail": "avec cheminée", "note": None},
+                              {"type": "Chambre", "etage": "etage", "surface": "13", "detail": None, "note": None}]}}
+post_avant = ols.requests.post
+ols.requests.post = lambda url, **kw: Reponse({"output_text": json.dumps(brut), "usage": {"input_tokens": 6000, "output_tokens": 250}})
+ext = ols.OpenAIListingSheetService(type("Cfg", (), {"openai_api_key": "k", "openai_vision_model": "gpt-4.1-mini",
+                                                     "supabase_url": "https://x.supabase.co", "supabase_service_role_key": "s"})()
+                                    ).extract_texte("un séjour de 32 m² et une chambre de 13", "La composition")
+ols.requests.post = post_avant
+voir(len(ext["pieces"]) == 2 and ext["pieces"][0]["type"] == "Sejour",
+     "§99.2 : les pièces rangées DANS `fields` par le lecteur sont remises à leur place (mesuré : 7 pièces perdues)")
+voir(ext["fields"]["kitchen"]["value"] is None and ext["fields"]["livingSurface"]["value"] == "32",
+     "§99.2 : une chaîne « null » n'est pas une valeur")
 interrupteur["valeur"] = ""
 r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
 voir(r[0] == 403, "interrupteur absent : refusé")
