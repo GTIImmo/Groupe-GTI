@@ -13,10 +13,12 @@ from pydantic import BaseModel, Field
 from ..auth import get_authenticated_user, require_request_user
 from ..services import assistant_fichiers as fichiers_service
 from ..services import assistant_parcours as parcours_moteur
-from ..services import parcours_publics
+from ..services import parcours_phrases, parcours_publics
+from ..services.agent_tarifs import cout_usd
+from ..services.openai_listing_sheet_service import OpenAIListingSheetService
 from ..services.assistant_catalogue import ContexteAssistant, Refus
 from ..services.assistant_gestes import GESTES, lire_fiche_du_parcours
-from ..services.assistant_service import AGENT_KEY, MAX_QUESTION_CARACTERES, AssistantService
+from ..services.assistant_service import AGENT_KEY, AGENT_PHRASE, MAX_QUESTION_CARACTERES, PLAFOND_JOUR_USD, AssistantService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
 from .ged import autorise
@@ -650,6 +652,77 @@ def parcours_services_publics(
         ecrite = store.ecrire_reponses(fraiche, nouvelles, fraiche.get("etape"))
         if ecrite:
             return {"ok": True, "parcours": parcours_moteur.vue(ecrite, annee)}
+    raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
+
+
+class ParcoursPhrasePayload(BaseModel):
+    question: str = Field(min_length=1, max_length=60)
+    texte: str = Field(min_length=1, max_length=4000)
+
+
+@router.post("/parcours/{parcours_id}/phrase")
+def parcours_phrase_libre(
+    parcours_id: str,
+    payload: ParcoursPhrasePayload,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P4-d (20/11) : une PHRASE LIBRE tapée dans la zone du bas pendant qu'une question est ouverte, lue TOUT DE SUITE par
+    #   le petit lecteur (le format du scan). ⛔ Téléphones et e-mails retirés AVANT le modèle ; la question ouverte reçoit
+    #   ses cases dans la CARTE (la personne valide) ; les autres sont pré-remplies « dit », jamais à la place d'une réponse.
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
+        raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    annee = parcours_moteur.annee_a_paris()
+    question = next((q for q in parcours_moteur.questions_posees(dict(ligne.get("reponses") or {}), annee)
+                     if q["id"] == payload.question), None)
+    if not question:
+        raise HTTPException(status_code=400, detail="Cette question n'est pas posée pour ce bien.")
+    try:
+        texte, retires = parcours_phrases.retirer_coordonnees(parcours_phrases.nettoyer(payload.texte))
+    except parcours_moteur.RefusParcours as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    if service.depense_du_jour() >= PLAFOND_JOUR_USD:
+        raise HTTPException(status_code=429, detail="Plafond de dépense du jour atteint : la phrase n'est pas lue")
+    try:
+        lu = parcours_phrases.lire(texte, question["titre"], OpenAIListingSheetService(settings).extract_texte)
+    except HTTPException:
+        raise HTTPException(status_code=502, detail="La phrase n'a pas pu être lue : réessaie, ou réponds avec les boutons.") from None
+    cout = cout_usd(lu.get("model"), lu.get("usage") or {}) if isinstance(lu.get("usage"), dict) else None
+    usage = lu.get("usage") or {}
+    try:  # même compteur que l'assistant (app_agent_run), jamais le texte
+        admin_service.insert_agent_run({
+            "agent_key": AGENT_PHRASE, "negociateur_email": (user.email or "").strip().lower() or None, "status": "proposed",
+            "model": lu.get("model"), "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
+            "total_tokens": usage.get("total_tokens"), "cost_usd": cout,
+            "proposal_json": {"parcours_id": parcours_id, "question": payload.question, "caracteres": len(texte),
+                              "retires": retires}})
+    except Exception:  # noqa: BLE001
+        pass
+    # Pendant la lecture la personne a pu répondre : on relit et on applique sur la ligne fraîche (l'application ne
+    # remplace jamais une réponse), trois essais au plus.
+    for _ in range(3):
+        fraiche = store.lire_service(parcours_id)
+        if not fraiche or fraiche.get("etat") != "en_cours" or fraiche.get("app_dossier_id") is not None:
+            raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+        try:
+            nouvelles, carte, dire = parcours_phrases.appliquer(dict(fraiche.get("reponses") or {}), payload.question, texte,
+                                                                lu["lecture"], annee, cout)
+        except parcours_moteur.RefusParcours as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        ecrite = store.ecrire_reponses(fraiche, nouvelles, fraiche.get("etape"))
+        if ecrite:
+            return {"ok": True, "parcours": parcours_moteur.vue(ecrite, annee), "carte": carte,
+                    "dire": {**dire, "retires": retires}}
     raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
 
 

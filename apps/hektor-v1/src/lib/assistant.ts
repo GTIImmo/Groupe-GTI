@@ -324,8 +324,15 @@ export type ParcoursVue = {
   fiche?: { coffre?: boolean; doutes?: number; mesure?: { pages: number; lues: number; cout_usd: number }; avis?: { fields: Record<string, string>; statePosts: Array<Record<string, unknown>> } } | null
   /** P4-c : ce que les services publics disent du bien, PROPOSÉ à confirmer (jamais posé) ; `a_jour` = lu pour l'adresse dite */
   publics?: { possible: boolean; a_jour: boolean; le?: string | null; propositions: PropositionPublique[] } | null
+  /** P4-d : les phrases libres gardées (sans téléphone ni e-mail) et ce qu'elles ont rempli */
+  phrases?: PhraseParcours[]
+  /** P4-d, côté écran seulement : ce qu'une phrase lue met dans la CARTE de sa question (la personne valide) */
+  remplir?: { question: string; cases: Record<string, unknown>; dire: DirePhrase; jeton: number } | null
   fin: boolean
 }
+/** P4-d : une phrase libre gardée sous sa question */
+export type PhraseParcours = { question: string; texte: string; le?: string; carte?: string[]; remplies?: string[]; note?: boolean }
+export type DirePhrase = { carte: number; remplies: number; note: boolean; vendeur: boolean; retires: number }
 /** P4-c : une proposition d'un service public (DPE ADEME, base des bâtiments, cadastre, registre des copropriétés).
  *  « Oui » remplit ses cases DANS LA CARTE ; la personne valide ensuite elle-même. */
 export type PropositionPublique = {
@@ -438,6 +445,28 @@ export async function chercherPublicsParcours(id: string): Promise<ParcoursVue> 
   return r.parcours
 }
 
+/** P4-d : une PHRASE LIBRE tapée dans la zone du bas pendant qu'une question est ouverte, lue tout de suite par le
+ *  petit lecteur (sans téléphone ni e-mail). Rend la vue, les cases pour la CARTE de la question et ce qu'il faut dire. */
+export async function phraseParcours(id: string, question: string, texte: string): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(800)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    // maquette : « 612 m² » remplit la surface de la question ouverte, le reste va dans la note
+    const m = texte.match(/(\d+)\s*m/)
+    const champ = question === 'interieur' ? 'surfappart' : question === 'dehors' ? 'surfterrain' : null
+    const cases: Record<string, unknown> = m && champ ? { [champ]: m[1] } : {}
+    const propre = texte.replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[coordonnée retirée]').replace(/0[1-9](?:[\s.-]?\d{2}){4}/g, '[coordonnée retirée]')
+    const reste = propre.replace(/(\d+)\s*m²?/, '').trim()
+    if (reste && !p.reponses.note) p.reponses.note = reste
+    p.phrases = [...(p.phrases ?? []), { question, texte: propre, carte: Object.keys(cases), remplies: [], note: Boolean(reste) }]
+    return { ...vueFausse(p), remplir: { question, cases, dire: { carte: Object.keys(cases).length, remplies: 0, note: Boolean(reste), vendeur: false, retires: propre === texte ? 0 : 1 }, jeton: Date.now() } }
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue; carte: Record<string, unknown>; dire: DirePhrase }>(
+    `/assistant/parcours/${encodeURIComponent(id)}/phrase`, 'POST', { question, texte })
+  return { ...r.parcours, remplir: { question, cases: r.carte ?? {}, dire: r.dire, jeton: Date.now() } }
+}
+
 export async function noterParcoursCree(id: string, appDossierId: number | null): Promise<ParcoursVue> {
   if (MAQUETTE) {
     const p = fauxParcours.find((x) => x.id === id)
@@ -478,7 +507,7 @@ export async function prendreCoordonneesMandant(parcoursId: string): Promise<Coo
 }
 
 // Mode maquette (sans base) : quatre questions pour dessiner chaque forme à l'écran (le vrai moteur en a 19, côté serveur)
-type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null; lus?: Record<string, string>; doutes?: Record<string, number>; fiche?: ParcoursVue['fiche']; publics?: PropositionPublique[]; publicsCle?: string | null }
+type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null; lus?: Record<string, string>; doutes?: Record<string, number>; fiche?: ParcoursVue['fiche']; publics?: PropositionPublique[]; publicsCle?: string | null; phrases?: PhraseParcours[] }
 const fauxParcours: FauxParcours[] = []
 const FAUSSES_QUESTIONS: QuestionParcours[] = [
   { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'], essentiels: ['type', 'adresse_haut', 'cp', 'ville'] },
@@ -504,7 +533,7 @@ function vueFausse(p: FauxParcours): ParcoursVue {
     question: q, repere: { rang: q ? FAUSSES_QUESTIONS.indexOf(q) + 1 : FAUSSES_QUESTIONS.length, total: FAUSSES_QUESTIONS.length, faites: Object.keys(p.etats).length },
     questions: FAUSSES_QUESTIONS.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
     sources: { ...Object.fromEntries(Object.keys(p.reponses).filter((k) => p.etats.bien === 'connue' && ['type', 'adresse_haut', 'cp', 'ville', 'surfappart', 'nbpieces'].includes(k)).map((k) => [k, 'demande'])), ...(p.lus ?? {}) },
-    doutes: p.doutes ?? {}, fiche: p.fiche ?? null,
+    doutes: p.doutes ?? {}, fiche: p.fiche ?? null, phrases: p.phrases ?? [],
     publics: {  // maquette P4-c : même règle que le serveur (question posée, aucune de ses cases déjà dite)
       possible: clePublicsFausse(p.reponses) != null, a_jour: clePublicsFausse(p.reponses) != null && p.publicsCle === clePublicsFausse(p.reponses),
       propositions: (p.publics ?? []).filter((x) => FAUSSES_QUESTIONS.some((q) => q.id === x.question)

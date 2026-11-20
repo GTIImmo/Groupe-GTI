@@ -40,13 +40,16 @@ ETAT_PAR_GESTE = {"repondre": "faite", "passer": "passee", "nsp": "nsp"}
 # reposée, elle s'affiche en pastille verte, modifiable. `_sources` dit d'où vient chaque case pré-remplie.
 ETAT_CONNUE = "connue"
 CLE_SOURCES = "_sources"
-SOURCES = frozenset({"demande", "scan"})  # P4-b : « scan » = la fiche papier lue
+SOURCES = frozenset({"demande", "scan", "phrase"})  # P4-b : « scan » = la fiche lue ; P4-d : « phrase » = une phrase libre
 CLE_DOUTES = "_doutes"          # P4-b : les cases lues à moins de 75 % -> « à vérifier », leur question est reposée
 CLE_FICHE = "_fiche"            # P4-b : la fiche lue (pages, coût), les pages de l'avis gardées à part, le coffre
 # P4-c (20/11) : ce que les SERVICES PUBLICS disent du bien (DPE ADEME, base des bâtiments, cadastre, registre des
 # copropriétés), lu pour UNE adresse. ⛔ Ce sont des PROPOSITIONS : aucune case n'est posée ; l'écran demande « C'est bien
 # ça ? » dans la question concernée et la personne valide elle-même (parcours_publics.py).
 CLE_PUBLICS = "_publics"
+# P4-d (20/11) : les PHRASES LIBRES tapées ou dictées pendant le parcours (sans téléphone ni e-mail), avec ce qu'elles
+# ont rempli ; affichées « gardées » sous leur question.
+CLE_PHRASES = "_phrases"
 # Ce qui fait relire les services : l'adresse, le type (maison ou appartement ne demandent pas la même chose) et la
 # surface (elle départage les DPE d'un même immeuble).
 CASES_PUBLICS = ("adresse_haut", "cp", "ville", "type", "surfappart")
@@ -246,6 +249,8 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
         "fiche": dict(reponses.get(CLE_FICHE) or {}) or None,
         # P4-c : les propositions des services publics encore utiles (question posée, rien encore dit sur ces cases)
         "publics": publics_vue(reponses, annee),
+        # P4-d : les phrases libres gardées (le texte sans coordonnées, la question, ce qu'elles ont rempli)
+        "phrases": [p for p in reponses.get(CLE_PHRASES) or [] if isinstance(p, dict)],
         "fin": q is None,
     }
 

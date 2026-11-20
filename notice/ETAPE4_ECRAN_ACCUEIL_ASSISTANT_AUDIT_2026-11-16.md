@@ -3756,3 +3756,56 @@ questions : un appartement de 87 m² au 13 rue Vimore 42700 Firminy ». Parcours
 gain est mesuré sur vraies API au §98.2 (49 « adresse » + 5 « batiment » sur 60, contre 4).
 
 **Reste** : P4-d (phrases libres) ; P6 (photos du bien).
+
+## 99. P4-d — LES PHRASES LIBRES, LUES TOUT DE SUITE PAR LE PETIT LECTEUR (20/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P4-d », puis ses deux choix (20/11) : **la zone du bas** (comme la maquette : « Réponds, dicte, ou
+touche une réponse… ») et **lue tout de suite**.
+
+**Ce que ça fait.**
+- Pendant qu'une question du parcours est ouverte, la zone du bas porte la pastille « Pour : « Le dehors » — ta phrase
+  est gardée et lue, sans l'assistant. ✕ Demander à l'assistant ». Entrée = la phrase part à la route
+  `POST /assistant/parcours/{id}/phrase` (pas de tour d'IA du grand assistant). « ✕ » rend la zone à l'assistant pour
+  cette question (« Ton message ira à l'assistant. Répondre à « Le dehors » »). Un fichier joint part toujours à
+  l'assistant (le trombone ne change pas).
+- Le serveur : ⛔ RETIRE téléphones et e-mails (`parcours_phrases.retirer_coordonnees`) AVANT le modèle ; vérifie le
+  plafond du jour ; lit la phrase par le **petit lecteur** (`OpenAIListingSheetService.extract_texte`, agent
+  `parcours_phrase`, gpt-4.1-mini, le MÊME schéma que le scan, la consigne connaît la question ouverte) ; puis la même
+  traduction que la fiche de visite (`parcours_traduction.lire_fiche`).
+- Ce qui en est fait (`parcours_phrases.appliquer`, fonction pure) :
+  · les cases de la **question ouverte** reviennent pour la CARTE (« Repris de : ta phrase. Vérifie, puis Valider ») —
+    rien n'est gardé avant « Valider » ;
+  · les cases d'**autres questions** sont pré-remplies, source « phrase » (pastille « dit »), avec leur doute s'il y en
+    a ; ⛔ jamais à la place d'une réponse ;
+  · ce qui ne rentre dans **aucune case** va dans la **note** de la fenêtre (comme le scan), ajouté aux phrases d'avant ;
+    ⛔ jamais sur une note dite ou lue sur la fiche ;
+  · un **nom de vendeur** lu n'est PAS gardé : masqué « [vendeur] » dans la phrase gardée, et l'écran renvoie aux cases
+    protégées de « Le mandant » ;
+  · la phrase est **gardée** sous sa question (« gardée · 1 case ici, 1 plus loin, le reste dans la note ») ; 40 au plus.
+- Le journal des agents (`app_agent_run`, clé `parcours_phrase`) : jetons, coût, nombre de caractères — JAMAIS le texte.
+  La dépense du jour (plafond 3 $) compte désormais `assistant` ET `parcours_phrase` ; le compte des QUESTIONS du jour
+  ne change pas.
+- Écran : une proposition des services publics se retire dès qu'une de ses cases est remplie dans la carte (vu en
+  maquette : la phrase « 612 m² » remplissait le terrain et le cadastre proposait encore 1 245 m²).
+
+**Ce que ça pourrait casser ailleurs, et ce qui est fait contre.**
+- La zone du bas change de destination pendant un parcours : la pastille le DIT, « ✕ » le défait, et elle ne s'applique
+  qu'à un parcours EN COURS de la conversation ouverte, sans fichier joint ; sur l'accueil et hors parcours, rien ne change.
+- Le service du scan : une méthode AJOUTÉE (`extract_texte`), la lecture des images (`extract`) n'est pas touchée.
+- Le registre des agents : une fiche ajoutée en code (`parcours_phrase`), les autres inchangées.
+- `depense_du_jour` lit deux clés au lieu d'une : le plafond devient plus prudent, jamais moins.
+- La classe `asp-garde` (le cadre protégé du mandant) existait : les nouvelles sont `asp-phr`, `asi-pour` (vérifié libres).
+
+**Preuves (hors ligne)** : parcours **156 verts** (+24 : téléphones et e-mail retirés, rien d'autre ; phrase vide ou
+trop longue ; la carte de la question ouverte, rien gardé ; l'année ailleurs avec son doute ; une réponse jamais
+remplacée ; le reste dans la note, ajouté, jamais sur une note dite ; le vendeur masqué ; 40 au plus ; la route : le
+lecteur n'a JAMAIS vu le téléphone, le journal sans le texte, la question non posée, le parcours d'un autre, le plafond
+(aucun appel), le lecteur en panne (rien écrit), l'interrupteur, le plafond qui compte les deux clés, la consigne) ;
+gestes 415, lecteur 76, socle 31, traduction 39, fichiers 28, DPE 11, catalogue, couverture, build.
+**Maquette** : `notice/preuve_parcours_phrase_libre_2026-11-20.jpg` (la phrase gardée avec « [coordonnée retirée] »,
+« Repris de : ta phrase », le terrain rempli, la pastille) et `notice/preuve_parcours_phrase_vers_assistant_2026-11-20.jpg`
+(« ✕ » : le message ira à l'assistant).
+
+**Non éprouvé en réel** : le petit lecteur sur une vraie phrase (≈ 0,001 $), sa durée, le rendu en production.
+
+**Reste** : P6 (photos du bien), puis P5, P7, P8 et l'épreuve case par case.

@@ -135,11 +135,27 @@ _SCAN_FICHE_INSTRUCTIONS = (
 )
 
 
+# Agent « phrase libre du parcours » (P4-d, 20/11/2026) : le petit lecteur. Il lit UNE phrase tapée ou dictée pendant le
+# parcours guidé, avec le MÊME format de sortie que le scan (les mêmes cases), pour que la même traduction vers la
+# fenêtre serve. Les conventions des cases sont celles du scan (reprises telles quelles à partir des montants).
+_CONVENTIONS_DU_SCAN = _SCAN_FICHE_INSTRUCTIONS[_SCAN_FICHE_INSTRUCTIONS.index("Les montants et surfaces"):]
+_PARCOURS_PHRASE_INSTRUCTIONS = (
+    "Tu lis UNE PHRASE tapee ou dictee par un negociateur immobilier qui decrit un bien a vendre ou a estimer "
+    "(la question en cours : {{question}}). Retourne uniquement ce que la phrase DIT, dans les champs prevus. "
+    "N'invente jamais une valeur. Une phrase courte ne remplit que quelques champs : laisse tous les autres a null. "
+    "Si une valeur est incertaine ou approximative, baisse confidence. "
+    "rawNotes = ce que la phrase dit et qui ne rentre dans AUCUN champ, en une phrase courte et neutre (sinon null) ; "
+    "n'y mets jamais un nom de personne, un telephone ou un e-mail. "
+    "Conventions des champs (les memes que pour une fiche papier) : " + _CONVENTIONS_DU_SCAN
+)
+
+
 # Defauts EN CODE (filet de securite). model=None -> modele par defaut de l'env.
 DEFAULT_SPECS: dict[str, AgentSpec] = {
     "redacteur": AgentSpec("redacteur", _REDACTEUR_INSTRUCTIONS, None, 1200),
     "avis_valeur": AgentSpec("avis_valeur", _AVIS_VALEUR_INSTRUCTIONS, None, 1200),
     "scan_fiche": AgentSpec("scan_fiche", _SCAN_FICHE_INSTRUCTIONS, None, 6500),
+    "parcours_phrase": AgentSpec("parcours_phrase", _PARCOURS_PHRASE_INSTRUCTIONS, None, 1500),
 }
 
 

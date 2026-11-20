@@ -32,6 +32,8 @@ from .assistant_objets import liste_pour_consignes
 # ---------------------------------------------------------------------------
 
 AGENT_KEY = "assistant"
+# P4-d (20/11) : le petit lecteur des phrases libres du parcours ; sa dépense compte dans le plafond du jour
+AGENT_PHRASE = "parcours_phrase"
 INTERRUPTEUR = "assistant_ia"
 PLAFOND_JOUR_USD = 3.0
 PLAFOND_QUESTIONS_JOUR = 100
@@ -260,7 +262,7 @@ class AssistantService:
         return r.json() or []
 
     def depense_du_jour(self) -> float:
-        rows = self._lignes_du_jour({"select": "cost_usd"}, "Dépense du jour")
+        rows = self._lignes_du_jour({"agent_key": f"in.({AGENT_KEY},{AGENT_PHRASE})", "select": "cost_usd"}, "Dépense du jour")
         return float(sum(float(row.get("cost_usd") or 0) for row in rows))
 
     def questions_du_jour(self, email: str) -> int:

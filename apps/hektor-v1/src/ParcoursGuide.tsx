@@ -25,6 +25,16 @@ const Coche = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
 )
 
+/** P4-d : ce qu'une phrase gardée a fait, en mots simples (planche 7 : « gardé, lu avec tes autres phrases ») */
+function direPhrase(p: { carte?: string[]; remplies?: string[]; note?: boolean }): string {
+  const morceaux: string[] = []
+  const n = (p.carte?.length ?? 0) + (p.remplies?.length ?? 0)
+  if (p.carte?.length) morceaux.push(`${p.carte.length} case${p.carte.length > 1 ? 's' : ''} ici`)
+  if (p.remplies?.length) morceaux.push(`${p.remplies.length} plus loin`)
+  if (p.note) morceaux.push('le reste dans la note')
+  return n || p.note ? `gardée · ${morceaux.join(', ')}` : 'gardée'
+}
+
 function texte(v: unknown): string {
   return v === null || v === undefined ? '' : String(v)
 }
@@ -277,9 +287,11 @@ export type ParcoursGuideProps = {
   chercherMandants?: (texte: string) => Promise<MandantTrouve[]>
   /** P4-b : le trombone est ouvert à ce compte -> « Lire la fiche de visite » (sinon, la bande ne s'affiche pas) */
   ficheOuverte?: boolean
+  /** P4-d : la question OUVERTE (ou aucune) -- la zone du bas y envoie les phrases libres */
+  onQuestion?: (parcoursId: string, question: { id: string; titre: string } | null) => void
 }
 
-export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants, ficheOuverte }: ParcoursGuideProps) {
+export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants, ficheOuverte, onQuestion }: ParcoursGuideProps) {
   const cat = useMemo(() => catalogue(vue.profil), [catalogue, vue.profil])
   const [ouverte, setOuverte] = useState<string | null>(null)  // une réponse déjà donnée que l'on modifie
   const q = ouverte ? vue.questions.find((x) => x.id === ouverte) ?? null : vue.question
@@ -337,6 +349,23 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
   // la question affichée (ou ce qu'en dit le serveur) a changé : on repart de ses réponses gardées
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleQuestion])
+  // P4-d : une phrase libre lue -- ses cases vont dans la CARTE de sa question (APRÈS la remise à zéro ci-dessus) ;
+  //   la personne vérifie et valide elle-même
+  useEffect(() => {
+    const r = vue.remplir
+    if (!r || !q || r.question !== q.id) return
+    if (Object.keys(r.cases).length) {
+      setValeurs((avant) => ({ ...avant, ...r.cases }))
+      setReprises((avant) => ({ ...avant, phrase: 'ta phrase' }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vue.remplir?.jeton])
+  // P4-d : la zone du bas sait quelle question est ouverte (une phrase tapée y va, sans tour d'IA)
+  const enCoursQ = vue.etat === 'en_cours' && vue.app_dossier_id == null
+  useEffect(() => {
+    onQuestion?.(vue.id, enCoursQ && q ? { id: q.id, titre: q.titre } : null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vue.id, q?.id, enCoursQ])
 
   const setValeur = (nom: string, v: unknown) => setValeurs((avant) => {
     const apres: Valeurs = { ...avant, [nom]: v }
@@ -405,7 +434,9 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       .map((c) => (vue.doutes?.[c.nom] != null ? { ...c, libelle: `${c.libelle} · à vérifier` } : c))
     if (!cases.length) return <p className="asp-note">Rien à demander ici pour ce type de bien.</p>
     // P4-c : les propositions des services publics pour CETTE question (maquette E03, E04, E05, N07)
-    const proposees = (vue.publics?.propositions ?? []).filter((p) => p.question === q.id && !ecartees.has(p.id) && !(p.id in reprises))
+    const proposees = (vue.publics?.propositions ?? []).filter((p) => p.question === q.id && !ecartees.has(p.id) && !(p.id in reprises)
+      // P4-d : une case déjà remplie dans la carte (tapée, ou venue d'une phrase) : la proposition se retire
+      && Object.keys(p.cases).every((c) => !texte(valeurs[c]).trim()))
     const reprendre = (p: PropositionPublique) => {
       setValeurs((avant) => ({ ...avant, ...p.cases }))
       setReprises((avant) => ({ ...avant, [p.id]: p.source }))
@@ -426,9 +457,6 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
             </div>
           </div>
         ))}
-        {Object.keys(reprises).length ? (
-          <p className="asp-note asp-prop-repris">Repris de : {[...new Set(Object.values(reprises))].join(', ')}. Vérifie, puis « Valider ».</p>
-        ) : null}
         {aCocher.length ? (
           <div className="asp-choix" role="group" aria-label="À cocher">
             {aCocher.map((c) => {
@@ -459,7 +487,7 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           {donnees.map((x) => (
             <span key={x.id} className="asp-rep" title={x.etat === 'connue' ? "D'après ta demande : pas reposée, tu peux la modifier" : undefined}>
               <span className={`asp-ok${x.etat === 'faite' || x.etat === 'connue' ? '' : ' is-pale'}`}><Coche /></span>
-              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>{x.etat === 'connue' ? <em className="asp-dit">{x.champs.some((c) => vue.sources?.[c] === 'demande') ? 'dit' : 'lu'}</em> : null}
+              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>{x.etat === 'connue' ? <em className="asp-dit">{x.champs.some((c) => vue.sources?.[c] === 'demande' || vue.sources?.[c] === 'phrase') ? 'dit' : 'lu'}</em> : null}
               {enCours ? <button type="button" onClick={() => setOuverte(x.id)} disabled={envoi}>Modifier</button> : null}
             </span>
           ))}
@@ -502,6 +530,16 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           </header>
           <div className="asp-qb">
             <p className="asp-phrase">{q.phrase}</p>
+            {(vue.phrases ?? []).filter((p) => p.question === q.id).map((p, i) => (
+              <div key={`${p.le ?? ''}${i}`} className="asp-phr"><span>« {p.texte} »</span><em>{direPhrase(p)}</em></div>
+            ))}
+            {vue.remplir && vue.remplir.question === q.id && (vue.remplir.dire.vendeur || vue.remplir.dire.retires) ? (
+              <p className="asp-note asp-phr-avis">{vue.remplir.dire.retires ? "Le téléphone ou l'e-mail a été retiré de la phrase avant la lecture. " : ''}
+                {vue.remplir.dire.vendeur ? "Le vendeur ne se garde pas par une phrase : saisis-le dans la question « Le mandant » (cases protégées)." : ''}</p>
+            ) : null}
+            {Object.keys(reprises).length ? (
+              <p className="asp-note asp-prop-repris">Repris de : {[...new Set(Object.values(reprises))].join(', ')}. Vérifie, puis « Valider ».</p>
+            ) : null}
             {publicsEnCours && QUESTIONS_PUBLIQUES.has(q.id) ? <p className="asp-note">Je regarde le DPE, le cadastre et les registres publics pour cette adresse…</p> : null}
             {corpsQuestion()}
           </div>

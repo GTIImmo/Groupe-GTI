@@ -419,3 +419,36 @@ class OpenAIListingSheetService:
         # 19/11 (étape 4 P4-b) : les jetons consommés, pour mesurer enfin le coût d'un scan (jamais mesuré jusqu'ici)
         resultat["usage"] = corps.get("usage") if isinstance(corps, dict) else None
         return resultat
+
+    def extract_texte(self, texte: str, question: str) -> dict[str, Any]:
+        """P4-d (20/11) : le PETIT LECTEUR du parcours guidé. Une phrase tapée ou dictée, lue avec le MÊME schéma que le
+        scan d'une fiche (les mêmes cases, le même nettoyage) : la même traduction vers la fenêtre s'applique ensuite.
+        ⛔ L'appelant a déjà RETIRÉ téléphones et e-mails de la phrase (parcours_phrases.retirer_coordonnees)."""
+        if not self.settings.openai_api_key:
+            raise HTTPException(status_code=503, detail="OPENAI_API_KEY non configure sur le backend")
+        spec = agent_registry.load_spec(self.settings, "parcours_phrase")
+        model = spec.model or self.settings.openai_vision_model
+        consigne = agent_registry.render(spec.instructions, {"question": question})
+        response = requests.post(
+            "https://api.openai.com/v1/responses",
+            headers={"Authorization": f"Bearer {self.settings.openai_api_key}", "Content-Type": "application/json"},
+            json={"model": model,
+                  "input": [{"role": "user", "content": [{"type": "input_text", "text": consigne},
+                                                          {"type": "input_text", "text": "LA PHRASE :\n" + texte}]}],
+                  # non strict, comme le scan : seuls les champs trouvés sont émis (rapide, peu de jetons)
+                  "text": {"format": {"type": "json_schema", "name": "parcours_phrase", "strict": False, "schema": _schema()}},
+                  "max_output_tokens": spec.max_output_tokens},
+            timeout=60,
+        )
+        if not response.ok:
+            raise HTTPException(status_code=502, detail="Le petit lecteur n'a pas répondu")
+        corps = response.json()
+        try:
+            parsed = json.loads(_extract_output_text(corps))
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=502, detail="Reponse OpenAI non JSON") from exc
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=502, detail="Reponse OpenAI inattendue")
+        resultat = _normalize_extraction(parsed, model)
+        resultat["usage"] = corps.get("usage") if isinstance(corps, dict) else None
+        return resultat

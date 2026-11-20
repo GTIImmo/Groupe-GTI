@@ -631,6 +631,115 @@ interrupteur["valeur"] = "on"
 voir(json.dumps(pub.SOURCE_ADEME) and "openai" not in open(pub.__file__, encoding="utf-8").read().lower(),
      "le module des services publics ne connaît pas OpenAI")
 
+print("6 septies) P4-d : les phrases libres, lues tout de suite, jamais à la place d'une réponse")
+from app.services import parcours_phrases as phr  # noqa: E402
+
+t, n = phr.retirer_coordonnees("Vendeur joignable au 06 12 34 56 78 ou +33 6 12 34 56 78, mail jean.dupont@exemple.invalid ; 118 m² et 3 chambres")
+voir(n == 3 and "@" not in t and "12 34" not in t and "118 m²" in t and "3 chambres" in t,
+     "téléphones (deux formes) et e-mail RETIRÉS avant le modèle ; les surfaces et les nombres restent")
+voir(phr.retirer_coordonnees("construite en 1974, 2 garages de 18 m², prix 245000")[1] == 0,
+     "une année, des surfaces, un prix : rien n'est pris pour un téléphone")
+voir(refuse(lambda: phr.nettoyer("x" * 1001), "trop longue") and refuse(lambda: phr.nettoyer("   "), "vide"),
+     "une phrase vide ou trop longue : refusée")
+LECTURE = {"valeurs": {"surfterrain": "612", "JARDIN-": "OUI", "ANNEE_CONS": "1974", "nbpieces": "9", "note": "un abri de jardin et un puits"},
+           "doutes": {"ANNEE_CONS": 0.6}, "coordonnees": {"nom": "Durand"}, "avis": None}
+rep0 = {"type": MAISON, "nbpieces": "5", "_sources": {"nbpieces": "demande"}}
+nv, carte, dire = phr.appliquer(rep0, "dehors", "Il y a 612 m² de terrain, construit vers 1974, Mme Durand vend, un abri de jardin et un puits",
+                                LECTURE, ANNEE, 0.0009)
+voir(carte == {"surfterrain": "612", "JARDIN-": "OUI"} and "surfterrain" not in nv and "JARDIN-" not in nv,
+     "la question OUVERTE (le dehors) : ses cases vont dans la CARTE, rien n'est gardé avant « Valider »")
+voir(nv["ANNEE_CONS"] == "1974" and nv["_sources"]["ANNEE_CONS"] == "phrase" and nv["_doutes"]["ANNEE_CONS"] == 0.6,
+     "une case d'une AUTRE question (l'année) : pré-remplie « phrase », avec son doute (« vers 1974 »)")
+voir(nv["nbpieces"] == "5", "⛔ une réponse déjà dite (5 pièces) n'est JAMAIS remplacée par la phrase (9)")
+voir(nv["note"] == "un abri de jardin et un puits" and nv["_sources"]["note"] == "phrase" and dire["note"],
+     "ce qui ne rentre dans aucune case va dans la NOTE de la fenêtre (comme le scan)")
+ph = nv["_phrases"][-1]
+voir("Durand" not in json.dumps(nv) and "[vendeur]" in ph["texte"] and dire["vendeur"] and "nom" not in nv,
+     "⛔ un nom de vendeur lu n'est PAS gardé : masqué dans la phrase, renvoyé aux cases protégées")
+voir(ph["question"] == "dehors" and ph["carte"] == ["JARDIN-", "surfterrain"] and "ANNEE_CONS" in ph["remplies"] and ph["cout_usd"] == 0.0009,
+     "la phrase gardée : sa question, ce qu'elle a rempli (carte et ailleurs), son coût")
+nv2, _, _ = phr.appliquer(nv, "energie", "et une cuve à fioul", {"valeurs": {"note": "une cuve à fioul"}, "doutes": {}, "coordonnees": {}}, ANNEE)
+voir(nv2["note"] == "un abri de jardin et un puits\nune cuve à fioul" and len(nv2["_phrases"]) == 2,
+     "une 2e phrase : son reste s'AJOUTE à la note des phrases")
+nv3, _, _ = phr.appliquer({**rep0, "note": "dite par moi", "_sources": {"note": "demande"}}, "dehors", "un puits",
+                          {"valeurs": {"note": "un puits"}, "doutes": {}, "coordonnees": {}}, ANNEE)
+voir(nv3["note"] == "dite par moi", "⛔ une note DITE (ou lue sur la fiche) n'est jamais écrasée par une phrase")
+voir(refuse(lambda: phr.appliquer({"_phrases": [{"texte": "x"}] * phr.MAX_PHRASES}, "dehors", "x", {"valeurs": {}}, ANNEE), "phrases déjà"),
+     "40 phrases au plus par parcours")
+
+# la route, le petit lecteur simulé
+vus_lecteur, runs = [], []
+
+
+class FauxLecteur:
+    def __init__(self, settings):
+        pass
+
+    def extract_texte(self, texte, question):
+        vus_lecteur.append((texte, question))
+        return {"model": "gpt-4.1-mini", "usage": {"input_tokens": 3000, "output_tokens": 120, "total_tokens": 3120},
+                "fields": {"landSurface": {"value": "612", "confidence": 0.95}, "garden": {"value": "oui", "confidence": 0.9},
+                           "constructionYear": {"value": "1974", "confidence": 0.9}},
+                "pieces": [], "statePosts": [], "rawNotes": "un abri de jardin et un puits"}
+
+
+class FauxAdmin:
+    def insert_agent_run(self, row):
+        runs.append(row)
+        return 1
+
+
+route.OpenAIListingSheetService = FauxLecteur
+Service.depense_du_jour = lambda self: depense["usd"]
+depense = {"usd": 0.0}
+interrupteur["valeur"] = "admin"
+table.clear()
+r0 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST, role="admin")
+p5 = r0["parcours"]["id"]
+appeler(route.parcours_repondre, p5, route.ParcoursReponsePayload(question="bien", geste="repondre", valeurs={"type": MAISON}),
+        "Bearer j", Settings(), None, S, ST, role="admin")
+PH = route.ParcoursPhrasePayload(question="dehors", texte="612 m² de terrain, construite en 1974, un abri de jardin et un puits ; vendeur au 06 12 34 56 78")
+r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
+voir(r["ok"] and r["carte"] == {"surfterrain": "612", "JARDIN-": "OUI"} and "surfterrain" not in table[p5]["reponses"],
+     "la route : les cases du dehors rendues pour la CARTE, pas gardées")
+voir(table[p5]["reponses"]["ANNEE_CONS"] == "1974" and table[p5]["reponses"]["note"] == "un abri de jardin et un puits",
+     "la route : l'année pré-remplie ailleurs, le reste dans la note")
+voir(vus_lecteur[-1][1] == "Le dehors" and "06 12" not in vus_lecteur[-1][0] and phr.MASQUE in vus_lecteur[-1][0] and r["dire"]["retires"] == 1,
+     "⛔ le petit lecteur n'a JAMAIS vu le téléphone ; il connaît la question ouverte")
+voir(runs and runs[-1]["agent_key"] == "parcours_phrase" and runs[-1]["cost_usd"] and "texte" not in json.dumps(runs[-1]["proposal_json"])
+     and "abri" not in json.dumps(runs[-1]), "le journal des agents : clé, jetons, coût — JAMAIS le texte")
+voir(r["parcours"]["phrases"][-1]["texte"].startswith("612 m²") and "06 12" not in json.dumps(table[p5]),
+     "la vue rend la phrase gardée, sans le téléphone (ni en base)")
+r = appeler(route.parcours_phrase_libre, p5, route.ParcoursPhrasePayload(question="piscine", texte="x"), "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
+voir(r[0] == 400 and "pas posée" in r[1], "une question non posée pour ce bien : refusée")
+r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, uid=AUTRE_UID, role="admin")
+voir(r[0] == 404, "le parcours d'un AUTRE : introuvable, même pour l'admin")
+depense["usd"] = 3.0
+n_avant = len(vus_lecteur)
+r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
+voir(r[0] == 429 and len(vus_lecteur) == n_avant, "plafond du jour atteint : la phrase n'est pas lue (aucun appel)")
+depense["usd"] = 0.0
+FauxLecteur.extract_texte = lambda self, t, q: (_ for _ in ()).throw(HTTPException(status_code=502, detail="x"))
+avant_panne = json.dumps(table[p5]["reponses"], sort_keys=True)
+r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
+voir(r[0] == 502 and "pas pu être lue" in r[1] and json.dumps(table[p5]["reponses"], sort_keys=True) == avant_panne,
+     "le lecteur en panne : une phrase, rien n'est écrit")
+from app.services import assistant_service as asvc, agent_registry as areg  # noqa: E402
+
+lu_plafond = {}
+get_avant = requests.get
+requests.get = lambda url, **kw: (lu_plafond.update(kw.get("params") or {}) or Reponse([{"cost_usd": 0.5}, {"cost_usd": 0.001}]))
+voir(asvc.AssistantService(Settings()).depense_du_jour() == 0.501 and lu_plafond["agent_key"] == "in.(assistant,parcours_phrase)",
+     "le plafond du jour compte AUSSI le petit lecteur (les deux clés)")
+requests.get = get_avant
+spec = areg.DEFAULT_SPECS["parcours_phrase"]
+voir("{{question}}" in spec.instructions and "rawNotes" in spec.instructions and "telephone" in spec.instructions
+     and "Les montants et surfaces" in spec.instructions, "la consigne du lecteur : la question, le reste en note, pas de coordonnée, les conventions du scan")
+interrupteur["valeur"] = ""
+r = appeler(route.parcours_phrase_libre, p5, PH, "Bearer j", Settings(), FauxAdmin(), S, ST, role="admin")
+voir(r[0] == 403, "interrupteur absent : refusé")
+interrupteur["valeur"] = "on"
+
 print("7) aucun appel au modèle")
 src = open(moteur.__file__, encoding="utf-8").read()
 voir("openai" not in src.lower().replace("ne connaît pas openai", ""), "le moteur ne connaît pas OpenAI")

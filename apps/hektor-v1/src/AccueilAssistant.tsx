@@ -2,7 +2,7 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, u
 import {
   EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
   relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
-  parcoursDeConversation, parcoursOuvert,
+  parcoursDeConversation, parcoursOuvert, phraseParcours,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
   type OuvertureAvis, type OuvertureCreation, type CatalogueParcours, type ParcoursVue,
 } from './lib/assistant'
@@ -515,6 +515,16 @@ export default function AccueilAssistant(props: {
   // 19/11 (P2) : les parcours guidés de la conversation ouverte ; la sonde dit si l'interrupteur l'ouvre à ce compte
   const [parcours, setParcours] = useState<ParcoursVue[]>([])
   const sondeParcours = useRef<Promise<boolean> | null>(null)
+  // P4-d (20/11) : la question OUVERTE d'un parcours -- la zone du bas y envoie la phrase (sans tour d'IA) ; « ✕ » la
+  //   rend à l'assistant pour cette question ; le petit lecteur la lit tout de suite
+  const [questionOuverte, setQuestionOuverte] = useState<{ parcoursId: string; id: string; titre: string } | null>(null)
+  const [pourAssistant, setPourAssistant] = useState<string | null>(null)
+  const [phraseEnCours, setPhraseEnCours] = useState(false)
+  const [phraseErreur, setPhraseErreur] = useState<string | null>(null)
+  const surQuestion = useCallback((parcoursId: string, q: { id: string; titre: string } | null) => {
+    setQuestionOuverte((avant) => (q ? { parcoursId, ...q } : avant?.parcoursId === parcoursId ? null : avant))
+    setPhraseErreur(null)
+  }, [])
   const avecParcours = !!props.catalogueParcours
   if (avecParcours && !sondeParcours.current) sondeParcours.current = parcoursOuvert()
 
@@ -892,10 +902,32 @@ export default function AccueilAssistant(props: {
     return () => window.removeEventListener(EVENEMENT_PARCOURS_CREE, surParcours)
   }, [])
 
+  // P4-d : une phrase va à la question ouverte quand un parcours est en cours dans CETTE conversation, sans fichier joint
+  const cleQuestionOuverte = questionOuverte ? `${questionOuverte.parcoursId}:${questionOuverte.id}` : null
+  const versParcours = !!questionOuverte && mode.type === 'conversation' && !joints.length && pourAssistant !== cleQuestionOuverte
+    && parcours.some((p) => p.id === questionOuverte.parcoursId && p.etat === 'en_cours' && p.app_dossier_id == null)
+  const envoyerPhrase = async (brute: string) => {
+    const texte = brute.trim()
+    if (!texte || !questionOuverte || phraseEnCours) return
+    setChamp('')
+    setPhraseErreur(null)
+    setPhraseEnCours(true)
+    try {
+      const v = await phraseParcours(questionOuverte.parcoursId, questionOuverte.id, texte)
+      setParcours((l) => l.map((x) => (x.id === v.id && !(x.maj_le && v.maj_le && v.maj_le < x.maj_le) ? v : x)))
+    } catch (e) {
+      setChamp(texte)  // la phrase revient dans le champ : rien n'est perdu
+      setPhraseErreur(e instanceof Error ? e.message : "La phrase n'a pas pu être lue.")
+    } finally {
+      setPhraseEnCours(false)
+    }
+  }
+  const soumettre = (texte: string) => (versParcours ? envoyerPhrase(texte) : envoyer(texte))
+
   const onTouche = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      void envoyer(champ)
+      void soumettre(champ)
     }
   }
 
@@ -946,7 +978,7 @@ export default function AccueilAssistant(props: {
     <button className="asi-go is-stop" type="submit" aria-label="Arrêter la réponse"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg></button>
   ) : (
     <button className="asi-go" type="submit" aria-label={joints.some((j) => j.etat === 'envoi') ? 'Envoi des fichiers en cours' : 'Envoyer'}
-      disabled={pause || !champ.trim() || joints.some((j) => j.etat === 'envoi')}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
+      disabled={pause || phraseEnCours || !champ.trim() || joints.some((j) => j.etat === 'envoi')}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
   )
 
   // 17/11 (le trombone) : seulement si l'interrupteur `assistant_fichiers` l'ouvre à ce compte
@@ -997,8 +1029,16 @@ export default function AccueilAssistant(props: {
       </div>
     </form>
   ) : (
-    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}
+    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void soumettre(champ) }}
       onDragOver={(e) => { if (trombone?.ouvert) e.preventDefault() }} onDrop={deposerParGlisser}>
+      {versParcours && questionOuverte ? (
+        <p className="asi-pour">{phraseEnCours ? <>Je lis ta phrase pour <b>« {questionOuverte.titre} »</b>…</>
+          : <>Pour : <b>« {questionOuverte.titre} »</b> — ta phrase est gardée et lue, sans l'assistant.</>}
+          {!phraseEnCours ? <button type="button" onClick={() => setPourAssistant(cleQuestionOuverte)}>✕ Demander à l'assistant</button> : null}</p>
+      ) : questionOuverte && pourAssistant === cleQuestionOuverte && !joints.length ? (
+        <p className="asi-pour">Ton message ira à l'assistant. <button type="button" onClick={() => setPourAssistant(null)}>Répondre à « {questionOuverte.titre} »</button></p>
+      ) : null}
+      {phraseErreur ? <p className="asi-pour-ko" role="alert">{phraseErreur}</p> : null}
       {listeJoints}
       <div className="asi-ask-row">
         {boutonTrombone}
@@ -1010,7 +1050,7 @@ export default function AccueilAssistant(props: {
           onChange={(e) => setChamp(e.target.value)}
           onKeyDown={onTouche}
           aria-label="Ta réponse"
-          placeholder={pause ? "L'assistant reprend demain." : 'Réponds ou demande autre chose…'}
+          placeholder={pause ? "L'assistant reprend demain." : versParcours ? 'Réponds, dicte, ou touche une réponse…' : 'Réponds ou demande autre chose…'}
         />
         {boutonEnvoi}
       </div>
@@ -1137,7 +1177,8 @@ export default function AccueilAssistant(props: {
                 <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id
                   // P4-c : la lecture des services publics revient en arrière-plan -- une vue plus ANCIENNE ne remplace pas la plus récente
                   && !(x.maj_le && v.maj_le && v.maj_le < x.maj_le) ? v : x)))}
-                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} ficheOuverte={Boolean(trombone?.ouvert)} />
+                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} ficheOuverte={Boolean(trombone?.ouvert)}
+                  onQuestion={surQuestion} />
               </div>
             </div>
           )) : null}
