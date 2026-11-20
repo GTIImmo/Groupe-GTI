@@ -18,8 +18,7 @@ const rm = lf(fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8'
 // numéro écrit en dur : le commit peut être rejoué sur origin/main et changer de numéro).
 const racine = path.join(__dirname, '../..')
 const git = (c) => execSync(c, { cwd: racine, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
-const introduit = git('git log -S "const carteDocument" --format=%H -- apps/hektor-v1/src/App.tsx').trim().split('
-').pop()
+const introduit = git('git log -S "const carteDocument" --format=%H -- apps/hektor-v1/src/App.tsx').trim().split(/\s+/).pop()
 const avant = lf(git(`git show ${introduit}~1:apps/hektor-v1/src/App.tsx`))
 
 console.log('① rien de la signature n\'a bougé')
