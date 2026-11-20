@@ -3790,3 +3790,5 @@ et le chemin n'a servi que deux fois, les deux par moi.**
 
 **3. `test_ged_remplir.cjs` lit ses six sources sans les retours chariot** (`.replace(/\r\n/g, '\n')`, comme
 `test_ged_remplir_contact.cjs`) : **38 verts sur le disque** (7 rouges avant, tous dus au CRLF d'App.tsx).
+⛔ **DÉCISION DE FRÉDÉRIC (20/11) sur 2b : « Non, laisse ».** On ne corrige pas : la nuit rattrape le lien, rien ne se
+perd. Ne pas relancer.
