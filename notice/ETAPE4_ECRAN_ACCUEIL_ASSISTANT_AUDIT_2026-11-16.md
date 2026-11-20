@@ -3691,3 +3691,50 @@ Mesure dans les avis gardés (`app_dossier_estimation.sources.dpe`) : juillet-ao
 DPE gardé est « proximité ». Le RNB a changé entre-temps ; le défaut touche l'éditeur d'avis ET le parcours.
 Correctif proposé (une ligne, seul lecteur de ce champ dans le serveur) : essayer `id` puis `ban_id`. ⛔ Route partagée :
 NON corrigé, attend son accord.
+
+### 98.2 LA ROUTE DU DPE RETROUVE L'ADRESSE (20/11) : audité, mesuré, corrigé, éprouvé hors ligne et sur vraies API — NON poussé
+
+**Ses mots** : « oui mais il faut être sûr donc audit et analyse puis test ».
+
+**L'audit (lecture seule, vraies API publiques).**
+- Côté ADEME, 1 000 DPE récents et anciens (5 tris / départements) : `identifiant_ban` = la clé BAN « 42095_2120_00013 »
+  804 fois, un identifiant de RUE sans numéro 192 fois, vide 4 fois — JAMAIS la forme `ban_id` du RNB.
+- Côté RNB, 60 adresses réelles (15 villes, 4 DPE récents chacune) : `id` a la forme de l'ADEME 58 fois sur 60 ; `ban_id`
+  a une autre forme 54 fois (vide 6). Règle actuelle (`ban_id` d'abord) : DPE trouvé à l'adresse **4 fois sur 60** ;
+  `id` d'abord : 49 (39 au bon numéro, 10 sur un autre numéro du même immeuble — la 1re adresse RNB n'est pas toujours
+  celle demandée).
+- La ligne fautive vient du commit 4b203fb (01/07) : elle marchait en juillet-août (8 avis « adresse »), quand le RNB
+  donnait la même forme aux deux champs ; en novembre, le seul avis gardé est « proximité ».
+- Les lecteurs : la route `/geo/dpe` a DEUX appelants — l'éditeur d'avis (« Tout générer », « Régénérer le DPE »,
+  ouverture par l'assistant ; ce qu'il garde va dans `app_dossier_estimation.sources.dpe` et donc dans le PDF des avis
+  générés ENSUITE) et le parcours (P4-c). Ni le worker ni la synchro n'interrogent le RNB ou l'ADEME. Le seul lecteur
+  du champ dans le serveur est `geo.dpe` (la route `/geo/rnb` ne rend que l'adresse en texte).
+
+**Le correctif (`routers/geo.py`, `dpe` seule ; additif pour les appelants).**
+1. paramètre optionnel `ban` : l'identifiant EXACT de l'adresse (le parcours le prend au géocodage, `type=housenumber`) ;
+2. adresse exacte = `ban` s'il a la forme BAN, sinon la 1re adresse du bâtiment RNB (le sens de juillet, gardé pour
+   l'éditeur) → « adresse » ;
+3. les AUTRES numéros du même bâtiment (5 au plus) → « batiment » (nouvelle valeur : même immeuble, pas l'adresse) ;
+4. sinon la proximité, comme avant. Un identifiant qui n'a pas la forme BAN n'est jamais envoyé (`_CLE_BAN`) ;
+   `ban_id` ne sert qu'en repli s'il a la bonne forme (l'ancienne forme du RNB marche encore).
+Le parcours : prudence « Un DPE d'une autre entrée du même immeuble… », et pas de surface proposée dans ce cas.
+L'éditeur : « batiment » tombe dans sa phrase prudente existante (« DPE le plus proche (adresse exacte introuvable) — à
+vérifier »), sans le badge « Proximité » ; son écran n'est PAS modifié (seul le type `matched_by` de lib/api.ts apprend
+la valeur). Les avis déjà gardés ne bougent pas.
+
+**Ce que ça pourrait casser ailleurs** : l'éditeur choisira le DPE de l'adresse au lieu de celui d'un voisin (le but) ;
+jusqu'à 5 appels ADEME de plus dans le pire cas (mesuré : ~0,3 s par appel de la route, en moyenne).
+
+**Preuves.**
+- Hors ligne : `backend/tests/test_geo_dpe.py` **11 verts** (forme actuelle du RNB → « adresse », l'autre forme jamais
+  envoyée, la surface départage, l'ancienne forme marche, l'adresse exacte avant le bâtiment, un identifiant mal formé
+  jamais envoyé, « batiment », 5 numéros au plus, la proximité) + ⭐ **témoin inverse** : le code de f515ba9 rend
+  « proximité » sur la même adresse. Parcours **132 verts** (+2 : la prudence « batiment », l'adresse exacte transmise) ;
+  gestes 415, lecteur 76, socle 31, traduction 39, fichiers 28, registre d'estimation 12/12, build.
+- Sur vraies API, le NOUVEAU code, 60 adresses, 0 erreur : **éditeur** 49 « adresse », 5 « batiment », 6 « proximité »
+  (contre 4 / 0 / 56) ; **parcours** **60 sur 60 au bon numéro**. Le 13 rue Vimore : 25 DPE à l'adresse ; sans surface
+  « le plus récent, pas forcément celui de ce logement » ; à 87 m² « celui dont la surface est la plus proche » (le DPE
+  de 87 m² du 06/11/2026).
+
+**Non éprouvé en réel dans l'application** : après le push — le parcours sur une conversation neutre (sans écriture
+ailleurs que sa ligne). « Régénérer le DPE » dans l'éditeur ÉCRIT l'avis d'un bien (sources) : pas sans son accord.

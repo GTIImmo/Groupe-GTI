@@ -492,6 +492,9 @@ voir("surface" not in p2 and "3 DPE à cette adresse" in p2["dpe"]["prudence"] a
 p3 = {p["id"]: p for p in pub.propositions({"dpe": {**DPE, "matched_by": "proximite"}, "cadastre": CAD}, "house", 2026, False)}
 voir("surface" not in p3 and "voisin" in p3["dpe"]["prudence"] and "terrain" not in p3,
      "un DPE de proximité : prudence, pas de surface ; une adresse approchée : pas de parcelle")
+p4 = {p["id"]: p for p in pub.propositions({"dpe": {**DPE, "matched_by": "batiment", "nb_adresse": 2}}, "apartment", 2026, True)}
+voir("surface" not in p4 and "autre entrée du même immeuble" in p4["dpe"]["prudence"],
+     "§98.2 : un DPE d'une autre entrée du même immeuble : sa prudence, et PAS sa surface")
 voir(pub.propositions({"dpe": {"found": False}, "bdnb": {"found": True, "annee_construction": 2031}}, "house", 2026, True) == [],
      "rien de trouvé, ou une année impossible : aucune proposition")
 
@@ -509,13 +512,15 @@ voir(moteur.seul_publics_a_bouge({"a": 1}, {"a": 1, "_publics": {}}) and not mot
      "« seule la lecture publique a bougé » se reconnaît ; un autre changement non")
 
 # la route, services publics simulés
-vus = {"geo": [], "jetons": set()}
+vus = {"geo": [], "jetons": set(), "ban": []}
 
 
 def faux_geo(nom, rendu):
     def f(**kw):
         vus["geo"].append(nom)
         vus["jetons"].add(kw.get("authorization"))
+        if nom == "dpe":
+            vus["ban"].append(kw.get("ban"))
         if isinstance(rendu, Exception):
             raise rendu
         return rendu
@@ -524,7 +529,8 @@ def faux_geo(nom, rendu):
 
 geo.dpe, geo.bdnb, geo.cadastre, geo.copro_rnie = (faux_geo("dpe", DPE), faux_geo("bdnb", BDNB), faux_geo("cadastre", CAD),
                                                    faux_geo("copro", COPRO))
-pub.geocoder = lambda rue, cp, ville: {"lat": 45.38, "lon": 4.28, "label": "3 Rue Haute 42700 Firminy", "score": 0.9, "precis": True}
+pub.geocoder = lambda rue, cp, ville: {"lat": 45.38, "lon": 4.28, "label": "3 Rue Haute 42700 Firminy", "score": 0.9, "precis": True,
+                                      "ban": "42095_2120_00013"}
 interrupteur["valeur"] = "admin"
 table.clear()
 r0 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST, role="admin")
@@ -536,6 +542,7 @@ appeler(route.parcours_repondre, p0, route.ParcoursReponsePayload(question="bien
 avant = {k: v for k, v in table[p0]["reponses"].items()}
 r = appeler(route.parcours_services_publics, p0, "Bearer j", Settings(), None, S, ST, role="admin")
 apres = table[p0]["reponses"]
+voir(vus["ban"] == ["42095_2120_00013"], "§98.2 : le DPE est cherché à l'adresse EXACTE du géocodage (son identifiant BAN)")
 voir(r["ok"] and sorted(vus["geo"]) == ["bdnb", "cadastre", "dpe"] and vus["jetons"] == {"Bearer j"},
      "une maison : DPE, année, cadastre -- avec le jeton de la personne ; pas le registre des copropriétés")
 voir({k: v for k, v in apres.items() if k != "_publics"} == avant and "dpe_cons" not in apres and "surfterrain" not in apres,

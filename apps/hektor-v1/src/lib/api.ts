@@ -5080,7 +5080,7 @@ export type BdnbData = {
 export type DpeData = {
   ok: boolean
   found?: boolean
-  matched_by?: 'adresse' | 'proximite' | null   // "adresse" = précis, "proximite" = indicatif
+  matched_by?: 'adresse' | 'batiment' | 'proximite' | null   // "adresse" = précis, "batiment" = même immeuble, autre numéro (20/11), "proximite" = indicatif
   nb_adresse?: number | null                     // nb de DPE trouvés à l'adresse exacte
   etiquette_dpe?: string | null
   etiquette_ges?: string | null

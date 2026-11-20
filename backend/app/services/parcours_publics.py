@@ -97,8 +97,10 @@ def geocoder(rue: str, cp: str, ville: str) -> dict[str, Any] | None:
     if lat is None or lon is None:
         return None
     # « housenumber » = le numéro est trouvé ; sinon le point est sur la rue (ou la commune) : approché
-    return {"lat": lat, "lon": lon, "label": props.get("label"), "score": score,
-            "precis": props.get("type") == "housenumber"}
+    precis = props.get("type") == "housenumber"
+    # l'identifiant BAN EXACT de l'adresse tapée (forme « 42095_2120_00013 ») : le DPE se cherche d'abord là (§98.2)
+    return {"lat": lat, "lon": lon, "label": props.get("label"), "score": score, "precis": precis,
+            "ban": str(props.get("id") or "") if precis else None}
 
 
 def interroger(appels: dict[str, Callable[[], Any]]) -> tuple[dict[str, Any], list[str]]:
@@ -137,7 +139,9 @@ def propositions(brut: dict[str, Any], profil: str, annee: int, point_precis: bo
             if cases.get("dpe_ges"):
                 morceaux.append(f"{cases['dpe_ges']} kg CO₂/m²/an")
             nb = dpe.get("nb_adresse") or 0
-            if dpe.get("matched_by") != "adresse":
+            if dpe.get("matched_by") == "batiment":
+                prudence = "Un DPE d'une autre entrée du même immeuble : il n'y en a pas à ce numéro exact."
+            elif dpe.get("matched_by") != "adresse":
                 prudence = "Le DPE le plus proche : il n'y en a pas à cette adresse exacte. Il peut être celui d'un voisin."
             elif nb > 1 and not dpe.get("par_surface"):
                 prudence = f"{nb} DPE à cette adresse : c'est le plus récent, pas forcément celui de ce logement."
@@ -211,7 +215,8 @@ def lire(reponses: dict[str, Any], authorization: str, settings: Any, annee: int
     profil = moteur.profil(reponses)
     surface = _nombre(reponses.get("surfappart"))
     appels: dict[str, Callable[[], Any]] = {
-        "dpe": lambda: geo.dpe(lat=lat, lon=lon, surface=surface, authorization=authorization, settings=settings),
+        "dpe": lambda: geo.dpe(lat=lat, lon=lon, surface=surface, ban=point.get("ban"), authorization=authorization,
+                               settings=settings),
         "bdnb": lambda: geo.bdnb(lat=lat, lon=lon, authorization=authorization, settings=settings),
     }
     if profil in PROFILS_TERRAIN | PROFILS_COPRO:
