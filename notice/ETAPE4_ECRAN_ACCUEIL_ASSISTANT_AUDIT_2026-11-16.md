@@ -3961,3 +3961,11 @@ bien (le salon) pour la galerie. » Parcours `25978be6…` laissé « en cours �
 maquette, je n'avais éprouvé que des photos DÉPOSÉES sur place (elles ont leur aperçu local). Corrigé : la relecture suit
 la liste des photos SANS aperçu (`sansApercu`). Build et essais verts ; non poussé, non revu en réel (la maquette ne peut
 pas reproduire : ses parcours vivent en mémoire).
+
+### 100.2 LA VIGNETTE : POUSSÉE (60c12a2) ET REVUE EN RÉEL (20/11, ~19:35) — VERT
+- Vercel sert `index-BUawyTQI.js` (l'ancien était `index-CBnHeZIr.js`). Render reste sur 59433ee, normal : 60c12a2 ne
+  touche que le front et `notice/`.
+- Parcours d'essai 25978be6, « Modifier » sur la pastille « Les photos » : la vignette montre **le salon, en couverture**,
+  par un lien signé du coffre (image chargée, 1920 px de large). Preuve : `notice/preuve_parcours_vignette_photo_reel_2026-11-20.png`.
+- En base : rouvrir la question n'écrit rien (`maj_le` inchangé à 18:02:59, photo toujours visible) ; 0 travail chez Hektor.
+- P6 est donc **complet en production**. Restent au plan : P5, P7, P8, puis l'épreuve case par case.
