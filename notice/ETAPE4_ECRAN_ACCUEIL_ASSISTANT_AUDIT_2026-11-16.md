@@ -3559,7 +3559,7 @@ Vercel vérifiés sur f1ff8a7.
 
 **Reste** : P4-c (services publics, proposés à confirmer), P4-d (phrases libres).
 
-## 97. P4-b bis — LES PHOTOS DU BIEN ET LA FICHE DE VISITE NE SE CONFONDENT PLUS (20/11) : écrit, éprouvé hors ligne, NON poussé
+## 97. P4-b bis — LES PHOTOS DU BIEN ET LA FICHE DE VISITE NE SE CONFONDENT PLUS (20/11) : POUSSÉ (7353637) et ÉPROUVÉ EN RÉEL, vert
 
 **Ses mots** : « l'assistant doit bien comprendre la différence entre les deux !!! Et cela doit être clair pour
 l'utilisateur + garde-fou possible. Ce sont vraiment deux choses différentes : une, simplement un ajout de photo avec
@@ -3595,4 +3595,23 @@ paramètres des 3 outils) ; gestes 415 (la phrase des pages), socle 31, traducti
 **Non éprouvé en réel** : l'IA qui DEMANDE devant des photos ambiguës, et qui envoie une photo du bien vers l'étape
 Photos et non vers le scan — à éprouver après le push (une photo de bien, une fiche, une demande ambiguë).
 
-**Reste** : pousser et l'essai réel ci-dessus ; P4-c (services publics), P4-d (phrases libres) ; P6 (photos du bien).
+### 97.1 L'ESSAI RÉEL (20/11, 10:03-10:06, heure de Paris) — VERT sur les trois cas et le garde-fou
+
+**Ses mots** : « Oui, pousse et essaie ». Poussé 7353637 (après fusion de 3 commits GED, sans fichier commun ; tous les
+essais verts) ; Render et Vercel vérifiés. Dans son Chrome, trois conversations NEUVES, rien chez Hektor :
+- **Cas 1 — la fiche de visite** (page 1 de la fiche d'essai FICHE_A_SCANNER_V2, « je joins la fiche de visite
+  remplie ») : la carte du parcours la porte (« La fiche de visite (1 page) sera lue au clic ») ; carte non validée (le
+  scan est déjà prouvé au §96.5).
+- **Cas 2 — une photo du bien** (le salon de l'annonce 24113, export console ; « je joins une photo du salon pour
+  l'annonce ») : la carte du parcours SANS la photo (« Déjà dit : le bien, l'intérieur ») ; l'IA : « La photo du salon
+  pourra être ajoutée à l'étape Photos ; elle ne sera pas scannée comme une fiche de visite. »
+- ⭐ **Le garde-fou, en réel** : dans ce parcours, la photo du salon passée VOLONTAIREMENT par « Lire la fiche de
+  visite » → « Ce n'est pas une fiche de visite (3 cases lues) : rien n'est gardé. Les PHOTOS DU BIEN s'ajoutent à
+  l'étape Photos… » ; en base : 0 case du scan, aucune fiche gardée, « 5 rue du Test » et 100 m² intacts. ⚠ Le scan a
+  INVENTÉ 3 cases sur une photo de salon : le garde-fou n'était pas de trop.
+- **Cas 3 — une demande ambiguë** (la même photo, « Nouvelle estimation d'essai, voici les photos. ») : AUCUNE carte ;
+  l'IA DEMANDE « Ce sont des photos du bien, ou la fiche de visite remplie photographiée ? ».
+- **Coût** : 3 tours = 0,0228 + 0,0235 + 0,0210 $ = 0,067 $ ; + un scan refusé (≈ 0,006 $).
+- Parcours d'essai `7c201a11…` laissé « en cours » (purge 30 j). Le parcours du cas 2 ne garde rien du salon.
+
+**Reste** : P4-c (services publics), P4-d (phrases libres) ; P6 (photos du bien).
