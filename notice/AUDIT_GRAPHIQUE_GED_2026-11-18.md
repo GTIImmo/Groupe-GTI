@@ -172,3 +172,33 @@ gestes, à un clic) ; « Lu par l'IA » est remplacé par les valeurs sur chaque
 « Voir et trancher » sont renommés ; la carte d'alerte liée à une fenêtre disparaît (son jugement reste, déduit).
 Maquette, côté démonstration seulement : « Rejouer l'arrivée » et le clic « Voir et ajouter » qui fait voler la valeur
 dans la case (dans l'app, ce vol suit l'enregistrement de la fenêtre).
+
+## 8. VERSION 3 (20/11) — « rehausser le niveau, c'est un peu vieux » ; la période de test retirée
+
+> *« Le niveau graphique et le design peuvent être rehaussés car c'est un peu vieux ; ensuite cette maquette doit
+> s'adapter comme le point 6 : désormais tout est corrigé directement, il faut retirer la période de test. »*
+
+Même toile, mêmes quatre écrans réécrits en place (`Main`, `Bilan`, `Depot`, `Telephone` ; les écrans 2b, 2c et 3b les
+reprennent) : https://claude.ai/artifact/VxtNCjmAVXkThs641fHX1z
+
+**Le parti pris graphique** : la charte bienvu, rien d'autre -- UNE police (Plus Jakarta Sans, celle de la charte, au lieu
+du couple Plus Jakarta / Hanken Grotesk) et UN magenta (#C5005F). Le papier beige, les coins cornés et les bandeaux
+encre sont retirés : surfaces blanches sur un fond gris froid très clair, ombres douces, rayons réguliers. Chaque document
+est une petite page blanche avec une bande de couleur par famille (vente magenta, diagnostics bleu, propriété ambre,
+fiscalité vert). Les valeurs lues sont des pastilles sur la ligne, et la feuille dépliée devient une grille « Ce que l'IA
+a lu ». Le moment en cours a un anneau de progression (3 sur 10) ; les moments finis, une coche verte.
+**L'élément fort** : « À traiter » ouvre sur un bloc magenta plein avec le NOMBRE en grand ; les cartes sous lui sont
+blanches. Une correction se lit « avant barré -> après en magenta ».
+**« Ce que dit… »** : en-tête clair ; deux choix côte à côte (« Le compromis dit » / « La transaction dit »), boutons radio,
+« sera corrigé » / « reste tel quel » ; la page du document s'ouvre D'OFFICE à la première ligne (point 2 du §5).
+
+**La période de test retirée (point 6, décision de Frédéric du 20/11)** : plus de « Vrai / Faux / Déjà su », plus de
+« Noter l'alerte ». Une alerte sans fenêtre devient un « Point d'attention » avec SES gestes (« Voir le titre »,
+« Déposer un pouvoir ») et un « Masquer » discret (« 1 point d'attention masqué, Réafficher »).
+⚠ **« Masquer » est une PROPOSITION de la maquette** : aujourd'hui, c'est le jugement qui range une alerte. Sans jugement,
+il faut un geste pour l'écarter -- à confirmer par Frédéric, et à décider : la table `app_ged_jugement` garde-t-elle ce
+« masqué », ou une autre trace ?
+
+**Restent à trancher** (§5) : 1 « À préparer » sur les documents non destinés à la signature ; 3 le bouton « Remplir la
+transaction » ; 4 « Voir et trancher » -> « Voir et corriger / Voir et ajouter » (la maquette le montre) ; 5 l'alerte en
+double d'une ligne de fenêtre (la maquette ne la montre plus). Rien n'est codé.
