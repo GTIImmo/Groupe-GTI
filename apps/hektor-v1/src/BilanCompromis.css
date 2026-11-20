@@ -10,9 +10,9 @@
 @keyframes bc-coche { from { stroke-dasharray: 16; stroke-dashoffset: 16; } to { stroke-dasharray: 16; stroke-dashoffset: 0; } }
 
 .bc-voile { position: fixed; inset: 0; z-index: 3200; display: grid; place-items: center; padding: 14px; background: rgba(31, 33, 33, 0.55); animation: bc-voile 200ms ease-out both; }
-.bc { --bc-encre: #1f2121; --bc-gris: #5c6163; --bc-trait: #e2e5e6; --bc-brume: #f7f8f8; --bc-mag: #c5005f; --bc-papier: #fbf7ee; --bc-papier-trait: #ece3cf; --bc-vert: #2e8a5c; --bc-ambre: #8a5a12;
+.bc { --bc-encre: var(--bv-ink, #1f2121); --bc-gris: var(--bv-mute, #5c6163); --bc-trait: var(--bv-line, #e2e5e6); --bc-brume: var(--bv-brume, #f7f8f8); --bc-mag: var(--bv-magenta, #c5005f); --bc-papier: #fbf7ee; --bc-papier-trait: #ece3cf; --bc-vert: var(--bv-ok, #2e8a5c); --bc-ambre: #8a5a12;
   position: relative; display: flex; flex-direction: column; width: min(1080px, 100%); height: min(720px, calc(100dvh - 28px)); overflow: hidden; border-radius: 20px; background: var(--bc-brume); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38); color: var(--bc-encre);
-  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.4; container-type: inline-size; animation: bc-ouvre 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  font-family: var(--bv-font-ui, 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif); font-size: 14px; line-height: 1.4; container-type: inline-size; animation: bc-ouvre 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .bc:focus { outline: none; }
 .bc *, .bc *::before, .bc *::after { box-sizing: border-box; }
 .bc button { font: inherit; }
@@ -20,10 +20,10 @@
 
 /* le bandeau */
 .bc-hd { flex: none; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px 10px 22px; background: var(--bc-encre); border-bottom: 3px solid var(--bc-mag); color: #ffffff; }
-.bc-hd :focus-visible { outline-color: #f6b6d5; }
+.bc-hd :focus-visible { outline-color: var(--bv-rose, #f6b6d5); }
 .bc-hd-t { flex: 1; min-width: 0; }
 .bc-hd-t p { margin: 0; overflow: hidden; color: #b9bec0; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.bc-hd-t h2 { margin: 0; color: #ffffff; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+.bc-hd-t h2 { margin: 0; color: #ffffff; font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
 .bc-hd-pil { flex: none; padding: 4px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .bc-hd-x { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.1); color: #ffffff; cursor: pointer; transition: background-color 160ms; }
 .bc-hd-x:hover { background: rgba(255, 255, 255, 0.2); }
@@ -38,7 +38,7 @@
 /* les conditions GÉNÉRALES du compromis (préemption, état hypothécaire) : dites, mises à part, jamais comparées */
 .bc-generales { display: grid; gap: 2px; margin: 18px 0 0; padding: 10px 14px; border-radius: 12px; background: #ffffff; box-shadow: inset 3px 0 0 #b9bec0, 0 0 0 1px var(--bc-trait); color: var(--bc-gris); font-size: 12.5px; }
 .bc-generales b { color: var(--bc-encre); font-size: 13px; font-weight: 700; }
-.bc-g h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.bc-g h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
 .bc-g h3 span, .bc-g-plie span { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #eceeef; color: var(--bc-gris); font-size: 12px; font-weight: 800; }
 .bc-g-aide { margin: 2px 0 0; color: var(--bc-gris); font-size: 12.5px; }
 .bc-g ol { display: grid; gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
@@ -52,16 +52,16 @@
 .bc-l-t b { font-size: 14.5px; font-weight: 800; }
 .bc-dest { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 .bc-dest.is-h { background: #f1f2f3; color: #4a4f51; }
-.bc-dest.is-n { background: #fcedf4; color: #a3004f; }
+.bc-dest.is-n { background: var(--bv-rose-soft, #fcedf4); color: var(--bv-framboise, #a3004f); }
 .bc-page { padding: 3px 10px; border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--bc-trait); color: var(--bc-gris); font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color 160ms, color 160ms; }
 .bc-page:hover { color: var(--bc-encre); background: var(--bc-brume); }
 .bc-page[aria-pressed="true"] { background: var(--bc-encre); color: #ffffff; box-shadow: none; }
 
 .bc-l-v { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); align-items: stretch; }
 .bc-signe { display: grid; place-items: center; align-self: center; width: 26px; height: 26px; margin: 0 2px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 1px var(--bc-trait); color: var(--bc-gris); font-size: 15px; font-weight: 800; line-height: 1; z-index: 1; }
-.bc-signe.is-trancher { background: #fff1dc; box-shadow: none; color: var(--bc-ambre); }
-.bc-signe.is-ajouter { background: #fdf0f6; box-shadow: none; color: var(--bc-mag); }
-.bc-signe.is-accord { background: #e6f3ec; box-shadow: none; color: #1f6b45; }
+.bc-signe.is-trancher { background: var(--bv-warn-soft, #fff1dc); box-shadow: none; color: var(--bc-ambre); }
+.bc-signe.is-ajouter { background: var(--bv-rose-soft, #fdf0f6); box-shadow: none; color: var(--bc-mag); }
+.bc-signe.is-accord { background: var(--bv-ok-soft, #e6f3ec); box-shadow: none; color: #1f6b45; }
 
 .bc-plaque { position: relative; display: grid; gap: 1px; align-content: start; min-height: 58px; padding: 8px 12px 9px; border: 0; border-radius: 10px; color: var(--bc-encre); text-align: left; transition: box-shadow 160ms, opacity 200ms, transform 160ms, background-color 160ms; }
 .bc-plaque small { color: var(--bc-gris); font-size: 11.5px; font-weight: 600; }
@@ -72,7 +72,7 @@
 .bc-plaque.is-compromis::after { content: ""; position: absolute; top: 0; right: 0; width: 14px; height: 14px; border-radius: 0 10px 0 4px; background: linear-gradient(225deg, var(--bc-brume) 50%, var(--bc-papier-trait) 50%); }
 /* la transaction : le registre, réglé */
 .bc-plaque.is-transaction { background: #ffffff; box-shadow: inset 0 0 0 1px var(--bc-trait); }
-.bc-plaque.is-transaction:has(b.is-vide) { background: transparent; box-shadow: none; border: 1.5px dashed #cdd2d4; }
+.bc-plaque.is-transaction:has(b.is-vide) { background: transparent; box-shadow: none; border: 1.5px dashed var(--bv-line-strong, #cdd2d4); }
 button.bc-plaque { cursor: pointer; }
 button.bc-plaque:hover:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--bc-encre); }
 button.bc-plaque:active:not(:disabled) { transform: scale(0.985); }
@@ -93,11 +93,11 @@ button.bc-plaque:hover .bc-verbe, button.bc-plaque:focus-visible .bc-verbe { opa
 .bc-lien { padding: 0; border: 0; background: none; color: var(--bc-encre); font-size: 12.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 .bc-g.is-accord { margin-top: 20px; }
-.bc-g-plie { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: #e6f3ec; color: #1f6b45; font-family: 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif; font-size: 14px; font-weight: 800; text-align: left; cursor: pointer; }
+.bc-g-plie { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--bv-ok-soft, #e6f3ec); color: #1f6b45; font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 14px; font-weight: 800; text-align: left; cursor: pointer; }
 .bc-g-plie svg { transition: transform 200ms; }
 .bc-g-plie[aria-expanded="true"] svg { transform: rotate(90deg); }
 .bc-g-plie span { background: #ffffff; color: #1f6b45; }
-.bc-g-plie small { flex-basis: 100%; padding-left: 20px; color: #3f7a5c; font-family: 'Hanken Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+.bc-g-plie small { flex-basis: 100%; padding-left: 20px; color: #3f7a5c; font-family: var(--bv-font-ui, 'Hanken Grotesk', sans-serif); font-size: 12px; font-weight: 600; }
 
 /* le document */
 .bc-doc { min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px; overflow: auto; border-left: 1px solid var(--bc-trait); background: #eef0f1; }
@@ -116,10 +116,10 @@ button.bc-plaque:hover .bc-verbe, button.bc-plaque:focus-visible .bc-verbe { opa
 .bc-resume, .bc-msg { flex: 1; min-width: 0; display: grid; gap: 1px; margin: 0; font-size: 13.5px; font-weight: 700; }
 .bc-resume small { color: var(--bc-gris); font-size: 12px; font-weight: 500; }
 .bc-msg { color: #1f6b45; }
-.bc-msg.is-erreur { color: #a3004f; }
+.bc-msg.is-erreur { color: var(--bv-framboise, #a3004f); }
 .bc-b1, .bc-b2 { flex: none; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; font-weight: 800; cursor: pointer; transition: background-color 160ms, opacity 160ms; }
 .bc-b1 { background: var(--bc-mag); color: #ffffff; box-shadow: 0 6px 16px rgba(197, 0, 95, 0.25); }
-.bc-b1:hover:not(:disabled) { background: #a3004f; }
+.bc-b1:hover:not(:disabled) { background: var(--bv-framboise, #a3004f); }
 .bc-b1:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
 .bc-b2 { background: transparent; color: var(--bc-encre); box-shadow: inset 0 0 0 1px var(--bc-trait); }
 .bc-b2:hover:not(:disabled) { background: var(--bc-brume); }

@@ -39,12 +39,23 @@
 | lecture | « pas ce type » refusé au hasard : la cause (le CODE du type seul dans l'en-tête) prouvée au banc | ✅ **EN PRODUCTION le 18/11** (`9d5a6fd`, Render) : l'en-tête donne le libellé du catalogue ; banc par le vrai code 95/95, **essai réel vert sur 63331** (la fiche synthétique refusée la veille sort « lu ») (§12.34, §12.35) |
 | recours | « C'est bien ce type : garder la lecture » sur une lecture refusée | ✅ **EN PRODUCTION le 18/11** (`5b93490`, patch posé 4/4, répétition 8/8, Vercel) ; ⚠ pas vu sur un vrai cas : il n'existe plus de lecture refusée (§12.36) |
 
-**Reste, au 18/11** : ⏰ le compte rendu de la mesure le 30/11 ; P7/P8 en réel — **mis de côté par Frédéric le 17/11 :
-« trop compliqué pour le moment »** ; les essais réels qui attendent une cible choisie par Frédéric (l'envoi direct de
-10c, « Ce que dit l'offre » sur une offre proposée vivante) ; deux options non tranchées (une règle de nommage commune
-§12.26 ; masquer l'IBAN d'un compromis au lieu de tout refuser §12.27) ; puis **les conditions du cran « on »**
-ci-dessous (audit des faits : §12.37). ✅ Les pièces d'essai de 63331 et 63147 sont SUPPRIMÉES (31/31, 18/11, §12.36) ;
-leurs lectures restent en base, invisibles.
+**Reste, au 20/11** (réécrit ; le détail des lots A à G est aux §12.41-12.56, tous ÉPROUVÉS EN RÉEL) :
+- **le visuel** : maquette V2 du 18/11 (`notice/AUDIT_GRAPHIQUE_GED_2026-11-18.md` §7, « la liste DEVIENT le dossier »)
+  livrée, PAS codée, son avis attendu, avec ses points à trancher (§5 de l'audit ; garder la mesure après le 30/11) ;
+- **le dossier « cran on »** (§12.37) : DPA (geste de Frédéric), registre des traitements, analyse d'impact, mention au
+  mandat, et DEUX DÉCISIONS : une durée de conservation des lectures, un chemin d'effacement pour une personne ;
+- ⏰ **la mesure** court jusqu'au 30/11 : au 20/11, **8 jugements** (7 vrais, 1 faux), lectures réelles sur 2 biens
+  seulement (59541, 62850) -- elle ne dira presque rien sans usage réel ;
+- **essais réels qui attendent une cible** : l'envoi direct de 10c, « Ce que dit l'offre » sur une offre vivante, P6 à
+  l'écran ; P7/P8 mis de côté le 17/11 ;
+- **options non tranchées** : règle de nommage commune (§12.26), masquer l'IBAN d'un compromis (§12.27), les types « hors
+  plan » du §12.41 (livret de famille, facture d'honoraires, syndic, fonds de travaux, règlement, adresse et régime) ;
+- ⚠ **un interrupteur a bougé hors de ce chantier** : `ged_depot_multiple = 'on'` depuis le 18/11 21:26, posé par la
+  session Étape 4 chap. 6 (`ffd7483`, §85 de sa note) -- le DÉPÔT est ouvert aux négociateurs, pas la LECTURE par l'IA
+  (`ged_lecture_ia`, `ged_lecture_personnes`, `ged_remplir`, `ged_propositions`, `ged_recu_manque` restent « admin »).
+  Au 20/11 : aucun dépôt par l'app depuis.
+✅ Toutes les pièces d'essai sont SUPPRIMÉES (63331, 63147 le 18/11 ; 63331, 63330 le 20/11, §12.58) ; leurs lectures
+restent en base, invisibles. Les fiches d'essai gardent les valeurs écrites par les preuves.
 
 **Avant les négociateurs (cran « on »)** : le contrat de sous-traitance (DPA) avec le fournisseur d'IA — décision du
 12/11 : « à la fin du dev » —, l'analyse d'impact, le registre des traitements (avec les NOMS lus depuis le lot 2), la
@@ -3792,3 +3803,69 @@ et le chemin n'a servi que deux fois, les deux par moi.**
 `test_ged_remplir_contact.cjs`) : **38 verts sur le disque** (7 rouges avant, tous dus au CRLF d'App.tsx).
 ⛔ **DÉCISION DE FRÉDÉRIC (20/11) sur 2b : « Non, laisse ».** On ne corrige pas : la nuit rattrape le lien, rien ne se
 perd. Ne pas relancer.
+
+### 12.59 VISUEL V3, MORCEAU 1 -- la base de « Masquer » (20/11, « Oui, vas-y ») -- ÉCRIT ET RÉPÉTÉ, PAS POSÉ
+
+Décisions de Frédéric (20/11, `notice/AUDIT_GRAPHIQUE_GED_2026-11-18.md` §8-9) : la période de test est retirée ; un point
+d'attention s'écarte par « Masquer », réversible par « Réafficher » ; le masquage vaut POUR TOUT LE MONDE sur le bien.
+**Le patch** `supabase/patch_ged_masquer_2026-11-20.sql` (+ `_INVERSE`, + `_REPETITION`) : le journal `app_ged_jugement`
+apprend deux verdicts, `masque` et `reaffiche` (CHECK de la table + garde de `app_ged_juger`, rien d'autre ne bouge dans la
+fonction ; droits reposés à l'identique). Le plus récent d'une ligne fait foi : `reaffiche` -> visible, tout autre -> masqué.
+Garde à l'entrée : l'empreinte de la fonction (`4d945b66…`) et le CHECK d'origine, sinon ARRÊT. L'inverse refuse s'il
+existe des `masque` / `reaffiche` (le journal ne s'efface pas) et vérifie qu'il défait bien SA fonction.
+**Répétition jouée VERTE (8 contrôles), en Frédéric sur 63331, sans rien garder** : masquer puis réafficher passent, un
+verdict inconnu est refusé, les anciens verdicts passent, `authenticated` n'écrit toujours pas en direct, 3 lignes d'essai
+à son nom, aucun ancien jugement touché, porte fermée à `anon`. **Aller-retour patch + inverse VERT** : la fonction revient
+à l'empreinte exacte du 16/11 et le CHECK d'origine. Après chaque essai, mesuré : porte intacte, CHECK intact, 8 jugements.
+⚠ Une limite vue en répétition : dans UNE transaction les deux lignes ont le même `juge_le` ; à l'écran chaque clic est sa
+propre transaction (le plus récent fait foi). ⚠ Tant que l'écran (morceau 4) n'écrit pas ces mots, ce patch ne change RIEN
+à ce que voit un utilisateur. **Reste : le poser en base (accord de Frédéric), puis le morceau 2.**
+**✅ POSÉ EN BASE le 20/11 (« Oui, pose-le »)** : état revérifié juste avant (empreinte `4d945b66…`, CHECK d'origine,
+8 jugements, `ged_propositions = admin`) ; patch passé d'un bloc ; **5 contrôles sur 5 VERTS** (CHECK et porte acceptent
+`masque` / `reaffiche`, porte SECURITY DEFINER fermée à `anon`, 8 jugements intacts, interrupteur inchangé). Aucun écran ne
+l'utilise encore (morceau 4). Retour arrière : `supabase/patch_ged_masquer_2026-11-20_INVERSE.sql`.
+
+### 12.60 VISUEL V3, MORCEAU 2 -- le socle : la GED branchée sur la charte bienvu (20/11, « Oui, enchaîne », « La charte ») -- ÉCRIT, PAS EN LIGNE
+
+**Trouvé en l'auditant** (`AUDIT_GRAPHIQUE_GED_2026-11-18.md` §9, correction) : la charte est déjà dans l'app (`src/bienvu.css`,
+jetons `--bv-*` sous `:root.bv`, allumée en production) avec DEUX polices -- titres Plus Jakarta Sans, texte Hanken Grotesk.
+Ma maquette V3 disait « une police » : faux. **Décision de Frédéric : « La charte »** (Hanken au texte, comme tout bienvu).
+**Le code** (CSS seulement, 3 fichiers, 127 lignes remplacées une pour une) : `RecuManque.css` (71 couleurs, 4 polices),
+`DepotDocuments.css` (64, 7), `BilanCompromis.css` (16, 5) -- chaque couleur qui a un rôle dans la charte (magenta, framboise,
+roses, encre, gris, traits, brume, vert et fonds d'état) devient `var(--bv-…, <ancienne valeur>)`, chaque police
+`var(--bv-font-display | --bv-font-ui, <ancienne pile>)`. ⭐ Le repli est l'ancienne valeur : interrupteur bienvu éteint =
+mêmes pixels. Gardés en dur, exprès : le blanc, les textes foncés d'état (vert, ambre, rouge : contraste sur fond pâle), le
+papier, les bleus et teintes sans rôle dans la charte. Rien d'autre ne change (ni mise en page, ni texte, ni geste).
+**Ce qui se verra, interrupteur allumé** : des teintes légèrement corrigées (encre #222323, vert #2f7d59, survols en
+framboise #8c0044, fonds roses unifiés) ; mêmes polices qu'avant.
+**Contrôles** : `test_ged_socle.cjs` **16 VERT** (aucune couleur de la charte en dur, chaque jeton existe et garde son repli,
+chaque police passe par la charte, deux polices) ; témoin inverse sur l'ancien fichier : **13 ROUGE**. Les 14 autres essais GED
+verts (bilan 137, lues 95, remplir contact 80…). `npm run build` passe ; le paquet porte `var(--bv-magenta, #c5005f)` et
+`.bc{--bc-encre: var(--bv-ink, #1f2121)…`. ⚠ Pas vu à l'écran : il faut le déploiement (accord de Frédéric).
+
+### 12.61 VISUEL V3, MORCEAU 3 -- « Le dossier » : la liste du cockpit rangée par moment (20/11, « Oui mais audite de nouveau ») -- ÉCRIT, PAS EN LIGNE
+
+Ré-audit avant le code : `AUDIT_GRAPHIQUE_GED_2026-11-18.md` §10 bis (9 risques, 9 parades). La session signature (Youtrust)
+a été prévenue (`notice/PROMPT_AVERTIR_SESSION_SIGNATURE_GED_2026-11-20.md`) : rien en cours chez elle, DEUX CONDITIONS,
+tenues -- (1) « Voir le suivi » déplie le groupe et la ligne du document PUIS défile (`ouvrirPuisSuivi`, sinon `sst-<id>`
+n'existe pas) ; (2) l'état de signature reste visible ligne REPLIÉE (la pastille d'aujourd'hui + « signée le / en attente /
+expirée … à renvoyer » ; « À envoyer en signature » reste dans la carte, cf. §5.1 de l'audit graphique, non tranché).
+**Le code** :
+- `lib/gedPieces.ts` : fonction NEUVE `dossierParMoment` (le moment en cours d'abord, puis les précédents ; une pièce une
+  seule fois ; au passé, les reçues et les obligatoires non trouvées) -- `recuManque` non touchée ;
+- `RecuManque.tsx` : deux propriétés neuves, `rangeEnListe` (cockpit seulement : plus de grille de feuilles ni de pastille
+  « Lu par l'IA », les moments ne se cliquent plus) et `onDossier` (il transmet à la liste ce qu'il sait DÉJÀ : groupes,
+  lectures en morceaux, « Revoir ce qu'il dit », « garder la lecture ») ; sans elles (fiche « classic ») : l'écran d'avant ;
+- `App.tsx` (`ConsoleDocumentsPanel`, skin `v21`) : au filtre « Tous » (qui s'appelle « Le dossier » quand le rangement est
+  là), les groupes dépliables (le moment en cours ouvert) ; une ligne par document (pièce, nom du fichier, 2 valeurs lues,
+  état) ; dépliée : « Ce que l'IA a lu » puis la carte d'aujourd'hui (`carteDocument`, le MÊME texte qu'avant, sorti de la
+  boucle) ; les manquantes à leur place avec « Déposer » (même geste que les feuilles) ; « Autres documents » pour le reste
+  (calculé dans App : un document absent de chez Hektor ne se perd pas). « À préparer », « Signés », « Cloud » : la liste à
+  plat d'aujourd'hui. Les négociateurs (interrupteurs GED en « admin ») voient la liste d'avant ;
+- `RecuManque.css` : classes neuves `gd3-…`, couleurs de la charte.
+**Contrôles** : `test_ged_dossier_range.cjs` **16 VERT** -- `docRowActions` et la carte IDENTIQUES AU CARACTÈRE à ceux du
+commit `0022771` (lus dans git), suivi des signataires toujours monté 3 fois, fenêtres de signature inchangées, les deux
+conditions, le classic intact, le rangement (moment en cours d'abord, une pièce une fois, aucun document perdu, comptes =
+`recuManque`) ; témoin inverse (un espace ajouté dans la carte) : **2 ROUGE**. Les 15 autres essais GED verts (un « absent »
+dans un commentaire avait fait sonner 3 essais : reformulé) ; les 5 essais de la signature demandés par sa session VERTS
+(choix, état du mandat, expirée, pièces, suivi) ; `npm run build` passe. ⚠ **Pas vu à l'écran** : il faut le déploiement.

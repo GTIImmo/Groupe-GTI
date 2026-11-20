@@ -172,3 +172,147 @@ gestes, à un clic) ; « Lu par l'IA » est remplacé par les valeurs sur chaque
 « Voir et trancher » sont renommés ; la carte d'alerte liée à une fenêtre disparaît (son jugement reste, déduit).
 Maquette, côté démonstration seulement : « Rejouer l'arrivée » et le clic « Voir et ajouter » qui fait voler la valeur
 dans la case (dans l'app, ce vol suit l'enregistrement de la fenêtre).
+
+## 8. VERSION 3 (20/11) — « rehausser le niveau, c'est un peu vieux » ; la période de test retirée
+
+> *« Le niveau graphique et le design peuvent être rehaussés car c'est un peu vieux ; ensuite cette maquette doit
+> s'adapter comme le point 6 : désormais tout est corrigé directement, il faut retirer la période de test. »*
+
+Même toile, mêmes quatre écrans réécrits en place (`Main`, `Bilan`, `Depot`, `Telephone` ; les écrans 2b, 2c et 3b les
+reprennent) : https://claude.ai/artifact/VxtNCjmAVXkThs641fHX1z
+
+**Le parti pris graphique** : la charte bienvu, rien d'autre -- UNE police (Plus Jakarta Sans, celle de la charte, au lieu
+du couple Plus Jakarta / Hanken Grotesk) et UN magenta (#C5005F). Le papier beige, les coins cornés et les bandeaux
+encre sont retirés : surfaces blanches sur un fond gris froid très clair, ombres douces, rayons réguliers. Chaque document
+est une petite page blanche avec une bande de couleur par famille (vente magenta, diagnostics bleu, propriété ambre,
+fiscalité vert). Les valeurs lues sont des pastilles sur la ligne, et la feuille dépliée devient une grille « Ce que l'IA
+a lu ». Le moment en cours a un anneau de progression (3 sur 10) ; les moments finis, une coche verte.
+**L'élément fort** : « À traiter » ouvre sur un bloc magenta plein avec le NOMBRE en grand ; les cartes sous lui sont
+blanches. Une correction se lit « avant barré -> après en magenta ».
+**« Ce que dit… »** : en-tête clair ; deux choix côte à côte (« Le compromis dit » / « La transaction dit »), boutons radio,
+« sera corrigé » / « reste tel quel » ; la page du document s'ouvre D'OFFICE à la première ligne (point 2 du §5).
+
+**La période de test retirée (point 6, décision de Frédéric du 20/11)** : plus de « Vrai / Faux / Déjà su », plus de
+« Noter l'alerte ». Une alerte sans fenêtre devient un « Point d'attention » avec SES gestes (« Voir le titre »,
+« Déposer un pouvoir ») et un « Masquer » discret (« 1 point d'attention masqué, Réafficher »).
+⚠ **« Masquer » est une PROPOSITION de la maquette** : aujourd'hui, c'est le jugement qui range une alerte. Sans jugement,
+il faut un geste pour l'écarter -- à confirmer par Frédéric, et à décider : la table `app_ged_jugement` garde-t-elle ce
+« masqué », ou une autre trace ?
+
+**Restent à trancher** (§5) : 1 « À préparer » sur les documents non destinés à la signature ; 3 le bouton « Remplir la
+transaction » ; 4 « Voir et trancher » -> « Voir et corriger / Voir et ajouter » (la maquette le montre) ; 5 l'alerte en
+double d'une ligne de fenêtre (la maquette ne la montre plus). Rien n'est codé.
+
+**V3.1 (20/11, « problème de mise en page, les boutons dépassent ; as-tu ajouté des animations dynamiques ? »)** :
+- **Corrigé, vu à l'écran dans son Chrome** : les « Déposer » sortaient du cadre (une ligne `div` en `width:100%` + marges
+  intérieures, sans `box-sizing:border-box` -> 72 px de trop ; règle posée sur les quatre écrans) ; au téléphone, la liste du
+  Compromis était ÉCRASÉE à zéro de hauteur (enfant `overflow:hidden` d'une colonne flexible -> `flex-shrink:0`) ; la date du
+  DPE tronquée ; l'aperçu des 9 pages qui passait à la ligne ; « Taille : partie 2.pdf » (lu au mauvais endroit).
+- **Les animations, chacune répond à un geste ou raconte l'arrivée** (toutes coupées par `prefers-reduced-motion`) :
+  l'arrivée -- les traits des moments se tracent, les coches sautent, l'anneau du Compromis se remplit, le compteur
+  « À traiter » monte 1, 2, 3, un reflet passe sur le bloc, les cartes arrivent en cascade, un faisceau balaie la miniature
+  des pièces qui viennent d'être lues ; « Voir et ajouter » -- chaque valeur vole dans SA case l'une après l'autre, la case
+  passe au vert, la carte devient « 3 ajoutées » avec une coche tracée et le compteur descend ; « Masquer » -- la carte glisse
+  et se replie ; le dépôt -- le scan tombe dans la liste, « Séparer » pulse, les 9 pages s'écartent en 3 groupes, l'envoi
+  remplit une barre fichier après fichier, « Déposé » saute, les valeurs lues apparaissent une à une ; « Ce que dit… » --
+  les lignes arrivent en cascade, la coche du choix saute, la page tourne quand on change de ligne, « Enregistrer » passe
+  en « Envoi… » puis la coche se trace ; au survol, les cartes se soulèvent.
+- **Les écrans s'enchaînent en lecture** : « Ajouter un document » ouvre le dépôt, « Voir et corriger » ouvre « Ce que
+  dit le compromis », « Fermer » revient au dossier.
+
+⛔ **DÉCISION DE FRÉDÉRIC (20/11) : « Oui, Masquer ».** Un point d'attention s'écarte par « Masquer » (réversible :
+« 1 point d'attention masqué, Réafficher ») ; « Vrai / Faux / Déjà su » disparaît avec la période de test.
+
+## 9. LE DÉCOUPAGE PROPOSÉ POUR CODER LA V3 (20/11) — proposé, RIEN codé, attend le « vas-y » morceau par morceau
+
+**Où ranger « Masquer » (audit)** : aujourd'hui le jugement vit dans `app_ged_jugement` (journal, le plus récent par ligne
+fait foi ; lu par `loadGedJugements`, écrit par `app_ged_juger`) ; 8 jugements en tout (7 vrais, 1 faux, 2 biens, 17-19/11).
+**Proposé** : garder CE journal et lui apprendre deux verdicts, `masque` et `reaffiche` (CHECK de la table et garde de la
+fonction élargis, patch + inverse + répétition). Le dernier mot d'une ligne décide : `reaffiche` -> visible, tout autre
+(y compris les 8 anciens vrai / faux) -> masqué, comme aujourd'hui où une ligne jugée se replie. Rien d'autre ne lit la table
+(seul `requete_mesure_ged_m10` la compte).
+⚠ Ce que la V3 touche AUSSI chez les négociateurs : la fenêtre de dépôt (`ged_depot_multiple = on` depuis le 18/11). Le reste
+de la GED est derrière des interrupteurs « admin ».
+
+**Les morceaux, un à la fois** (chacun : essais hors ligne, build, puis en ligne sur son accord) :
+1. **la base de « Masquer »** -- le patch ci-dessus (petit, nécessaire au morceau 4) ;
+2. **le socle** -- une police (Plus Jakarta Sans), un magenta, les couleurs d'état, la miniature « page » par famille, les
+   pastilles ; CSS seulement, sous les classes GED existantes ;
+3. **l'onglet Documents : « la liste devient le dossier »** -- les moments (coches, anneau), les groupes dépliables, une
+   ligne par document avec ses valeurs, « Ce que l'IA a lu » dépliée, les manquantes à leur place ; le tableau anti-perte du
+   §6 vérifié geste par geste ;
+4. **« À traiter »** -- le bloc magenta et son compteur, les cartes, « Voir et corriger / Voir et ajouter », « Masquer /
+   Réafficher », l'alerte en double d'une fenêtre retirée, plus de « Vrai / Faux / Déjà su » ;
+5. **« Ce que dit… »** -- les deux choix face à face, la page ouverte d'office, « Envoi… » puis la coche ; la plaque
+   « papier » corrigée au passage ;
+6. **la fenêtre de dépôt** -- l'habit, la séparation qui écarte les pages, l'envoi fichier par fichier ;
+7. **le téléphone**.
+Les animations viennent avec chaque morceau (aucune ne bloque un geste ; `prefers-reduced-motion` les coupe).
+**Encore à trancher** : (§5.1) masquer « À préparer / À envoyer en signature » sur les documents qui ne se signent pas ;
+(§5.3) retirer le bouton « Remplir la transaction », toujours refusé.
+
+⛔ **DÉCISION DE FRÉDÉRIC (20/11) : « Masquer » vaut POUR TOUT LE MONDE sur le bien** (rangé par bien, comme le jugement
+d'aujourd'hui ; « Réafficher » le remet pour tous ; le journal garde qui et quand). Une alerte dont le texte change est une
+alerte neuve et réapparaît. Masquer n'écrit rien sur la fiche ni chez Hektor et ne corrige rien.
+
+**⚠ CORRECTION DE MA V3 (20/11, audit du morceau 2, lu dans le code)** : la charte bienvu est DÉJÀ dans l'app, en jetons
+`--bv-*` sous `:root.bv` (`src/bienvu.css`, interrupteur allumé en production depuis le 19/10). Elle dit : **titres en Plus
+Jakarta Sans, interface en Hanken Grotesk** (deux polices, pas une), encre `#222323`, fond `#f6f7f8`, vert `#2f7d59`, ambre
+`#b66a16`, rouge `#b94a48`, magenta `#c5005f`. Plus Jakarta n'est servie qu'en 400 / 600 / 800. ⛔ J'avais écrit « une police,
+celle de la charte » : c'était FAUX, et ma maquette a pris des teintes voisines au lieu de celles de la charte. Les trois
+feuilles GED (`RecuManque.css`, `DepotDocuments.css`, `BilanCompromis.css`, 642 lignes) n'utilisent aucun jeton `--bv-*` :
+couleurs en dur, déjà Plus Jakarta (titres) + Hanken (texte).
+➡ Le socle (morceau 2) doit BRANCHER la GED sur ces jetons. Reste à trancher par Frédéric : la police du texte -- la charte
+(Hanken, comme tout le reste de bienvu) ou Plus Jakarta partout dans la GED (comme la maquette, mais différente du reste).
+
+## 10. MORCEAU 3 -- AUDIT AVANT DE CODER (20/11, « Oui, enchaîne ») -- RIEN CODÉ
+
+**Ce qui existe** (code lu) : l'onglet Documents du cockpit (`ConsoleDocumentsPanel`, skin `v21`, App.tsx ~12912-13040) montre
+dans l'ordre : l'en-tête, `RecuManque` (les moments, une grille de FEUILLES par pièce attendue, « À remplir », « À regarder »,
+« La fiche du bien », la pastille « Lu par l'IA »), puis l'ANCIENNE LISTE (filtres Tous / À préparer / Signés / Cloud, une
+carte par document). Chaque carte porte `docRowActions` : Ouvrir / Ouvrir le signé / Préparer, Preuves, Relancer, Annuler,
+Signature (choix à trois Youtrust / Hektor / manuscrite, ou les anciens boutons selon les interrupteurs), Signé à la main,
+Supprimer (ou « Signé : ne se supprime pas ») ; plus `SuiviSignatairesYoutrust`, « Remplacé », la mention de dépôt chez Hektor.
+⚠ **C'est le territoire de la signature** (règle du projet : prévenir la session signature avant de toucher l'envoi des
+documents). La liste existe aussi dans le skin « classic » (fiches non cockpit) et au téléphone (morceau 7).
+
+**Le chemin proposé -- « habiller sans déplacer les gestes »** :
+- `RecuManque` rend, en plus de ce qu'il rend déjà à l'écran du bien, la CARTE « document -> moment, pièce, valeurs lues »
+  qu'il calcule déjà (classements + `recuManque` + lectures) ;
+- la liste (App.tsx) se RANGE par moment quand le filtre est « Le dossier » : groupes dépliables (le moment en cours ouvert),
+  une ligne compacte par document (pièce, 2 valeurs lues, état) ; un clic la déplie et montre ce que l'IA a lu PUIS la carte
+  d'aujourd'hui À L'IDENTIQUE (`docRowActions`, suivi des signataires, « Remplacé », mentions) -- aucune ligne du code de la
+  signature n'est modifiée, elle est seulement appelée plus bas ;
+- les pièces non trouvées se rangent dans leur groupe (« Déposer », même geste `onDeposer`), « selon le cas » et « bonne
+  pratique » en une ligne ; les documents sans pièce attendue vont dans « Autres documents » ;
+- la grille de feuilles et la pastille « Lu par l'IA » de `RecuManque` disparaissent (leur contenu est dans les lignes ; le
+  recours « garder la lecture » et « Revoir ce qu'il dit » passent dans la ligne dépliée) ;
+- les autres filtres (À préparer, Signés, Cloud) gardent la liste à plat d'aujourd'hui.
+⚠ **Ce que ça change pour l'utilisateur** : les boutons de signature et de suppression sont à UN CLIC de plus (la ligne se
+déplie) -- c'est le dessin de la V2 validé (« des boutons à déplier »), mais c'est un geste de plus pour signer.
+**Périmètre proposé** : le cockpit (`v21`) seulement ; le skin « classic » et le téléphone ne bougent pas dans ce morceau.
+
+### 10 bis. RÉ-AUDIT -- ce que le morceau 3 pourrait casser, et la parade (20/11, « audite de nouveau, tu ne dois rien casser »)
+1. **`RecuManque` est monté dans DEUX habillages** (cockpit `v21` ET fiche « classic », `{blocRecuManque}` ×2, essai
+   `test_ged_recu_manque` l. 60). Retirer sa grille de pièces et sa pastille « Lu par l'IA » les retirerait AUSSI du classic.
+   -> **Parade** : une propriété neuve `rangeEnListe`, vraie seulement au cockpit ; sans elle, `RecuManque` rend EXACTEMENT
+   ce qu'il rend aujourd'hui (classic intact).
+2. **Trois essais lisent ce code** : `test_ged_lecture` l. 128 (« Lu par l'IA : ${lus.length} », le filtre des lectures),
+   `test_ged_mesure` l. 73 (découpe entre `{alertes.map(` et `gm2-lus`), `test_ged_bilan` l. 110 (« Revoir ce qu'il dit »).
+   -> **Parade** : ces textes RESTENT (le classic les rend) ; on rejoue les 15 essais GED, sans en affaiblir aucun.
+3. **Les gestes de la signature** (`docRowActions`, `SuiviSignatairesYoutrust`, « Remplacé », mention de dépôt, fenêtres
+   Preuves / Choix / Signature / Envoi Youtrust, montées SOUS la liste). -> **Parade** : la ligne dépliée APPELLE la même
+   fonction `docRowActions(doc)` et les mêmes composants avec les mêmes propriétés ; les fenêtres restent montées au même
+   endroit ; aucune ligne de leur code n'est touchée (vérifié par un essai : le corps de `docRowActions` identique au caractère).
+4. **Le rattachement document -> pièce** se fait par le NOM (`LignePiece.documents` porte des noms) et ne couvre que le moment
+   en cours (+ les manquantes des précédents). -> **Parade** : une fonction NEUVE dans `lib/gedPieces.ts`
+   (`dossierParMoment`), sans toucher `recuManque` ; un document va dans le PREMIER moment, en partant du moment en cours, qui
+   l'attend ; sinon « Autres documents ». Deux documents de même nom vont ensemble (comme aujourd'hui dans la feuille).
+5. **Les filtres et leurs compteurs** (Tous / À préparer / Signés / Cloud) et la ligne « À préparer » du pied de cockpit
+   (App.tsx ~34655) : inchangés ; seul « Tous » devient « Le dossier » rangé ; les trois autres restent la liste à plat.
+6. **Les événements** `ged:lecture-faite`, `ged:decisions-changees`, le défilement vers `.ged-depot`, `onResultat` (contexte du
+   dépôt) : non touchés.
+7. **Les styles** `fa-ck-doc*` ne vivent que dans `fa-cockpit-v2.css` : le rangement ajoute des classes NEUVES (`gd3-…`), il ne
+   réécrit aucune règle existante.
+8. **Le téléphone et le classic** : rien ne change dans ce morceau.
+9. **Retour arrière** : le commit seul (aucune base, aucun worker) ; et la propriété `rangeEnListe` retirée = l'écran d'avant.

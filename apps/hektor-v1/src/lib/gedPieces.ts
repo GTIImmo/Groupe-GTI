@@ -170,6 +170,31 @@ export type RecuManque = {
   precedents: Array<{ moment: MomentDossier; manquantes: LignePiece[] }>
 }
 
+// ── Visuel V3, morceau 3 (20/11/2026) : LA LISTE DEVIENT LE DOSSIER. Fonction NEUVE, `recuManque` ci-dessous n'est pas
+// touchée. Les documents rangés par moment : le moment en cours d'abord, puis les précédents (du plus récent au plus
+// ancien). Une pièce n'apparaît qu'une fois (dans le premier moment qui l'attend) ; un document va avec sa pièce. Au moment
+// en cours, toutes ses lignes (reçues, non trouvées, selon le cas) ; aux moments passés, les reçues et les OBLIGATOIRES non
+// trouvées (comme `recuManque`). Ce qu'aucune pièce n'attend va dans `autres` (par nom, comme les feuilles d'aujourd'hui).
+export type GroupeDossier = { moment: MomentDossier; courant: boolean; lignes: LignePiece[]; recues: number; attendues: number }
+export function dossierParMoment(faits: FaitsDuBien, documents: DocumentDuDossier[]): { moment: MomentDossier; groupes: GroupeDossier[]; autres: string[] } {
+  const moment = momentDuDossier(faits)
+  const docs = documents.map((d) => ({ nom: d.nom, type: typeDuDocument(d) }))
+  const vues = new Set<string>()
+  const ranges = new Set<string>()
+  const groupes: GroupeDossier[] = []
+  for (const m of ORDRE.slice(0, ORDRE.indexOf(moment) + 1).reverse()) {
+    const courant = m === moment
+    const lignes = evaluer(PIECES[m], faits, docs)
+      .filter((l) => !vues.has(l.cle))
+      .filter((l) => courant || l.etat === 'recu' || (l.etat === 'non_trouve' && l.niveau === 'obligatoire'))
+    lignes.forEach((l) => { vues.add(l.cle); l.documents.forEach((n) => ranges.add(n)) })
+    const comptees = lignes.filter((l) => l.etat !== 'selon_le_cas')
+    groupes.push({ moment: m, courant, lignes, recues: comptees.filter((l) => l.etat === 'recu').length, attendues: comptees.length })
+  }
+  const autres = [...new Set(documents.map((d) => d.nom).filter((n) => !ranges.has(n)))]
+  return { moment, groupes, autres }
+}
+
 export function recuManque(faits: FaitsDuBien, documents: DocumentDuDossier[]): RecuManque {
   const moment = momentDuDossier(faits)
   const docs = documents.map((d) => ({ nom: d.nom, type: typeDuDocument(d) }))
