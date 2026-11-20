@@ -3615,3 +3615,55 @@ essais verts) ; Render et Vercel vérifiés. Dans son Chrome, trois conversation
 - Parcours d'essai `7c201a11…` laissé « en cours » (purge 30 j). Le parcours du cas 2 ne garde rien du salon.
 
 **Reste** : P4-c (services publics), P4-d (phrases libres) ; P6 (photos du bien).
+
+## 98. P4-c — LES SERVICES PUBLICS, PROPOSÉS À CONFIRMER (20/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P4-c » (dans la suite de « Vas-y, A » : P4 dans l'ordre a, b, c, d).
+
+**Ce que ça fait.** Dès que l'adresse du bien est dite (la rue ET le code postal ou la ville), l'écran demande EN
+ARRIÈRE-PLAN au serveur (`POST /assistant/parcours/{id}/publics`) ce que disent les services publics :
+- le **DPE réel** de l'ADEME → `dpe_cons`, `dpe_ges`, `dpe_date` (JJ/MM/AAAA, la forme de la fenêtre ; le worker accepte
+  aussi AAAA-MM-JJ, `normalizeOptionalFrenchDate`) — question « L'énergie », maquette E05 « C'est lui ? Oui / Un autre » ;
+- sa **surface** → `surfappart`, seulement quand le DPE est À L'ADRESSE et SEUL (sinon c'est peut-être un autre
+  logement) — « L'intérieur », maquette E03 « Oui, 118 m² / Autre » ;
+- l'**année de construction** (BDNB) → `ANNEE_CONS` — « L'énergie » ;
+- la **parcelle** (cadastre) → `surfterrain`, pour une MAISON ou un TERRAIN seulement (pour un appartement, la parcelle
+  est celle de tout l'immeuble) et seulement si le numéro de rue est trouvé — « Le dehors », maquette E04 ;
+- la **copropriété** (registre national RNIC) → `copropriete` OUI, `copropriete_nb_lot`, `copropriete_statut_syndicat`
+  (PROCEDURE_EN_COURS / PAS_DE_PROCEDURE) — appartement ou immeuble, maquette N07 « C'est elle ? Oui / Une autre ».
+
+Ce sont **les routes de l'éditeur d'avis** (`routers/geo.py` : `dpe`, `bdnb`, `cadastre`, `copro_rnie`), appelées telles
+quelles avec le jeton de la personne ; le géocodage est celui de l'écran (Géoplateforme, score ≥ 0,35). On n'envoie que
+l'adresse du bien.
+
+⛔ **Rien n'est posé en silence.** Le serveur garde des PROPOSITIONS dans `reponses._publics` (clé = adresse + type +
+surface ; une surface dite ensuite relit, pour départager les DPE d'un immeuble). La vue ne montre une proposition que si
+sa question est posée pour ce bien ET qu'aucune de ses cases n'a de réponse (ni dite, ni lue sur la fiche de visite).
+« Oui » remplit les cases DANS LA CARTE (« Repris de : ADEME, DPE. Vérifie, puis Valider ») ; « Autre » la range ; la
+personne valide toujours elle-même. Chaque proposition porte sa **prudence** quand il le faut (DPE de proximité, plusieurs
+DPE à l'adresse, copropriété trouvée sur une parcelle voisine, parcelle unique sous l'adresse).
+⛔ « Pas de DPE » (maquette E05) n'est PAS proposé : son sens n'est pas tranché (non concerné ? vierge ? pas fait ?).
+⛔ Un service en panne ne propose rien (noté dans `_publics.erreurs`) ; une adresse introuvable ne fait rien deviner.
+
+**Ce que ça pourrait casser ailleurs, et ce qui est fait contre.**
+- *Une réponse qui croise la lecture publique* (écriture conditionnelle sur `maj_le`) : la route de réponse et la lecture
+  de la fiche de visite **rejouent** leur écriture sur la ligne fraîche **si et seulement si** seul `_publics` a bougé
+  (`seul_publics_a_bouge`) ; un autre changement (un second onglet) reste refusé en 409, comme avant.
+- *La saisie en cours dans la carte* : la carte se remettait à zéro à chaque nouvelle `maj_le` ; la clé suit désormais les
+  réponses GARDÉES de la question (une lecture publique qui revient ne vide pas ce que la personne tape).
+- *Une vue plus ancienne qui arrive après une plus récente* : l'écran garde la plus récente (`maj_le`).
+- Les routes de l'éditeur d'avis ne sont pas modifiées ; la fenêtre de création non plus.
+
+**Preuves (hors ligne)** : parcours **130 verts** (+34 : la clé, la date, les 5 propositions et leurs prudences, maison /
+appartement, « Pas de DPE » absent, la vue qui cache ce qui est déjà dit, AUCUNE case posée par la route, pas de relecture
+en double, le jeton de la personne, la panne d'un service, l'adresse introuvable, la réponse rejouée et le second onglet
+refusé, la fiche croisée, l'interrupteur, chaque case dans SA question) ; gestes 415, lecteur 76, socle 31, traduction 39,
+fichiers 28, catalogue et couverture verts, build.
+**Maquette** : `notice/preuve_parcours_services_publics_propositions_2026-11-20.jpg` (l'énergie : DPE « C'est lui ? » et
+année « C'est bien ça ? ») et `notice/preuve_parcours_services_publics_2026-11-20.jpg` (après « Oui » sur le DPE et
+« Autre » sur l'année : date, conso, GES remplis, année vide) ; le dehors : « 1 245 m² au cadastre », « Oui » remplit 1245.
+
+**Non éprouvé en réel** : les vrais services sur une vraie adresse, la durée de la lecture, le croisement réponse /
+lecture. À éprouver après le push, sur une conversation neutre, sans cliquer « Créer ».
+
+**Reste** : P4-d (phrases libres) ; P6 (photos du bien).

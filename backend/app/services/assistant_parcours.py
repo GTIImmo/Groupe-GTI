@@ -43,6 +43,13 @@ CLE_SOURCES = "_sources"
 SOURCES = frozenset({"demande", "scan"})  # P4-b : « scan » = la fiche papier lue
 CLE_DOUTES = "_doutes"          # P4-b : les cases lues à moins de 75 % -> « à vérifier », leur question est reposée
 CLE_FICHE = "_fiche"            # P4-b : la fiche lue (pages, coût), les pages de l'avis gardées à part, le coffre
+# P4-c (20/11) : ce que les SERVICES PUBLICS disent du bien (DPE ADEME, base des bâtiments, cadastre, registre des
+# copropriétés), lu pour UNE adresse. ⛔ Ce sont des PROPOSITIONS : aucune case n'est posée ; l'écran demande « C'est bien
+# ça ? » dans la question concernée et la personne valide elle-même (parcours_publics.py).
+CLE_PUBLICS = "_publics"
+# Ce qui fait relire les services : l'adresse, le type (maison ou appartement ne demandent pas la même chose) et la
+# surface (elle départage les DPE d'un même immeuble).
+CASES_PUBLICS = ("adresse_haut", "cp", "ville", "type", "surfappart")
 # ⛔ règle du 18/11 : les coordonnées d'un nouveau mandant vivent à part (assistant_prive), jamais dans les réponses.
 COORDONNEES = frozenset({"civilite", "nom", "prenom", "email", "telephone", "mandant_email", "mandant_telephone"})
 MANDANT_CHOIX = frozenset({"", "existant", "nouveau"})
@@ -237,8 +244,44 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
         # P4-b : les cases à vérifier, la fiche lue (sans ses coordonnées : elles sont au coffre)
         "doutes": dict(reponses.get(CLE_DOUTES) or {}),
         "fiche": dict(reponses.get(CLE_FICHE) or {}) or None,
+        # P4-c : les propositions des services publics encore utiles (question posée, rien encore dit sur ces cases)
+        "publics": publics_vue(reponses, annee),
         "fin": q is None,
     }
+
+
+def cle_publics(reponses: dict[str, Any]) -> str | None:
+    """P4-c : la clé d'une lecture des services publics, ou None si l'adresse ne suffit pas (la rue ET le code postal
+    ou la ville : une ville seule placerait le point au centre de la commune, le DPE et la parcelle seraient d'un autre)."""
+    valeurs = {c: str(reponses.get(c) or "").strip() for c in CASES_PUBLICS}
+    if not valeurs["adresse_haut"] or not (valeurs["cp"] or valeurs["ville"]):
+        return None
+    return "|".join(" ".join(valeurs[c].lower().split()) for c in CASES_PUBLICS)
+
+
+def publics_vue(reponses: dict[str, Any], annee: int) -> dict[str, Any]:
+    """Ce que l'écran reçoit des services publics : faut-il (re)lire, et les propositions encore utiles. Une proposition
+    ne se montre que si sa question est posée pour ce bien et qu'AUCUNE de ses cases n'a de réponse : elle ne remplace
+    jamais ce que la personne a dit (ni la fiche de visite)."""
+    cle = cle_publics(reponses)
+    gardee = reponses.get(CLE_PUBLICS) if isinstance(reponses.get(CLE_PUBLICS), dict) else {}
+    posees = {q["id"] for q in questions_posees(reponses, annee)}
+    utiles = []
+    for p in gardee.get("propositions") or []:
+        cases = p.get("cases") or {}
+        if p.get("question") in posees and cases and all(reponses.get(c) in (None, "", []) for c in cases):
+            utiles.append(p)
+    return {"possible": cle is not None, "a_jour": cle is not None and gardee.get("cle") == cle,
+            "le": gardee.get("le"), "propositions": utiles}
+
+
+def seul_publics_a_bouge(avant: dict[str, Any], apres: dict[str, Any]) -> bool:
+    """P4-c : entre la lecture et l'écriture d'une réponse, seule la lecture des services publics (lancée par l'écran en
+    arrière-plan) a écrit. Alors la réponse se rejoue sur la ligne fraîche sans rien écraser ; un AUTRE changement (un
+    second onglet) reste refusé, comme avant."""
+    a = {k: v for k, v in (avant or {}).items() if k != CLE_PUBLICS}
+    b = {k: v for k, v in (apres or {}).items() if k != CLE_PUBLICS}
+    return a == b
 
 
 class ParcoursStore:

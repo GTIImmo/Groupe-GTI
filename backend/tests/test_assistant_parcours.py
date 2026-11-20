@@ -447,6 +447,183 @@ rf3 = appeler(route.parcours_lire_fiche, p0, route.ParcoursFichePayload(fichiers
 voir(rf3[0] == 400 and "pas pu être lue" in rf3[1], "une fiche illisible : refusée avec la phrase, rien n'est écrit")
 interrupteur["valeur"] = "on"
 
+print("6 sexies) P4-c : les services publics, PROPOSÉS à confirmer, jamais posés")
+from app.services import parcours_publics as pub  # noqa: E402
+from app.routers import geo  # noqa: E402
+
+voir(moteur.cle_publics({"ville": "Firminy"}) is None and moteur.cle_publics({"adresse_haut": "3 rue Haute"}) is None,
+     "une ville seule, ou une rue sans code postal ni ville : pas de lecture (le point serait faux)")
+voir(moteur.cle_publics({"adresse_haut": " 3  rue Haute", "cp": "42700"}) == moteur.cle_publics({"adresse_haut": "3 rue haute", "cp": "42700 "}),
+     "la clé ne bouge pas pour une espace ou une majuscule")
+voir(moteur.cle_publics({"adresse_haut": "3 rue Haute", "cp": "42700"}) != moteur.cle_publics({"adresse_haut": "3 rue Haute", "cp": "42700", "surfappart": "64"}),
+     "la surface change la clé : elle départage les DPE d'un immeuble, on relit")
+voir(pub.date_fr("2023-03-14") == "14/03/2023" and pub.date_fr("0000-00-00") is None and pub.date_fr("") is None,
+     "la date du DPE dans la forme de la fenêtre (JJ/MM/AAAA), jamais une date vide")
+DPE = {"ok": True, "found": True, "matched_by": "adresse", "nb_adresse": 1, "etiquette_dpe": "D", "etiquette_ges": "C",
+       "date": "2023-03-14", "conso_ep_m2": 182.4, "ges_emission": 31.6, "surface": 118.0}
+BDNB = {"ok": True, "found": True, "annee_construction": 1974}
+CAD = {"ok": True, "found": True, "parcelles": [{"reference": "AB 123", "idu": "421000000AB0123", "contenance": 1245}],
+       "contenance_totale": 1245}
+COPRO = {"ok": True, "found": True, "match": "parcelle", "nb_lots": 24, "syndic_nom": "Foncia", "procedure": False}
+ps = {p["id"]: p for p in pub.propositions({"dpe": DPE, "bdnb": BDNB, "cadastre": CAD, "copro": COPRO}, "house", 2026, True)}
+voir(ps["dpe"]["cases"] == {"dpe_cons": "182", "dpe_ges": "32", "dpe_date": "14/03/2023"} and ps["dpe"]["question"] == "energie"
+     and ps["dpe"]["phrase"].startswith("DPE D · GES C du 14/03/2023, 182 kWh/m²/an") and ps["dpe"]["non"] == "Un autre",
+     "le DPE (maquette E05) : D, C, la date, 182 kWh -- « C'est lui ? Oui / Un autre »")
+voir(ps["surface"]["cases"] == {"surfappart": "118"} and ps["surface"]["oui"] == "Oui, 118 m²" and ps["surface"]["question"] == "interieur",
+     "la surface du DPE (maquette E03) : « Oui, 118 m² / Autre », dans l'intérieur")
+voir(ps["annee"]["cases"] == {"ANNEE_CONS": "1974"} and ps["terrain"]["cases"] == {"surfterrain": "1245"}
+     and "parcelle AB 123" in ps["terrain"]["phrase"] and ps["terrain"]["question"] == "dehors",
+     "l'année (BDNB) et la parcelle (cadastre, maquette E04) pour une maison")
+voir("copro" not in ps, "une maison : pas de copropriété proposée")
+voir(not any("non_concerne" in c or "vierge" in c for p in ps.values() for c in p["cases"]),
+     "« Pas de DPE » n'est pas proposé : son sens n'est pas tranché")
+pa = {p["id"]: p for p in pub.propositions({"dpe": DPE, "bdnb": BDNB, "cadastre": CAD, "copro": COPRO}, "apartment", 2026, True)}
+voir("terrain" not in pa and pa["copro"]["cases"] == {"copropriete": "OUI", "copropriete_statut_syndicat": "PAS_DE_PROCEDURE",
+     "copropriete_nb_lot": "24"} and pa["copro"]["phrase"] == "Copropriété de 24 lots, syndic Foncia, pas de procédure."
+     and pa["copro"]["non"] == "Une autre", "un appartement (maquette N07) : la copropriété, et PAS la parcelle de tout l'immeuble")
+pp = {p["id"]: p for p in pub.propositions({"copro": {**COPRO, "procedure": True, "match": "adresse"}}, "apartment", 2026, True)}
+voir(pp["copro"]["cases"]["copropriete_statut_syndicat"] == "PROCEDURE_EN_COURS" and "voisine" in pp["copro"]["prudence"],
+     "une procédure en cours ; trouvée sur une parcelle voisine : la prudence le dit")
+voir(all(c in moteur.PAR_ID[p["question"]]["champs"] for p in [*ps.values(), *pa.values()] for c in p["cases"]),
+     "chaque case proposée appartient à SA question (sinon « Valider » la refuserait)")
+p2 = {p["id"]: p for p in pub.propositions({"dpe": {**DPE, "nb_adresse": 3}}, "apartment", 2026, True)}
+voir("surface" not in p2 and "3 DPE à cette adresse" in p2["dpe"]["prudence"] and "pas forcément" in p2["dpe"]["prudence"],
+     "3 DPE à l'adresse, surface inconnue : le DPE avec sa prudence, et PAS sa surface (peut-être un autre logement)")
+p3 = {p["id"]: p for p in pub.propositions({"dpe": {**DPE, "matched_by": "proximite"}, "cadastre": CAD}, "house", 2026, False)}
+voir("surface" not in p3 and "voisin" in p3["dpe"]["prudence"] and "terrain" not in p3,
+     "un DPE de proximité : prudence, pas de surface ; une adresse approchée : pas de parcelle")
+voir(pub.propositions({"dpe": {"found": False}, "bdnb": {"found": True, "annee_construction": 2031}}, "house", 2026, True) == [],
+     "rien de trouvé, ou une année impossible : aucune proposition")
+
+# la vue : seulement les propositions utiles
+garde = {"cle": moteur.cle_publics({"type": MAISON, "adresse_haut": "3 rue Haute", "cp": "42700"}), "le": "x",
+         "propositions": list(ps.values())}
+rv = {"type": MAISON, "adresse_haut": "3 rue Haute", "cp": "42700", "ANNEE_CONS": "1980", "_publics": garde}
+pv = moteur.publics_vue(rv, ANNEE)
+voir(pv["possible"] and pv["a_jour"] and {p["id"] for p in pv["propositions"]} == {"dpe", "surface", "terrain"},
+     "l'année est déjà DITE (1980) : la proposition 1974 ne se montre pas -- une réponse n'est jamais remplacée")
+voir(not moteur.publics_vue({**rv, "surfappart": "120"}, ANNEE)["a_jour"], "la surface dite ensuite : la lecture n'est plus à jour")
+voir("copro" not in {p["id"] for p in moteur.publics_vue({**rv, "_publics": {**garde, "propositions": list(pa.values())}}, ANNEE)["propositions"]},
+     "une proposition dont la question n'est pas posée (copropriété d'une maison) ne se montre pas")
+voir(moteur.seul_publics_a_bouge({"a": 1}, {"a": 1, "_publics": {}}) and not moteur.seul_publics_a_bouge({"a": 1}, {"a": 2}),
+     "« seule la lecture publique a bougé » se reconnaît ; un autre changement non")
+
+# la route, services publics simulés
+vus = {"geo": [], "jetons": set()}
+
+
+def faux_geo(nom, rendu):
+    def f(**kw):
+        vus["geo"].append(nom)
+        vus["jetons"].add(kw.get("authorization"))
+        if isinstance(rendu, Exception):
+            raise rendu
+        return rendu
+    return f
+
+
+geo.dpe, geo.bdnb, geo.cadastre, geo.copro_rnie = (faux_geo("dpe", DPE), faux_geo("bdnb", BDNB), faux_geo("cadastre", CAD),
+                                                   faux_geo("copro", COPRO))
+pub.geocoder = lambda rue, cp, ville: {"lat": 45.38, "lon": 4.28, "label": "3 Rue Haute 42700 Firminy", "score": 0.9, "precis": True}
+interrupteur["valeur"] = "admin"
+table.clear()
+r0 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST, role="admin")
+p0 = r0["parcours"]["id"]
+r = appeler(route.parcours_services_publics, p0, "Bearer j", Settings(), None, S, ST, role="admin")
+voir(r[0] == 400 and "adresse" in r[1] and not vus["geo"], "sans adresse : refusé, aucun service appelé")
+appeler(route.parcours_repondre, p0, route.ParcoursReponsePayload(question="bien", geste="repondre",
+        valeurs={"type": MAISON, "adresse_haut": "3 rue Haute", "cp": "42700", "ville": "Firminy"}), "Bearer j", Settings(), None, S, ST, role="admin")
+avant = {k: v for k, v in table[p0]["reponses"].items()}
+r = appeler(route.parcours_services_publics, p0, "Bearer j", Settings(), None, S, ST, role="admin")
+apres = table[p0]["reponses"]
+voir(r["ok"] and sorted(vus["geo"]) == ["bdnb", "cadastre", "dpe"] and vus["jetons"] == {"Bearer j"},
+     "une maison : DPE, année, cadastre -- avec le jeton de la personne ; pas le registre des copropriétés")
+voir({k: v for k, v in apres.items() if k != "_publics"} == avant and "dpe_cons" not in apres and "surfterrain" not in apres,
+     "⛔ AUCUNE case posée : seules les propositions sont gardées (`_publics`)")
+pr = r["parcours"]["publics"]
+voir(pr["a_jour"] and {p["id"] for p in pr["propositions"]} == {"dpe", "surface", "annee", "terrain"},
+     "la vue rend les 4 propositions, à jour pour cette adresse")
+n = len(vus["geo"])
+r = appeler(route.parcours_services_publics, p0, "Bearer j", Settings(), None, S, ST, role="admin")
+voir(r["ok"] and len(vus["geo"]) == n, "redemandé pour la même adresse : rien n'est relu (pas d'appel en double)")
+r = appeler(route.parcours_services_publics, p0, "Bearer j", Settings(), None, S, ST, uid=AUTRE_UID, role="admin")
+voir(r[0] == 404, "le parcours d'un AUTRE : introuvable, même pour l'admin")
+# une réponse qui croise la lecture publique : rejouée, pas refusée ; un second onglet : toujours refusé
+lu_avant = json.loads(json.dumps(table[p0]))
+table[p0]["reponses"] = {**table[p0]["reponses"], "_publics": {**table[p0]["reponses"]["_publics"], "le": "plus tard"}}
+table[p0]["maj_le"] = "t" + str(int(table[p0]["maj_le"][1:]) + 1)
+orig = ST.lire_service
+premiere = {"faite": False}
+
+
+def lecture_perimee(i):
+    if not premiere["faite"]:
+        premiere["faite"] = True
+        return json.loads(json.dumps(lu_avant))
+    return orig(i)
+
+
+ST.lire_service = lecture_perimee
+r = appeler(route.parcours_repondre, p0, route.ParcoursReponsePayload(question="quartier", geste="nsp"), "Bearer j",
+            Settings(), None, S, ST, role="admin")
+ST.lire_service = orig
+voir(r["ok"] and table[p0]["reponses"]["_questions"].get("quartier") == "nsp" and table[p0]["reponses"]["_publics"]["le"] == "plus tard",
+     "la lecture publique a écrit pendant une réponse : la réponse est REJOUÉE, rien n'est écrasé")
+lu_avant = json.loads(json.dumps(table[p0]))
+table[p0]["reponses"] = {**table[p0]["reponses"], "ville": "Saint-Étienne"}
+table[p0]["maj_le"] = "t" + str(int(table[p0]["maj_le"][1:]) + 1)
+premiere["faite"] = False
+ST.lire_service = lecture_perimee
+r = appeler(route.parcours_repondre, p0, route.ParcoursReponsePayload(question="confort", geste="nsp"), "Bearer j",
+            Settings(), None, S, ST, role="admin")
+ST.lire_service = orig
+voir(r[0] == 409 and table[p0]["reponses"]["ville"] == "Saint-Étienne", "un AUTRE changement (second onglet) : toujours refusé, 409")
+# un appartement : la copropriété, après le cadastre (sa parcelle sert de repère) ; un service en panne ne fait rien tomber
+table.clear()
+vus["geo"].clear()
+geo.bdnb = faux_geo("bdnb", RuntimeError("BDNB en panne"))
+r0 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST, role="admin")
+p1 = r0["parcours"]["id"]
+appeler(route.parcours_repondre, p1, route.ParcoursReponsePayload(question="bien", geste="repondre",
+        valeurs={"type": APPARTEMENT, "adresse_haut": "8 place du Marché", "ville": "Firminy"}), "Bearer j", Settings(), None, S, ST, role="admin")
+r = appeler(route.parcours_services_publics, p1, "Bearer j", Settings(), None, S, ST, role="admin")
+g = table[p1]["reponses"]["_publics"]
+voir(r["ok"] and "copro" in vus["geo"] and vus["geo"].index("copro") > vus["geo"].index("cadastre")
+     and {p["id"] for p in r["parcours"]["publics"]["propositions"]} == {"dpe", "surface", "copro"},
+     "un appartement : DPE et copropriété proposés, la parcelle de l'immeuble NON")
+voir(g["erreurs"] == ["bdnb"] and "annee" not in {p["id"] for p in g["propositions"]},
+     "la base des bâtiments en panne : notée, pas d'année proposée, le reste est là")
+# une adresse introuvable : rien de deviné
+table.clear()
+vus["geo"].clear()
+pub.geocoder = lambda rue, cp, ville: None
+r0 = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST, role="admin")
+p2 = r0["parcours"]["id"]
+appeler(route.parcours_repondre, p2, route.ParcoursReponsePayload(question="bien", geste="repondre",
+        valeurs={"type": MAISON, "adresse_haut": "lieu-dit inconnu", "cp": "42700"}), "Bearer j", Settings(), None, S, ST, role="admin")
+r = appeler(route.parcours_services_publics, p2, "Bearer j", Settings(), None, S, ST, role="admin")
+voir(r["ok"] and not vus["geo"] and table[p2]["reponses"]["_publics"]["introuvable"] is True and r["parcours"]["publics"]["a_jour"]
+     and r["parcours"]["publics"]["propositions"] == [], "une adresse introuvable : aucun service, aucune proposition, et pas de relecture en boucle")
+# la fiche de visite (~30 s) croisée par la lecture publique : appliquée sur la ligne fraîche, le scan payé n'est pas perdu
+ges.OpenAIListingSheetService.extract = lambda self, p: json.loads(json.dumps(FICHE))
+perimee = json.loads(json.dumps(table[p2]))
+table[p2]["reponses"] = {**table[p2]["reponses"], "_publics": {**table[p2]["reponses"]["_publics"], "le": "pendant la fiche"}}
+table[p2]["maj_le"] = "t" + str(int(table[p2]["maj_le"][1:]) + 1)
+ecrite = ges.lire_fiche_du_parcours(ctx, perimee, "c1")
+voir(ecrite and table[p2]["reponses"]["surfappart"] == "64" and table[p2]["reponses"]["_publics"]["le"] == "pendant la fiche",
+     "la fiche lue pendant une lecture publique : appliquée sur la ligne fraîche, les deux gardés")
+perimee = json.loads(json.dumps(table[p2]))
+table[p2]["reponses"] = {**table[p2]["reponses"], "cp": "42000"}
+table[p2]["maj_le"] = "t" + str(int(table[p2]["maj_le"][1:]) + 1)
+voir(ges.lire_fiche_du_parcours(ctx, perimee, "c1") is None and table[p2]["reponses"]["cp"] == "42000",
+     "la fiche croisée par un AUTRE changement : refusée comme avant, rien n'est écrasé")
+interrupteur["valeur"] = ""
+r = appeler(route.parcours_services_publics, p2, "Bearer j", Settings(), None, S, ST, role="admin")
+voir(r[0] == 403, "interrupteur absent : refusé")
+interrupteur["valeur"] = "on"
+voir(json.dumps(pub.SOURCE_ADEME) and "openai" not in open(pub.__file__, encoding="utf-8").read().lower(),
+     "le module des services publics ne connaît pas OpenAI")
+
 print("7) aucun appel au modèle")
 src = open(moteur.__file__, encoding="utf-8").read()
 voir("openai" not in src.lower().replace("ne connaît pas openai", ""), "le moteur ne connaît pas OpenAI")

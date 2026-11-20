@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from ..auth import get_authenticated_user, require_request_user
 from ..services import assistant_fichiers as fichiers_service
 from ..services import assistant_parcours as parcours_moteur
+from ..services import parcours_publics
 from ..services.assistant_catalogue import ContexteAssistant, Refus
 from ..services.assistant_gestes import GESTES, lire_fiche_du_parcours
 from ..services.assistant_service import AGENT_KEY, MAX_QUESTION_CARACTERES, AssistantService
@@ -541,6 +542,16 @@ def parcours_repondre(
     prochaine = parcours_moteur.suivante(reponses, annee)
     ecrite = store.ecrire_reponses(ligne, reponses, prochaine["id"] if prochaine else None)
     if not ecrite:
+        # P4-c (20/11) : si SEULE la lecture des services publics (arrière-plan) a écrit entre-temps, la réponse se rejoue
+        #   sur la ligne fraîche -- rien n'est écrasé. Tout autre changement (un second onglet) reste refusé.
+        fraiche = store.lire_service(parcours_id)
+        if fraiche and fraiche.get("etat") == "en_cours" and fraiche.get("app_dossier_id") is None \
+                and parcours_moteur.seul_publics_a_bouge(ligne.get("reponses") or {}, fraiche.get("reponses") or {}):
+            reponses = parcours_moteur.enregistrer(dict(fraiche.get("reponses") or {}), payload.question,
+                                                   payload.valeurs, payload.geste)
+            prochaine = parcours_moteur.suivante(reponses, annee)
+            ecrite = store.ecrire_reponses(fraiche, reponses, prochaine["id"] if prochaine else None)
+    if not ecrite:
         raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
     return {"ok": True, "parcours": parcours_moteur.vue(ecrite, annee)}
 
@@ -597,6 +608,49 @@ def parcours_lire_fiche(
     if not ecrite:
         raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
     return {"ok": True, "parcours": parcours_moteur.vue(ecrite)}
+
+
+@router.post("/parcours/{parcours_id}/publics")
+def parcours_services_publics(
+    parcours_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P4-c (20/11) : l'adresse est dite -> le DPE (ADEME), l'année (BDNB), la parcelle (cadastre), la copropriété (RNIC),
+    #   lus par les routes de l'éditeur d'avis avec le jeton de la personne. ⛔ Gardés comme PROPOSITIONS (`_publics`) :
+    #   aucune case n'est posée ; la question concernée demande « C'est bien ça ? » (parcours_publics.py).
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
+        raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    annee = parcours_moteur.annee_a_paris()
+    reponses = dict(ligne.get("reponses") or {})
+    cle = parcours_moteur.cle_publics(reponses)
+    if cle is None:
+        raise HTTPException(status_code=400, detail="L'adresse du bien n'est pas encore dite.")
+    deja = reponses.get(parcours_moteur.CLE_PUBLICS)
+    if isinstance(deja, dict) and deja.get("cle") == cle:
+        return {"ok": True, "parcours": parcours_moteur.vue(ligne, annee)}  # déjà lu pour cette adresse : rien à refaire
+    garde = parcours_publics.lire(reponses, authorization or "", settings, annee)
+    # Pendant la lecture (quelques secondes) la personne a pu répondre : on relit, on ne pose QUE `_publics`, et on
+    # recommence si quelqu'un écrit entre les deux (jamais une réponse écrasée).
+    for _ in range(3):
+        fraiche = store.lire_service(parcours_id)
+        if not fraiche or fraiche.get("etat") != "en_cours" or fraiche.get("app_dossier_id") is not None:
+            raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+        nouvelles = {**dict(fraiche.get("reponses") or {}), parcours_moteur.CLE_PUBLICS: garde}
+        ecrite = store.ecrire_reponses(fraiche, nouvelles, fraiche.get("etape"))
+        if ecrite:
+            return {"ok": True, "parcours": parcours_moteur.vue(ecrite, annee)}
+    raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
 
 
 class ParcoursCreePayload(BaseModel):

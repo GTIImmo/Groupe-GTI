@@ -301,6 +301,15 @@ a.asi-obj { text-decoration: none; }
 .asp-fiche { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 9px 12px; border-radius: 12px; background: #eef6f6; color: var(--asi-canard); font-size: 13px; line-height: 1.4; }
 .asp-fiche .asp-sec { margin-left: auto; }
 .asp-fiche-ko { flex-basis: 100%; color: var(--asi-ko); }
+/* P4-c (20/11) : une proposition d'un service public, « C'est bien ça ? Oui / Autre » (maquette E03, E04, E05, N07) */
+.asp-prop { display: grid; gap: 6px; padding: 9px 12px; border-radius: 12px; background: #eef6f6; color: var(--asi-canard); font-size: 13px; line-height: 1.4; }
+.asp-prop p { margin: 0; }
+.asp-prop-src { color: var(--asi-mute); }
+.asp-prop-pru { display: block; margin-top: 2px; font-size: 12px; color: var(--asi-mute); }
+.asp-prop-q { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.asp-prop-q > span { margin-right: auto; font-weight: 600; }
+.asp-prop-oui { border-color: var(--asi-canard); color: var(--asi-canard); font-weight: 600; }
+.asp-prop-repris { color: var(--asi-canard); }
 /* l'entrée provisoire du parcours (admin, tant que l'interrupteur est sur « admin » ; remplacée à P4) */
 .asp-entree { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12.5px; color: var(--asi-mute); }
 @media (max-width: 720px) {

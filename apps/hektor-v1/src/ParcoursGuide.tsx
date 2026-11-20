@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  RefusAssistant, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, repondreParcours,
-  type CaseParcours, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type QuestionParcours,
+  RefusAssistant, chercherPublicsParcours, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, repondreParcours,
+  type CaseParcours, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type PropositionPublique, type QuestionParcours,
 } from './lib/assistant'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,7 +16,9 @@ import {
 type Valeurs = Record<string, unknown>
 type Piece = { idTypePiece: string; typeLabel: string; surfacePiece: string; etagePiece: string; detailPiece: string }
 
-const PILULES_MAX = 12   // au-delà, une liste se choisit dans un menu (les 29 types de bien, les agences…)
+// P4-c : les questions où un service public peut proposer quelque chose (l'intérieur, le dehors, l'énergie, la copropriété)
+const QUESTIONS_PUBLIQUES = new Set(['interieur', 'dehors', 'energie', 'copropriete'])
+const PILULES_MAX = 12  // au-delà, une liste se choisit dans un menu (les 29 types de bien, les agences…)
 const OUI = new Set(['OUI', '1'])
 
 const Coche = () => (
@@ -305,10 +307,33 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
       setFiche({ etat: 'repos', erreur: e instanceof Error ? e.message : "La fiche n'a pas pu être lue." })
     }
   }
-  const cleQuestion = `${vue.id}:${q?.id ?? 'fin'}:${vue.maj_le ?? ''}`
+  // P4-c : l'adresse dite -> les services publics sont lus EN ARRIÈRE-PLAN (DPE, année, parcelle, copropriété) ; une fois
+  //   par adresse (la clé dit l'adresse, le type et la surface). Rien n'est posé : ce sont des propositions.
+  const [publicsEnCours, setPublicsEnCours] = useState(false)
+  const publicsDemandes = useRef(new Set<string>())
+  const clePublics = ['adresse_haut', 'cp', 'ville', 'type', 'surfappart'].map((c) => texte(vue.reponses[c]).trim().toLowerCase()).join('|')
+  const enCoursPublics = vue.etat === 'en_cours' && vue.app_dossier_id == null
+  useEffect(() => {
+    if (!enCoursPublics || !vue.publics?.possible || vue.publics.a_jour) return
+    const cle = `${vue.id}|${clePublics}`
+    if (publicsDemandes.current.has(cle)) return
+    publicsDemandes.current.add(cle)
+    setPublicsEnCours(true)
+    // une panne ne dérange pas la personne : on ne propose rien, c'est tout
+    chercherPublicsParcours(vue.id).then(onVue, () => undefined).finally(() => setPublicsEnCours(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vue.id, clePublics, vue.publics?.possible, vue.publics?.a_jour, enCoursPublics])
+  // « Oui » remplit les cases de la carte ; « Autre » range la proposition. La personne valide toujours elle-même.
+  const [ecartees, setEcartees] = useState<Set<string>>(() => new Set())
+  const [reprises, setReprises] = useState<Record<string, string>>({})  // proposition reprise -> sa source (dite sous la carte)
+
+  // P4-c : la clé suit les réponses GARDÉES de la question (et plus `maj_le`) : la lecture publique qui revient pendant
+  //   que la personne tape ne vide pas sa saisie ; une réponse, une fiche lue, une autre question la renouvellent.
+  const cleQuestion = `${vue.id}:${q?.id ?? 'fin'}:${q ? JSON.stringify(q.champs.map((c) => vue.reponses[c] ?? null)) : ''}`
   useEffect(() => {
     setValeurs(q ? valeursDe(q, vue.reponses) : {})
     setErreur(null)
+    setReprises({})
   // la question affichée (ou ce qu'en dit le serveur) a changé : on repart de ses réponses gardées
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleQuestion])
@@ -379,12 +404,31 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
     const cases = q.champs.map((c) => cat.cases[c]).filter((c) => montree(c, valeurs))
       .map((c) => (vue.doutes?.[c.nom] != null ? { ...c, libelle: `${c.libelle} · à vérifier` } : c))
     if (!cases.length) return <p className="asp-note">Rien à demander ici pour ce type de bien.</p>
+    // P4-c : les propositions des services publics pour CETTE question (maquette E03, E04, E05, N07)
+    const proposees = (vue.publics?.propositions ?? []).filter((p) => p.question === q.id && !ecartees.has(p.id) && !(p.id in reprises))
+    const reprendre = (p: PropositionPublique) => {
+      setValeurs((avant) => ({ ...avant, ...p.cases }))
+      setReprises((avant) => ({ ...avant, [p.id]: p.source }))
+    }
     const aCocher = q.forme === 'cocher' ? cases.filter((c) => estACocher(c)) : []
     const compteurs = q.forme === 'compteurs' ? cases.filter((c) => c.genre === 'nombre' && c.entier) : []
     const listes = cases.filter((c) => c.genre === 'liste' && !aCocher.includes(c))
     const saisies = cases.filter((c) => c.genre !== 'liste' && !compteurs.includes(c))
     return (
       <>
+        {proposees.map((p) => (
+          <div key={p.id} className="asp-prop" role="group" aria-label={`Proposition : ${p.source}`}>
+            <p><b>{p.phrase}</b> <span className="asp-prop-src">({p.source})</span>{p.prudence ? <span className="asp-prop-pru">{p.prudence}</span> : null}</p>
+            <div className="asp-prop-q">
+              <span>{p.demande}</span>
+              <button type="button" className="asp-sec asp-prop-oui" onClick={() => reprendre(p)}>{p.oui}</button>
+              <button type="button" className="asp-sec" onClick={() => setEcartees((avant) => new Set(avant).add(p.id))}>{p.non}</button>
+            </div>
+          </div>
+        ))}
+        {Object.keys(reprises).length ? (
+          <p className="asp-note asp-prop-repris">Repris de : {[...new Set(Object.values(reprises))].join(', ')}. Vérifie, puis « Valider ».</p>
+        ) : null}
         {aCocher.length ? (
           <div className="asp-choix" role="group" aria-label="À cocher">
             {aCocher.map((c) => {
@@ -458,6 +502,7 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           </header>
           <div className="asp-qb">
             <p className="asp-phrase">{q.phrase}</p>
+            {publicsEnCours && QUESTIONS_PUBLIQUES.has(q.id) ? <p className="asp-note">Je regarde le DPE, le cadastre et les registres publics pour cette adresse…</p> : null}
             {corpsQuestion()}
           </div>
           {erreur ? <div className="asp-ko" role="alert">{erreur}</div> : null}

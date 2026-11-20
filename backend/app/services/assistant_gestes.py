@@ -2531,7 +2531,17 @@ def lire_fiche_du_parcours(ctx: ContexteAssistant, ligne: dict[str, Any], fichie
     if lecture["coordonnees"] and _deposer_au_coffre(ctx, str(ligne["id"]), lecture["coordonnees"]):
         nouvelles[parcours_moteur.CLE_FICHE]["coffre"] = True
     prochaine = parcours_moteur.suivante(nouvelles, annee)
-    return parcours_moteur.ParcoursStore(ctx.settings).ecrire_reponses(ligne, nouvelles, prochaine["id"] if prochaine else None)
+    store = parcours_moteur.ParcoursStore(ctx.settings)
+    ecrite = store.ecrire_reponses(ligne, nouvelles, prochaine["id"] if prochaine else None)
+    if ecrite is None:
+        # P4-c (20/11) : la lecture dure ~30 s ; si SEULE la lecture des services publics a écrit entre-temps, la fiche
+        #   s'applique sur la ligne fraîche (le scan payé n'est pas perdu). Tout autre changement reste refusé.
+        fraiche = store.lire_service(str(ligne["id"]))
+        if fraiche and fraiche.get("etat") == "en_cours" and fraiche.get("app_dossier_id") is None \
+                and parcours_moteur.seul_publics_a_bouge(ligne.get("reponses") or {}, fraiche.get("reponses") or {}):
+            nouvelles = {**nouvelles, parcours_moteur.CLE_PUBLICS: (fraiche.get("reponses") or {}).get(parcours_moteur.CLE_PUBLICS)}
+            ecrite = store.ecrire_reponses(fraiche, nouvelles, prochaine["id"] if prochaine else None)
+    return ecrite
 
 
 def preparer_parcours_creation(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:

@@ -1134,7 +1134,9 @@ export default function AccueilAssistant(props: {
             <div key={p.id} className="asi-ai">
               <span className="asi-mk"><Sceau /></span>
               <div className="asi-ai-b">
-                <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id ? v : x)))}
+                <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id
+                  // P4-c : la lecture des services publics revient en arrière-plan -- une vue plus ANCIENNE ne remplace pas la plus récente
+                  && !(x.maj_le && v.maj_le && v.maj_le < x.maj_le) ? v : x)))}
                   onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} ficheOuverte={Boolean(trombone?.ouvert)} />
               </div>
             </div>
