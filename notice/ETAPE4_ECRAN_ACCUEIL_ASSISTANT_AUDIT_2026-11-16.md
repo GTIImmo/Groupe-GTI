@@ -3938,3 +3938,26 @@ dans l'ordre).
 photos du bien jointes à la demande dans `photos_du_bien`.
 
 **Reste** : P5 (listes du rapport et de l'envoi), P7 (documents, voie A), P8, et l'épreuve case par case.
+
+### 100.1 POUSSÉ (59433ee, avec la fusion de 17 commits GED) ET ÉPROUVÉ EN RÉEL (20/11, 19:01-19:06, heure de Paris) — VERT, sauf la vignette (corrigée, non poussée)
+
+**Ses mots** : « Pousse et essai ». Avant le push : 17 commits de la session GED sur main (Masquer posé en base, visuel
+V3, dossier rangé par moment) ; un seul fichier commun (`App.tsx`) ; fusion locale SANS conflit ; build, mes essais et
+les deux essais GED (`test_ged_socle` 16, `test_ged_dossier_range` 17) verts après fusion. Render et Vercel vérifiés.
+Dans son Chrome, une conversation NEUVE, `salon.jpg` (photo du salon, dossier d'essai) jointe au trombone :
+« Nouvelle estimation d'essai par questions : une maison au 12 rue des Tilleuls 42700 Firminy. Je joins une photo du
+bien (le salon) pour la galerie. » Parcours `25978be6…` laissé « en cours » (purge 30 j) ; jamais « Créer ».
+- ⭐ L'IA a passé la photo par `photos_du_bien` : la carte dit « La photo du bien ira à l'étape Photos de la fenêtre
+  (jamais lue) » et l'IA « la photo du salon ira à l'étape Photos ».
+- La question « Les photos » montrait « 1 photo jointe · la 1re en couverture » — ⚠ MAIS SA VIGNETTE VIDE (voir plus bas).
+- « Valider », puis « Ouvrir la fenêtre remplie » : à l'étape 2, **« 1 photo(s) préparée(s) » : salon.jpg, 499 Ko,
+  Visible** (la vraie image). Preuve : `notice/preuve_parcours_photo_du_bien_reel_2026-11-20.jpg`. La fenêtre est laissée
+  ouverte, rien cliqué (fermer avec une photo demande une confirmation).
+- En base : `photos = [{id: f98fd72c…, visible: true}]`, source « demande », question « faite » ; AUCUNE fiche lue (le
+  salon n'est jamais passé au scan) ; 0 travail de création ni d'envoi de photo.
+
+⚠ **Le défaut trouvé en réel (la vignette vide)** : la carte s'affiche d'abord avec les valeurs de la question d'AVANT
+(aucune photo), puis reçoit les siennes ; la relecture des liens ne se lançait qu'au premier rendu, donc jamais. En
+maquette, je n'avais éprouvé que des photos DÉPOSÉES sur place (elles ont leur aperçu local). Corrigé : la relecture suit
+la liste des photos SANS aperçu (`sansApercu`). Build et essais verts ; non poussé, non revu en réel (la maquette ne peut
+pas reproduire : ses parcours vivent en mémoire).

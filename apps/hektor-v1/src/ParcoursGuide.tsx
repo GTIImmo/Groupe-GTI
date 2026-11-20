@@ -286,9 +286,12 @@ function QuestionPhotos({ parcoursId, photos, onChange }: { parcoursId: string; 
   const choix = useRef<HTMLInputElement | null>(null)
   const derniere = useRef(photos)
   derniere.current = photos
-  // les photos déjà gardées : relues au coffre (lien de lecture court) ; une photo purgée est comptée
+  // les photos déjà gardées : relues au coffre (lien de lecture court) ; une photo purgée est comptée.
+  // ⚠ 20/11 (§100.1, vu en réel) : la carte s'affiche d'abord avec les valeurs de la question d'AVANT (aucune photo),
+  //   puis reçoit les siennes : la relecture suit donc la liste des photos SANS aperçu, pas seulement le premier rendu.
+  const sansApercu = photos.filter((p) => !apercus[p.id]).map((p) => p.id).join(',')
   useEffect(() => {
-    if (!photos.some((p) => !apercus[p.id])) return
+    if (!sansApercu) return
     let annule = false
     photosDuBienParcours(parcoursId).then((r) => {
       if (annule) return
@@ -297,7 +300,7 @@ function QuestionPhotos({ parcoursId, photos, onChange }: { parcoursId: string; 
     }).catch(() => undefined)
     return () => { annule = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parcoursId])
+  }, [parcoursId, sansApercu])
   const joindre = async (liste: FileList | null) => {
     const tous = Array.from(liste ?? [])
     const place = MAX_PHOTOS_DU_BIEN - photos.length
