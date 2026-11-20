@@ -3558,3 +3558,41 @@ Vercel vérifiés sur f1ff8a7.
 - Non éprouvé en réel : les pages 3-4 de la fiche (l'avis) — seule l'exposition a été gardée à part, faute de ces pages.
 
 **Reste** : P4-c (services publics, proposés à confirmer), P4-d (phrases libres).
+
+## 97. P4-b bis — LES PHOTOS DU BIEN ET LA FICHE DE VISITE NE SE CONFONDENT PLUS (20/11) : écrit, éprouvé hors ligne, NON poussé
+
+**Ses mots** : « l'assistant doit bien comprendre la différence entre les deux !!! Et cela doit être clair pour
+l'utilisateur + garde-fou possible. Ce sont vraiment deux choses différentes : une, simplement un ajout de photo avec
+visible ou non visible, couverture, uniquement des photos ; l'autre, un document type pour envoyer à un agent qui ajoute
+une annonce. » Puis « Vas-y, P4-b bis ».
+
+**Le vocabulaire, fixé** :
+- **LES PHOTOS DU BIEN** = la galerie de l'annonce (salon, façade…) : ajoutées, visibles ou masquées, la couverture.
+  JAMAIS lues par le scan. Aujourd'hui : la carte « Ajouter des photos » (annonce existante) ; à la création, l'étape
+  Photos de la fenêtre ; dans le parcours : **P6** (à faire).
+- **LA FICHE DE VISITE** = le patron rempli à la main : un DOCUMENT lu par l'agent de scan pour remplir une création.
+  JAMAIS dans la galerie. Aujourd'hui : « Par photo, avec l'IA » dans la fenêtre, la carte « créer », **P4-b** dans le
+  parcours.
+
+**Ce qui est écrit (commit fc6af12)** :
+- **La consigne** (tous les comptes) : « DEUX CHOSES À NE JAMAIS CONFONDRE » ; l'IA ne voit que le NOM des fichiers :
+  si la personne ne l'a pas dit clairement, elle DEMANDE « Ce sont des photos du bien, ou la fiche de visite
+  remplie ? » et ne devine jamais ; des photos du bien jointes à une création vont à l'étape Photos de la fenêtre.
+- **Les outils**, des noms qui ne se confondent pas : `photos_du_bien` (carte « Ajouter des photos »),
+  `fiche_de_visite` (carte « créer » et parcours) ; leurs descriptions le répètent. Les cartes enregistrées gardent
+  « fichiers » en interne : rien de cassé.
+- **Le garde-fou** : si le scan lit moins de 5 cases sur toutes les pages, ce n'est PAS une fiche de visite : RIEN n'est
+  gardé, et la phrase dit « les PHOTOS DU BIEN s'ajoutent à l'étape Photos de la fenêtre (ou par la carte « Ajouter des
+  photos ») ». Le coût d'une erreur reste ≈ 0,006 $ la page ; rien de faux n'entre.
+- **L'écran** : « Lire la fiche de visite » ; « la fiche de visite remplie (le patron, pas les photos du bien) » ;
+  la question « Les photos » : « les photos du bien (la galerie de l'annonce) — pas la fiche de visite » ; la carte
+  « créer » dit « Fiche de visite : N pages ».
+
+**Preuves (hors ligne)** : parcours **96 verts** (+2 : une photo du bien passée pour la fiche -> refusée, RIEN gardé,
+la phrase ; l'IA passe la fiche par `fiche_de_visite`) ; lecteur **76** (+2 : la consigne sépare et fait demander ; les
+paramètres des 3 outils) ; gestes 415 (la phrase des pages), socle 31, traduction 39, couverture, catalogue, lot 0, build.
+
+**Non éprouvé en réel** : l'IA qui DEMANDE devant des photos ambiguës, et qui envoie une photo du bien vers l'étape
+Photos et non vers le scan — à éprouver après le push (une photo de bien, une fiche, une demande ambiguë).
+
+**Reste** : pousser et l'essai réel ci-dessus ; P4-c (services publics), P4-d (phrases libres) ; P6 (photos du bien).
