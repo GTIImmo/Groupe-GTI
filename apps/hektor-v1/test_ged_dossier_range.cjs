@@ -14,8 +14,13 @@ const temoin = process.argv.includes('--temoin')
 let app = lf(fs.readFileSync(path.join(__dirname, 'src/App.tsx'), 'utf8'))
 if (temoin) app = app.replace('{docRowActions(e.doc)}', '{docRowActions(e.doc) }')
 const rm = lf(fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8'))
-// La référence : App.tsx AVANT le morceau 3 (le commit qui porte le socle, 0022771)
-const avant = lf(execSync('git show 0022771:apps/hektor-v1/src/App.tsx', { cwd: path.join(__dirname, '../..'), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }))
+// La référence : App.tsx AVANT le morceau 3 -- le parent du commit qui a introduit `const carteDocument` (trouvé par git, sans
+// numéro écrit en dur : le commit peut être rejoué sur origin/main et changer de numéro).
+const racine = path.join(__dirname, '../..')
+const git = (c) => execSync(c, { cwd: racine, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+const introduit = git('git log -S "const carteDocument" --format=%H -- apps/hektor-v1/src/App.tsx').trim().split('
+').pop()
+const avant = lf(git(`git show ${introduit}~1:apps/hektor-v1/src/App.tsx`))
 
 console.log('① rien de la signature n\'a bougé')
 const entre = (s, a, b) => { const i = s.indexOf(a); const j = s.indexOf(b, i + a.length); return i < 0 || j < 0 ? null : s.slice(i, j) }
