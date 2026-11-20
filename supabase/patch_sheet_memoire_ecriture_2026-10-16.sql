@@ -1,3 +1,8 @@
+-- ⛔⛔ REMPLACE LE 20/11/2026 -- NE PAS COLLER CE PATCH. Il n'a jamais ete colle (la table n'existe
+--    pas chez Supabase, verifie les 19 et 20/11). Sa clef, app_chaine_id, est le NUMERO DE CHAINE, qui
+--    BOUGE a chaque recalcul des dossiers. Le remplacant, cle par l'ID Unique du Sheet :
+--    supabase/patch_sheet_ecrit_memoire_colonne_a_2026-11-20.sql (+ _INVERSE, _REPETITION).
+--    Ce fichier est garde tel quel pour l'histoire de la decision.
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- LOT 2 — LA MEMOIRE DE CE QUE NOUS ECRIVONS DANS LE CLASSEUR    16/10/2026
 -- ═══════════════════════════════════════════════════════════════════════════════

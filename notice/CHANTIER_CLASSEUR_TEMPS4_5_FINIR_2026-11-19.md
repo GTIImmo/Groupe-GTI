@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11)** — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la mémoire app_sheet_ecrit à coller ; la 3e lecture de 4126/4496)** — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2026,6 +2026,198 @@ LE CONTROLE DE SAMEDI MATIN (le run fini, ~06:40) -- reference figee le 20/11 a 
 
 ⛔ RETOUR ARRIERE : retirer la ligne de .env -- la nuit suivante refait les dossiers d'avant. MAIS les
   fusions d'etiquettes deja posees sont DEFINITIVES : une etiquette absorbee ne revient pas.
+```
+
+
+---
+
+## ⑬ LE 20/11 AU MATIN — L'ÉCRIVAIN DE LA COLONNE A (DORMANT), SA MÉMOIRE, LA 3e LECTURE DE 4126 ET 4496
+
+> **La demande** (session « Envoi données vers Google Sheets », après l'allumage de E) : *« N'attends pas samedi
+> pour le reste. Samedi ne bloque que l'ÉCRITURE elle-même… le vrai verrou n'est pas E : c'est que L'ÉCRIVAIN NEUF
+> N'EXISTE PAS ENCORE. »* — l'écrivain (écrit, relu, éprouvé à blanc, DORMANT), la table `app_sheet_ecrit` à
+> coller, la 3e lecture de 4126 et 4496. **Interdits inchangés** : pas une ligne dans le Sheet, rien en base, rien
+> chez Hektor, rien de poussé ; la vague 0 attend SES 3 lignes et SES Apps Script.
+>
+> ➡ Tout ce chapitre est du **code neuf dormant, de la lecture et des fichiers**. Rien n'a été écrit nulle part.
+
+### 13.1 La mémoire `app_sheet_ecrit` — un patch NEUF ; celui du 16/10 est remplacé
+
+```
+LE PATCH     supabase/patch_sheet_ecrit_memoire_colonne_a_2026-11-20.sql (+ _INVERSE, _REPETITION) -- A COLLER
+             PAR TOI. Aucun redemarrage. Idempotent.
+POURQUOI UN NEUF : celui du 16/10 (jamais colle -- la table n'existe pas, verifie les 19 et 20/11) avait pour
+             clef app_chaine_id, le NUMERO DE CHAINE, qui BOUGE a chaque recalcul. Une memoire tenue par une clef
+             qui bouge perd ses lignes en silence. Il porte maintenant en tete « REMPLACE, NE PAS COLLER ».
+LA CLEF      (id_unique, colonne) : l'ID Unique (AL) -- leur clef, stable quand on trie -- et le LIBELLE de la
+             colonne (« affair_uuid »), jamais sa lettre.
+UNE LIGNE    valeur ecrite . ce qu'il y avait avant . etat prevu -> ecrit -> defait . la vague . la ligne VUE
+             (indicative, jamais une adresse) . quand . qui (l'outil).
+             « prevu » est ecrit AVANT l'envoi au Sheet : si l'envoi tombe au milieu, la memoire sait ou chercher.
+LES DROITS   lecture : managers et admins (une politique) ; ecriture : la cle de service SEULE -- insert, update,
+             delete retires a anon et authenticated (« revoke from public » ne les ferme pas).
+LES GARDES   d'entree : s'arrete si une table de la forme du 16/10 existe deja ; de sortie : 10 colonnes, RLS,
+             1 politique, droits fermes, 0 ligne. L'INVERSE refuse de retirer la table si elle porte UNE ligne.
+⚠ NON EPROUVE SUR UNE BASE : il n'y a pas de base d'essai, et coller est ton geste. La repetition le dira.
+```
+
+### 13.2 L'écrivain — `phase2/checks/ecrire_colonne_a_du_sheet_2026-11-20.py`
+
+```
+LA METHODE DU § 8.3, A LA LETTRE. Cinq etapes, une par appel :
+  preparer  --nom vague0 --ids A,B,C      fabrique notice/CLASSEUR_VAGUE_<nom>_<date>.csv (lecture seule) et
+                                           donne son EMPREINTE. Il refuse une ligne hors de la case VAGUE_1 du
+                                           classement, une ligne de la decision B, une ligne a deux etiquettes.
+  a_blanc   --vague <fichier>             le BON D'ECRITURE : ligne par ligne, ecrite ou SAUTEE et pourquoi,
+                                           + les deux empreintes a recopier. Lecture seule.
+  ecrire    --vague F --empreinte-vague X --empreinte-colonne-a Y     avec APP_SHEET_ECRIRE_AFFAIR_UUID=1
+  defaire   --nom N [--empreinte-colonne-a Y]                          (a blanc sans l'interrupteur)
+  simuler                                  l'epreuve sur une copie en memoire (13.3)
+
+LES TROIS VERROUS, ENSEMBLE, + DEUX GARDES -- sinon REFUS, code 3, avant la moindre sauvegarde :
+  1  l'interrupteur, donne A LA COMMANDE. ⛔ S'il est ecrit dans .env (racine ou app), REFUS : un interrupteur
+     d'ecriture ne reste pas arme d'une seance a l'autre.
+  2  l'empreinte SHA-256 du fichier de vague : on ecrit le fichier qui a ete lu et accorde, a l'octet.
+  3  l'empreinte de la colonne A, PAR ID UNIQUE, donnee par l'a blanc : si A a bouge depuis, REFUS.
+  +  la table app_sheet_ecrit existe ; l'heure est hors de 03:30-09:30 (run, pose des etiquettes, descente).
+
+CE QU'IL REJOUE A L'INSTANT, AVANT CHAQUE PAQUET DE 100 -- chaque ligne qui echoue est SAUTEE et NOMMEE :
+  DECISION_B . UUID_EN_DOUBLE_DANS_LA_VAGUE . ID_UNIQUE_ABSENT / EN_DOUBLE (AL relu) . A_DEJA_REMPLIE (on
+  n'ecrase jamais) . SANS_LIEN . GEL_A_CHANGE (le gel chez Supabase != le fichier) . LIEN_NON_SUR . C5_SEULE .
+  PLUSIEURS_DOSSIERS . ETIQUETTE_A_CHANGE (Supabase != le fichier) . UUID_DEJA_DANS_LE_SHEET .
+  MEMOIRE_DIT_ECRIT_MAIS_A_VIDE . ETIQUETTE_PARTAGEE (le dossier porte une autre ligne -- regle C5 appliquee
+  aux autres lignes aussi).
+  ⭐ L'ETIQUETTE est lue CHEZ SUPABASE au moment d'ecrire, exigee IDENTIQUE sur les transactions de la ligne,
+     avec la regle C5 decidee le 19/11 (une creation du Sheet ne decide jamais : on prend celles de Hektor).
+  ⭐ Une exception ne se devine pas : elle s'ECRIT dans le fichier de vague (colonne « admis » :
+     lien_non_sur, autre_ligne:<ID>) -- donc elle change l'empreinte, donc elle repasse par ton accord.
+APRES CHAQUE PAQUET : il RELIT A et AL et exige chaque UUID sur la ligne de SON ID Unique. Une seule case mal
+  posee -> ARRET IMMEDIAT (code 4). A la fin : les criteres ①②③④⑤ du § 8.5, comptes, ligne par ligne.
+LA SAUVEGARDE, avant d'ecrire : C:\Hektor\Backups\classeur_colonne_a\<heure>_<vague>_ECRIRE\sauvegarde\ --
+  tout le Sheet A1:AL, A et AL par ligne, l'empreinte B..AL par ID Unique, la vague, les empreintes.
+LE RETOUR ARRIERE ne juge que SA part (lecon 31) : il vide une case SEULEMENT si elle porte encore NOTRE valeur.
+  Il retrouve aussi une case MAL POSEE (notre valeur sur une ligne dont la sauvegarde prouve que A etait vide).
+  Toute autre valeur est NOMMEE et LAISSEE ; la memoire de cette ligne reste « ecrit ».
+CODES : 0 vert . 1 un rouge . 2 pas pu lire (jamais un vert) . 3 un verrou refuse . 4 arret en cours d'ecriture
+```
+
+### 13.3 L'épreuve — 33 verdicts, 0 rouge ; et le vrai Sheet, en lecture
+
+```
+simuler (20/11, 08:56) -- une COPIE EN MEMOIRE du Sheet (lu une fois en GET : 4 802 lignes, A vide partout),
+  la memoire dans un dictionnaire, le gel et le registre VRAIS (lus chez Supabase). requests.request ne laisse
+  partir qu'un GET. Rapports : C:\Hektor\chantier_classeur_q6_cache\ecrivain_colonne_a_simulation\2026-11-20_085606\
+A  NOMINAL + 12 TEMOINS INVERSES -- chacun SAUTE avec la bonne raison, nomme :
+     A_DEJA_REMPLIE (« E » seme) . ID_UNIQUE_ABSENT . ID_UNIQUE_EN_DOUBLE . ETIQUETTE_A_CHANGE . GEL_A_CHANGE .
+     UUID_DEJA_DANS_LE_SHEET . MEMOIRE_DIT_ECRIT . UUID_EN_DOUBLE_DANS_LA_VAGUE (x2) . DECISION_B (A6OS2TTJ) .
+     C5_SEULE (origine forcee dans la copie) . et TROIS VRAIES lignes du Sheet qui montrent leur defaut a
+     l'instant : ETIQUETTE_PARTAGEE (OAQDRTNC, avec 44ZVGG8Q) . PLUSIEURS_DOSSIERS (LPBAZ1D4) . LIEN_NON_SUR
+     (E1QEDCAG, « a valider »)
+   TEMOIN POSITIF : 231 lignes ECRITES (les 230 nominales + S13Z3PIN, une ligne dont la creation C5 est dans un
+     AUTRE dossier : elle s'ecrit, la regle C5 joue) ; criteres ①②③④⑤ : 0 faute ; memoire « ecrit » x 231.
+   LE RETOUR ARRIERE, apres DEUX humains (une case corrigee, deux lignes echangees par un tri) : 230 videes, la
+     case humaine (02Q7GAMQ) NOMMEE et LAISSEE ; la colonne A redevient celle d'avant, sauf elle ; memoire
+     230 « defait », la sienne reste « ecrit ».
+B  LA COURSE : une ligne inseree en haut du Sheet ENTRE la relecture et l'ecriture -> ARRET IMMEDIAT, code 4,
+     les 5 cases mal posees nommees ; le retour arriere les RETROUVE (par la sauvegarde) et rend la colonne A
+     d'avant : 0 difference.
+C  LES VERROUS : sans l'interrupteur . interrupteur dans .env . mauvaise empreinte de fichier . empreinte trop
+     courte . colonne A changee . 05:12 du matin -> 6 REFUS, 0 ecriture ; le vrai Sheet desarme refuse sans
+     appel reseau ; 0 POST vers Google de toute l'epreuve.
+
+LE VRAI SHEET, EN LECTURE (09:00) : un fichier d'ESSAI de 120 lignes (rangé dans le cache, PAS dans notice/ --
+  ce n'est pas une vague, je ne choisis pas la vague 0) -> a_blanc : 2 paquets, 120 « a ecrire », 0 sautee, la
+  relecture A/AL par paquet marche sur le vrai Sheet ; il dit « la table n'existe pas : l'ecriture serait
+  REFUSEE ». ecrire sans l'interrupteur -> REFUS code 3, aucun dossier cree. defaire -> REFUS code 3 (pas de
+  table, donc rien n'a pu etre ecrit).
+```
+
+### 13.4 Ce qui n'a PAS été éprouvé — dit franchement
+
+```
+. L'ECRITURE ELLE-MEME (batchUpdate RAW, batchClear) : jamais appelee, par construction. Sa premiere fois sera
+  la VAGUE 0 -- c'est son role : 3 lignes, ecrire, relire, DEFAIRE, verifier, re-ecrire (§ 8.4).
+. Les ecritures dans app_sheet_ecrit (POST upsert, PATCH) : la table n'existe pas. Meme premiere fois.
+. Le SQL du patch : aucune base d'essai. La repetition (lecture seule) le juge apres collage.
+. Les Apps Script du Sheet (V1, ton geste) : s'ils lisent A, ou reagissent a une ecriture par l'API.
+. ⚠ LA VAGUE 1 DE MARDI : « preparer » lit un CLASSEMENT. Celui du 19/11 (TEMPS5_Q8) n'applique PAS la regle
+  C5 -- les 86 lignes qu'elle libere n'y sont pas en VAGUE_1. Il faut, le jour meme, un classement de l'etat
+  REEL (E jouee, les 8 lignes si tu les as decidees, le patch V2 s'il est joue) AVEC C5, ecrit en CSV avec sa
+  case. C'est l'etat 5 de temps6 rendu en fichier : ~30 min, a faire lundi (pas de geste, de la lecture).
+```
+
+### 13.5 La 3e lecture de 4126 et 4496 — et ce que le code d'aujourd'hui ne sait pas faire
+
+**Les faits, séparés : indépendants, ou circulaires** (rien de prouvé par le seul gel) :
+
+```
+4496  bien 9769 (maison VAN DIJK, Cunlhat)                                        ➡ BISCH, PREUVE FORTE
+  INDEPENDANT (Hektor seul) : le compromis annule vaut 155 000 = l'offre REFUSEE de BISCH (4498, 14/04/2021,
+     155 000) ; la chaine vivante vaut 159 000 (offre 4497 NOIRJEAN FAUCHEZ 26/05/2021, compromis 4495, vente
+     4499). Ici le prix DEPARTAGE : les deux acheteurs successifs n'ont PAS le meme prix.
+  INDEPENDANT : le contact GALLOT (60182) sur le compromis annule est AUSSI sur le compromis vivant et la vente
+     de NOIRJEAN -- et sa fiche est enregistree le 17/02/2022, APRES la vente du 30/08/2021 : un contact pose
+     apres coup, il ne designe personne.
+  LE SHEET (colonnes hors gel) : XC761R8Z BAYADA BISCH, offre 14/04/2021 (= Hektor au jour), 155 000, « rdv
+     diags le 23/4, spanc le 27/4 OK » (la vente se preparait), annulee 21/05/2021 -- et NOIRJEAN offre 5 JOURS
+     APRES (26/05). La suite se tient.
+  CIRCULAIRE, A NE PAS COMPTER : la date d'annulation posee sur 4496 (21/06/2021, patch C3 du 16/11) vient de
+     la ligne 61OW86CS STRIPOLLI -- un TERRAIN a Saint-Jeures (12 000, agence TENCE, vendeur DELAIGUE) sous le
+     MEME numero de mandat recycle 4235. Ce lien du gel est FAUX ; le patch V2 le retire deja (« 4496 est sur un
+     AUTRE bien »), et 4496 est dans sa liste des valeurs posees par nous a faire descendre (correction 3).
+  ⭐ C'EST TA QUESTION EN ATTENTE sur XC761R8Z (« a-t-il ete prepare pour l'affaire BISCH ? Si non, il ne
+     revient a aucune ligne ») : la reponse que je lis est OUI, probablement.
+
+4126  bien 9232 (immeuble SCI GRIVE DE LA LYS, Ambert)                             ➡ GAIGA, PROBABLE
+  INDEPENDANT (Hektor) : l'offre REFUSEE de GAIGA (4128, 30/09/2021, 77 000) -- « refusee » est souvent
+     « acceptee puis tombee » ; aucun autre acheteur entre elle et GIORGETTI (offre 15/05/2022).
+  INDEPENDANT : le contact GUERIN (49384) du compromis annule est AUSSI sur le compromis vivant et la vente de
+     GIORGETTI -- fiche enregistree le 10/10/2023, APRES la vente du 20/01/2023. Il ne designe personne : ni la
+     lecture de E (« le nom GUERIN le met chez GIORGETTI ») ni celle de G2 (« un acheteur d'avant ») ne tient.
+  LE SHEET (colonne « En attente de », hors gel) : P252U1JH CHAPTARD GAIGA -- « 07/1 doss ouvert notaires »,
+     « Sauret/Detoqueville 20/1 > retard Covid ACQ », annulee 22/01/2022 : le dossier etait CHEZ LES NOTAIRES,
+     donc au stade du compromis. GIORGETTI ne vient qu'en mai.
+  ⚠ LE PRIX NE DEPARTAGE PAS (tout vaut 77 000) -- d'ou « probable », pas « fort ».
+  CIRCULAIRE : la date d'annulation posee sur 4126 (22/01/2022, C3) vient de P252U1JH par le gel. Et le lien du
+     gel P252U1JH -> 4126 est lui-meme l'hypothese.
+```
+
+**⛔ Ce que le rejeu a trouvé — un « oui » ne suffirait pas avec le code d'aujourd'hui**
+(`phase2/checks/troisieme_lecture_4126_4496_2026-11-20.py`, sur une copie en mémoire, E allumée comme samedi) :
+
+```
+TEMOIN (le code d'aujourd'hui + les deux lignes « 4126;4128 » et « 4496;4498 » dans une COPIE du fichier) :
+  « [M] rattachement manuel : transaction introuvable » x 2 -- 0 dossier ne bouge. POURQUOI : une transaction
+  SANS DATE n'est sous les yeux du fichier manuel que si la regle E la rend visible -- et 4126, 4496 sont
+  EXCLUES de E (ta decision du 20/11). ⛔ ET LEVER L'EXCLUSION SERAIT PIRE : E les rend visibles, la regle D
+  les colle au dossier GIORGETTI / NOIRJEAN par le contact GUERIN / GALLOT, puis le fichier manuel (qui joue en
+  DERNIER et fusionne des DOSSIERS entiers) collerait TOUT le dossier GIORGETTI a l'offre de GAIGA.
+LA PIECE QUI MANQUE (mesuree sur une COPIE du module, l'original n'est pas touche) : dans la boucle du fichier
+  manuel, une source SANS DATE restee seule, du MEME bien, rejoint directement le dossier de la cible -- sans
+  passer par E ni par D. 5 lignes, derriere l'interrupteur du fichier deja allume.
+  REJEU : 11 550 -> 11 548 dossiers ; apparaissent EXACTEMENT {4126, 4128} et {4496, 4498} ; RIEN d'autre ne
+  bouge (0 transaction hors des 4). VERT.
+  LES ETIQUETTES (la plus petite transaction gagne) : 4126 garde 22609d0e, ABSORBE 8a15b70b (celle de 4128) ;
+  4496 garde 9bc1d7bf, ABSORBE 5f77aa7f (celle de 4498). 2 fusions, definitives.
+CE QUE CA FAIT AU SHEET : P252U1JH (gel : 4126 + 4128) passe de PLUSIEURS DOSSIERS a UN dossier. XC761R8Z
+  (gel : 4498) rejoint 4496 -- ETIQUETTE PARTAGEE avec 61OW86CS tant que le patch V2 n'a pas retire le faux
+  lien, seule ensuite.
+⚠ CONSEQUENCE POUR L'ECRITURE : ni P252U1JH ni XC761R8Z ne doit etre ecrite avant ta decision -- leur
+  etiquette d'aujourd'hui (8a15b70b, 5f77aa7f) serait ABSORBEE ensuite. Aujourd'hui aucune des deux n'est en
+  vague 1 (PLUSIEURS DOSSIERS, EN ATTENTE) : l'ecrivain les sauterait de toute facon.
+4720 (bien 10129) : rien de neuf -- aucune ligne du Sheet ne le designe ; il reste exclu de E.
+```
+
+### 13.6 Ce qui attend ta décision
+
+```
+1  COLLER LA MEMOIRE : supabase/patch_sheet_ecrit_memoire_colonne_a_2026-11-20.sql, puis sa _REPETITION
+   (tout « attendu » doit concorder). Sans elle, l'ecrivain REFUSE -- c'est voulu.
+2  4496 -> BISCH (preuve forte) et 4126 -> GAIGA (probable) : deux decisions, ligne a ligne. Si oui :
+   la PIECE (5 lignes dans affaire_ledger.py, du code du run de nuit : ton « vas-y ») + les deux lignes au
+   fichier des rattachements (ta decision) -> une nuit, 2 fusions. Pas de date imposee : rien ne l'attend.
+3  INCHANGES : les 8 lignes ; le patch V2 (je te le redemande avec sa sauvegarde prete) ; la vague 0 -- TES
+   3 lignes et TES Apps Script ; samedi matin, A ou B pour le controle de E.
 ```
 
 
