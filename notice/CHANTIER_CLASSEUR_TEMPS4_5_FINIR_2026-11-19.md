@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 00:45 (chapitre ⑫)** — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E)** — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -1946,6 +1946,52 @@ APRES L'ECRITURE                      G2 : la relecture de ses 281 coupes invisi
 5  V1 tes Apps Script . V2 coller app_sheet_ecrit
 6  plus tard : G2 (apres l'ecriture et la relecture des 281) ; l'outil de scission ; la troisieme lecture de 4126
    et 4496 (deux rattachements a la main, ta decision)
+```
+
+
+### 12.8 ⭐ Le matin du 20/11 — la nuit des 10 est VERTE, le compte DÉFINITIF de E est fait, la référence figée
+
+```
+LA NUIT : run fini 06:37:51, code 0, « Pipeline finished successfully » (2 h 38, la duree habituelle).
+
+LE CONTROLE DES 10 -- VERT, et par TROIS chemins independants :
+  1 la session « Envoi donnees vers Google Sheets » a lance le script a 06:39-06:40 : VERT
+  2 je l'ai RELANCE moi-meme, une etape par appel (journal 0 s . tel quel 10 s . sans 17 s . juger 1 s) :
+    VERT -- 0 ecart base/fonction ; « 16 » rattachements a la main ; sans les 10 lignes la base differe
+    sur EXACTEMENT les 10 offres, 0 hors des 10 ; chacune sous l'etiquette de son compromis d'AVANT la nuit ;
+    10 fusions, le cri a sonne (attendu) ; 11 580 dossiers ; 0 transaction sans etiquette
+  3 le JOURNAL DES ETIQUETTES chez Supabase, lu en lecture seule : 14 evenements a 05:12:12, 10 « fusion »
+    (les 10 offres, et l'etiquette absorbee est CELLE que le juge nomme, une par une) + 4 « propagation »
+    (30832 a 30835, des transactions neuves arrivees dans des dossiers deja etiquetes). Rien d'autre.
+    Et la base distante : 31 363 transactions, 11 580 etiquettes, 11 580 chaines, 0 sans etiquette = le local.
+  ⭐ E est restee ETEINTE (le journal du run ne porte pas son compteur).
+
+LE COMPTE DEFINITIF DE E, sur la base de ce matin (temps4 rejoue 30 s, puis le script neuf
+  phase2/checks/regle_e_compte_definitif_2026-11-20.py, 36 s, lecture seule, le Sheet LU en direct) :
+  29 reunions . 30 transactions sans date rattachees . 29 biens . 11 580 -> 11 550 dossiers . 0 coupe
+  30 etiquettes absorbees : 13 reunions ou l'etiquette du DOSSIER CIBLE disparait, 16 cas normaux
+  29 a 30 fusions en une nuit -> le cri sonnera, c'est attendu
+  temoins : N = la base a 0 ecart . positifs 5/5 . gardes 5/5 . exclusions 5/5 SEULES et DITES (5) .
+            inverse 0 . gardes apres E 0/0 . les 10 menages de cette nuit intacts
+  ⭐⭐ LA PREDICTION EST IDENTIQUE, OCTET POUR OCTET, A CELLE D'HIER SOIR (00:40, base d'avant la nuit) :
+     0 nouvelle, 0 disparue, 0 etiquette gardee changee. La nuit des 10 et les 4 transactions neuves n'ont
+     touche aucune des 29.
+  LE CLASSEUR : 28 reunions touchent au moins une ligne (par le GEL d'aujourd'hui), 1 aucune (bien 23562,
+     KERROUM). Le Sheet : 15 ne voit qu'un cote + 1 aucune ligne . 10 acheteurs differents MAIS la ligne
+     annulee ne date aucun compromis (LIEN DU GEL SUSPECT, E probablement juste) . 3 meme acheteur .
+     ⭐ AUCUNE DEMENTIE -- le meme jugement qu'hier soir (§ 12.2).
+  21 lignes du Sheet ont une etiquette FUTURE qui change (reliees au cote absorbe). ⭐ La colonne A est
+     VIDE sur les 4 797 lignes : aucune etiquette deja ecrite n'est dementie -- la vague 0 et la vague 1 se
+     calculent apres E, comme l'ordre du § 11.8 le prevoit.
+  -> notice/CHANTIER_CLASSEUR_REGLE_E_COMPTE_DEFINITIF_2026-11-20.md (la liste nom par nom, une ligne par
+     reunion, puis le detail ; les 5 exclusions rappelees en tete) et son .csv
+
+LA REFERENCE DU CONTROLE DE SAMEDI, figee a 06:58 : « regle_e reference » -- 31 363 transactions, 29 reunions
+  predites (regle_e_prediction_2026-11-20_0658.csv), exclusions du code [4126, 4496, 4720, 21520, 26613].
+  Les fichiers des essais a blanc d'hier soir sont ranges sous ESSAI_A_BLANC_* (rien d'ecrase).
+
+⛔ E N'EST PAS ALLUMEE : APP_CHAINAGE_SANS_DATE_VISIBLE est ABSENTE de .env. Elle s'allume sur ton mot
+  ecrit, ICI, avec ce compte sous les yeux.
 ```
 
 
