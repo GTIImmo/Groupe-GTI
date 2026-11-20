@@ -3809,3 +3809,29 @@ gestes 415, lecteur 76, socle 31, traduction 39, fichiers 28, DPE 11, catalogue,
 **Non éprouvé en réel** : le petit lecteur sur une vraie phrase (≈ 0,001 $), sa durée, le rendu en production.
 
 **Reste** : P6 (photos du bien), puis P5, P7, P8 et l'épreuve case par case.
+
+### 99.1 POUSSÉ (ef84ad6) ET ÉPROUVÉ EN RÉEL (20/11, 12:12-12:14, heure de Paris) — VERT, avec une réserve sur la note
+
+**Ses mots** : « Pousse et essaie ». Poussé ef84ad6 (avec la note §98.3) ; Render (`/health` = ef84ad639962) et Vercel
+(une chaîne propre à P4-d dans le JS servi) vérifiés. Dans son Chrome, une conversation NEUVE : « Nouvelle estimation
+d'essai par questions : une maison au 12 rue des Tilleuls 42700 Firminy ». Parcours `b5013b88…` laissé « en cours »
+(purge 30 j) ; rien chez Hektor, rien validé, jamais « Créer ».
+- La zone du bas montre « Pour : « Le quartier » — ta phrase est gardée et lue, sans l'assistant. ✕ Demander à l'assistant ».
+- Phrase tapée : « Quartier calme, école et commerces à 5 minutes à pied, bus en bas de la rue. Il y a 612 m² de terrain
+  avec un abri de jardin, construite vers 1975. Vendeur au 06 12 34 56 78. » (un numéro inventé).
+- À l'écran : la phrase gardée avec « [coordonnée retirée] », « gardée · 2 cases ici, 3 plus loin, le reste dans la
+  note », « Le téléphone ou l'e-mail a été retiré… », « Repris de : ta phrase » ; Proximité et Environnement remplis
+  dans la carte (non validés). Preuve : `notice/preuve_parcours_phrase_libre_reel_2026-11-20.jpg`.
+- En base : `surfterrain` 612, `JARDIN-` OUI, `ANNEE_CONS` 1975, source « phrase » ; PROXIMITE/ENVIRONNEMENT NON gardés
+  (la carte) ; ⛔ le téléphone n'est NULLE PART dans le parcours ; le journal des agents : `parcours_phrase`,
+  gpt-4.1-mini, 5 955 + 166 jetons, **0,00265 $**, `{question, caracteres: 180, retires: 1}` — pas le texte.
+
+⚠ **Deux écarts trouvés en réel** (non corrigés, à décider) :
+1. **La note répète tout** : le lecteur a mis dans `rawNotes` un résumé de TOUTE la phrase (« Quartier calme avec école,
+   commerces, bus proches; terrain 612 m2 avec abri de jardin, construction vers 1975. ») au lieu du seul reste (l'abri de
+   jardin, le bus). La fenêtre recevrait une note redondante. Remède proposé : une consigne plus stricte (« rawNotes ne
+   répète JAMAIS ce qui est dans un champ ») — à éprouver de nouveau en réel.
+2. **Le coût** est 2,6 fois l'estimation (0,00265 $ au lieu de ~0,001 $) : la consigne reprend toutes les conventions du
+   scan (~6 000 jetons d'entrée). Sans gravité au plafond (3 $/jour = plus de 1 000 phrases).
+- « vers 1975 » n'a pas été marqué « à vérifier » (le lecteur a donné une confiance haute) ; « bus en bas de la rue »
+  n'est pas allé dans Transport.
