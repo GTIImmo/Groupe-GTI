@@ -79,6 +79,8 @@ TRANCHE = 50                        # une liste in.(...) ne depasse jamais 50 va
 ORIGINE = "ecrire_colonne_a_du_sheet_2026-11-20.py"
 FENETRE_INTERDITE = ((3, 30), (9, 30))   # le run (04:00), la pose des etiquettes, la descente (07:45)
 DECISION_B = RACINE / "notice" / "TEMPS6_DECISION_B_LIGNES_REPORTEES_EN_VAGUE_2_PAR_G2_2026-11-20.csv"
+#: decision du 20/11 (« LES 19 : OUI, sors-les, comme les 9 de B ») -- mesure du § 13.8 (temps7)
+DECISION_19 = RACINE / "notice" / "TEMPS7_DECISION_DU_20_11_LES_19_HORS_DE_LA_VAGUE_1_2026-11-20.csv"
 CLASSEMENT = RACINE / "notice" / "TEMPS5_Q8_LES_LIGNES_DU_SHEET_ET_LEUR_VAGUE_2026-11-19.csv"
 SORTIES = Path(r"C:\Hektor\Backups\classeur_colonne_a")
 SORTIES_SIMULATION = Path(r"C:\Hektor\chantier_classeur_q6_cache\ecrivain_colonne_a_simulation")
@@ -492,8 +494,23 @@ def lire_decision_b() -> set[str]:
     return ids
 
 
+def lire_hors_vague() -> dict[str, tuple[str, str]]:
+    """Les lignes que Frederic a SORTIES de la vague 1, et pourquoi : {ID Unique: (raison, detail)}.
+    Les 9 de B (vague 2, apres G2) et les 19 du 20/11 (une reparation que le Sheet designe les attend)."""
+    hors = {i: ("DECISION_B", "decision du 20/11 : vague 2, apres G2") for i in lire_decision_b()}
+    with DECISION_19.open(encoding="utf-8-sig", newline="") as f:
+        lus = {propre(r["id_unique"]): propre(r["nature"]) for r in csv.DictReader(f, delimiter=";")}
+    if len(lus) != 19:
+        raise LectureRatee(f"decision des 19 : {len(lus)} lignes lues, 19 attendues (decision du 20/11)")
+    if set(lus) & set(hors):
+        raise LectureRatee(f"une ligne est dans B ET dans les 19 : {sorted(set(lus) & set(hors))}")
+    for i, nature in lus.items():
+        hors[i] = ("DECISION_19", "decision du 20/11 : hors de la vague 1, une reparation l'attend (%s)" % nature)
+    return hors
+
+
 # ═══════════════════════════════════════════ LE JUGE D'UN PAQUET ═══════════════════════════════════════════
-def juger_paquet(entrees, col_a, col_al, reg, memo: dict, exclus_b: set, doubles_vague: set) -> list[dict]:
+def juger_paquet(entrees, col_a, col_al, reg, memo: dict, exclus_b: dict, doubles_vague: set) -> list[dict]:
     """Pour chaque ligne du paquet : A_ECRIRE (avec sa ligne et son etiquette) ou SAUTEE (avec sa raison).
     Tout est relu A L'INSTANT : le Sheet (col_a, col_al), le gel et le registre (Supabase), la memoire."""
     pos = positions(col_al)
@@ -516,7 +533,7 @@ def juger_paquet(entrees, col_a, col_al, reg, memo: dict, exclus_b: set, doubles
             return d
 
         if i in exclus_b:
-            sauter("DECISION_B", "decision du 20/11 : vague 2, apres G2")
+            sauter(*exclus_b[i])
             continue
         if i in doubles_vague:
             sauter("UUID_EN_DOUBLE_DANS_LA_VAGUE", "la meme etiquette prevue sur deux lignes du fichier")
@@ -656,7 +673,7 @@ def derouler_ecriture(*, mode: str, nom: str, entrees, sha_vague: str, sheet, me
                       journal=print) -> tuple[int, dict]:
     """mode = 'a_blanc' (lecture seule) ou 'ecrire'. Renvoie (code, rapport)."""
     assert mode in ("a_blanc", "ecrire")
-    exclus_b = lire_decision_b()
+    exclus_b = lire_hors_vague()
     valeurs = sheet.lire_tout()
     if propre(valeurs[0][A]) != COLONNE or propre(valeurs[0][AL]) != ENTETE_AL:
         raise LectureRatee("l'en-tete du Sheet a bouge : A=%r AL=%r" % (valeurs[0][A], valeurs[0][AL]))
@@ -885,7 +902,7 @@ def derouler_defaire(*, mode: str, nom: str, sheet, memoire, a_avant_de_la_vague
 
 # ═══════════════════════════════════════════ PREPARER ═══════════════════════════════════════════
 def preparer(args, reg, journal=print) -> int:
-    exclus_b = lire_decision_b()
+    exclus_b = lire_hors_vague()
     with Path(args.source).open(encoding="utf-8-sig", newline="") as f:
         tete = f.readline()
         f.seek(0)
@@ -909,7 +926,7 @@ def preparer(args, reg, journal=print) -> int:
         elif propre(source[i].get(args.colonne_case)) != args.case:
             refus.append((i, "case %s, pas %s" % (source[i].get(args.colonne_case), args.case)))
         elif i in exclus_b:
-            refus.append((i, "decision B du 20/11 (vague 2)"))
+            refus.append((i, "%s : %s" % exclus_b[i]))
         else:
             gardees.append(i)
     liens = reg.liens_des_lignes(gardees)
@@ -996,7 +1013,7 @@ def simuler(reg: Registre, journal=print) -> int:
     valeurs = reel.lire_tout()
     journal("Sheet lu une fois (GET) : %d lignes ; colonne A remplie sur %d"
             % (len(valeurs) - 1, sum(1 for r in valeurs[1:] if propre(r[A]))))
-    exclus_b = lire_decision_b()
+    exclus_b = lire_hors_vague()
     cl = {}
     with CLASSEMENT.open(encoding="utf-8") as f:
         for r in csv.DictReader(f):
@@ -1045,9 +1062,12 @@ def simuler(reg: Registre, journal=print) -> int:
     par_id[s2]["etiquette_prevue"] = par_id[s1]["etiquette_prevue"]
     attendus[s1] = attendus[s2] = "UUID_EN_DOUBLE_DANS_LA_VAGUE"
     # une ligne de la decision B, glissee dans la vague
-    b = sorted(exclus_b)[0]
+    b = sorted(i for i, (r, _) in exclus_b.items() if r == "DECISION_B")[0]
     eb = entree_vivante(b, "SIMULATION")[0]
     ent.append(eb); attendus[b] = "DECISION_B"
+    # une ligne des 19 du 20/11, glissee dans la vague
+    b19 = sorted(i for i, (r, _) in exclus_b.items() if r == "DECISION_19")[0]
+    ent.append(entree_vivante(b19, "SIMULATION")[0]); attendus[b19] = "DECISION_19"
     # des lignes REELLES dans les cases bloquees du 19/11 : la premiere qui, a l'instant, montre le defaut
     for case, raison in (("ETIQUETTE_PARTAGEE", "ETIQUETTE_PARTAGEE"), ("PLUSIEURS_DOSSIERS", "PLUSIEURS_DOSSIERS"),
                          ("LIEN_A_VALIDER", "LIEN_NON_SUR")):

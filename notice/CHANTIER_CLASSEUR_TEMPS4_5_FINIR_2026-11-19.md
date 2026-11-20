@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19)** — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits — les 87 peuvent passer « sûre », V2 corrige les 2 FAUX et 9 autres, rebrancher l'audit ne change l'étiquette d'AUCUNE ligne de la vague 1 ; 15 coupes au hasard : 14 justes, la 15e faible sur deux pièces sans date ; le calendrier : tu écris le mercredi 2/12)** — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2346,6 +2346,224 @@ LE DELAI   le paquet 1 (les 19) : dans l'heure qui suit ta reponse. Le classeur 
    patch V2 ; la vague 0 (TES 3 lignes, TES Apps Script) ; samedi matin, A ou B.
 ```
 
+
+---
+
+## ⑭ Le 20/11, fin de matinée — les 19 sortis, les 110 liens contre l'audit du 18/11, 15 coupes tirées au hasard, le calendrier
+
+> Sa demande (20/11, après ⑬) : « LES 19 : OUI, sors-les, comme les 9 de B » ; « LE MAXIMUM DE CORRECTIONS AVANT LA
+> VAGUE 1. Les liens, les regroupements, puis les étiquettes reposées — et j'écris après, en une seule fois […] J'accepte
+> un reste : les 74 lignes sans aucune transaction chez nous » ; « COMMENCE PAR MES 110 LIENS » ; trois questions avant de
+> coder ; « TIRE-M'EN 15 AU HASARD » ; « DONNE-MOI UN CALENDRIER CHIFFRÉ ». Interdits inchangés. Tout ce chapitre est
+> lecture, mesure sur copie, et code DORMANT : rien dans le Sheet, rien chez Hektor, rien en base, rien de poussé.
+
+### 14.1 Les 19 sont sortis de la vague 1 — fait
+
+```
+LA DECISION   notice/TEMPS7_DECISION_DU_20_11_LES_19_HORS_DE_LA_VAGUE_1_2026-11-20.csv -- les 19 de § 13.8, leur
+              nature (a paire croisee 10, b doublon de Hektor 4, c tentative ratee sur deux fiches 5), la piece en
+              cause, et la decision dans ses mots.
+              ⚠ « 5+4+5 = 14 » : une PAIRE croisee, c'est DEUX lignes -- 5 paires = 10 lignes ; 10 + 4 + 5 = 19.
+L'ECRIVAIN    ecrire_colonne_a_du_sheet_2026-11-20.py lit les DEUX fichiers (lire_hors_vague : 9 de B + 19, refus
+              si un compte bouge ou si une ligne est dans les deux) ; chaque ligne sautee porte SA raison
+              (DECISION_B ou DECISION_19, avec la nature). preparer les refuse aussi.
+L'EPREUVE     simuler rejoue : 34 verdicts, 0 rouge (un de plus : le temoin 0bc98552, ligne des 19 glissee dans la
+              vague, SAUTEE « DECISION_19 ») ; 0 appel POST vers Google.
+LA VAGUE 1    4 082 a l'etat 5 - 9 (B) - 19 = 4 054 lignes.
+```
+
+### 14.2 Les 110 liens « à valider » — les trois questions
+
+Script : `phase2/checks/temps8_les_110_liens_et_l_audit_du_18_2026-11-20.py` (lecture seule) ; sortie
+`notice/TEMPS8_LES_110_LIENS_A_VALIDER_2026-11-20.md` et `.csv` (une ligne par lien à valider, les deux audits côte à côte).
+
+```
+LES TEMOINS   0 -- le classement recopie redonne l'etat 5 de temps6 : 0 ecart sur 4 797 lignes.
+              1 -- la confiance lue LIEN PAR LIEN (et non l'union par ligne) : meme classement, 0 ecart.
+              POSITIF -- un lien seme dans le dossier d'une ligne de la vague 1 la fait sortir (VU).
+DEUX AVIS     l'audit du 18/11 (fait SANS le gel : verdict, confiance, GARDER/RETIRER/DEPLACER par piece) et
+INDEPENDANTS  l'audit V2 du 19/11 (mon propre appariement, SANS le gel : verdict, certitude, ses pieces).
+CE QUE SONT   86 lignes a liens « a valider » (+2 melangees sure/a valider) et 22 a liens « bonne » -- ⚠ « bonne »
+LES 110       est la confiance que le PATCH V2 ecrit sur ses ajouts : la case les compte comme non sures.
+
+Q1  LES 87 JUSTES PEUVENT-ELLES PASSER « SURE » ?  OUI, LES 87.
+    85 : les deux audits disent JUSTE, la ligne du 18/11 garde EXACTEMENT les pieces d'aujourd'hui, mon
+         appariement du 19/11 trouve EXACTEMENT les memes, et V2 ne les touche pas (79 « certaine », 6 « forte »).
+         Elles avaient ete trouvees par l'etage 9 « sans mandat » (84 sur 85) -- le mandat ne departage pas parce que
+         Hektor recycle ses numeros ; les deux audits les retrouvent par les dates au jour pres.
+     2 : T47ZI6GS -- memes pieces des deux cotes, le 19/11 dit « solide » au lieu de « certaine ».
+         NKDC0I1M -- le 19/11 ne prouve pas l'offre 27741 (sans date, sans contact ; la seule du dossier) :
+         compromis et vente identiques des deux cotes ; l'etiquette est celle du dossier, la meme avec ou sans
+         l'offre. Ma recommandation : « sure » aussi.
+    POURQUOI CE N'EST PAS DEJA FAIT : changer la confiance est une ECRITURE dans le gel chez Supabase -- ton
+    accord. Un patch court (confiance seule ; etage et preuves INTACTS, la reserve 1 du 18/11), avec sauvegarde,
+    inverse et repetition. Il est INDEPENDANT de V2 : la garde de V2 relit (ID, transaction, role), pas la
+    confiance -- l'ordre entre les deux est libre.
+
+Q2  LE PATCH V2 CORRIGE-T-IL LES 2 FAUX ?  OUI -- et beaucoup plus.
+    8RWTD0YX VAN ROSSUM : V2 retire 4385 (le compromis d'une autre affaire du bien) et 1001477 (l'offre en double
+              creee depuis le Sheet), ajoute 4387 -- exactement « le vrai dossier est la chaine 4387 » du 18/11.
+    fa06e4e5 BILDINICI : V2 retire 28930 et 1001553 (le compromis cree depuis le Sheet qui n'a jamais existe),
+              ajoute 28931 -- l'offre qui porte son nom et sa date de chute ; le 19/11 dit la meme chose.
+    V2 TOUCHE 65 LIGNES : 28 PARTIEL, 11 FAUX, 26 A RATTACHER du 18/11 -- il corrige 11 des 12 FAUX de tout
+    l'audit (le 12e est une question ouverte, sortie du patch le 19/11). ⛔ La memoire qui disait « V2 ne corrige
+    que 2 erreurs » etait fausse ; corrigee.
+    ⚠ CE QUE J'AI TROUVE EN PASSANT : apres V2, ces lignes restent bloquees pour une raison PERIMEE. Le
+    classement exige « verdict du 18/11 = JUSTE », or ce verdict jugeait le gel AVANT la correction. 28 lignes
+    sont « audit non juste » a l'etat 5 pour cette seule raison, et 12 des 110 aussi.
+
+Q3  REBRANCHER L'AUDIT SUR LE GEL : COMBIEN DE LIGNES DE LA VAGUE 1 CHANGERAIENT D'ETIQUETTE ?  0.
+    Cinq variantes, de la plus etroite a la plus large, chacune comparee ligne par ligne (case ET etiquette) sur
+    les 4 054 de la vague 1 :
+      A  les 85 passent « sure »                                   0 changent, 0 sortent, 85 entrent
+      B  + T47ZI6GS et NKDC0I1M                                    0, 0, 87
+      C  + tout ce que le 18/11 dit des autres (retirer, deplacer,
+           rattacher)                                              0, 0, 87
+      D  + partout ou les DEUX audits disent exactement ce que le
+           gel dira apres V2 (136 lignes : 108 des 110 et les 28
+           « audit non juste ») -- le verdict perime ne bloque plus  0, 0, 118
+      E  + « gel seul » leve pour ces 136 (le juge du Sheet ne les
+           designe pas : il s'appuie sur le numero de mandat, que
+           Hektor recycle ; les audits les retrouvent au jour pres)  0, 0, 136
+    POURQUOI 0 : changer un lien ne change pas une chaine ni une etiquette ; et chaque ligne de la vague 1 est
+    deja SEULE sur son dossier -- aucune des 136 n'y touche (le temoin positif prouve qu'on le verrait).
+```
+
+### 14.3 Ce qui reste VRAIMENT des 110 — 1 ligne à trancher, 1 règle, 2 recommandations
+
+```
+LES 23 QUE TU COMPTAIS (+ les 2 JUSTES a reserve = 25) :
+  12 NE SONT PLUS DES QUESTIONS -- V2 les corrige EXACTEMENT comme les deux audits : les 2 FAUX, les 9 A RATTACHER
+     (MDOXOBIC, DHXRAK9O, 72GQRHVB, 7IHI7YTJ, S8BKB6FL, 58I5AO17, CS38OO8R, KAYC29B7, O8BY6AC8), et 3S4ZWOFK
+     (PARTIEL : la copie C5 1001580 remplacee par la vraie offre 11958). Elles n'attendent QUE ton « vas-y » sur V2.
+   9 JAMAIS VUES LE 18/11, VUES LE 19/11 -- « JUSTE, certaine » toutes les neuf, la date au jour pres, le nom (8)
+     et le prix (6) : 0TECT361 MUNOZ, 50OUISUB SCARAMUZZI REVRET, D4GZG5QI CONTE, JL6I6JDG LECLERC, PJ7OXF0X
+     GONZALES, SNDD1833 MOUGENOT, WG029IGN FOUET, XMOGLM8G COLLARD, f9b55f79 GENILLIER. Leurs liens sont
+     « bonne » dans le gel (pas de V2). ⚠ UN seul avis independant, pas deux -> LA REGLE A TRANCHER : un audit
+     « certaine », date au jour pres, suffit-il ? Ma recommandation : oui.
+   4 AUTRES :
+     . T47ZI6GS et NKDC0I1M -- vues en Q1 : « sure » recommande.
+     . A5RW8ZVO LESAULT -- compromis 28155 SANS date (101 500) ; les deux audits le gardent (les deux noms, la
+       commission, la ville) sans preuve par la date. Recommande : « sure ».
+     . ⛔ M2G1Z1K8 SAS 2511 INVEST -- ta ligne : une offre du 26/04/2024 a 55 000, mandat 16559 ; notre lien : un
+       compromis annule SANS date a 100 000, sous EURL INVEST-2511. Le 18/11 le garde (« couvre vraisemblablement les deux
+       lots ») ; le 19/11 le refuse : ton mandat 16559 est le lot JUMEAU, sans aucune transaction chez nous.
+       Les audits divergent : A TOI.
+       Ma recommandation : ne PAS l'ecrire (un compromis des deux lots n'est pas l'affaire de cette ligne seule).
+```
+
+### 14.4 Les 15 coupes tirées au hasard — et ce qu'elles disent des 331
+
+Script : `phase2/checks/temps8_quinze_coupes_nettes_au_hasard_2026-11-20.py` (graine 20112026 écrite avant le tirage,
+rejouable) ; pièces brutes : `notice/TEMPS8_QUINZE_COUPES_NETTES_AU_HASARD_2026-11-20.md`.
+
+```
+LA POPULATION  331 LIGNES « coupe NETTE » du fichier des 803 -- 161 COUPES (une coupe = un groupe de 2 ou 3 lignes).
+               Strates : F1 avec G2 83, F1 sans G2 15, F2 49 (+1 avec G2), F3 3 (+1), F4 9.
+LE TIRAGE      stratifie : au moins une coupe par strate, une a 3 lignes, le reste au prorata ; hasard a graine fixe.
+LA RELECTURE   chaque piece contre ta ligne : la date (au jour), le montant, le nom ; et chaque « seconde
+               designation » du juge (3 cas) verifiee : c'est chaque fois une ligne d'un AUTRE MANDAT, ecartee a raison.
+VERDICT        14 JUSTES SUR TOUTES LEURS PIECES.
+               LA 15e (bien 53342, ALONSO / DE MATOS-DE FARIA) est juste sur ses pieces datees, mais deux compromis
+               annules SANS DATE (90 000 et 94 000) vont a ALONSO sur son SEUL NOM -- et c'est justement le nom que
+               Hektor laisse sur le compromis de DE MATOS. Plausible, pas prouve.
+CE QUE CA DIT  la faiblesse n'est pas au hasard, elle a une marque : « [nom seul] » ou « [case vide] » dans la coupe.
+DES 331        132 COUPES (274 lignes) : CHAQUE piece est designee par sa date -> les 15 les representent.
+                29 COUPES (57 lignes) : au moins une piece par le nom seul (18) ou la case vide (11) -- dont 25 que G2
+                coupe de toute facon. Ma recommandation : valider les 132 d'un mot, me laisser te montrer les 29.
+```
+
+Les 15, en français simple (la ligne de ton classeur → les pièces qui lui reviennent) :
+
+```
+ 1  bien 15722 · DE OLIVEIRA (vendu) / COLOMBET (annule) -- Hektor a mis COLOMBET sur le compromis de DE OLIVEIRA.
+    DE OLIVEIRA : compromis 01/06/2021, offre et vente a 220 000. COLOMBET : offre 01/04/2021 et compromis
+    annule 07/05/2021 a 207 000.                                                                      JUSTE
+ 2  bien 32960 · KADIM (annule) / CARRONNIER (vendu) -- le nom KADIM est reste sur le compromis et la vente de
+    CARRONNIER. KADIM : 21/09 et 08/10/2022 (66 000). CARRONNIER : 28/12/2022, 07/01/2023, vente (64 000). JUSTE
+ 3  bien 376 · LANGLADE (annule) / DEBRAY (vendu) -- l'inverse : DEBRAY sur le compromis annule de LANGLADE.
+    LANGLADE : 18/06 et 20/07/2023 (134 000). DEBRAY : 05/12/2023, 04/01/2024, vente (123 000).       JUSTE
+ 4  bien 47571 · LE VELY (annule) / MALIGE-MARTIN (vendu) -- MALIGE sur le compromis annule du 02/07/2025, a
+    18 100 = le prix de ta ligne LE VELY. Le reste (16 000) a MALIGE-MARTIN.                          JUSTE
+ 5  bien 15338 · DUMOULIN (annule) / BARONE (vendu) -- les deux compromis au nom d'un tiers, KOCA. DUMOULIN :
+    12/04 et 21/04/2023 a 165 000 (ton prix). BARONE : 08/07, 26/07/2023, vente, a 145 000.            JUSTE
+ 6  bien 49924 · PORTERAT (annule) / OUCHEMOUKH (vendu) -- les deux compromis au nom ROYER. PORTERAT : compromis
+    annule 04/04/2023. OUCHEMOUKH : 16/06, 27/06/2023, vente (136 000).                               JUSTE
+ 7  bien 43114 · BEIKES (2022) / BIGONNET (2023), deux annulees -- BEIKES sur le compromis de BIGONNET du
+    24/10/2023. BEIKES : 04/06 et 26/07/2022 (35 000). BIGONNET : son offre et ce compromis (34 000).  JUSTE
+ 8  bien 15517 · BEST et MARIN-DURAN (annulees) / DELORME (vendu) -- BEST sur les TROIS compromis. BEST :
+    07/09 et 26/09/2023 (145 000). MARIN-DURAN : 06/10 et 08/11/2023 (140 000). DELORME : 23/02/2024,
+    14/03/2024, vente (138 500). Chaque date au jour, chaque montant suit son offre.                  JUSTE
+ 9  bien 6555 · BERNAUD (annule) / NAGY-BOURNIGAL (vendu) -- tout a 30 000 : seule la date departage, et elle
+    tombe au jour (19/09 et 07/10/2020 ; 02/01 et 20/01/2021).                                        JUSTE
+10  bien 17534 · WHITELEY (annule) / CHAUSSE (vendu) -- WHITELEY sur la vente de CHAUSSE. WHITELEY : compromis
+    annule 20/11/2024 (105 000). CHAUSSE : 18/05, 03/07/2025, vente (85 000).                         JUSTE
+11  bien 3029 · SCI SEYA JAUMET (2019, annule) / PERLE (2020, vendu) -- SEYA JAUMET sur le compromis de PERLE.
+    JAUMET : 20/08 et 27/09/2019 (45 000). PERLE : 02/06, 19/06/2020, vente (49 000). (Ton prix « 42 » pour
+    JAUMET est une coquille, sans effet.)                                                             JUSTE
+12  bien 52937 · COQUILLART et SCIACCA (annulees) / SCI Patrimonial DASSAUD (vendu) -- COQUILLART : 17/12/2020
+    et 02/02/2021 (215 000). SCIACCA : son offre du 08/09/2021. DASSAUD : 08/10, 02/11/2021, vente
+    (200 000) -- Hektor avait mis COQUILLART et SCIACCA sur ces deux pieces.                          JUSTE
+13  bien 41833 · FILLIAT-GARNIER (annule) / PERBET-CELLE (vendu) -- tout a 105 000, la date departage :
+    GARNIER 19/03 et 12/04/2021 ; PERBET-CELLE 30/04, 01/06/2021, vente.                              JUSTE
+14  bien 24206 · DENIS DOS SANTOS (annule) / GAILLARD (vendu) -- GAILLARD sur le compromis annule du 26/09/2024,
+    qui est la date de DOS SANTOS. Le reste a GAILLARD (31/10/2024, 85 000).                          JUSTE
+15  bien 53342 · ALONSO (2023, annule) / DE MATOS-DE FARIA (2024, vendu) -- pieces datees justes (DE MATOS :
+    06/04, 07/05/2024, vente a 89 000 ; ALONSO : offre 08/07/2023 a 98 000). ⚠ Deux compromis annules SANS
+    date vont a ALONSO sur son seul nom.                                              JUSTE sauf 2 pieces
+```
+
+### 14.5 Le calendrier chiffré — « le maximum avant la vague 1, puis une seule écriture »
+
+```
+⚠ CE QUE TA DEMANDE CHANGE, ET QUE JE NE DECIDE PAS : « les regroupements avant d'ecrire » veut dire G2 et l'outil
+  de scission AVANT l'ecriture. Or ta regle de ce matin dit « pas de code de scission avant la fin de l'ecriture ».
+  Le calendrier ci-dessous suppose que tu la leves ; sans ton mot, je n'ecris pas une ligne de G2 ni de l'outil.
+
+UN GESTE PAR NUIT, en semaine, chacun suivi de son controle a 07:00 (le samedi et le dimanche : aucun geste neuf).
+CHEZ SUPABASE (le gel) : des gestes de JOUR, ton accord a chacun -- ils ne touchent ni chaines ni etiquettes.
+
+         MOI                                                  TOI                                     LA NUIT
+ve 20    les 19, les 110, les 15 (fait) ; le classeur des      les 15 -> les 132 ; la regle des 9 ;     E (allumee)
+         groupes (~3 h, ce soir) ; les 29 coupes faibles       M2G1Z1K8 ; leves-tu la regle ?
+sa 21    le controle de E (~1 h)                               --                                       --
+lu 23    patch « confiance » des 110 (~2 h) ; la piece         V2 (« vas-y ») ; le patch confiance ;    la piece 4126/
+         4126/4496 derriere son interrupteur (~1 h) ;          la piece (« vas-y » avec son compte)     4496 + 2 lignes
+         G2 commence                                           
+ma 24    G2 fini, ses temoins (~½ j) ; l'outil commence        les 8 lignes ; le classeur des groupes  les 8 lignes
+me 25    l'outil (~1 j) ; le fichier des rattachements de      les groupes rendus ; G2 (« vas-y »)      les rattachements
+         tes reponses (reunions, les 19, les 33 questions)                                              (reunions, 19, 33)
+je 26    l'outil fini, ses temoins (~½ j) ; le fichier des     l'outil (« vas-y »)                      G2
+         detachements tire de tes coupes validees
+ve 27    rien de neuf la nuit (le week-end)                    --                                       --
+lu 30    le patch V3 (les liens suspects, de jour)             V3                                       l'OUTIL : les
+                                                                                                        coupes validees
+ma 1/12  le controle ; le classement du jour AVEC C5 ;         la vague 0 (TES 3 lignes, TES Apps       --
+         temps7 rejoue ; les fichiers de vague ; l'a blanc     Script) ; tu lis l'a blanc
+me 2/12  -- TU ECRIS --                                        ton « vas-y » d'ecriture
+
+➡ LA DATE A LAQUELLE TU ECRIS : MERCREDI 2 DECEMBRE, si chaque nuit est verte et chaque decision arrive a son
+  jour. Une nuit rouge, ou une decision qui manque a son jour, decale d'UN jour ouvre (pas de geste le week-end).
+➡ CE QUI RESTERA NON ECRIT : les 74 sans transaction (ton reste accepte) ; et ce que tu choisis de laisser (par
+  exemple M2G1Z1K8, ou des coupes que tu refuses). Le reste se compte le 1/12 sur la photo du jour.
+⚠ NON MESURE : le compte final par case apres TOUS ces gestes (il depend de tes decisions) ; le temps reel de
+  l'ecriture de ~4 700 lignes (l'epreuve ecrit 231 lignes ; le vrai Sheet n'a jamais recu un batchUpdate) --
+  c'est la raison de garder la vague 0 AVANT.
+```
+
+### 14.6 Ce qui attend ta décision
+
+```
+1  LEVES-TU « pas de code de scission avant la fin de l'ecriture » ? (sinon : on ecrit apres les liens et les
+   rattachements, sans G2 ni l'outil -- et les melanges restent non ecrits)
+2  LES 15 COUPES : 14 justes, la 15e juste sauf deux pieces sans date. Valides-tu les 132 coupes datees d'un mot,
+   et je te montre les 29 a piece « nom seul » ou « case vide » ?
+3  LE PATCH « CONFIANCE » (ecriture dans le gel, de jour) : les 87 JUSTES + les 9 vues le 19/11 + A5RW8ZVO, et
+   la regle « un verdict du 18/11 corrige a l'identique par V2 ne bloque plus » (136 lignes en tout) ?
+4  M2G1Z1K8 : ne pas l'ecrire (ma recommandation) ?
+5  INCHANGES : V2 ; la piece 4126/4496 apres samedi ; les 8 lignes ; la vague 0 (TES 3 lignes, TES Apps Script) ;
+   samedi matin, A ou B.
+```
 
 ---
 
