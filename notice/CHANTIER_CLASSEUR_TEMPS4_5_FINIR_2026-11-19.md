@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits — les 87 peuvent passer « sûre », V2 corrige les 2 FAUX et 9 autres, rebrancher l'audit ne change l'étiquette d'AUCUNE ligne de la vague 1 ; 15 coupes au hasard : 14 justes, la 15e faible sur deux pièces sans date ; le calendrier : tu écris le mercredi 2/12)** — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00)** — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2563,6 +2563,110 @@ me 2/12  -- TU ECRIS --                                        ton « vas-y » d
 4  M2G1Z1K8 : ne pas l'ecrire (ma recommandation) ?
 5  INCHANGES : V2 ; la piece 4126/4496 apres samedi ; les 8 lignes ; la vague 0 (TES 3 lignes, TES Apps Script) ;
    samedi matin, A ou B.
+```
+
+### 14.7 Ses réponses (20/11, début d'après-midi) — trois règles levées, et le calendrier le plus court
+
+```
+SES MOTS   « JE LEVE TROIS REGLES » : 1 « pas de code de scission avant la fin de l'ecriture » -- LEVEE, G2 et
+           l'outil passent AVANT l'ecriture ; 2 « un geste par nuit » -- LEVEE, « la seule chose a laquelle je
+           tiens, c'est de pouvoir dire quel geste a casse quoi » ; 3 « rien le week-end » -- LEVEE, le controle
+           du matin se fait, il le lit le lundi, « une casse du samedi attend ma decision jusqu'au lundi ».
+           « LES 132 COUPES DATEES : OUI » -> notice/TEMPS8_DECISION_DU_20_11_LES_132_COUPES_DATEES_VALIDEES_
+           2026-11-20.csv (274 lignes ; 60 de ces coupes, G2 les fait seule) ; les 29 « nom seul / case vide » :
+           a lui montrer a part. « LE PATCH CONFIANCE (les 136 lignes) : OUI. » « M2G1Z1K8 : on ne l'ecrit
+           pas. » « SAMEDI : ne m'attends pas. »
+⚠ UN COMPTE A REDRESSER : ma description du patch disait « les 87 JUSTES + les 9 + A5RW8ZVO » ET « 136 ».
+           La variante E (136) ne contient PAS NKDC0I1M (les deux audits divergent sur son offre sans date) ;
+           les 87 nommees, si. Avec NKDC0I1M, comme decrit : 137. Je le mets, son etiquette ne change pas ;
+           il peut l'oter d'un mot.
+```
+
+**Comment je garantis « quel geste a cassé quoi » dans une nuit groupée** :
+
+```
+1  CHAQUE GESTE A SON INTERRUPTEUR (E, la piece, G2, l'outil), et chaque ligne des fichiers (rattachements,
+   detachements) porte le nom de son geste -- le journal du chainage l'ecrit a chaque mouvement.
+2  AVANT LA NUIT, SUR COPIE : un rejeu de la nuit ENTIERE donne la liste complete des transactions qui
+   changeront de dossier (et des etiquettes qui suivront) ; puis un rejeu « tout SAUF ce geste » par geste
+   (~10 min chacun) : chaque changement prevu est ATTRIBUE a son geste -- et ceux qui naissent de deux gestes
+   ensemble sont nommes comme tels. Je n'allume que si chaque changement a un pere.
+3  LE MATIN : le controle compare la realite a la prevision, transaction par transaction. Un changement
+   imprevu = rouge, et il s'attribue en rejouant la nuit geste par geste eteint.
+4  REVENIR : eteindre l'interrupteur du coupable ; la nuit suivante, le chainage se refait a neuf sans lui
+   (il se recalcule entierement a chaque run). Les etiquettes : la fusion rend au dossier celle de sa plus
+   petite transaction -- a verifier par le meme controle, pas a supposer.
+```
+
+**Ce qui est TECHNIQUE, et incontournable** :
+
+```
+T1  UN GESTE DE CHAINAGE NE JOUE QU'AU RUN DE NUIT : recalculer_les_chaines est appele DANS l'etape du registre
+    (affaire_ledger.py:1107), apres la lecture des transactions chez Hektor ; puis le push, puis la pose des
+    etiquettes, la meme nuit. L'effet se lit le lendemain vers 07:30.
+T2  LE CODE DOIT EXISTER AVANT SA NUIT. Mon estimation, en heures de travail : G2 ~3 h (ecrite et mesuree dans
+    temps6, a recopier derriere un interrupteur avec ses temoins) ; l'outil ~4 h ; leurs temoins sur rejeu ~2 h ;
+    les fichiers et le rejeu de la nuit entiere ~2 h.
+T3  DANS UNE NUIT, L'ORDRE EST CELUI DU CODE (boucle datee, A, E, D et la garde G2 ; puis les rattachements a
+    la main ; puis les detachements EN DERNIER) -> tout peut aller dans UNE nuit, a une condition : le fichier des detachements se calcule sur une
+    copie APRES G2 et apres les rattachements (sinon il couperait ce que G2 coupe deja). Donc : G2 code AVANT de
+    fabriquer les fichiers.
+T4  LE GEL (V2, confiance, V3) : des gestes de JOUR, immediats, qui ne touchent ni chaines ni etiquettes. Mais
+    « confiance » pour 40 des lignes (les 12 que V2 corrige et les 28 « audit non juste ») a besoin de V2 AVANT :
+    leurs liens n'existent qu'apres lui. Les 97 autres n'attendent rien.
+T5  LES FICHIERS DE VAGUE ne se fabriquent qu'apres la DERNIERE nuit (etiquettes definitives), apres son controle.
+T6  L'ECRIVAIN REFUSE 03:30-09:30 : la pose des etiquettes et la descente reecrivent ce qu'il lit.
+T7  LA VAGUE 0 attend TES 3 lignes et TES Apps Script ; chaque interrupteur et l'ecriture attendent ton mot. Un
+    groupe que tu n'as pas tranche n'entre dans aucun fichier : ses lignes restent non ecrites.
+```
+
+**Ce qui est de la PRUDENCE — ce que je garde, ce que ça coûte, pourquoi** :
+
+```
+P1  E SEULE CETTE NUIT.                                         COUT : 0 jour -- l'outil n'est pas ecrit ce soir.
+P2  LE REJEU DE LA NUIT ENTIERE + UN PAR GESTE, avant d'allumer. COUT : ~1 h, 0 jour. C'EST ta garantie.
+P3  DEUX NUITS GROUPEES plutot qu'une : la 1re porte le CODE NEUF (G2, l'outil) avec ce qui est deja decide ; la
+    2e porte tes reponses aux groupes.                          COUT : 0 jour -- tes reponses fixent la date de
+    toute facon ; et le code neuf ne joue pas pour la 1re fois au milieu de tout le reste.
+P4  LA VAGUE 0 le matin meme, avant la grande ecriture.          COUT : ~1 h, 0 jour (et c'est ta regle).
+P5  PAS DE CHAINAGE DE JOUR (relancer l'etape du registre hors de la nuit).
+                                                                COUT : 1 jour, SEULEMENT si tes reponses arrivent
+    un matin de semaine (ecrire l'apres-midi au lieu du lendemain). POURQUOI : l'etape relit Hektor (son quota ;
+    la nuit en prend deja ~4 500 requetes) et tournerait pendant que l'equipe travaille dans l'app ; jamais
+    mesure. La lever = un audit de ~2 h, puis ton accord pour lancer un run.
+P6  TON « VAS-Y » D'ECRITURE DONNE EN DIRECT (pas a l'avance).   COUT : 1 jour, SEULEMENT si tout est pret un jour
+    ou tu es absent (un dimanche).
+```
+
+**Le calendrier le plus court** :
+
+```
+VE 20 (aujourd'hui)
+   MOI   le classeur des groupes (les 29 d'abord ; les 13 disputees + 8 a completer relues ; les 33 questions ;
+         la reparation des 19 ; les 7 reunions ; les 8 lignes) ~3 h, vers 17:00 ;
+         le patch « confiance », partie A (les 97 lignes qui n'attendent pas V2) : ecrit, rejoue, colle sur ton
+         OUI, sa repetition montree ~1 h 30 ; G2 commence.
+   TOI   V2 (« vas-y ») -> je le colle, puis la partie B de « confiance » dans la foulee ;
+         le « vas-y » CONDITIONNEL de la nuit de samedi (ci-dessous) ; tes reponses aux groupes, quand tu peux.
+   NUIT  E seule.
+SA 21
+   MOI   le controle de E ; G2 fini ; l'outil ; leurs temoins ; les fichiers ; le rejeu de la nuit entiere et
+         geste par geste. Si E est verte ET chaque changement prevu a son pere : j'allume vers 20:00.
+   NUIT  ① la piece 4126/4496 et ses 2 lignes · G2 · l'outil avec les 132 coupes validees (moins ce que G2 coupe).
+DI 22
+   MOI   le controle de ① ; tes reponses arrivees -> les fichiers, le rejeu, j'allume.
+   NUIT  ② tes reponses : rattachements et detachements (si elles sont la).
+LU 23
+   MOI   le controle de ② ; le classement du jour (avec C5, les 137, sans M2G1Z1K8) ; temps7 rejoue ; les fichiers
+         de vague ; l'a blanc -- pret vers 10:30.
+   TOI   tu lis les controles ; V3 (les liens suspects, patch de jour) ; la vague 0 (TES 3 lignes, TES Apps
+         Script) ; ton « vas-y ».
+   ➡ TU ECRIS LE LUNDI 23 NOVEMBRE, en fin de matinee -- si tes reponses aux groupes arrivent avant dimanche 18:00.
+   ➡ Si elles arrivent lundi : la nuit ② est celle de lundi, et TU ECRIS LE MARDI 24 (ou lundi apres-midi, si tu
+     leves P5).
+⚠ CE QUI PEUT DECALER : un controle rouge (E samedi, ① dimanche) -- il attend ta decision lundi ; l'outil plus
+  long que mes ~4 h ; une reponse manquante (son groupe reste non ecrit, la date ne bouge pas).
+⚠ NON MESURE : le temps reel de l'ecriture de ~4 700 lignes ; le compte final par case (il depend de tes reponses).
 ```
 
 ---
