@@ -3824,3 +3824,21 @@ propre transaction (le plus récent fait foi). ⚠ Tant que l'écran (morceau 4)
 8 jugements, `ged_propositions = admin`) ; patch passé d'un bloc ; **5 contrôles sur 5 VERTS** (CHECK et porte acceptent
 `masque` / `reaffiche`, porte SECURITY DEFINER fermée à `anon`, 8 jugements intacts, interrupteur inchangé). Aucun écran ne
 l'utilise encore (morceau 4). Retour arrière : `supabase/patch_ged_masquer_2026-11-20_INVERSE.sql`.
+
+### 12.60 VISUEL V3, MORCEAU 2 -- le socle : la GED branchée sur la charte bienvu (20/11, « Oui, enchaîne », « La charte ») -- ÉCRIT, PAS EN LIGNE
+
+**Trouvé en l'auditant** (`AUDIT_GRAPHIQUE_GED_2026-11-18.md` §9, correction) : la charte est déjà dans l'app (`src/bienvu.css`,
+jetons `--bv-*` sous `:root.bv`, allumée en production) avec DEUX polices -- titres Plus Jakarta Sans, texte Hanken Grotesk.
+Ma maquette V3 disait « une police » : faux. **Décision de Frédéric : « La charte »** (Hanken au texte, comme tout bienvu).
+**Le code** (CSS seulement, 3 fichiers, 127 lignes remplacées une pour une) : `RecuManque.css` (71 couleurs, 4 polices),
+`DepotDocuments.css` (64, 7), `BilanCompromis.css` (16, 5) -- chaque couleur qui a un rôle dans la charte (magenta, framboise,
+roses, encre, gris, traits, brume, vert et fonds d'état) devient `var(--bv-…, <ancienne valeur>)`, chaque police
+`var(--bv-font-display | --bv-font-ui, <ancienne pile>)`. ⭐ Le repli est l'ancienne valeur : interrupteur bienvu éteint =
+mêmes pixels. Gardés en dur, exprès : le blanc, les textes foncés d'état (vert, ambre, rouge : contraste sur fond pâle), le
+papier, les bleus et teintes sans rôle dans la charte. Rien d'autre ne change (ni mise en page, ni texte, ni geste).
+**Ce qui se verra, interrupteur allumé** : des teintes légèrement corrigées (encre #222323, vert #2f7d59, survols en
+framboise #8c0044, fonds roses unifiés) ; mêmes polices qu'avant.
+**Contrôles** : `test_ged_socle.cjs` **16 VERT** (aucune couleur de la charte en dur, chaque jeton existe et garde son repli,
+chaque police passe par la charte, deux polices) ; témoin inverse sur l'ancien fichier : **13 ROUGE**. Les 14 autres essais GED
+verts (bilan 137, lues 95, remplir contact 80…). `npm run build` passe ; le paquet porte `var(--bv-magenta, #c5005f)` et
+`.bc{--bc-encre: var(--bv-ink, #1f2121)…`. ⚠ Pas vu à l'écran : il faut le déploiement (accord de Frédéric).
