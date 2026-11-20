@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, tard le soir (⑰ : les 132 MESURÉES pièce par pièce -- aucune fausse, 273 lignes sur 274 prouvées ; l'outil de coupe CORRIGÉ, témoin vert ; ses deux critères appliqués partout : 395 lignes s'écrivent, 39 pièces à part, 9 de ses OUI touchés ; R1-R5 posées ; lundi 23 tient s'il donne son mot samedi)** — puis 20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -2864,6 +2864,169 @@ LE CONTROLE SUR TOUT LE CLASSEUR (montant de l'offre de CHAQUE ligne du bien, ho
    rattachée à un dossier déjà écrit -- pour 20088, 4542, 14033, et 4533, 7710, 4560, 14110 du classeur.
 3  Les corrections du classeur des groupes (28, 22, 29, 50, 40 ; et 8) et les trois lectures refaites (7, 17, 25).
 4  B : quand il veut, au calme. Sans réponse : rien d'écrit sur B1-B3, rien d'autre ne bouge.
+```
+
+---
+
+## ⑰ Le 20/11, tard le soir — les 132 mesurées, l'outil de coupe corrigé, ses deux critères appliqués partout
+
+> Ses mots (20/11, tard le soir) : « NI L'UN NI L'AUTRE. Je ne valide pas en bloc [...] Je te donne des critères, tu
+> les appliques, et tu me dis OÙ ÇA TOMBE. » — « LES 132 COUPES DATÉES [...] je veux la MESURE, pas le principe. Si
+> une seule est fausse, je retire ma validation. » — « L'OUTIL DE COUPE porte ce défaut dans son code. Corrige-le et
+> montre-moi son témoin. » — Critère 1 : « LA PREUVE INTERNE DÉCIDE [...] Sinon : À PART. Pas de « plutôt ». » —
+> Critère 2 : « SI L'ÉTIQUETTE NE BOUGE PAS, LE DOUTE NE COÛTE RIEN. » — Il tranche : la convention après
+> renégociation, la règle « à part » (générales), B3 à part.
+
+Tout est produit par `phase2/checks/temps11_les_132_mesurees_et_tes_criteres_2026-11-20.py` (lecture seule, gel
+vivant, résultat VERT), avec l'outil corrigé `phase2/checks/coupe_preuve_interne.py`. Détail pièce par pièce :
+`notice/TEMPS11_LES_132_MESUREES_ET_TES_CRITERES_2026-11-20.csv` (et `.md`).
+
+### 17.1 Les 132 coupes, pièce par pièce — aucune fausse, une ligne non prouvée
+
+```
+⚠ CE QUE « DATÉE » VOULAIT DIRE : le code des coupes appelait « par la date » une pièce dont la ligne avait sa case
+  REMPLIE (Offre Achat, Compromis…), SANS comparer les dates. Mesurées au jour exact ce soir :
+627 PIÈCES   623 prouvées par la date au jour exact (sur TOUTES les lignes du bien, pas seulement la coupe)
+               1 par prix + honoraires
+               2 offres acceptées à un jour de leur case, que Hektor enchaîne au compromis prouvé (0 à 31 j après,
+                 seule offre acceptée du bien) -- coupes 58 (2168) et 90 (26029)
+               1 SANS PREUVE : 23054, l'offre refusée de SOTTON (SBH4QWDW, coupe 67), datée du 26/01/2021, ta case dit
+                 25/01 -- son prix est celui de la ligne, mais une offre n'a pas d'honoraires
+               0 CONTREDITE (aucune pièce que les preuves désignent ailleurs)
+LES COUPES   131 prouvées sans réserve ; 1 (la 67) dont une ligne n'est pas prouvée. La pièce est SEULE sur sa ligne :
+             la coupe ne change pas, seule la ligne SOTTON ne s'écrit pas. -> 273 lignes sur 274 s'écrivent.
+⭐ 8 « CONFLITS DATE / PRIX » au premier passage, TOUS levés par la mesure : le prix désignait l'acheteur final parce
+  que la case Prix du classeur n'est pas toujours le prix de l'offre (ARNOLD 159 000 au classeur, 135 000 au compromis,
+  à l'offre et à la vente) -- la ligne avait une offre Hektor DATÉE AU JOUR EXACT à ce prix ; et FARDELLA : le prix
+  désignait COSTA, dont l'offre est d'un mois APRÈS ce compromis (un acheteur impossible ne contredit rien).
+TÉMOIN DU CRITÈRE 2   la règle « la plus petite transaction » contre la simulation de la pose (écrire, puis corriger
+             dans tous les sens) sur chaque pièce des 132 : 583 d'accord, 0 en désaccord.
+```
+
+### 17.2 L'outil de coupe corrigé, et son témoin
+
+```
+LE DÉFAUT    il n'était PAS dans le code de nuit (affaire_ledger.py applique une liste) mais dans le code qui
+             FABRIQUAIT la liste (temps6, bloc « part / dispute / nom seul ») : 1) la pièce donnée au NOM ; 2) « par la
+             date » = case remplie ; 3) seules les lignes du GROUPE regardées.
+LE NEUF      coupe_preuve_interne.py : la date au jour exact d'abord, puis prix + honoraires (l'offre de la ligne = sa
+             case Prix OU une offre Hektor datée au jour exact de sa case Offre Achat ; ses honoraires = sa commission),
+             parmi TOUTES les lignes du bien (registre des transactions, des mandats, numéro de dossier, LIEN CRM).
+             Le nom n'entre jamais. Un acheteur impossible par les dates n'est pas candidat. Sinon : abstention.
+             Dans temps6, la branche « nom seul » est RETIRÉE (la pièce reste sans ligne) et l'avertissement posé.
+LE TÉMOIN    sur les 132 + les sections 1 et 2 du classeur : 826 pièces identiques, 10 corrigées, 18 abstentions
+             (dont 3 dans les 132 : les deux offres enchaînées et SOTTON), 12 disputes tranchées par la date.
+   l'ancien se trompait, le neuf tranche juste : 16378 -> COMI (et non DU PELOUX) ; 27135 -> GENESTAS, 27134 -> ARMAND
+             TORE (et non ALONSO) ; 4649 -> MULLER, 4651 -> CHECCONI (et non DUVET) ; 7450 -> DURIEUX (et non GUERIN) ;
+             17131 -> MELKI ; 4480 -> MARCOS (et non VIALLARD).            VERT
+   l'ancien se trompait, le neuf s'abstient : 4533, 7710, 4560, 14110 -> À PART.          VERT
+⚠ LA LIMITE  25 lignes du classeur ne sont reliées à aucun bien par aucun des quatre chemins : l'outil ne les voit pas.
+```
+
+### 17.3 Ses deux critères appliqués partout — où ça tombe
+
+```
+SES 23 QUESTIONS
+  sortent, ta réponse ne déplace aucune pièce : A2, A7, A8, B4, B5, B6, B7 (7 questions, 12 lignes)
+  sortent, la preuve tranche : A3 (11414 -> SOUBEYRAND, par la date), A4 (19131 et 19133 -> POCHELON, par la date),
+     A9 (17366 -> ROBERT, par la date ; AFFONSO garde 17365 et ne bouge pas)
+  À PART, l'étiquette en dépendait : A1 (27512), A5 (20088), A6 (4542), B1 (26613), B2 (21520), B3 (14033, sa décision)
+  -> 19 des 23 lignes s'écrivent. Ne s'écrivent pas : SHN6RKDI, d2108609 (B1, B2 : il ne leur reste que leur copie C5),
+     ea6a28a7 (B3), et HUY49KEC -- sa question sort, mais sa vente 3741 tombe à côté de tes cases : critère 1, à part.
+  ⚠ B3 : le critère 1 donne 14033 à DONNADIEU (140 500 et 9 500 = son prix et sa commission, aucune autre ligne).
+     Sa décision (à part) est appliquée ; les deux libèrent COLAS ; seule DONNADIEU s'écrirait en plus.
+  Les jumelles (A8) s'écrivent TOUTES LES DEUX : VIALLARD 3308P0UX + YRUF0S9H sur 4483 ; PAOLONE O6R10ZQA + T2GZOY5O
+     sur 20073 + 20075 (une réunion) ; MARCOS reprend 4480.
+SES « OUI » VALIDÉS EN BLOC -- mon ⑯ disait 5 à corriger : le critère strict en touche 9
+  une pièce change de ligne : 28 (7450 -> DURIEUX)
+  À PART, une étiquette en dépend : 2 (1059), 22 (4533), 29 (7710), 40 (14110), 50 (4560)
+  À PART, aucune étiquette ne bouge : 14 (24591), 18 (27555, 27556 -- GARRY XHITO8HE perd sa seule pièce),
+     28 (7453), 46 (24321)
+  Les 4 de plus (2, 14, 18, 46) : des pièces « nom seul » que mon contrôle du ⑯ laissait passer -- il cherchait des
+  CONTRADICTIONS ; le critère exige une PREUVE.
+TOUT LE PÉRIMÈTRE (les 132 + sections 1 à 3)   203 biens, 433 morceaux, 39 pièces À PART (dont 19 dont la place ne
+  bouge aucune étiquette) ; 395 lignes s'écrivent, 6 non (SOTTON, GARRY, SHN6RKDI, d2108609, ea6a28a7, HUY49KEC) ;
+  83 gestes sur le gel pour y arriver (relier 42, délier 41) -- À FAIRE SEULEMENT SUR SON ACCORD.
+  La pièce 4126/4496 : le critère 1 ne donne NI 4126 NI 4496 (ni 4720) -- elles restent à part.
+SES 7 (4, 8, 11, 20, 23, 24, 81) : je n'y touche pas. Ceux des sections 1 et 2 sont dans le compte ci-dessus TELS
+  QUE L'OUTIL LES VOIT (le csv dit pièce par pièce) ; rien n'est fabriqué avant qu'il les ait tranchés.
+```
+
+### 17.4 Les lignes oubliées
+
+```
+27 des 180 groupes ont, hors du groupe, une ligne du même bien qui touche une de leurs pièces.
+   14 : une ligne d'un AUTRE groupe de mon classeur -- le même bien coupé en deux groupes (11/86, 17/124, 20 et 53/57,
+        58/59, 61/66, 108/140, 111/133, 113/83, 126/129) : vus des deux côtés.
+   15 : une ligne dans AUCUN groupe -- comme FARGE-DEBISE (20 et 53 sont dans les deux cas). 15 lignes : YRUF0S9H, 0EMKY4ZS, HHQZC2QP, L2B2WGCF, FOZ6HZLK,
+        D9MMB7OU, 6FQO29C8, 1c7b38f9, JX1K7DWB, ZN47FIR7, VTVUQWO4, WECT3RIT, ODF1PWJ0, 1cc703d9, SC58GWXX.
+        Elles changent une décision sur 25, 40, 68, 63, 20/53, 74, 62, 24 (toutes reprises par l'outil neuf) ; elles ne
+        changent RIEN sur 76 et 78 (validés : la date au jour exact décide, la ligne oubliée ne touche que par le prix) ;
+        les 4 de la section 7 (116, 127, 128, 132) sont dans MA relecture à faire.
+   Sur les 132 coupes : 9 ont une telle ligne ; aucune ne change le verdict (le juge regarde déjà tout le bien).
+```
+
+### 17.5 Les règles du chantier, posées ce soir
+
+```
+R1  LA PREUVE INTERNE DÉCIDE (son critère 1). Une pièce va à une ligne par la date au jour exact de la case de son
+    genre, ou par son prix ET ses honoraires = l'offre et la commission d'une ligne -- unique parmi TOUTES les lignes du
+    bien. Le nom n'entre jamais. Un acheteur impossible par les dates n'est pas candidat. Sinon : À PART.
+R2  SI L'ÉTIQUETTE NE BOUGE PAS, LE DOUTE NE COÛTE RIEN (son critère 2). Une question sort de sa liste quand sa réponse
+    ne déplace la plus petite transaction d'aucun dossier possible ; la ligne s'écrit. (Témoin : 583/0.)
+R3  APRÈS UNE RENÉGOCIATION, le rôle « offre » tient l'offre ACCEPTÉE ; l'offre d'origine reste dans le même dossier
+    (sa règle, générale). Dans l'outil : une offre acceptée sans preuve à elle suit l'offre d'origine prouvée de sa
+    chaîne quand aucun autre acheteur du bien ne s'intercale, ou le compromis prouvé qui la suit de 0 à 31 jours.
+R4  « À PART » (sa règle, générale) : une pièce douteuse reste seule dans son dossier et n'est jamais rattachée à un
+    dossier déjà écrit.
+    CE QU'ELLE ENTRAÎNE AILLEURS :
+    a. L'OUTIL ET G2 DEVIENNENT PERMANENTS : les coupes et les pièces à part ne tiennent que par lui (il joue en
+       dernier chaque nuit). L'éteindre après l'écriture ressouderait les dossiers, et chaque étiquette tenue par une
+       plus petite transaction repartie de l'autre côté changerait. -> plus jamais éteints sans réécrire la colonne A.
+    b. RÉPONDRE PLUS TARD à une question B reste possible SANS toucher la colonne A seulement si la pièce va à une ligne
+       non écrite, ou n'est pas plus petite que la plus petite du dossier qui la reçoit. B3 : « 14033 = DONNADIEU »
+       passe ; « 14033 = COLAS » est interdit (14033 < 14034 : l'étiquette écrite de COLAS changerait). Sur les 39
+       pièces à part, 19 pourront être rattachées un jour sans rien bouger : la règle peut se restreindre aux 20 autres.
+    c. LE GEL : une ligne encore reliée à sa pièce à part serait dans deux dossiers -> bloquée. Il faut DÉLIER ces liens
+       (dans les 83 gestes) : un patch du gel, sur son accord.
+    d. DANS L'APP : chaque pièce à part apparaît comme une affaire à elle (un compromis annulé ou une offre refusée sans
+       ligne du classeur) -- 39 dossiers de plus au registre.
+R5  B3 : 14033 À PART (sa décision) ; la vente COLAS s'écrit.
+```
+
+### 17.6 Ce que j'en tire pour la façon de le faire valider
+
+```
+POURQUOI SON TIRAGE DE 15 N'A RIEN VU   les 5 erreurs vivaient toutes dans les 29 coupes « nom seul / case vide » ; le
+  tirage portait sur les 161 coupes : 1 seule des 15 y est tombée (ALONSO, déjà signalée faible). Et surtout : je les
+  avais relues avec LE MÊME angle mort que celui qui les avait faites (les deux lignes de la coupe, le nom) -- un
+  contrôle qui partage le raisonnement le confirme (voir « accord circulaire »).
+POUR LA SUITE   1. il valide des RÈGLES, pas des cas (comme ce soir) ; 2. chaque pièce porte sa preuve écrite, revérifiée
+  par la machine sur 100 % (fait : 627 pièces des 132, et les sections 1 à 3) ; 3. son œil va aux EXCEPTIONS seules
+  (les 39 à part, les 6 lignes non écrites), et un tirage, s'il en faut un, se fait DANS chaque sorte de preuve,
+  séparément ; 4. tout contrôle regarde TOUTES les lignes du bien.
+```
+
+### 17.7 La date, et ce qui attend sa décision
+
+```
+LUNDI 23 TIENT, à deux conditions :
+   samedi 21    le contrôle de la 1re nuit de E (prévu) ; SON MOT sur « où ça tombe » (17.3) -> je fabrique le fichier
+                des détachements V3 et le patch du gel V3 (83 gestes), avec leur répétition, et je rejoue la nuit sur copie
+                (éteints = identique ; allumés = la prévision) ; puis SON « VAS-Y » avec les comptes, AVANT SAMEDI SOIR.
+   nuit sa->di  G2 + l'outil V3, pour la première fois.   dimanche matin : le contrôle.
+   nuit di->lu  la nuit de stabilité (les étiquettes ne doivent pas bouger).
+   lundi 23     la vague 0 (SES 3 lignes, SES Apps Script), puis la vague 1.
+   Si son mot arrive dimanche : mardi 24.
+   Avant lundi je passe aussi la vague 1 au même crible (lecture seule) : le défaut vivait dans l'outil de coupe, je
+   veux le compte des pièces contredites ailleurs.
+CE QUI ATTEND SA DÉCISION
+   1  « où ça tombe » : 395 lignes, 39 pièces à part, 6 lignes non écrites, 9 de ses OUI touchés (17.3).
+   2  le patch du gel V3 (83 gestes) et le fichier des détachements V3 : je les fabrique sur son mot, il les joue sur
+      son « vas-y ».
+   3  R4 restreinte aux 20 pièces dont la place bouge une étiquette (les 19 autres rattachables un jour) ?
+INCHANGÉS   rien dans le Sheet, rien chez Hektor, rien en base ; rien de poussé ; l'écrivain dort ; la vague 0 attend
+   ses 3 lignes et ses Apps Script ; ses 7 groupes ; les 2 réunions « à toi » ; ma relecture des 76 lignes.
 ```
 
 ---

@@ -526,11 +526,13 @@ def etape_classer() -> int:
             elif cs:
                 dispute.append(a)
             else:
-                cs = {cls[i] for i in ls if set(TX[a]["noms"]) & noms_ligne(i)}
-                if len(cs) == 1:
-                    part[cs.pop()].append((a, "nom seul"))
-                else:
-                    reste.append(a)
+                # ⛔ 20/11 AU SOIR -- LE DEFAUT EST ICI, ET IL EST RETIRE : on donnait la piece au NOM qu'elle porte
+                #   (« [nom seul] »). Or Hektor recopie le nom du premier acheteur sur TOUS les compromis du bien : 3
+                #   lectures fausses et 5 des 67 « OUI » valides etaient de ce type. Une piece sans ligne qui la designe
+                #   reste desormais SANS LIGNE ; l'outil corrige est `coupe_preuve_interne.py` (date au jour exact,
+                #   puis prix + honoraires, sur TOUTES les lignes du bien -- jamais le nom). ⚠ « date » ci-dessus veut
+                #   seulement dire « la case est remplie », pas « la date est egale » : ne plus s'en servir pour couper.
+                reste.append(a)
         proprio[k] = {a: c for c, xs in part.items() for a, _ in xs}
         sans_piece = sorted({cls[i] for i in ls} - set(part))
         coupe_etat[k] = ("DISPUTEE" if dispute else "A COMPLETER" if reste or sans_piece else
