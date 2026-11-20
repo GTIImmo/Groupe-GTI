@@ -3733,3 +3733,10 @@ quand des doublons sont trouvés. Le 2e clic d'un double-clic créait donc le co
 doublon. Parade : le bouton reste inactif 1 s après chaque changement d'étape ou l'apparition des doublons (pas au premier
 affichage) -- la même que « Ce que dit… » (§12.55). Essai statique `test_contact_double_clic.cjs` 4 verts, témoin inverse
 compris. ⚠ **Pas vu à l'écran** : il faut le déploiement (accord de Frédéric).
+**En ligne et éprouvé le 20/11** : les 3 commits rejoués sur `origin/main` (le dossier local avait divergé : un `git push`
+simple était refusé), poussés en `03e03bf`, déployés par Vercel (`dpl_65W6i7SbAKTHHMsrUB8Ed2MsAyUU`, READY). Le bundle servi
+porte les deux correctifs (`(c.length===1||o&&o[1]===1)` pour P6 ; `disabled:se||Mt` et `setTimeout(…,1e3)` sur `[re,vn]`).
+**À l'écran**, Nouveau contact, identité fictive « ESSAI DOUBLECLIC » / `@example.com`, compte formation, UN seul clic sur
+« Étape suivante » : 0 ms « Étape suivante » actif -> 100 ms « Créer le contact » INACTIF -> 500 ms INACTIF -> 1 300 ms actif.
+Fenêtre fermée sans enregistrer ; 0 travail de contact créé (vérifié en base). Pas de vrai double-clic tenté : un échec
+aurait créé le contact chez Hektor. P6 n'est pas éprouvée à l'écran (il faudrait deux personnes au même prénom sur un bien).
