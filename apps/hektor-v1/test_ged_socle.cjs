@@ -3,7 +3,7 @@
 // interrupteur bienvu éteint = mêmes pixels qu'avant.  node test_ged_socle.cjs   (--temoin : sur l'ancien fichier, rouge attendu)
 const fs = require('fs')
 const path = require('path')
-const { execSync } = require('child_process')
+
 
 let ok = 0, ko = 0
 const voir = (vrai, libelle) => { if (vrai) { ok++; console.log('  VERT  ' + libelle) } else { ko++; console.log('  ROUGE ' + libelle) } }
@@ -12,9 +12,12 @@ const FEUILLES = ['RecuManque.css', 'DepotDocuments.css', 'BilanCompromis.css']
 const CHARTE = ['#c5005f', '#8c0044', '#a3004e', '#a3004f', '#a9004f', '#f6b6d5', '#fdf0f6', '#fcedf4', '#fbeef4', '#fde8f1',
   '#1f2121', '#5c6163', '#747a7a', '#e2e5e6', '#cfd3d4', '#cdd2d4', '#f6f7f8', '#f7f8f8', '#2e8a5c', '#e6f3ec', '#fff1dc', '#fbeceb']
 const temoin = process.argv.includes('--temoin')
-const lire = (f) => temoin
-  ? execSync(`git show HEAD~0:apps/hektor-v1/src/${f}`, { cwd: path.join(__dirname, '../..'), encoding: 'utf8' }).replace(/\r\n/g, '\n')
-  : fs.readFileSync(path.join(__dirname, 'src', f), 'utf8').replace(/\r\n/g, '\n')
+// Témoin inverse : la même feuille, jetons retirés (chaque `var(--bv-…, X)` redevient X) -- l'essai doit alors sonner.
+const sansCharte = (css) => css.replace(/var\(--bv-[a-z-]+, (#[0-9a-fA-F]{6})\)/g, '$1').replace(/var\(--bv-font-(?:display|ui), ([^;}]+?)\)(?=\s*[;}])/g, '$1')
+const lire = (f) => {
+  const css = fs.readFileSync(path.join(__dirname, 'src', f), 'utf8').replace(/\r\n/g, '\n')
+  return temoin ? sansCharte(css) : css
+}
 
 const bienvu = fs.readFileSync(path.join(__dirname, 'src/bienvu.css'), 'utf8')
 const jetons = new Set([...bienvu.matchAll(/(--bv-[a-z-]+)\s*:/g)].map((m) => m[1]))
