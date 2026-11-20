@@ -3733,3 +3733,62 @@ quand des doublons sont trouvés. Le 2e clic d'un double-clic créait donc le co
 doublon. Parade : le bouton reste inactif 1 s après chaque changement d'étape ou l'apparition des doublons (pas au premier
 affichage) -- la même que « Ce que dit… » (§12.55). Essai statique `test_contact_double_clic.cjs` 4 verts, témoin inverse
 compris. ⚠ **Pas vu à l'écran** : il faut le déploiement (accord de Frédéric).
+**En ligne et éprouvé le 20/11** : les 3 commits rejoués sur `origin/main` (le dossier local avait divergé : un `git push`
+simple était refusé), poussés en `03e03bf`, déployés par Vercel (`dpl_65W6i7SbAKTHHMsrUB8Ed2MsAyUU`, READY). Le bundle servi
+porte les deux correctifs (`(c.length===1||o&&o[1]===1)` pour P6 ; `disabled:se||Mt` et `setTimeout(…,1e3)` sur `[re,vn]`).
+**À l'écran**, Nouveau contact, identité fictive « ESSAI DOUBLECLIC » / `@example.com`, compte formation, UN seul clic sur
+« Étape suivante » : 0 ms « Étape suivante » actif -> 100 ms « Créer le contact » INACTIF -> 500 ms INACTIF -> 1 300 ms actif.
+Fenêtre fermée sans enregistrer ; 0 travail de contact créé (vérifié en base). Pas de vrai double-clic tenté : un échec
+aurait créé le contact chez Hektor. P6 n'est pas éprouvée à l'écran (il faudrait deux personnes au même prénom sur un bien).
+
+### 12.58 (20/11, « Fais 1, 2, 3 ») -- le ménage des pièces d'essai, deux trouvailles auditées, un essai rendu insensible aux fins de ligne
+
+**1. LE MÉNAGE EST FAIT (20/11, 08:50 -> 08:53, heure de Paris).** Sauvegarde datée d'abord
+(`scratchpad/menage2011/sauvegarde_menage_pieces_fictives_20261120.json` : les 8 fiches, leur numéro Hektor, leur chemin).
+Contrôles avant : 8 documents en tout sur 63331 et 63330, TOUS marqués ESSAI / FICTIF / SPECIMEN, signature `to_send`,
+0 demande de signature liée, file vide. Le geste : `delete_document_from_hektor`, raison `menage_pieces_fictives_20_11`,
+au nom de Frédéric, la charge du 18/11 -- d'abord UN seul (63330, titre de propriété, done en ~40 s, Hektor 716269
+confirmé), puis les 7 autres. **8/8 done, 0 erreur** ; journal des suppressions : **8 traces, 8 « confirmé chez
+Hektor »** ; il reste **0 document** sur 63331 et 63330. Comme le 18/11, les lectures GED de ces pièces restent en base,
+invisibles à l'écran.
+⚠ **Ce que le ménage ne défait pas, exprès** : les valeurs écrites sur les fiches d'essai par les preuves restent
+(63330 terrain 742 m², 600 avant ; 63331 CHARGES 200 et quote-part 2 400, 150 et 1 800 avant). Les remettre = une
+écriture chez Hektor de plus, non demandée.
+
+**2a. « La recherche du bien, à la création d'un contact, ne regarde que le compte choisi » : C'EST LE DESSIN, PAS UN
+DÉFAUT.**
+- Le filtre est là depuis le 01/06 (`8ef77ba`, App.tsx, `scope: { negotiatorEmail: selectedHektorEmail }`) ; l'écran le
+  DIT quand la liste est vide : « Les annonces récentes du négociateur apparaissent ici ».
+- Le compte choisi est le NÉGOCIATEUR DU CONTACT (la carte d'aperçu l'écrit : « Négociateur · … »), et le worker ouvre la
+  session Hektor de ce compte (`ensureHektorExecutionContext`, `preferRequester`). Montrer ses biens à lui garde le contact
+  et le bien chez le même négociateur.
+- Pas de contournement : un numéro tapé ne vaut que s'il est choisi dans la liste (`setOwnerAnnonceId('')` à chaque frappe).
+- ⚠ Une différence, NOTÉE seulement : les deux autres recherches de bien (fenêtres de RDV, App.tsx ~40056 et ~47166)
+  cherchent dans toute l'AGENCE quand elle est connue. Rien ne dit qu'il faille aligner : ce sont d'autres usages.
+- ⚠ NON MESURÉ : si Hektor accepterait de relier un bien d'une autre agence que celle du compte (la console est filtrée
+  par agence). Je ne l'ai pas essayé : ce serait une écriture chez Hektor.
+- Ce qui m'avait surpris le 19/11 venait de moi : j'avais pris le compte formation pour un bien d'Emmanuelle PEREIRA.
+
+**2b. « Un contact créé dans l'app n'a pas de ligne au registre des mandants » : VRAI, MAIS SEULEMENT JUSQU'À LA NUIT,
+et le chemin n'a servi que deux fois, les deux par moi.**
+- Le lien existe BIEN chez Hektor : la création avec « Rattacher un bien existant » appelle `linkHektorMandantContact` et
+  attend sa confirmation (19/11 : `post_create_step.status = linked`, 606436 sur 63331).
+- Ce qui manque est CHEZ NOUS : l'écran lit `app_relation` (vue `app_contact_relations_current`). Les TROIS portes du
+  mandant l'écrivent au clic puis le marquent établi (`app_link_mandant_optimistic`, `app_create_mandant_contact_optimistic`,
+  `app_unlink_mandant_optimistic` ; dans le worker l'étape `relation_etablie`). La création d'un contact
+  (`app_create_contact_optimistic`) n'y touche pas, et le worker ne relit après coup que le CONTACT, pas le bien.
+- La nuit rattrape : `relation_ledger.py` recopie chaque nuit les liens que Hektor montre, et elle le fait AUSSI pour les
+  contacts nés dans l'app (mesuré : 7 lignes `sync_annonce_contact_link` sur des contacts >= 20 000 000, premières vues
+  à 04:48 et 04:55 les 23 et 24/10). ⚠ Mais le cas EXACT (création avec rattachement, puis la nuit) n'a jamais été observé :
+  les deux fois (18/11 20:38, 19/11 09:50), j'ai refait « Rattacher un mandant existant » dans l'heure.
+- L'usage réel : 49 créations de contact depuis le 29/05, dont **2** avec « Rattacher un bien existant », toutes deux sur
+  63331, par moi. 17 « Terminer », 14 sans étape, 14 avec recherche.
+- Effet, donc : le mandant rattaché à la création n'apparaît ni sur la fiche du bien ni dans la rubrique de la GED avant la
+  nuit. Rien ne se perd.
+- Le remède, s'il est voulu (code existant -> « vas-y ») : faire comme les trois autres portes, c'est-à-dire écrire le lien
+  au clic, ou au minimum après la confirmation de Hektor (le patron est `marquerLienDeLaCreationEtabli`, worker l. ~18907).
+
+**3. `test_ged_remplir.cjs` lit ses six sources sans les retours chariot** (`.replace(/\r\n/g, '\n')`, comme
+`test_ged_remplir_contact.cjs`) : **38 verts sur le disque** (7 rouges avant, tous dus au CRLF d'App.tsx).
+⛔ **DÉCISION DE FRÉDÉRIC (20/11) sur 2b : « Non, laisse ».** On ne corrige pas : la nuit rattrape le lien, rien ne se
+perd. Ne pas relancer.
