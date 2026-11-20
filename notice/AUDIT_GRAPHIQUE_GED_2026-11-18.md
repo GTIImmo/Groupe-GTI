@@ -264,3 +264,30 @@ feuilles GED (`RecuManque.css`, `DepotDocuments.css`, `BilanCompromis.css`, 642 
 couleurs en dur, déjà Plus Jakarta (titres) + Hanken (texte).
 ➡ Le socle (morceau 2) doit BRANCHER la GED sur ces jetons. Reste à trancher par Frédéric : la police du texte -- la charte
 (Hanken, comme tout le reste de bienvu) ou Plus Jakarta partout dans la GED (comme la maquette, mais différente du reste).
+
+## 10. MORCEAU 3 -- AUDIT AVANT DE CODER (20/11, « Oui, enchaîne ») -- RIEN CODÉ
+
+**Ce qui existe** (code lu) : l'onglet Documents du cockpit (`ConsoleDocumentsPanel`, skin `v21`, App.tsx ~12912-13040) montre
+dans l'ordre : l'en-tête, `RecuManque` (les moments, une grille de FEUILLES par pièce attendue, « À remplir », « À regarder »,
+« La fiche du bien », la pastille « Lu par l'IA »), puis l'ANCIENNE LISTE (filtres Tous / À préparer / Signés / Cloud, une
+carte par document). Chaque carte porte `docRowActions` : Ouvrir / Ouvrir le signé / Préparer, Preuves, Relancer, Annuler,
+Signature (choix à trois Youtrust / Hektor / manuscrite, ou les anciens boutons selon les interrupteurs), Signé à la main,
+Supprimer (ou « Signé : ne se supprime pas ») ; plus `SuiviSignatairesYoutrust`, « Remplacé », la mention de dépôt chez Hektor.
+⚠ **C'est le territoire de la signature** (règle du projet : prévenir la session signature avant de toucher l'envoi des
+documents). La liste existe aussi dans le skin « classic » (fiches non cockpit) et au téléphone (morceau 7).
+
+**Le chemin proposé -- « habiller sans déplacer les gestes »** :
+- `RecuManque` rend, en plus de ce qu'il rend déjà à l'écran du bien, la CARTE « document -> moment, pièce, valeurs lues »
+  qu'il calcule déjà (classements + `recuManque` + lectures) ;
+- la liste (App.tsx) se RANGE par moment quand le filtre est « Le dossier » : groupes dépliables (le moment en cours ouvert),
+  une ligne compacte par document (pièce, 2 valeurs lues, état) ; un clic la déplie et montre ce que l'IA a lu PUIS la carte
+  d'aujourd'hui À L'IDENTIQUE (`docRowActions`, suivi des signataires, « Remplacé », mentions) -- aucune ligne du code de la
+  signature n'est modifiée, elle est seulement appelée plus bas ;
+- les pièces non trouvées se rangent dans leur groupe (« Déposer », même geste `onDeposer`), « selon le cas » et « bonne
+  pratique » en une ligne ; les documents sans pièce attendue vont dans « Autres documents » ;
+- la grille de feuilles et la pastille « Lu par l'IA » de `RecuManque` disparaissent (leur contenu est dans les lignes ; le
+  recours « garder la lecture » et « Revoir ce qu'il dit » passent dans la ligne dépliée) ;
+- les autres filtres (À préparer, Signés, Cloud) gardent la liste à plat d'aujourd'hui.
+⚠ **Ce que ça change pour l'utilisateur** : les boutons de signature et de suppression sont à UN CLIC de plus (la ligne se
+déplie) -- c'est le dessin de la V2 validé (« des boutons à déplier »), mais c'est un geste de plus pour signer.
+**Périmètre proposé** : le cockpit (`v21`) seulement ; le skin « classic » et le téléphone ne bougent pas dans ce morceau.
