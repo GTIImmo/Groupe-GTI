@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E)** — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11)** — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -1992,6 +1992,40 @@ LA REFERENCE DU CONTROLE DE SAMEDI, figee a 06:58 : « regle_e reference » -- 3
 
 ⛔ E N'EST PAS ALLUMEE : APP_CHAINAGE_SANS_DATE_VISIBLE est ABSENTE de .env. Elle s'allume sur ton mot
   ecrit, ICI, avec ce compte sous les yeux.
+```
+
+
+### 12.9 ⭐⭐ LA RÈGLE E EST ALLUMÉE — 20/11 à 07:26, sur son mot écrit ici
+
+```
+SON MOT, dans cette conversation, apres le controle des 10 et le compte definitif : « Oui, allume E ».
+
+LE GESTE : une ligne ajoutee a .env, APRES le bloc des rattachements a la main, avec son bloc de
+  commentaire (la date, le compte, les 5 exclusions, la commande du controle, le retour arriere) :
+        APP_CHAINAGE_SANS_DATE_VISIBLE=1
+  SAUVEGARDE DATEE AVANT : C:\Hektor\chantier_classeur_q6_cache\sauvegardes\env_avant_regle_e_2026-11-20_0726
+  (hors du depot ; empreinte SHA-256 egale a l'original avant le geste). La difference : 13 lignes
+  AJOUTEES, rien d'autre (diff relu).
+
+LA PREUVE QUE LE RUN LA VERRA -- un processus NEUF, sans la variable dans son environnement (ni Machine
+  ni User), lit .env comme le run : chainage_sans_date_visible_actif() = True. Le chainage rejoue sur une
+  COPIE en memoire : 11 580 -> 11 550 dossiers . [E] rendues visibles 79 . exclusions dites 5 . garde E 10 .
+  [D] 756 . [M] 16 -- EXACTEMENT le compte definitif du § 12.8.
+
+QUI LA VERRA, ET QUAND : seul le run de nuit chaine (refresh_ledger -> recalculer_les_chaines) ; le worker
+  ne touche que la table distante. ➡ E joue pour la premiere fois au run de SAMEDI 21/11, 04:00 :
+  le chainage vers 06:20, la pose des etiquettes juste apres -- 29 a 30 fusions, le cri SONNERA.
+
+LE CONTROLE DE SAMEDI MATIN (le run fini, ~06:40) -- reference figee le 20/11 a 06:58 :
+        controle_nuit_chainage_classeur_2026-11-20.py regle_e journal
+        controle_nuit_chainage_classeur_2026-11-20.py regle_e rejeu_tel_quel
+        controle_nuit_chainage_classeur_2026-11-20.py regle_e rejeu_sans
+        controle_nuit_chainage_classeur_2026-11-20.py regle_e juger
+  puis le journal des etiquettes chez Supabase, lu a part (attendu : les fusions des 29 reunions, les
+  etiquettes absorbees nommees dans CHANTIER_CLASSEUR_REGLE_E_COMPTE_DEFINITIF_2026-11-20.csv).
+
+⛔ RETOUR ARRIERE : retirer la ligne de .env -- la nuit suivante refait les dossiers d'avant. MAIS les
+  fusions d'etiquettes deja posees sont DEFINITIVES : une etiquette absorbee ne revient pas.
 ```
 
 
