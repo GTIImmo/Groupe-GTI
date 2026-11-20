@@ -22,7 +22,21 @@ import { dateEtatLue, FICHES_PERSONNES_LUES, loadGedLectures, resumeLecture, typ
 import { reglesPersonnes } from './lib/gedReglesPersonnes'
 import { reglesFinancement } from './lib/gedReglesFinancement'
 import { reglesEtatCivil } from './lib/gedReglesEtatCivil'
-import { LIBELLE_MOMENT, recuManque, type LignePiece, type MomentDossier } from './lib/gedPieces'
+import { dossierParMoment, LIBELLE_MOMENT, recuManque, type GroupeDossier, type LignePiece, type MomentDossier } from './lib/gedPieces'
+
+// Visuel V3, morceau 3 (20/11/2026) : ce que la LISTE des documents du cockpit reçoit pour se ranger par moment. Rien de
+// neuf n'est lu : ce sont les classements, les lectures et les fenêtres « Ce que dit… » que ce composant tient déjà.
+export type LectureRangee = { resume: string; morceaux: string[]; refusee: boolean; lectureId: string | null; peutGarder: boolean; peutRevoir: boolean }
+export type DossierRange = {
+  moment: MomentDossier
+  groupes: GroupeDossier[]
+  autres: string[]
+  lectures: Map<string, LectureRangee>
+  revoir: (documentId: string) => void
+  garder: (lectureId: string) => void
+  gardeEnCours: string | null
+  messageGarde: string | null
+}
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
@@ -84,7 +98,12 @@ const euros = (v: string | number | null | undefined) => { const x = Number(v); 
 
 export function RecuManque({
   hektorAnnonceId, appDossierId, documents, faits, personnesDuBien = [], contactsDuBien = [], onDeposer, onRemplir, onResultat, onBilan, peutModifierTransaction = false,
+  rangeEnListe = false, onDossier,
 }: {
+  // Visuel V3, morceau 3 : vrai au COCKPIT seulement -- la liste range les documents, la grille de feuilles et la pastille
+  // « Lu par l'IA » ne s'affichent plus ici. Non fourni (fiche « classic ») : l'écran d'aujourd'hui, à l'identique.
+  rangeEnListe?: boolean
+  onDossier?: (d: DossierRange) => void
   hektorAnnonceId: string | number
   appDossierId?: number
   documents: ConsoleDocument[]
@@ -548,6 +567,34 @@ export function RecuManque({
     onResultat?.({ moment: resultat.moment, nonTrouvees: resultat.pieces.filter((l) => l.etat === 'non_trouve').map((l) => l.libelle) })
   }, [resultat, onResultat])
 
+  // Visuel V3, morceau 3 : la liste du cockpit se range par moment avec CE QUE CE COMPOSANT SAIT DÉJÀ (mêmes classements,
+  // mêmes lectures, mêmes fenêtres). Rien n'est envoyé si la liste ne le demande pas (fiche « classic »).
+  const dossierRange = useMemo(() => (onDossier ? dossierParMoment(
+    faits,
+    documents.filter((d) => d.present_in_hektor !== false).map((d) => ({ nom: d.document_name, typeCode: classements.get(d.id) ?? null })),
+  ) : null), [onDossier, faits, documents, classements])
+  useEffect(() => {
+    if (!onDossier || !dossierRange) return
+    const parDocument = new Map<string, LectureRangee>()
+    for (const d of documents) {
+      const l = lectures.get(d.id)
+      if (!l) continue
+      const resume = resumeLecture(l)
+      const morceaux = l.etat === 'pas_ce_type' ? [] : resume.replace(/^Lu : /, '').replace(/\.$/, '').split(' · ').map((m) => m.trim()).filter(Boolean)
+      parDocument.set(d.id, {
+        resume, morceaux, refusee: l.etat === 'pas_ce_type', lectureId: l.id ?? null, peutGarder: peutGarder(l),
+        peutRevoir: bilans.some((b) => documentDuBilanDe(b)?.id === d.id),
+      })
+    }
+    onDossier({
+      ...dossierRange, lectures: parDocument,
+      revoir: (documentId) => { const b = bilans.find((x) => documentDuBilanDe(x)?.id === documentId); if (b) setBilanOuvert(cleBilan(b)) },
+      garder: (lectureId) => { void garderLecture(lectureId) },
+      gardeEnCours, messageGarde,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onDossier, dossierRange, documents, lectures, bilans, gardeEnCours, messageGarde])
+
   // ── habillage H1 (16/11, maquette https://claude.ai/artifact/S16jkpfnqtPF83xvUdkNtm) : LE DOSSIER. Les moments de la
   // vente en tête, une FEUILLE par pièce attendue (reçue : cochée ; non trouvée : à déposer). Mêmes données, mêmes gestes.
   const [momentVu, setMomentVu] = useState<MomentDossier | null>(null)
@@ -611,7 +658,8 @@ export function RecuManque({
           const courant = i === indexCourant
           const manquantes = resultat.precedents.find((p) => p.moment === m)?.manquantes.length ?? 0
           const vu = momentVu ? momentVu === m : courant
-          const ouvrable = courant || (passe && manquantes > 0)
+          // morceau 3 : au cockpit, un moment se déplie dans la liste (plus de grille à changer ici)
+          const ouvrable = !rangeEnListe && (courant || (passe && manquantes > 0))
           const compte = courant
             ? `${resultat.recues} pièce${resultat.recues > 1 ? 's' : ''} sur ${resultat.attendues}`
             : passe ? (manquantes ? `${manquantes} non trouvée${manquantes > 1 ? 's' : ''}` : 'complet') : 'à venir'
@@ -626,8 +674,9 @@ export function RecuManque({
         })}
       </ol>
 
-      {precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
-      <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div>
+      {/* Visuel V3, morceau 3 : au cockpit, les pièces se rangent DANS la liste des documents (plus de grille ici) */}
+      {!rangeEnListe && precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
+      {!rangeEnListe ? <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div> : null}
 
       {propositions.length || faites.length || alertes.length || aTrancher.length ? (
         <div className="gm2-col2">
@@ -738,7 +787,7 @@ export function RecuManque({
         </div>
       ) : null}
 
-      {lus.length ? (
+      {lus.length && !rangeEnListe ? (
         <div className="gm2-lus">
           <button type="button" className="gm2-pil" onClick={() => setOuvrirLus((v) => !v)} aria-expanded={ouvrirLus}>
             {`Lu par l'IA : ${lus.length} document${lus.length > 1 ? 's' : ''}${refusees ? ` · ${refusees} refusé${refusees > 1 ? 's' : ''} par l'IA` : ''}`}
