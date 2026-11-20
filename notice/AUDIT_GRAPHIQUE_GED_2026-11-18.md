@@ -250,3 +250,7 @@ de la GED est derrière des interrupteurs « admin ».
 Les animations viennent avec chaque morceau (aucune ne bloque un geste ; `prefers-reduced-motion` les coupe).
 **Encore à trancher** : (§5.1) masquer « À préparer / À envoyer en signature » sur les documents qui ne se signent pas ;
 (§5.3) retirer le bouton « Remplir la transaction », toujours refusé.
+
+⛔ **DÉCISION DE FRÉDÉRIC (20/11) : « Masquer » vaut POUR TOUT LE MONDE sur le bien** (rangé par bien, comme le jugement
+d'aujourd'hui ; « Réafficher » le remet pour tous ; le journal garde qui et quand). Une alerte dont le texte change est une
+alerte neuve et réapparaît. Masquer n'écrit rien sur la fiche ni chez Hektor et ne corrige rien.
