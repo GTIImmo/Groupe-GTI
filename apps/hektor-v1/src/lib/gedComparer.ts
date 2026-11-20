@@ -210,7 +210,7 @@ export function personnesLuesDe(l: Pick<LectureDocument, 'valeurs'>): PersonneLu
 }
 
 const MOTS_VIDES = new Set(['DE', 'DU', 'DES', 'LE', 'LA', 'LES', 'ET', 'EP', 'NEE', 'VEUVE', 'VVE', 'M', 'MME', 'MR', 'MLLE'])
-const motsDe = (s: string) => normaliserTexte(s).split(' ').filter((m) => m.length >= 2 && !MOTS_VIDES.has(m))
+export const motsDe = (s: string) => normaliserTexte(s).split(' ').filter((m) => m.length >= 2 && !MOTS_VIDES.has(m))
 
 // Une personne lue est-elle sur la fiche ? « egal » : nom et un prénom ; « proche » : un mot du nom retrouvé (prénom
 // absent, nom composé, nom et prénom inversés, fiche de couple « M. et Mme X ») ; « different » : AUCUN mot de son nom ni de

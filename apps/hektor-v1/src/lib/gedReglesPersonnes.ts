@@ -5,7 +5,7 @@
 // les prénoms, la naissance et la fin de validité servent. La ligne « Pièce d'identité de chaque mandant » de « Reçu /
 // Manque » (gedPieces.ts) RESTE : elle reconnaît aussi les anciens documents par leur nom (décision du 13/11).
 // Note du chantier : notice/CHANTIER_GED_DOCUMENTS_2026-11-06.md §12.19.
-import { dateLue, lireDateIso, normaliserTexte, personneSurLaFiche, type PersonneDuBien, type Verdict } from './gedComparer'
+import { dateLue, lireDateIso, motsDe, normaliserTexte, personneSurLaFiche, type PersonneDuBien, type Verdict } from './gedComparer'
 import type { LectureDocument } from './gedLecture'
 import { momentDuDossier } from './gedPieces'
 import type { AffaireRegle, Alerte, FaitsRegles } from './gedRegles'
@@ -68,6 +68,46 @@ function correspondance(p: PieceLue, personnes: PersonneDuBien[]): { verdict: Ve
     }
   }
   return meilleur
+}
+
+// P6 (19/11) -- UNE PIÈCE COUVRE UNE SEULE PERSONNE : celle qui lui ressemble LE MIEUX parmi toutes les personnes du bien
+// (mandants et acquéreurs vivants). Avant, une personne était couverte dès qu'UNE pièce lui ressemblait : la carte de
+// « Jean MARTIN » couvrait aussi « Jean MARTIN DUPONT » (même prénom, un mot du nom commun), et le second n'était jamais
+// réclamé (vu en réel sur 63331 avec les noms d'essai, le mot « ESSAI »). Peut couvrir : « egal », ou « proche » si la fiche
+// n'a pas de prénom (essais du 13/11). Départage : le verdict, puis la part du nom en commun (nom de naissance ou d'usage),
+// puis le premier prénom. ÉGALITÉ PARFAITE entre deux personnes : la pièce ne couvre NI l'une NI l'autre -- on ne sait
+// pas à qui elle est, et une pièce manquante se réclame plutôt que de se taire (lutte anti-blanchiment). SAUF si chacune
+// porte EXACTEMENT un nom de la pièce (naissance ou usage) : c'est la même personne inscrite sous ses deux noms.
+const partDuNom = (a: string, b: string) => {
+  const x = new Set(motsDe(a)), y = new Set(motsDe(b))
+  const communs = [...x].filter((m) => y.has(m)).length
+  return x.size + y.size ? communs / new Set([...x, ...y]).size : 0
+}
+function scoreCouverture(p: PieceLue, qui: PersonneDuBien): number[] | null {
+  const v = correspondance(p, [qui]).verdict
+  if (!(v === 'egal' || (v === 'proche' && !qui.prenom.trim()))) return null
+  const part = Math.max(...[p.nom, p.nomUsage].filter(Boolean).map((n) => partDuNom(n, qui.nom)))
+  const prenom = motsDe(p.prenoms)[0] && motsDe(p.prenoms)[0] === motsDe(qui.prenom)[0] ? 1 : 0
+  return [RANG[v], part, prenom]
+}
+const compare = (a: number[], b: number[]) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0 }
+const clePersonne = (qui: PersonneDuBien) => normaliserTexte(`${qui.prenom} ${qui.nom}`)
+// Les personnes (clés) que chaque pièce couvre : sa meilleure, seule.
+export function personnesCouvertes(pieces: PieceLue[], personnes: PersonneDuBien[]): Set<string> {
+  const uniques = [...new Map(personnes.filter((q) => clePersonne(q)).map((q) => [clePersonne(q), q])).values()]
+  const couvertes = new Set<string>()
+  for (const p of pieces) {
+    let meilleur: number[] | null = null
+    let qui: string[] = []
+    for (const q of uniques) {
+      const s = scoreCouverture(p, q)
+      if (!s) continue
+      const c = meilleur ? compare(s, meilleur) : 1
+      if (c > 0) { meilleur = s; qui = [clePersonne(q)] } else if (c === 0) qui.push(clePersonne(q))
+    }
+    if (qui.length === 1 || (meilleur && meilleur[1] === 1)) qui.forEach((c) => couvertes.add(c))
+  }
+  return couvertes
 }
 
 export function reglesPersonnes(faits: FaitsRegles, docs: DocumentLu[], personnesDuBien: PersonneDuBien[], affaires: AffaireRegle[], aujourdhui: Date): Alerte[] {
@@ -134,15 +174,15 @@ export function reglesPersonnes(faits: FaitsRegles, docs: DocumentLu[], personne
   // P6 -- une pièce par personne : chaque mandant de la fiche, et chaque acquéreur d'un compromis vivant. Ne parle que si
   // une pièce au moins a été LUE sur ce bien (sinon les cartes déposées avant l'outil, jamais lues, feraient crier).
   const attendues = [...personnesDuBien, ...vivantes.filter((a) => a.kind === 'compromis').flatMap((a) => a.acquereurs ?? [])]
+  // couverte : par une pièce dont elle est LA meilleure correspondance (voir personnesCouvertes) -- la pièce de Marc FICTIF
+  // ne couvre pas Jeanne FICTIF (13/11), celle de Jean MARTIN ne couvre pas Jean MARTIN DUPONT (19/11)
+  const couvertes = personnesCouvertes(pieces, tous)
   const vues = new Set<string>()
   for (const qui of attendues) {
-    const cle = normaliserTexte(`${qui.prenom} ${qui.nom}`)
+    const cle = clePersonne(qui)
     if (!cle || vues.has(cle)) continue
     vues.add(cle)
-    // couverte : nom ET prénom (« egal ») ; « proche » seulement si la fiche n'a pas de prénom -- sinon, dans un couple,
-    // la pièce de Marc FICTIF « couvrirait » Jeanne FICTIF par le seul nom (trouvé par les essais du 13/11)
-    const couverte = pieces.some((p) => { const v = correspondance(p, [qui]).verdict; return v === 'egal' || (v === 'proche' && !qui.prenom.trim()) })
-    if (!couverte) {
+    if (!couvertes.has(cle)) {
       alertes.push({ code: 'P6', niveau: 'piece', texte: `Pièce d'identité de ${nomFiche(qui)} : non trouvée parmi les pièces lues`, pourquoi: 'une pièce par mandant (et par acquéreur au compromis)', typeADeposer: 'justif.identite' })
     }
   }
