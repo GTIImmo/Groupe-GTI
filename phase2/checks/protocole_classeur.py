@@ -32,10 +32,13 @@ LES ETAPES -- une par appel, `python -u` :
                          MATIN ») : le Sheet (lignes, cases lues), le registre (champ par champ), le gel (liens), et
                          les biens qui ont bouge. `comparer` entre deux images s'en sert : chaque verdict change est
                          dit venu de la nuit (sa ligne ou son bien a bouge) ou du code. Temoin positif : 22/11.
-  avis [P]               LE TEMOIN DES 2 560 NUMEROS de app_classeur_avis (son mot, reponses 21, § 2) : une photo de la
-                         table (lecture seule), sa mesure refaite (meme / autre / plusieurs dossiers), puis le passage
-                         P contre chaque numero -- celles qui collaient et que le protocole contredit EN TETE.
-  LE MATIN : image, puis mouvement, puis passage, puis comparer <reference> <nouveau>.
+  avis [P]               LA SENTINELLE DES 2 560 NUMEROS de app_classeur_avis (son mot, reponses 21, § 2 ; 21 bis, § 2 :
+                         « garde-le comme SENTINELLE, meme s'il n'est pas un juge ») : une photo de la table (lecture
+                         seule), sa mesure refaite (meme / autre / plusieurs dossiers), le passage P contre chaque
+                         numero -- celles qui collaient et que le protocole contredit EN TETE -- puis CE QUI A BOUGE
+                         depuis la mesure precedente, ligne par ligne.
+  LE MATIN : image, puis MOUVEMENT (ce que la nuit a deplace -- a dire AVANT toute comparaison, son mot 21 bis), puis
+             passage, puis avis (la sentinelle), puis comparer <reference> <nouveau>.
 
 Option commune : --image <dossier> (sinon : l'image la plus recente).
 Les portes et le rejeu exact de l'etiquette : protocole_portes.py (le vrai chainage rejoue sur une copie de l'image).
@@ -45,6 +48,10 @@ v2 (22/11) : la regle P1 VALIDEE (REGLES_VALIDEES) ; le motif PIECE_SUPPRIMEE_FI
 v3 (22/11 apres-midi, son mot « reponses 21 ») : R7a et R7b VALIDEES ; R7b met la piece de cote AVEC son dossier
   d'aujourd'hui (sa regle : elle garde son ancien numero) ; SES_DECISIONS (DJEBBOUR, trois affaires) remplace la coupe
   des 132 dans les temoins ; l'etape `avis` (le temoin des 2 560 numeros) ; le numero de dossier a cote de l'etiquette.
+v3.1 (22/11 soir, son mot « reponses 21 bis ») : AUCUNE REGLE NE CHANGE. Le temoin des 2 560 devient une SENTINELLE (ce
+  qui bouge depuis la mesure precedente) ; le passage NOMME les lignes en attente dont le dossier est fige par R7b
+  (« figees ne veut pas dire reglees »). Voisins : protocole_les_numeros_neufs.py (ancien -> neuf, en clair),
+  protocole_r7b_reversible.py (defaire R7b), sauvegarde_datee_classeur.py (la sauvegarde qui se relit).
 
 LES EPREUVES (le plan du 22/11, notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md). Version 0 de ce
 22/11 : E1 et E2 sont codees ; une ligne qui les passe recoit le motif declare `E3_A_CODER` -- le compte boucle des la
@@ -83,7 +90,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v3 -- 22/11 apres-midi : les regles R7a et R7b validees (son mot, reponses au rapport 21, points 1 et 2)"
+VERSION = "v3.1 -- 22/11 soir : sentinelle des 2 560, figees n'est pas reglees (affichage seul ; les regles sont celles de la v3)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -761,6 +768,19 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
              "NEUF (voir mises_de_cote_passage_%d.json)" % (len(MISES_DE_COTE), g, len(MISES_DE_COTE) - g, pid))
         (DOSSIER / ("mises_de_cote_passage_%d.json" % pid)).write_text(json.dumps(
             {str(a): x for a, x in MISES_DE_COTE.items()}, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+        # SON MOT (reponses 21 bis, point 2 b) : « CES DEUX LIGNES RESTENT DANS LE RESTE A VIDER. Figees ne veut pas
+        #   dire reglees. » -- les lignes EN ATTENTE dont le gel tient une piece d'un dossier fige par R7b, NOMMEES a
+        #   chaque passage (affichage seul : aucune regle, aucun verdict ne change)
+        v_de = {r["id_unique"]: r["verdict"] for r in rangs}
+        num_fige = {q: x["ancien_numero"] for x in MISES_DE_COTE.values() for q in x["groupe"]}
+        att_f = defaultdict(set)
+        for i_, gs in I.gel_par_ligne.items():
+            for g_ in gs:
+                if g_["piece"] in num_fige and v_de.get(i_) == "ATTENTE":
+                    att_f[i_].add(num_fige[g_["piece"]])
+        dire("   R7b -- FIGEES N'EST PAS REGLEES : %d ligne(s) EN ATTENTE portent un dossier fige ; elles restent dans le "
+             "reste a vider : %s" % (len(att_f), " . ".join("%s (%s)" % (i_, "+".join(sorted(n_))) for i_, n_ in
+                                                             sorted(att_f.items())) or "aucune"))
     if crie:
         dire("   ⛔ un temoin crie : voir la table `temoin` du socle (passage %d)" % pid)
     return 0 if boucle and not crie else 1
@@ -1090,7 +1110,10 @@ def etape_avis(I: Image, p: int | None) -> int:
     photo = AVIS / ("avis_%s.json" % datetime.now().strftime("%Y-%m-%d_%H%M%S"))
     photo.write_text(json.dumps({"n": n, "avec_numero": n_uuid, "empreinte": emp, "ecrit_le": [e_min, e_max],
                                  "origines": origines, "lignes": rows}, ensure_ascii=False), encoding="utf-8")
-    dire("TEMOIN app_classeur_avis -- photo %s (empreinte %s)" % (photo.name, emp))
+    # SON MOT (reponses 21 bis, § 2) : « GARDE LE TEMOIN DES 2 560 COMME SENTINELLE, meme s'il n'est pas un juge : il
+    #   mesure ce qui bouge depuis le 16/11, et c'est lui qui a fait sortir les 63. »
+    dire("SENTINELLE app_classeur_avis (PAS UN JUGE : ses numeros sortent du gel du 16/11, patch C9) -- photo %s "
+         "(empreinte %s)" % (photo.name, emp))
     dire("   %d lignes, dont %d avec un numero de dossier ; origine(s) : %s ; ecrites du %s au %s" % (
         n, n_uuid, origines, (e_min or "")[:16], (e_max or "")[:16]))
     A = {i: (u, nu) for i, _o, _e, u, nu in rows if u}
@@ -1156,6 +1179,25 @@ def etape_avis(I: Image, p: int | None) -> int:
     contredit = [r for r in sortie_l if contredit_(r)]
     dire("   ⛔ CELLES QUI COLLAIENT ET QUE LE PROTOCOLE CONTREDIT : %d (en tete du fichier) -> %s" % (len(contredit),
                                                                                                 sortie))
+    # LA SENTINELLE : ce qui a bouge depuis la mesure precedente, ligne par ligne (le numero de la table, ce que le gel
+    #   designe, ce que dit le protocole) -- jamais un compte seul
+    prec = sorted((f_ for f_ in AVIS.glob("avis_contre_passage_*.json")), key=lambda f_: f_.stat().st_mtime)
+    if prec:
+        P0 = json.loads(prec[-1].read_text(encoding="utf-8"))
+        avant = {r[0]: r for r in P0["lignes"]}
+        bouge = {"numero de la table": [], "ce que le gel designe": [], "ce que dit le protocole": []}
+        for r in sortie_l:
+            r0 = avant.get(r[0])
+            if r0 is None:
+                bouge["numero de la table"].append(r[0])
+                continue
+            for k_, j_ in (("numero de la table", 2), ("ce que le gel designe", 4), ("ce que dit le protocole", 5)):
+                if r[j_] != r0[j_]:
+                    bouge[k_].append(r[0])
+        disparues = sorted(set(avant) - {r[0] for r in sortie_l})
+        dire("   SENTINELLE -- depuis %s (photo %s) : %s%s" % (prec[-1].name, P0.get("photo"), " . ".join(
+            "%s %d%s" % (k_, len(v_), (" (%s)" % " ".join(v_[:8])) if v_ else "") for k_, v_ in bouge.items()),
+            (" . disparues de la table %d" % len(disparues)) if disparues else ""))
     (AVIS / ("avis_contre_passage_%d.json" % p)).write_text(json.dumps(
         {"photo": photo.name, "empreinte": emp, "aujourdhui": dict(c_auj),
          "croise": {"%s|%s" % k: n_ for k, n_ in cat.items()}, "lignes": sortie_l}, ensure_ascii=False, indent=1,

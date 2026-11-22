@@ -3956,6 +3956,70 @@ LA SUITE : l'outil de sauvegarde datee et sa relecture ; demain matin la mesure 
   vider (225).
 ```
 
+### 20.12 Ses réponses au rapport ㉑ bis (22/11 soir) — les 63 en clair, le journal, R7b réversible, la sauvegarde qui se relit
+
+```
+SON MOT : C:\Hektor\mot_du_22_11_reponses_21bis.md (79 l.) -- « TU AS EU RAISON CONTRE MOI » (les 2 560 numeros sont de C9,
+  pas de sa main) ; « UN TEMOIN QUI SORT DU TRAVAIL QU'IL JUGE N'EST PAS UN JUGE » ; « ne te retiens jamais de me contredire
+  quand tu as la mesure ».
+1 LES 63 : OUI a la regle du plus ancien (deja codee), a DEUX CONDITIONS.
+  a) L'ANCIEN NUMERO TRACE AU JOURNAL. MESURE (lecture seule) : chaque changement a BIEN sa ligne (pose 11 454, propagation
+     13, fusion 47, scission 143 = 11 657) ; MAIS l'ancien numero n'est PAS dans la ligne : SCISSION = ANCIEN uuid + NEUF
+     numero + neuf uuid (141/143 portent le neuf, 0 l'ancien) ; FUSION = garde + uuid absorbe SANS numero. Retrouvable par la
+     ligne de naissance : 190/190 (11 551 vivants : leur numero = celui de leur naissance, 0 ecart). ⚠ PIEGE pour un lecteur :
+     dans une scission, dossier_numero est le NEUF a cote de l'ANCIEN uuid.
+     -> PATCH FABRIQUE, NON JOUE : supabase/patch_journal_ancien_numero_2026-11-22{,_REPETITION,_INVERSE}.sql, genere par
+     phase2/checks/fabriquer_patch_journal_ancien_numero.py depuis le texte EN PRODUCTION de la RPC (md5 815e956f...) :
+     colonne ancien_numero ; la RPC l'ecrit a chaque fusion et scission (5 remplacements, ancres d'une ligne, diff relu) ;
+     les 190 lignes passees remplies par leur naissance (a blanc : 190/190, 0 egal au neuf) ; l'evenement « restauration »
+     ajoute a la contrainte (une restauration est aussi un changement). Gardes : empreinte de la fonction, colonne absente,
+     contrainte exacte ; s'arrete si une ligne reste vide. Epreuve a blanc des deux SELECT neufs (CTE en lecture seule) :
+     analyses, valides.
+  b) LES 63 EN CLAIR : phase2/checks/protocole_les_numeros_neufs.py refait la RPC (annee = app_dossier_annee_ouverture,
+     rang = compteur + ordre des chaines de l'annee) -- TEMOIN : ma copie de l'annee = LA VRAIE, chaine par chaine,
+     11 551/11 551 ; et l'annee du numero d'aujourd'hui est retrouvee 11 536 fois (15 numeros plus vieux que leur dossier :
+     9 fusion/scission, 6 donnees changees ; la vraie fonction dit la meme chose). -> 275 numeros neufs, 247 lignes (63 +
+     8 autres des 2 560 + 176 hors). HYPOTHESE DITE : la nuit de la pose ne frappe aucun autre numero de la meme annee avant.
+     -> notice/PROTOCOLE_LES_NUMEROS_NEUFS_ANCIEN_VERS_NEUF_PASSAGE_20_2026-11-22.csv
+     ⭐⭐ CE QUE LA MESURE DIT : sur les 63 (60 ventes reglees, 3 annulees), AUCUNE des 60 ventes ne garde son numero :
+     56 le laissent a une ligne ANNULEE (la tentative d'avant), 4 a une piece qu'aucune ligne ne porte -- la vente, avec
+     sa facture, recoit le neuf. Les 3 annulees : 2 le laissent a une vente reglee, 1 a une autre annulee. Annee du neuf :
+     32 la meme, 31 plus recente (celle de la vente). -> son oui, redemande en le sachant.
+  LA RESERVE (un document sorti ?) : LEVEE PAR LA MESURE. Aucun lecteur de app_dossier_numero hors la pose et le journal
+     (front : le select du registre ne le demande pas ; backend, worker, taches : 0 ; historique git : jamais) ; Sheet 0 ;
+     8 tables de ce qui sort (e-mails, espace client, notifications, assistant, relances, signatures, avis) : 0 sur 5 339 ;
+     le « numero_dossier » de l'app (fiche notaire...) est celui de HEKTOR (VT9562, VA6482) : 0 D20xx sur 62 557.
+     NON MESURABLE : une recopie a la main depuis mes fichiers.
+2 R7b : OUI a deux conditions. a) REVERSIBLE -- protocole_r7b_reversible.py, deux rejeux du VRAI chainage : figer ne
+  change rien (12/12 tels quels, avec leur numero) ; RETIRER LES 8 LIGNES = 0 piece, 0 etiquette ne bouge. b) RESTE A
+  VIDER -- ⚠ CE NE SONT PAS DEUX LIGNES MAIS TROIS : 3QZ4DAD1 (D2021-0326), ARF57GC5 (D2020-0527) ET 86da6949 (l. 4724,
+  TAVERNIER / BOURSIER, Ambert, annulee : son seul lien est l'offre 29000, la piece mise de cote, D2026-0297 seule). Les
+  trois EN ATTENTE (SES_PIECES_A_PART) ; chaque passage les NOMME (« figees n'est pas reglees »).
+3 LA SAUVEGARDE QUI SE RELIT : phase2/checks/sauvegarde_datee_classeur.py (prendre / relire / epreuve / restauration) ->
+  C:\Hektor\Backups\classeur\<date>\ : registre (4 colonnes), GEL ENTIER (aucune copie locale jusqu'ici), compteur,
+  journal, avis sans ecrit_par, registre local, Sheet entier, les 2 fichiers. Une transaction « repeatable read, read only » ;
+  l'empreinte de chaque table CALCULEE PAR POSTGRES. REPETITION 2026-11-22_163632 (pas la vraie) :
+  . relire (processus neuf, depuis le disque) : 9 fichiers a leur empreinte ; 5 contenus = Postgres ; local = Supabase
+    31 368/31 368 (meme empreinte, calculee par Python d'un cote et Postgres de l'autre) ; rien n'a bouge depuis.
+  . TEMOIN INVERSE : une etiquette changee + empreinte du fichier recalculee -> ROUGE (contenu) ; un octet change -> ROUGE
+    deux fois.
+  . EPREUVE DES 216 (copie sqlite) : arrivee 728 changent ; defaire sans sauvegarde : dossiers 31 368/31 368, 216
+    etiquettes ne reviennent pas (215 dossiers) ; restauration fabriquee DEPUIS LE FICHIER RELU : 216 instructions, 216
+    lignes, 215 lignes « restauration » au journal (ancien = neuf 0 fois) ; copie restauree = l'empreinte Postgres du moment ;
+    216/216. -> notice/SAUVEGARDE_EPREUVE_LES_216_ETIQUETTES_2026-11-22_163632.csv
+  . restauration contre la base d'aujourd'hui : 0 ligne -> rien fabrique. ⛔ LE COMPTEUR NE RECULE JAMAIS (un numero donne
+    ne se redonne pas) ; la restauration exige le patch du journal (garde).
+4 LA SENTINELLE DES 2 560 (etape avis) : « pas un juge » ; dit ce qui bouge depuis la mesure precedente, ligne par ligne.
+  Passage 22 : 0 / 0 / 0 depuis le 20 (empreinte de la table identique a23f6956).
+REJEU (v3.1, aucune regle ne change) : passage 22 = 20 : 0 verdict change, memes ecarts de temoins ; portes : 4 573/4 573
+  justes, meme etiquette.
+RAPPORT : notice/PROTOCOLE_REPONSES_21BIS_LES_63_EN_CLAIR_SAUVEGARDE_QUI_SE_RELIT_2026-11-22.md
+A LUI : le patch du journal (il touche la RPC de la nuit) ; son oui des 63, sachant qu aucune vente ne garde son numero ; 86da6949 couverte
+  par son oui R7b ?
+LA SUITE : demain matin image + MOUVEMENT (dit d'abord) + passage + avis + comparer 20 ; la vraie sauvegarde juste avant
+  la premiere ecriture (prendre, relire, epreuve) ; le reste a vider (225).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
