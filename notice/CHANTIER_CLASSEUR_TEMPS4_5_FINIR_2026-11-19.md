@@ -3907,6 +3907,55 @@ LA SUITE : demain matin la mesure de la nuit (image, mouvement, passage, compare
   les 69 du verrou, les 480 pieces de G2, puis les autres motifs.
 ```
 
+### 20.11 Ses réponses au rapport ㉑ (22/11 après-midi) — R7a et R7b appliquées, DJEBBOUR, les témoins d'avant l'écriture
+
+```
+SON MOT : C:\Hektor\mot_du_22_11_reponses_21.md (104 l.) -- « TU AS BIEN TRAVAILLE, ET TU NE CHANGES PAS DE CAP. »
+SES TROIS REPONSES :
+  1 R7a : OUI -> REGLES_VALIDEES (protocole_classeur v3). ⚠ le rejeu exact a trouve un defaut du BROUILLON : le morceau
+    d'une ligne coupee doit EMPORTER sa piece R7a (305KAY9W perdait sa 24124) -> corrige dans protocole_portes.
+  2 R7b : OUI, « AVEC MA REGLE [...] une piece mise de cote GARDE SON ANCIEN NUMERO DE DOSSIER ». ⚠ Mise de cote SEULE,
+    elle coupait son dossier dans 2 cas sur 13 (37243 D2021-0326 : 17459+17460 ; 54990 D2020-0527 : 28294 + l'offre
+    28297 de THOURY) -> l'autre piece aurait recu un numero NEUF. -> R7b met la piece de cote AVEC SON DOSSIER
+    d'aujourd'hui (ce qu'aucun morceau ne prend), fige tel quel par le fichier des coupes : 13 pieces, 12 dossiers,
+    12 lignes ; les 12 GARDENT leur numero (pose simulee ET vrai chainage). 4 sont SUPPRIMEES CHEZ HEKTOR (3698 19414
+    28568 28959) : le chainage les fige deja -> aucune ligne dans le fichier (elle serait « introuvable » chaque nuit).
+    ⚠ 2 dossiers figes sont ceux de SES lignes en attente : 3QZ4DAD1 (VACHER PEYRARD) et ARF57GC5 (THOURY) -> A LUI.
+  3 DJEBBOUR : TROIS affaires (HUGON COTTIN 2023, DJEBBOUR 2024, DJEBBOUR 2025) = ce que le protocole tranchait.
+    -> SES_DECISIONS (temoin « ses_decisions » 3/3) ; il REMPLACE la coupe des 132 pour ZE9WZW22 Q3KTCMVB DKTK22F2 :
+    temoin 132 : 4 -> 2 ecarts (restent O6R10ZQA PAOLONE et T0WL4QE7, connus). Le fichier reel n'est PAS touche.
+REJEU : passage 20 (= 18, 19 : 0 change) : 4 573 + 225 = 4 798 ; 13 -> 20 : 38 changent, 0 DEJA RENDU ; temoins : 21
+  ecarts = 21, memes lignes. Passage 21 (apres l'etape avis et les numeros du rapport) : 0 change -> REFERENCE = 20.
+AVANT LA PREMIERE ECRITURE (son § 2) :
+  . LIEN_NON_SUR SEME (Y8O4NJSY, nominale, confiance forcee « a valider » dans RegistreSimule) : l'ecrivain la saute et
+    la nomme. simuler : 34 verdicts, 0 ROUGE (1 avant).
+  . app_classeur_avis (etape `avis`, photo en lecture seule, empreinte a23f6956) : ⚠ ces numeros ont ete POSES LE 16/11
+    PAR C9 depuis le gel (patch_c9_avis_etiquette), pas ecrits par lui ; « origine = classeur » = les colonnes d'avis.
+    Son classeur ne porte AUCUN D20xx-xxxx (verifie). Sa mesure refaite a l'unite : 2 543 / 10 / 7.
+    AU NUMERO EXACT 2 452 / 2 560 (2 448 des 2 543 + 4 des 7 « plusieurs »).
+    ⛔ 63 QUI COLLAIENT CONTREDITES : 57 avec EXACTEMENT les vraies pieces du gel (4 moins, 2 plus) -- c'est le NUMERO :
+      leur dossier est coupe (39 par ses 132, 24 neuves), la pose laisse le numero au morceau de la plus petite
+      transaction : 59 fois une AUTRE de ses lignes (57 sans ligne d'avis), 4 fois une piece plus ancienne a personne
+      (AOPBUAOJ D2022-0001). -> A LUI : la regle de la nuit lui va-t-elle ?
+    Les 17 : AUTRE 10 = 2 reunis par la nuit depuis le 16/11 (A07EC3DH, MCD6CRNB : le protocole garde aujourd'hui) +
+      5 NEUF + 3 verrou E7 ; PLUSIEURS 7 = 4 rendues au numero du 16/11 + 3 NEUF.
+  . LES NUMEROS : chaque fichier donne numero + etiquette (rapport, portes, avis).
+  . LES 6 FIGEES : 5 sont ses doublons (dfb32f2b 3250892d 87eb399e 0bc98552 6095c819) dont Hektor a DEJA supprime la
+    moitie -> rien a trancher chez Hektor ; la 6e (6684bcf1) n'est pas un doublon. 11 doublons tranches (+ HOPCBVKM).
+  . DEFAIRE (passage 20) : dossiers exacts ; 216 etiquettes (215 dossiers) a restaurer. ⚠ L'outil de sauvegarde datee
+    + relecture (lisible, empreinte comparee a la base) N'EST PAS ENCORE FABRIQUE.
+G2, SES 480 PIECES (protocole_g2_ailleurs.py) : 286 biens, 281 SANS AUCUNE LIGNE de son classeur, 5 a lignes en attente
+  (9868 9902 9961 10043 15672) ; 462 d'avant 2018 ; 287 morceaux sortis : 155 offres refusees, 69 tentatives annulees,
+  53 ventes entieres, 10 autres ; les 480 recevraient un numero NEUF dans l'app. -> reste en attente, non proposee.
+PORTES (passage 20, sans G2) : RIEN 4 010 . MISE_DE_COTE 10 . RATTACHEMENT 86 . COUPE ECRITE 266 . COUPE NEUVE 201 ;
+  arrivee : 4 573/4 573 justes et meme etiquette ; 559 morceaux, 0 refuse ; 0 hors des biens. GEL : 250 delies, 74
+  relies, 299 lignes ; DOSSIERS 11 551 -> 11 612 (544 / 605 / 1 360 pieces) ; ETIQUETTES 4 243 meme, 247 NEUVE.
+RAPPORT : notice/PROTOCOLE_REPONSES_21_R7_DJEBBOUR_TEMOINS_AVANT_ECRITURE_2026-11-22.md.
+A LUI : la regle du numero pour les 63 ; R7b qui fige les dossiers de 3QZ4DAD1 et ARF57GC5.
+LA SUITE : l'outil de sauvegarde datee et sa relecture ; demain matin la mesure de la nuit (comparer 20) ; le reste a
+  vider (225).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

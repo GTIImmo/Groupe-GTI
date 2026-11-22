@@ -28,6 +28,9 @@ LA PORTE D'UNE LIGNE TRANCHEE (sur les dossiers du rejeu A) -- M = ses pieces, N
   COUPE         un de ses dossiers porte aussi une piece qui n'est pas a elle : il faut la couper (le fichier des
                 detachements, eteint) -- « deja ecrite » si un des 275 morceaux de ses 132 coupes est exactement M
   REGLE         dite a part : la ligne que la regle G2 (deja codee, eteinte) mettrait juste toute seule
+  MISE_DE_COTE  la ligne est juste aujourd'hui, mais sa piece plus petite (regle R7b) doit etre FIGEE hors de son dossier,
+                AVEC son dossier d'aujourd'hui : une ligne du fichier des coupes qui ne change rien ce jour-la (sa regle :
+                « une piece mise de cote GARDE SON ANCIEN NUMERO DE DOSSIER »)
   HEKTOR        en surimpression : la ligne tient deux vraies pieces d'un meme genre (un doublon chez Hektor) -- sans
                 effet sur l'etiquette, c'est sa decision, bien par bien
 
@@ -246,6 +249,32 @@ def main() -> int:
         porte[i] = pt
         detail[i] = {"porte": pt, "dossiers_aujourdhui": len(Cs), "extras": sorted(extras), "extras_quoi": quoi,
                      "doublon_hektor": doublon, "neutres": sorted(N)}
+    # R7b (validee le 22/11) : les pieces mises de cote, AVEC leur dossier d'aujourd'hui -- le passage les a ecrites
+    f_mdc = P.DOSSIER / ("mises_de_cote_passage_%d.json" % pid)
+    MDC = json.loads(f_mdc.read_text(encoding="utf-8")) if f_mdc.exists() else {}
+    groupes_mdc = {}
+    for a_, x in MDC.items():
+        groupes_mdc[frozenset(x["groupe"])] = x
+    mdc_de_ligne = defaultdict(set)
+    for i, x in T.items():
+        for pr in x["preuves"]:
+            if pr.startswith("a part MISE DE COTE"):
+                mdc_de_ligne[i] |= {int(n) for n in pr.split(":")[-1].split()}
+    for i in mdc_de_ligne:
+        if porte[i] == "RIEN":
+            porte[i] = "MISE_DE_COTE"
+            detail[i]["porte"] = "MISE_DE_COTE"
+        detail[i]["mise_de_cote"] = sorted(mdc_de_ligne[i])
+    # R7a (validee le 22/11) : la piece a part DEJA dans le dossier de la ligne y reste -- « on ne coupe pas le dossier
+    #   entre elles » : si la ligne doit etre coupee d'autre chose, son morceau l'emporte avec elle (mesure du 22/11 :
+    #   sans cela, 305KAY9W perdait sa 24124 dans le reste de l'ancien dossier)
+    r7a_de_ligne = defaultdict(set)
+    for i, x in T.items():
+        for pr in x["preuves"]:
+            if pr.startswith("a part deja dans son dossier"):
+                r7a_de_ligne[i] |= {int(n) for n in pr.split(":")[-1].split()}
+    dire("   R7b : %d piece(s) mise(s) de cote, en %d dossier(s) figes tels quels, pour %d ligne(s)"
+         % (len(MDC), len(groupes_mdc), len(mdc_de_ligne)))
     cpt = Counter(porte.values())
     porte_a = dict(porte)                      # la porte sur la nuit d'aujourd'hui, avant de regarder G2
     dire("   LA PORTE (rejeu A) : " + " . ".join("%s %d" % kv for kv in sorted(cpt.items(), key=lambda kv: -kv[1])))
@@ -268,8 +297,8 @@ def main() -> int:
         M, N = T[i]["pieces"], neutres_de(T[i]["preuves"])
         Cs = {ch[p_] for p_ in M}
         return len(Cs) == 1 and not (mm[next(iter(Cs))] - M - N)
-    par_g2 = sorted(i for i in T if porte[i] != "RIEN" and juste(i, chB, mB)) if chB else []
-    casse_g2 = sorted(i for i in T if porte[i] == "RIEN" and not juste(i, chB, mB)) if chB else []
+    par_g2 = sorted(i for i in T if porte[i] not in ("RIEN", "MISE_DE_COTE") and juste(i, chB, mB)) if chB else []
+    casse_g2 = sorted(i for i in T if porte[i] in ("RIEN", "MISE_DE_COTE") and not juste(i, chB, mB)) if chB else []
     bouge_g2 = sum(1 for p_ in chA if chA[p_] != chB.get(p_)) if chB else -1
     dire("   REJEU B (+ G2) : %d pieces changent de dossier ; G2 mettrait JUSTES %d lignes a corriger, et en CASSERAIT %d "
          "qui sont justes aujourd'hui -- %.0f s" % (bouge_g2, len(par_g2), len(casse_g2), time.time() - t0))
@@ -297,16 +326,35 @@ def main() -> int:
                 "tranchee dont la porte n'est pas RIEN (rattachement et coupe ensemble : l'outil de coupe sait aussi "
                 "reunir). Pour le rejeu E de protocole_portes.py, rien d'autre." % (pid, image),
                 "transactions;bien;geste;pourquoi"]
-    vus, figes = set(), []
+    vus, figes, mdc_figees = set(), [], []
     for i in sorted(T):
-        k_ = frozenset(T[i]["pieces"])
-        if any(P.supprimee_chez_hektor(I.pieces[q]) for q in k_) and porte_a[i] != "RIEN":
+        k_ = frozenset(T[i]["pieces"]) | frozenset(r7a_de_ligne.get(i, set()))
+        if any(P.supprimee_chez_hektor(I.pieces[q]) for q in k_) and porte_a[i] not in ("RIEN", "MISE_DE_COTE"):
             figes.append(i)                    # le chainage ne la trouverait pas (« transaction introuvable »)
             continue
-        if porte_a[i] != "RIEN" and k_ not in vus:   # les jumelles : un seul morceau pour leurs deux lignes
+        if porte_a[i] not in ("RIEN", "MISE_DE_COTE") and k_ not in vus:   # les jumelles : un seul morceau pour les deux
             vus.add(k_)
-            lignes_b.append("%s;%s;protocole_%s;%s" % (" ".join(map(str, sorted(T[i]["pieces"]))), T[i]["biens"][0],
-                                                      porte_a[i].lower(), i))
+            lignes_b.append("%s;%s;protocole_%s;%s%s" % (" ".join(map(str, sorted(k_))), T[i]["biens"][0],
+                                                        porte_a[i].lower(), i, (" -- avec sa piece a part deja dans son "
+                                                                                "dossier (R7a) %s" % " ".join(map(
+                                                                                    str, sorted(r7a_de_ligne[i]))))
+                                                        if r7a_de_ligne.get(i) else ""))
+    # R7b : chaque dossier mis de cote, fige tel quel, AVEC SON ANCIEN NUMERO ecrit sur sa ligne (sa regle)
+    for g_, x in sorted(groupes_mdc.items(), key=lambda kv: min(kv[0])):
+        if g_ in vus:
+            continue
+        vus.add(g_)
+        f_ = [q for q in g_ if P.supprimee_chez_hektor(I.pieces[q])]
+        if f_ and len(f_) == len(g_):
+            # SUPPRIMEE CHEZ HEKTOR : le chainage la fige deja dans son dossier (« la trace garde son dossier ») -- elle ne
+            #   peut rejoindre aucun dossier, et le fichier la dirait « introuvable » chaque nuit : pas de ligne a ecrire
+            mdc_figees.append(sorted(g_))
+            continue
+        if f_:
+            dire("   ⛔ un dossier mis de cote MELE une piece supprimee chez Hektor et d'autres : %s" % sorted(g_))
+        lignes_b.append("%s;%s;protocole_mise_de_cote;garde son ancien numero %s (%s) -- regle R7b, pour %s" % (
+            " ".join(map(str, sorted(g_))), x["bien"], x["ancien_numero"], x["ancien_uuid"],
+            "+".join(sorted(i for i in mdc_de_ligne if mdc_de_ligne[i] & g_))))
     brouillon.write_text("\n".join(lignes_b) + "\n", encoding="utf-8")
     chE, resE = rejeu_en_cache("E", image, brouillon, {"APP_CHAINAGE_GARDE_G2": "0", "APP_CHAINAGE_DETACHEMENTS": "1"},
                                a.rejeu == "E")
@@ -322,6 +370,19 @@ def main() -> int:
         dire("   ⛔ morceaux a corriger qui tiennent une piece supprimee chez Hektor (aucune porte) : %s" % figes)
     dire("   ⭐ lignes tranchees JUSTES dans l'etat d'arrivee : %d sur %d%s" % (
         len(T) - len(faux_E), len(T), (" -- ⛔ PAS JUSTES : %s" % faux_E[:12]) if faux_E else ""))
+    # R7b : chaque dossier mis de cote est-il SEUL dans son dossier a l'arrivee, et garde-t-il son ancien numero ?
+    labE_ = K.pose_de_nuit(lab_img, chE)
+    mdc_faux = []
+    for g_, x in groupes_mdc.items():
+        cs = {chE[q] for q in g_}
+        seul = len(cs) == 1 and mE[next(iter(cs))] == set(g_)
+        garde = all(labE_[q] == x["ancien_uuid"] for q in g_)
+        if not (seul and garde):
+            mdc_faux.append((sorted(g_), seul, garde))
+    dire("   ⭐ R7b, SA REGLE : %d dossier(s) mis de cote sur %d sont seuls a l'arrivee ET gardent leur ancien numero%s"
+         % (len(groupes_mdc) - len(mdc_faux), len(groupes_mdc), (" -- ⛔ %s" % mdc_faux) if mdc_faux else ""))
+    dire("      dont %d deja figes par le chainage (supprimes chez Hektor : aucune ligne dans le fichier) : %s"
+         % (len(mdc_figees), mdc_figees))
     # hors des biens du protocole, rien ne doit bouger
     biens_t = {T[i]["biens"][0] for i in T}
     hors = sorted(p_ for p_ in chA if chA[p_] != chE.get(p_) and bien_de[p_] not in biens_t)
@@ -400,18 +461,28 @@ def main() -> int:
          % len(att_bouge))
 
     # ── LA SORTIE : une ligne par ligne tranchee ─────────────────────────────────────────────────────────────────────
+    num_de = {I.pieces[q]["app_dossier_uuid"]: I.pieces[q]["app_dossier_numero"] for q in I.pieces
+              if I.pieces[q]["app_dossier_uuid"]}
+
+    def numero(e) -> str:
+        """SON MOT (reponses 21, § 2) : « PARLE-MOI EN NUMERO DE DOSSIER [...] Donne-moi LES DEUX. »"""
+        if e in num_de:
+            return num_de[e] or "?"
+        return "NEUF (numero donne par la nuit)" if str(e).startswith("NEUVE") else str(e)
     sortie = P.NOTICE / ("PROTOCOLE_PASSAGE_%d_LA_PORTE_DE_CHAQUE_LIGNE_2026-11-22.csv" % pid)
     with sortie.open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f, delimiter=";")
         w.writerow(["id_unique", "ligne_du_sheet", "bien", "porte", "dossiers_aujourdhui", "pieces_de_trop",
                     "regle_G2_la_met_juste", "doublon_hektor", "gel_aujourdhui", "pieces_du_protocole",
-                    "etiquette_aujourdhui_par_le_gel", "etiquette_a_l_arrivee"])
+                    "numero_aujourdhui_par_le_gel", "etiquette_aujourdhui_par_le_gel", "numero_a_l_arrivee",
+                    "etiquette_a_l_arrivee", "mise_de_cote_R7b"])
         for i in sorted(T, key=lambda j: T[j]["num"]):
             d = detail[i]
             w.writerow([i, T[i]["num"], T[i]["biens"][0], porte[i], d["dossiers_aujourdhui"], " | ".join(d["extras_quoi"]),
                         "oui" if i in par_g2 else ("CASSEE PAR G2" if i in casse_g2 else ""),
                         "+".join(d["doublon_hektor"]), " ".join(map(str, sorted(gel_l[i]))),
-                        " ".join(map(str, sorted(T[i]["pieces"]))), auj[i], lab_ligne_E[i]])
+                        " ".join(map(str, sorted(T[i]["pieces"]))), numero(auj[i]), auj[i], numero(lab_ligne_E[i]),
+                        lab_ligne_E[i], " ".join(map(str, d.get("mise_de_cote", [])))])
     res = {"passage": pid, "image": image, "portes": dict(cpt), "extras": dict(nature_extra), "doublons_hektor": dbl,
            "porte_sans_g2": dict(Counter(porte_a.values())), "g2_ailleurs": g2_ailleurs, "figes": figes,
            "g2_met_juste": par_g2, "g2_casse": casse_g2, "faux_E": faux_E, "diff_etiquette": diff_lab, "hors": hors[:50],
@@ -420,11 +491,14 @@ def main() -> int:
            "dossiers": {"avant": len(avant), "apres": len(apres), "recoupes": len(recoupes), "neufs": len(neufs),
                         "pieces": pieces_ch},
            "etiquettes": {"pieces": lab_ch, "lignes": dict(cat), "changent_de_ligne": changent, "perdent": perdent},
-           "attente_qui_bouge": att_bouge, "detail": detail}
+           "attente_qui_bouge": att_bouge, "detail": detail, "mises_de_cote": {
+               "pieces": len(MDC), "dossiers": len(groupes_mdc), "lignes": sorted(mdc_de_ligne), "faux": mdc_faux,
+               "figes_par_le_chainage": mdc_figees}, "r7a": {i: sorted(v) for i, v in r7a_de_ligne.items()},
+           "numero_a_l_arrivee": {i: numero(lab_ligne_E[i]) for i in T}, "etiquette_a_l_arrivee": lab_ligne_E}
     (P.DOSSIER / ("portes_passage_%d.json" % pid)).write_text(json.dumps(res, ensure_ascii=False, indent=1),
                                                              encoding="utf-8")
     dire("-> %s (%.0f s)" % (sortie, time.time() - t0))
-    return 0 if not faux_E and not diff_lab and not hors else 1
+    return 0 if not faux_E and not diff_lab and not hors and not mdc_faux else 1
 
 
 if __name__ == "__main__":

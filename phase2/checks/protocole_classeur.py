@@ -32,6 +32,9 @@ LES ETAPES -- une par appel, `python -u` :
                          MATIN ») : le Sheet (lignes, cases lues), le registre (champ par champ), le gel (liens), et
                          les biens qui ont bouge. `comparer` entre deux images s'en sert : chaque verdict change est
                          dit venu de la nuit (sa ligne ou son bien a bouge) ou du code. Temoin positif : 22/11.
+  avis [P]               LE TEMOIN DES 2 560 NUMEROS de app_classeur_avis (son mot, reponses 21, § 2) : une photo de la
+                         table (lecture seule), sa mesure refaite (meme / autre / plusieurs dossiers), puis le passage
+                         P contre chaque numero -- celles qui collaient et que le protocole contredit EN TETE.
   LE MATIN : image, puis mouvement, puis passage, puis comparer <reference> <nouveau>.
 
 Option commune : --image <dossier> (sinon : l'image la plus recente).
@@ -39,6 +42,9 @@ Les portes et le rejeu exact de l'etiquette : protocole_portes.py (le vrai chain
 
 v2 (22/11) : la regle P1 VALIDEE (REGLES_VALIDEES) ; le motif PIECE_SUPPRIMEE_FIGEE (trouve par le rejeu exact) ;
   les variantes R7a et R7b proposees (jamais appliquees sans son mot).
+v3 (22/11 apres-midi, son mot « reponses 21 ») : R7a et R7b VALIDEES ; R7b met la piece de cote AVEC son dossier
+  d'aujourd'hui (sa regle : elle garde son ancien numero) ; SES_DECISIONS (DJEBBOUR, trois affaires) remplace la coupe
+  des 132 dans les temoins ; l'etape `avis` (le temoin des 2 560 numeros) ; le numero de dossier a cote de l'etiquette.
 
 LES EPREUVES (le plan du 22/11, notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md). Version 0 de ce
 22/11 : E1 et E2 sont codees ; une ligne qui les passe recoit le motif declare `E3_A_CODER` -- le compte boucle des la
@@ -77,7 +83,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v2 -- 22/11 midi : la regle P1 validee (son mot, reponses au rapport 20, point 1)"
+VERSION = "v3 -- 22/11 apres-midi : les regles R7a et R7b validees (son mot, reponses au rapport 21, points 1 et 2)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -123,20 +129,36 @@ REGLES_VALIDEES = {
     "P1": ("une ligne que le gel ET le mandat mettent sur le meme bien, et le seul product_ref sur un autre, est sur le "
            "bien du gel et du mandat (deux sources independantes contre une)",
            "son mot du 22/11, reponses au rapport 20, point 1 : « LA REGLE P1 : OUI. [...] Applique-la. »"),
+    "R7a": ("une piece a part, plus petite, qui est DEJA dans le dossier ou sont TOUTES les pieces de la ligne, et qui "
+            "n'est possible pour AUCUNE autre ligne, ne retient pas la ligne au verrou E7 : le dossier ne peut plus la "
+            "recevoir, il l'a deja. Elle reste a part (jamais donnee a la ligne), et ON NE COUPE PAS le dossier entre "
+            "elles : l'etiquette de la ligne est celle du dossier tel qu'il est",
+            "son mot du 22/11, reponses au rapport 21, point 1 : « R7a : OUI. Applique-la. [...] elle ne menace donc "
+            "aucun numero partage. On la laisse a part et on ne coupe pas le dossier. »"),
+    "R7b": ("une piece a part, plus petite, possible pour CETTE seule ligne et qui est dans un AUTRE dossier, est MISE DE "
+            "COTE : isolee dans un dossier a elle seule (le fichier des coupes), elle ne peut plus rejoindre aucun dossier "
+            "-- donc elle ne retient plus la ligne. ⛔ ET ELLE GARDE SON ANCIEN NUMERO DE DOSSIER (sa regle, qui ne se "
+            "negocie pas) : il est ecrit sur sa ligne du fichier des coupes, et le rejeu exact dit si la pose de nuit le "
+            "lui laisse",
+            "son mot du 22/11, reponses au rapport 21, point 2 : « R7b : OUI. Applique-la. ⚠ AVEC MA REGLE, et elle ne "
+            "se negocie pas : une piece mise de cote GARDE SON ANCIEN NUMERO DE DOSSIER. On ne supprime jamais une "
+            "part, on l'isole. »"),
 }
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
-    "R7a": "une piece a part, plus petite, qui est DEJA dans le dossier ou sont TOUTES les pieces de la ligne, et qui n'est "
-           "possible pour AUCUNE autre ligne, ne retient pas la ligne au verrou E7 : le dossier ne peut plus la recevoir, "
-           "il l'a deja. Elle reste a part (jamais donnee a la ligne), mais ON NE COUPE PAS le dossier entre elles : "
-           "l'etiquette de la ligne est celle du dossier tel qu'il est (22/11, lecture des 107)",
-    "R7b": "une piece a part, plus petite, possible pour CETTE seule ligne et qui est dans un AUTRE dossier, est MISE DE "
-           "COTE : isolee dans un dossier a elle seule (le fichier des coupes), elle ne peut plus rejoindre aucun dossier "
-           "-- donc elle ne retient plus la ligne (sa regle 6 : on ne supprime pas une part, on la met de cote ; sa regle "
-           "R4 du 20/11, rendue sure par le fichier) (22/11, lecture des 107)",
 }
+# R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
 VARIANTES_ACTIVES: set = set()
+
+
+def joue(regle: str) -> bool:
+    """Une regle joue si elle est VALIDEE (toujours) ou si un passage de mesure l'active (--variantes)."""
+    return regle in REGLES_VALIDEES or regle in VARIANTES_ACTIVES
+
+
+# LES PIECES MISES DE COTE par R7b dans le dernier passage : piece -> son ancien dossier, l'etiquette simulee, le reste
+MISES_DE_COTE: dict = {}
 # son mot du 22/11, point 4 : « Le bien 39845 : je veux toujours voir ces deux affaires moi-meme. Mets-les-moi de cote »
 BIENS_A_SA_DECISION = {"39845": "son mot du 22/11, point 4 -- les deux affaires du bien, il les voit lui-meme"}
 
@@ -153,6 +175,15 @@ JUMELLES = [
     {"nom": "PAOLONE", "bien": "41467", "lignes": ["O6R10ZQA", "T2GZOY5O"], "source": "son mot du 22/11, point 3"},
     {"nom": "DEBARD", "bien": "41481", "lignes": ["5QE9107L", "ZW7MKTWH"], "source": "§ 18.9 (mesure du 10/11)"},
 ]
+# SES DECISIONS RENDUES APRES LES TEMOINS -- elles REMPLACENT, pour leurs lignes, ce qu'un temoin plus ancien attendait
+#   (une decision ne se recalcule jamais ici : elle se recopie, avec sa source)
+SES_DECISIONS = {
+    "DJEBBOUR (bien 30717)": {
+        "source": "son mot du 22/11, reponses au rapport 21, point 3 : « DEUX AFFAIRES. [...] ET LA 3575 EST UNE "
+                  "TROISIEME, SEPAREE [...] CE BIEN PORTE TROIS AFFAIRES : HUGON COTTIN 2023, DJEBBOUR 2024, DJEBBOUR 2025 »",
+        "remplace": "sa coupe des 132 du 20/11 (un seul morceau 14940 14941 14942 14944 pour 3461 et 155)",
+        "lignes": {"ZE9WZW22": [14939, 14943], "Q3KTCMVB": [14941], "DKTK22F2": [14940, 14942, 14944]}},
+}
 ATTENDU_TEMOINS = {"v3_lignes": 456, "v3_morceau": 431, "v3_a_part": 20, "v3_attend_avec_sa_ligne": 3,
                    "v3_exception_nommee": 2, "coupes_132": 132, "lignes_132": 274, "coupes_29": 29, "lignes_29": 57,
                    "a_part_20": 20}
@@ -549,7 +580,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
     deja = {}
-    if "R7a" in VARIANTES_ACTIVES:
+    if joue("R7a"):
         for gl, ids in r["morceaux"].items():
             hk_ = [a for a in ids if I.nature[a] == PC.VRAIE]
             ch_m = {S.get(a) for a in ids}
@@ -557,7 +588,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 deja[gl] = sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_)
                                   and gl in r["possibles"][a] and len(r["possibles"][a]) == 1 and S.get(a) in ch_m)
     isoles = set()
-    if "R7b" in VARIANTES_ACTIVES:
+    if joue("R7b"):
         for gl, ids in r["morceaux"].items():
             hk_ = [a for a in ids if I.nature[a] == PC.VRAIE]
             ch_m = {S.get(a) for a in ids}
@@ -565,13 +596,35 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 isoles |= {a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_) and gl in r["possibles"][a]
                            and len(r["possibles"][a]) == 1 and S.get(a) not in ch_m and a not in deja.get(gl, [])}
     # E9 : la pose de nuit simulee sur le decoupage (chaque morceau devient un dossier ; le reste garde sa chaine)
-    ch_new = {a: ("isole", a) for a in isoles}
+    ch_new = {}
     for gl, ids in r["morceaux"].items():
         for a in ids + deja.get(gl, []):
             ch_new[a] = ("morceau", min(ids))
+    # R7b, AVEC SA REGLE (« une piece mise de cote GARDE SON ANCIEN NUMERO DE DOSSIER ») : elle est mise de cote AVEC son
+    #   dossier d'aujourd'hui -- tout ce qu'aucun morceau ne prend -- et ce dossier est fige tel quel par le fichier des
+    #   coupes. ⛔ La mettre de cote SEULE couperait son dossier quand il porte une autre piece : mesure du 22/11, 2 des
+    #   13 (biens 37243 et 54990) -- l'autre piece aurait recu un numero NEUF, contre sa regle.
+    groupe_isole = {}
+    for a in sorted(isoles):
+        g_ = groupe_isole.setdefault(S[a], sorted(q for q in D.par_bien.get(b, []) if S.get(q) == S[a]
+                                                  and q not in ch_new))
+        for q in g_:
+            ch_new[q] = ("isole", S[a])
     for a in D.par_bien.get(b, []):
         ch_new.setdefault(a, ("chaine", S[a]))
     lab1 = K.pose_de_nuit({a: I.pieces[a]["app_dossier_uuid"] for a in ch_new}, ch_new)
+    # R7b, SA REGLE : la piece mise de cote garde-t-elle son ancien numero ? (la pose de nuit simulee le dit ; le rejeu
+    #   exact de protocole_portes.py le redit sur le vrai chainage)
+    for a in sorted(isoles):
+        ancien = I.pieces[a]["app_dossier_uuid"]
+        g_ = groupe_isole[S[a]]
+        hors = sorted(q for q in D.par_bien.get(b, []) if S.get(q) == S.get(a) and q not in g_)
+        MISES_DE_COTE[a] = {"bien": b, "ancien_uuid": ancien, "ancien_numero": I.pieces[a]["app_dossier_numero"],
+                            "ancienne_chaine": S.get(a), "etiquette_simulee": lab1[a],
+                            "garde_son_numero": lab1[a] == ancien, "mise_de_cote_avec": [q for q in g_ if q != a],
+                            "pieces_du_dossier_prises_par_un_morceau": hors,
+                            "etiquettes_du_groupe": sorted({str(lab1[q]) for q in g_}),
+                            "groupe": g_, "lignes_du_gel": {str(q): sorted(I.gel_par_piece.get(q, [])) for q in g_}}
     out = []
     for i in sorted(a_juger):
         base = {"id_unique": i, "num": D.LIG[i]["num"], "biens": [b]}
@@ -622,10 +675,13 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             preuves.append("a part sans effet sur l'etiquette (son critere 2) : %s" % " ".join(map(str, neutres)))
         mis_de_cote = sorted(a for a in isoles if a < m and gl in r["possibles"][a])
         if mis_de_cote:
-            preuves.append("a part MISE DE COTE, isolee, possible pour elle seule, hors de son dossier (VARIANTE R7b) : %s"
-                           % " ".join("%d" % a for a in mis_de_cote))
+            preuves.append("a part MISE DE COTE avec son dossier d'aujourd'hui, possible pour elle seule, hors de son "
+                           "dossier (REGLE R7b, validee le 22/11 ; elle garde son ancien numero : %s) : %s" % (", ".join(
+                               "%d -> %s (dossier fige : %s)" % (a, I.pieces[a]["app_dossier_numero"] or "aucun",
+                                                                  " ".join(map(str, groupe_isole[S[a]])))
+                               for a in mis_de_cote), " ".join("%d" % a for a in mis_de_cote)))
         if deja.get(gl):
-            preuves.append("a part deja dans son dossier, possible pour elle seule (VARIANTE R7a) : %s" % " ".join(
+            preuves.append("a part deja dans son dossier, possible pour elle seule (REGLE R7a, validee le 22/11) : %s" % " ".join(
                 "%d" % a for a in deja[gl]))
         if exc:
             preuves.append("exception nommee : %s -- %s" % (exc, "+".join(sorted(gl))))
@@ -640,6 +696,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
 def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set | None = None) -> int:
     VARIANTES_ACTIVES.clear()
     VARIANTES_ACTIVES.update(variantes or ())
+    MISES_DE_COTE.clear()
     if VARIANTES_ACTIVES - set(VARIANTES):
         raise SystemExit("⛔ variante inconnue : %s" % sorted(VARIANTES_ACTIVES - set(VARIANTES)))
     if VARIANTES_ACTIVES:
@@ -698,6 +755,12 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
         dire("   temoin %-14s accord %4d . ECART %4d . attend %4d" % (fam, c["accord"], c["ecart"], c["attend"]))
         crie |= c["ecart"] > 0
     con.close()
+    if MISES_DE_COTE:
+        g = sum(1 for x in MISES_DE_COTE.values() if x["garde_son_numero"])
+        dire("   R7b : %d piece(s) mise(s) de cote ; %d gardent leur ancien numero dans la pose simulee, %d en recevraient un "
+             "NEUF (voir mises_de_cote_passage_%d.json)" % (len(MISES_DE_COTE), g, len(MISES_DE_COTE) - g, pid))
+        (DOSSIER / ("mises_de_cote_passage_%d.json" % pid)).write_text(json.dumps(
+            {str(a): x for a, x in MISES_DE_COTE.items()}, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     if crie:
         dire("   ⛔ un temoin crie : voir la table `temoin` du socle (passage %d)" % pid)
     return 0 if boucle and not crie else 1
@@ -945,10 +1008,14 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
                              for p in PR.get(x["ligne"], []))
                     noter("v3_neutres", x["ligne"], "%d neutre" % n, "neutre nomme" if ok else "PAS NOMME NEUTRE",
                           int(not ok))
+    remplacees = {i for d_ in SES_DECISIONS.values() for i in d_["lignes"]}
     for fam in ("coupes_132", "coupes_29"):
         for e in T["familles"][fam]:
             for m in e["morceaux"]:
-                juger_pieces(fam, m["lignes"], m["pieces"], vraies_seules=True)
+                juger_pieces(fam, [i for i in m["lignes"] if i not in remplacees], m["pieces"], vraies_seules=True)
+    for nom, d_ in SES_DECISIONS.items():      # ses decisions rendues APRES les temoins : elles remplacent l'ancien attendu
+        for i, ps in d_["lignes"].items():
+            juger_pieces("ses_decisions", [i], ps, vraies_seules=True)
     # une piece a part ne doit appartenir a AUCUNE ligne tranchee -- et tant qu'aucune ligne de son bien n'est
     #   tranchee, le temoin ATTEND (« a personne » par absence de verdict n'est pas un accord)
     tenues = defaultdict(list)
@@ -986,6 +1053,116 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
     return sortie
 
 
+# ════════════════════════ LE TEMOIN DES 2 560 NUMEROS DE app_classeur_avis (son mot, reponses 21, § 2) ═══════════════
+# « 2 560 de mes lignes y ont DEJA leur NUMERO DE DOSSIER ecrit [...] FAIS PASSER TON PROTOCOLE CONTRE CES 2 560 LIGNES,
+#   et dis-moi : combien il retrouve au numero exact ; ce qu'il dit des 17 qui ne collent pas aujourd'hui ; et s'il en
+#   contredit une qui collait, CA SE REGARDE AVANT TOUT LE RESTE. »
+# ⚠ D'OU VIENNENT CES NUMEROS (lu dans le code, pas suppose) : ils ont ete POSES LE 16/11 par le patch C9
+#   (supabase/patch_c9_avis_etiquette_2026-11-16.sql), CALCULES DEPUIS LE GEL joint au registre de ce jour-la, et
+#   seulement quand la ligne designait UN SEUL dossier. « origine = classeur » est l'origine des trois colonnes d'AVIS
+#   (AH, AI, AJ de son classeur), pas du numero. Le temoin est donc LA PHOTO DU 16/11 du gel et des dossiers -- une
+#   epreuve que le protocole n'a pas fabriquee, mais pas une ecriture de sa main.
+AVIS = DOSSIER / "avis"
+
+
+def etape_avis(I: Image, p: int | None) -> int:
+    import csv
+    AVIS.mkdir(parents=True, exist_ok=True)
+    # 1. la photo de la table, en lecture seule (jamais ecrit_par : une identite ne s'ecrit pas sur un document)
+    try:
+        cn, cu = pooler()
+        cu.execute("select id_unique, origine, ecrit_le::text, app_dossier_uuid::text, app_dossier_numero "
+                   "from public.app_classeur_avis order by id_unique collate \"C\"")
+        rows = cu.fetchall()
+        cu.execute("select count(*), count(app_dossier_uuid), md5(string_agg(id_unique||':'||coalesce("
+                   "app_dossier_uuid::text,'-')||':'||coalesce(app_dossier_numero,'-'), ',' order by id_unique "
+                   "collate \"C\")), min(ecrit_le)::text, max(ecrit_le)::text, count(distinct origine), "
+                   "string_agg(distinct origine, ',') from public.app_classeur_avis")
+        n, n_uuid, emp, e_min, e_max, n_or, origines = cu.fetchone()
+        cn.rollback()
+        cn.close()
+    except Exception as e:  # noqa: BLE001
+        dire("⛔ app_classeur_avis n'a pas pu etre lue (%s) -- code 2" % str(e).splitlines()[0][:160])
+        return 2
+    if n != len(rows):
+        dire("⛔ la table a bouge pendant la lecture (%d contre %d) -- code 2" % (n, len(rows)))
+        return 2
+    photo = AVIS / ("avis_%s.json" % datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+    photo.write_text(json.dumps({"n": n, "avec_numero": n_uuid, "empreinte": emp, "ecrit_le": [e_min, e_max],
+                                 "origines": origines, "lignes": rows}, ensure_ascii=False), encoding="utf-8")
+    dire("TEMOIN app_classeur_avis -- photo %s (empreinte %s)" % (photo.name, emp))
+    dire("   %d lignes, dont %d avec un numero de dossier ; origine(s) : %s ; ecrites du %s au %s" % (
+        n, n_uuid, origines, (e_min or "")[:16], (e_max or "")[:16]))
+    A = {i: (u, nu) for i, _o, _e, u, nu in rows if u}
+    # 2. aujourd'hui (le gel et les dossiers de l'image) : sa mesure (2 543 / 10 / 7), refaite a l'identique
+    lab = {a: x["app_dossier_uuid"] for a, x in I.pieces.items()}
+    num_de = {x["app_dossier_uuid"]: x["app_dossier_numero"] for x in I.pieces.values() if x["app_dossier_uuid"]}
+    auj = {}
+    for i, (u, _nu) in A.items():
+        ls = {lab[g["piece"]] for g in I.gel_par_ligne.get(i, []) if g["piece"] in lab and lab[g["piece"]]}
+        auj[i] = "MEME" if ls == {u} else ("AUTRE" if len(ls) == 1 else ("PLUSIEURS" if ls else "AUCUN"))
+    c_auj = Counter(auj.values())
+    dire("   AUJOURD'HUI (le gel de l'image %s) : meme dossier %d . un AUTRE dossier %d . PLUSIEURS dossiers %d . aucun "
+         "%d   (sa mesure : 2 543 / 10 / 7)" % (I.d.name, c_auj["MEME"], c_auj["AUTRE"], c_auj["PLUSIEURS"],
+                                              c_auj["AUCUN"]))
+    # 3. le protocole : le passage, et l'etiquette d'ARRIVEE du rejeu exact (protocole_portes) quand elle existe
+    con = socle()
+    if p is None:
+        p = con.execute("select max(id) from passage").fetchone()[0]
+    V = {i: (v, e, m, json.loads(ps) if ps else []) for i, v, e, m, ps in con.execute(
+        "select id_unique, verdict, etiquette, motif, pieces from verdict where passage=?", (p,))}
+    con.close()
+    f_pt = DOSSIER / ("portes_passage_%d.json" % p)
+    PT = json.loads(f_pt.read_text(encoding="utf-8")) if f_pt.exists() else {}
+    arrivee = PT.get("etiquette_a_l_arrivee", {})
+    porte = {i: d["porte"] for i, d in PT.get("detail", {}).items()}
+
+    def numero(e) -> str:
+        if e in num_de:
+            return num_de[e] or "?"
+        return "NEUF" if str(e).startswith("NEUVE") else str(e)
+    cat, sortie_l = Counter(), []
+    for i, (u, nu) in sorted(A.items()):
+        v = V.get(i)
+        if v is None:
+            k, e = "ABSENTE DU SHEET", None
+        elif v[0] != "TRANCHEE":
+            k, e = "EN ATTENTE (%s)" % v[2], None
+        else:
+            e = arrivee.get(i, v[1])
+            k = "AU NUMERO EXACT" if e == u else ("UN NUMERO NEUF" if str(e).startswith("NEUVE") else
+                                                  "UN AUTRE NUMERO EXISTANT")
+        cat[(auj[i], k if not k.startswith("EN ATTENTE") else "EN ATTENTE")] += 1
+        sortie_l.append([i, I.sheet["par_id"][i][0]["num"] if i in I.sheet["par_id"] else "", nu, u, auj[i], k,
+                         numero(e) if e else "", e or "", porte.get(i, ""), " ".join(map(str, v[3])) if v else ""])
+    dire("   LE PROTOCOLE (passage %d%s) contre les %d :" % (p, ", etiquette d'arrivee du rejeu exact" if arrivee
+                                                                else ", etiquette simulee", len(A)))
+    for g in ("MEME", "AUTRE", "PLUSIEURS", "AUCUN"):
+        ks = {k: n_ for (g_, k), n_ in cat.items() if g_ == g}
+        if ks:
+            dire("      aujourd'hui %-9s (%4d) : %s" % (g, sum(ks.values()), " . ".join(
+                "%s %d" % kv for kv in sorted(ks.items(), key=lambda kv: -kv[1]))))
+    sortie = NOTICE / ("PROTOCOLE_TEMOIN_AVIS_LES_2560_NUMEROS_PASSAGE_%d_2026-11-22.csv" % p)
+    ordre = {"MEME": 1, "AUTRE": 2, "PLUSIEURS": 3, "AUCUN": 4}
+
+    def contredit_(r) -> bool:
+        return r[4] == "MEME" and r[5] in ("UN NUMERO NEUF", "UN AUTRE NUMERO EXISTANT")
+    with sortie.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f, delimiter=";")
+        w.writerow(["id_unique", "ligne_du_sheet", "numero_du_16_11", "etiquette_du_16_11", "aujourdhui_par_le_gel",
+                    "le_protocole", "numero_a_l_arrivee", "etiquette_a_l_arrivee", "porte", "pieces_du_protocole"])
+        # ⛔ D'ABORD celles qui collaient et que le protocole contredit (« ca se regarde avant tout le reste »)
+        w.writerows(sorted(sortie_l, key=lambda r: (not contredit_(r), ordre[r[4]], r[1] or 0)))
+    contredit = [r for r in sortie_l if contredit_(r)]
+    dire("   ⛔ CELLES QUI COLLAIENT ET QUE LE PROTOCOLE CONTREDIT : %d (en tete du fichier) -> %s" % (len(contredit),
+                                                                                                sortie))
+    (AVIS / ("avis_contre_passage_%d.json" % p)).write_text(json.dumps(
+        {"photo": photo.name, "empreinte": emp, "aujourdhui": dict(c_auj),
+         "croise": {"%s|%s" % k: n_ for k, n_ in cat.items()}, "lignes": sortie_l}, ensure_ascii=False, indent=1,
+        default=str), encoding="utf-8")
+    return 0
+
+
 def etape_rapport(p: int | None) -> int:
     import csv
     con = socle()
@@ -993,24 +1170,34 @@ def etape_rapport(p: int | None) -> int:
         p = con.execute("select max(id) from passage").fetchone()[0]
     image, version, debut = con.execute("select image, version, debut from passage where id=?", (p,)).fetchone()
     sortie = NOTICE / ("PROTOCOLE_PASSAGE_%d_LE_VERDICT_DE_CHAQUE_LIGNE_%s.csv" % (p, debut[:10]))
+    # SON MOT (reponses 21, § 2) : « PARLE-MOI EN NUMERO DE DOSSIER [...] Donne-moi LES DEUX. »
+    rc = sqlite3.connect("file:%s?mode=ro" % (IMAGES / image / "registre.sqlite").as_posix(), uri=True)
+    num_de = dict(rc.execute("select distinct app_dossier_uuid, app_dossier_numero from app_affaire_ledger "
+                             "where app_dossier_uuid is not null"))
+    rc.close()
+
+    def numero(e) -> str:
+        if not e:
+            return ""
+        return num_de.get(e) or ("NEUF (numero donne par la nuit)" if str(e).startswith("NEUVE") else "?")
     rows = list(con.execute("select id_unique, num, biens, verdict, etiquette, pieces, preuves, motif, motif_texte, "
                             "epreuve from verdict where passage=? order by num", (p,)))
     with sortie.open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f, delimiter=";")
-        w.writerow(["id_unique", "ligne_du_sheet", "bien", "verdict", "etiquette", "piece", "preuve_nommee", "motif",
-                    "pourquoi", "epreuve"])
+        w.writerow(["id_unique", "ligne_du_sheet", "bien", "verdict", "numero_de_dossier", "etiquette", "piece",
+                    "preuve_nommee", "motif", "pourquoi", "epreuve"])
         for i, n, bs, v, e, ps, pr, m, mt, ep in rows:
             b = " ".join(json.loads(bs))
             if v == "TRANCHEE":
                 pieces, preuves = json.loads(ps), json.loads(pr)
                 par_piece = {int(x.split()[0]): x for x in preuves if x.split()[0].isdigit()}
                 for a in pieces:
-                    w.writerow([i, n, b, v, e, a, par_piece.get(a, ""), "", "", ep])
+                    w.writerow([i, n, b, v, numero(e), e, a, par_piece.get(a, ""), "", "", ep])
                 for x in preuves:
                     if not x.split()[0].isdigit():
-                        w.writerow([i, n, b, v, e, "", x, "", "", ep])
+                        w.writerow([i, n, b, v, numero(e), e, "", x, "", "", ep])
             else:
-                w.writerow([i, n, b, v, "", "", "", m, mt, ep])
+                w.writerow([i, n, b, v, "", "", "", "", m, mt, ep])
     dire("RAPPORT du passage %d (%s, image %s) -> %s" % (p, version, image, sortie))
     for m, k in con.execute("select motif, count(*) from verdict where passage=? and verdict='ATTENTE' group by 1 "
                             "order by 2 desc", (p,)):
@@ -1040,6 +1227,8 @@ def main() -> int:
     k = sp.add_parser("compter")
     k.add_argument("p", type=int, nargs="?")
     sp.add_parser("temoins")
+    av = sp.add_parser("avis", help="le temoin des numeros de app_classeur_avis (photo en lecture seule + croisement)")
+    av.add_argument("p", type=int, nargs="?")
     r_ = sp.add_parser("rapport")
     r_.add_argument("p", type=int, nargs="?")
     mv = sp.add_parser("mouvement", help="ce que la nuit a deplace entre deux images (par defaut : les deux dernieres)")
@@ -1064,6 +1253,8 @@ def main() -> int:
     I = Image(image_choisie(a.image))
     if a.etape == "bien":
         return etape_bien(I, a.annonce)
+    if a.etape == "avis":
+        return etape_avis(I, a.p)
     return etape_passage(I, a.note, a.perimetre, {x for x in a.variantes.split(",") if x})
 
 

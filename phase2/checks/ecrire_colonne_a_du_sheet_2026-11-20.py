@@ -352,8 +352,19 @@ class RegistreSimule:
     """Pour l'epreuve SEULEMENT : le vrai registre, avec des transactions dont on force l'origine (pour
     semer le temoin « C5 seule » sans toucher la base)."""
 
-    def __init__(self, vrai: Registre, origine_forcee: dict[int, str]) -> None:
+    def __init__(self, vrai: Registre, origine_forcee: dict[int, str],
+                 confiance_forcee: dict[str, str] | None = None) -> None:
         self.vrai, self.forcee = vrai, origine_forcee
+        # ⭐ 22/11 (son mot, reponses 21, § 2 : « SEME-LE ET FAIS-LE CRIER ») : la confiance du gel forcee sur une ligne,
+        #   pour semer le temoin LIEN_NON_SUR, qui n'a plus d'exemple reel depuis le patch de confiance
+        self.confiance_forcee = confiance_forcee or {}
+
+    def liens_des_lignes(self, ids):
+        out = self.vrai.liens_des_lignes(ids)
+        for i, c in self.confiance_forcee.items():
+            if i in out:
+                out[i] = [(a, c) for a, _c in out[i]]
+        return out
 
     def __getattr__(self, nom):
         return getattr(self.vrai, nom)
@@ -1085,6 +1096,7 @@ def simuler(reg: Registre, journal=print) -> int:
     b19 = sorted(i for i, (r, _) in exclus_b.items() if r == "DECISION_19")[0]
     ent.append(entree_vivante(b19, "SIMULATION")[0]); attendus[b19] = "DECISION_19"
     # des lignes REELLES dans les cases bloquees du 19/11 : la premiere qui, a l'instant, montre le defaut
+    confiance_forcee: dict[str, str] = {}
     for case, raison in (("ETIQUETTE_PARTAGEE", "ETIQUETTE_PARTAGEE"), ("PLUSIEURS_DOSSIERS", "PLUSIEURS_DOSSIERS"),
                          ("LIEN_A_VALIDER", "LIEN_NON_SUR")):
         trouve = None
@@ -1099,13 +1111,22 @@ def simuler(reg: Registre, journal=print) -> int:
                 break
         if trouve:
             ent.append(trouve); attendus[trouve["id_unique"]] = raison
+        elif raison == "LIEN_NON_SUR":
+            # ⭐ 22/11, SON MOT : « SEME-LE ET FAIS-LE CRIER AVANT d'ecrire la premiere etiquette. Je n'ecris pas sans
+            #   filet. » Plus aucune ligne reelle n'a un lien « a valider » depuis le patch de confiance : on le SEME sur
+            #   une ligne NOMINALE (qui, sans la graine, s'ecrit) -- sa confiance est forcee dans le registre simule
+            s = next(x)
+            confiance_forcee[s] = "à valider"
+            attendus[s] = "LIEN_NON_SUR"
+            journal("   temoin LIEN_NON_SUR SEME sur %s (une ligne nominale ; sa confiance forcee a « a valider » dans "
+                    "le registre simule -- aucune ligne reelle ne montre plus le defaut)" % s)
         else:
             attendu(False, "temoin %s : aucune ligne reelle ne montre le defaut a l'instant -- NON EPROUVE" % raison)
     # C5 seule : on force l'origine « classeur » sur TOUTES les transactions d'une ligne nominale
     s = next(x)
     forcee = {a: "classeur" for a in par_id[s]["transactions"]}
     attendus[s] = "C5_SEULE"
-    reg_sim = RegistreSimule(reg, forcee)
+    reg_sim = RegistreSimule(reg, forcee, confiance_forcee)
     # temoin POSITIF de la regle C5 : une ligne qui a une creation du Sheet dans un AUTRE dossier, et qui s'ecrit
     c5_pos = None
     for i in sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "PLUSIEURS_DOSSIERS" and i in pos0
