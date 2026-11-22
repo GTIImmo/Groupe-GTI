@@ -4020,6 +4020,61 @@ LA SUITE : demain matin image + MOUVEMENT (dit d'abord) + passage + avis + compa
   la premiere ecriture (prendre, relire, epreuve) ; le reste a vider (225).
 ```
 
+### 20.13 Ses réponses au rapport ㉑ bis (22/11 soir, tard) — le rejeu du patch, les lignes en attente, les lignes 23 et 535
+
+Son mot : `C:\Hektor\mot_du_22_11_reponses_21ter.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_21TER_LE_REJEU_DU_PATCH_LES_EN_ATTENTE_LES_LIGNES_23_ET_535_2026-11-22.md`.
+
+```
+SES REPONSES
+  1 le patch du journal : OUI, mais PAS AVANT le rejeu de la fonction MODIFIEE sur une COPIE (« je refuse que la NUIT
+    soit son premier essai »).
+  2 les 63 : la regle du plus ancien TIENT, pas d'exception pour la vente (« le numero suit ma ligne ») -- N'Y REVIENS PLUS.
+  3 86da6949 : couverte par son oui a R7b ; les TROIS restent dans le reste a vider, nommees a chaque passage.
+  A les 35 en attente ne doivent pas perdre le numero qu'elles affichent (lignes 40, 105, 311).
+  B les lignes 23 et 535 : par quelle porte, et la preuve nommee de chaque piece.
+1 LE REJEU DU PATCH -- ⚠ JE L'AI CONTREDIT : l'outil du matin (« 0 ecart sur 31 368 ») rejoue une COPIE PYTHON des regles
+  (pose_de_nuit), pas la SQL ; il ne voit pas le patch. AUCUN Postgres sur la machine (ni installe, ni portable, ni WSL).
+  phase2/checks/rejeu_patch_journal_sur_copie.py :
+  . extraire -- FAIT 22/11 20:12, lecture seule (REPEATABLE READ, UTC) : registre 31 368 (8 colonnes), mandats 27 511,
+    dates convenues 5, compteur 25, journal 11 657, les 5 fonctions (pose = 815e956f) ; collation Supabase en_US.UTF-8
+    (les rangs se trient sur des dates AAAA-MM-JJ et des numeros : meme ordre en C) ; declencheurs du registre = les
+    parties seulement (la pose n'y touche pas) -> C:\Hektor\chantier_classeur_q6_cache\rejeu_patch_journal\2026-11-22_201242
+  . rejouer --pg <bin> -- ECRIT, PAS LANCE : la copie relue (empreintes + md5 des 5 fonctions), LE FICHIER DU PATCH joue
+    tel quel, sa repetition, son inverse ; 5 etats AVANT / APRES (aujourd'hui ; l'arrivee du protocole + la prediction des
+    275 ; defait -> pose + propagation ; a blanc ; limite 25) ; l'ancien numero verifie ligne par ligne ; TEMOIN INVERSE
+    (le rang d'une scission + 1 doit faire crier la comparaison).
+  ⛔ A LUI : telecharger @embedded-postgres/windows-x64@17.6.0-beta.15 (registre npm, ~101 Mo decompresse) dans
+    C:\Hektor\outils\postgres17, sans service, localhost:54329, arrete apres.
+2 LES 63 : rien a coder (c'est la regle de la nuit). Fait signale : un numero GARDE par une fusion porte l'annee de SA
+  naissance -- 15 dossiers sur 11 551 aujourd'hui (ex. D2024-0456 : compromis sans date, annee du mandat 12/12/2024,
+  l'affaire s'ouvre en 2025). Les numeros NEUFS portent l'annee d'ouverture de leur affaire.
+A phase2/checks/protocole_en_attente_garde_son_numero.py (passage 22, 225 en attente) -- ON LAISSE EN PLACE :
+  . case A du Sheet : vide 225/225 ; l'ecrivain n'ecrit qu'une case VIDE d'une ligne de la VAGUE, saute une case
+    remplie, ne vide (defaire) que NOTRE valeur ; app_classeur_avis : aucun geste du protocole n'y ecrit ;
+  . registre a l'arrivee : GARDE 153 . SANS_PIECE 69 . CHANGE 3 (renumerotees, pas videes : la porte d'une voisine
+    tranchee coupe leur dossier, la regle du plus ancien laisse l'ancien numero a la voisine) --
+    3900 RGCEC677 4542 4545 D2021-0130 -> D2021-0757 (1379 Z0BDVNBZ garde) ; 3990 Z3DYDC4X 14111 D2021-0025 ->
+    D2021-0772 (1932 AYIHPHF5 garde) ; 4005 SBH4QWDW 23054 D2021-0041 -> D2021-0800 (3910 VMWFLLW4 garde) ; aucune
+    n'affiche de numero (A vide, hors des 2 560) ;
+  . 40 / 105 / 311 : D2025-0107 / D2025-0039 / D2024-0279 gardes ; les 35 des 2 560 : 35 GARDE (dont 1700, 4291, 4626
+    deja deplacees par la regle E la nuit du 21/11 : le numero d'aujourd'hui est garde). PAS DE GARDE AJOUTEE : rien ne vide.
+B phase2/checks/protocole_ce_qui_a_deplace_les_2560_depuis_le_16_11.py -- 17 lignes des 2 560 ne portent plus l'etiquette
+  du 16/11 : REGLE_E 9 . COPIE_C5 6 . AUCUN_DEPLACEMENT 2 . A_EXPLIQUER 0.
+  . 23 (MCD6CRNB) : la REGLE E (sa decision du 20/11 07:26), fusion 34540 la nuit du 21/11 ; annoncee dans son compte
+    definitif (cas 6) ; gardee = 7080 (compromis annule sans date, PASSERIEUX), D2024 = l'annee de son MANDAT.
+  . 535 (A07EC3DH) : AUCUNE porte qui survive -- fusion 34336 (13/11, GUERIN + PAYSAC reunis), scission 34373/34374 (18/11,
+    la 1re nuit avec la copie C5 1001563). REJEU SANS LA COPIE : la nuit re-fusionne 1875 1876 1878 avec 1874 (3 pieces,
+    0 ailleurs). La separation est juste sur le fond (deux acheteurs), mais par SA regle C5 une creation du Sheet ne
+    decide jamais. FAMILLE (rejeu sans les 190 copies) : 5 pieces, 2 biens -- 5262 (535, 3540) et 24733 (2388 CIMINO,
+    4113 SOUDANI, copie 1001580).
+  ⛔ A LUI : la regle « C5 aux portes » (une separation que seule une copie tient s'ecrit en coupe), mesuree, NON appliquee.
+  VARIANTE C5P (brouillon + 4 coupes, copie en memoire) : AVEC les copies 0 piece ne change contre le rejeu E (l'arrivee
+  est la meme) ; SANS les copies, les pieces de 5262 et 24733 ne bougent plus (la separation tient sur la porte). Le meme
+  test bouge 15 autres pieces : 14 offres refusees dont la coupe DEJA ECRITE nomme une copie dans son morceau (retirer la
+  copie defait le morceau) + 20673 (sans ligne) -- les copies ne se jettent pas : note, rien a faire.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
