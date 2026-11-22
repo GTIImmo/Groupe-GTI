@@ -3848,6 +3848,67 @@ LA SUITE : lire par motif les biens des 106 (E7), des 23 « plusieurs biens » r
 
 ---
 
+### 20.10 Ses réponses au rapport ⑳ (22/11 midi) — P1 appliquée, la mesure du matin, les portes, le mouvement, R7a et R7b
+
+```
+SON MOT : C:\Hektor\mot_du_22_11_reponses_20.md (155 l.) -- « TU TRAVAILLES BIEN. NE CHANGE PAS DE CAP. »
+SES CINQ REPONSES :
+  1 P1 : OUI, appliquee -> REGLES_VALIDEES (protocole_classeur v2). Rejoue TOUT (passage 10) : 59 verdicts changent,
+    0 DEJA RENDU (57 tranchees, 1 verrou, 1 copie seule), 0 ecart neuf. Chaque ligne P1 porte sa preuve « son bien X
+    par la regle P1 ; ecarte : Y (product_ref seul) ».
+  2 LES 106 : GARDEES (107 apres P1). Lues par motif -> R7a et R7b (ci-dessous), NON appliquees.
+  3 DJEBBOUR : TROIS lignes (ZE9WZW22 3575, Q3KTCMVB 3461, DKTK22F2 155) -- il a ecrit DEUX noms (HUGON COTTIN 2023 ;
+    DJEBBOUR 2024 et 2025) ; Hektor a SIX pieces (+ l'offre refusee 14943 du 03/07/2023) ; chaque date tombe sur UNE
+    case d'UNE ligne. -> notice/PROTOCOLE_DJEBBOUR_TES_TROIS_LIGNES_COTE_A_COTE_2026-11-22.md. A LUI. ⚠ s'il dit « une
+    affaire », nommer la paire NE SUFFIT PAS (E8 n'exempte que deux lignes d'un MEME morceau) : une regle « une paire
+    nommee reunit ses morceaux », qui servira aussi a DEBARD.
+  4 SON 4 794 / MON 4 798 : EXPLIQUE EN ENTIER, pas comme il pensait. Ses 5 lignes 3541 3693 3837 4019 4070 sont VIDES
+    de A a AL en direct aussi ; les 4 de plus = 4 lignes NEUVES 4801-4804 (offres du 21/10 au 19/11 ; mandats 18993
+    18996 18950 18973), apres la copie en base (app_classeur_ligne_id s'arrete a 4800). Les 4 794 de la copie sont tous
+    en direct, MEME numero de ligne (0 difference).
+  5 « RIEN NE S'ECRIT » = RIEN DE NOUVEAU : la nuit continue. SON OBLIGATION : mesurer chaque matin ce qu'elle deplace
+    -> etape `mouvement` (Sheet case par case, registre champ par champ, gel lien par lien, biens bouges) ; `comparer`
+    entre deux images partage chaque changement : la nuit ou le code. Temoin positif (3 changements semes : retrouves,
+    rien d'autre). 10:44 -> 12:42 : 0 mouvement ; passage 11 sur la nouvelle image : 0 verdict change.
+DEFAUT TROUVE PAR LE REJEU EXACT : 6 lignes tranchees IRREALISABLES (0bc98552 3250892d 6095c819 6684bcf1 87eb399e
+  dfb32f2b) : une piece SUPPRIMEE CHEZ HEKTOR, figee par le chainage, et des pieces dans deux dossiers -> motif
+  PIECE_SUPPRIMEE_FIGEE ; rejoue (passage 13) : 6 verdicts changent, LES 6 DEJA RENDUS, exactement eux. 5 sont ses
+  doublons Hektor dont Hektor a deja supprime une moitie (doublons tranches : 16 -> 11). Piste NON proposee : app_chaine_id
+  d'une piece supprimee n'est plus recalculee -- pose, push et descente non mesures.
+LES PORTES (protocole_portes.py, passage 13, 4 535 tranchees) -- le VRAI chainage rejoue sur copie de l'image :
+  rejeu A (la nuit, G2 et outil eteints) = l'image, 0 ecart sur 31 368 (TEMOIN) ;
+  RIEN 3 985 (dont 189 : seul le gel change) . REGLE G2 206 (codee, eteinte) . RATTACHEMENT 85 . COUPE DEJA ECRITE 138
+  . COUPE NEUVE 121 . HEKTOR 0 necessaire (11 lignes tiennent un doublon, sans effet). Sans G2 : coupes 265 + 200.
+  ⚠ G2 casse 0 ligne juste, MAIS deplace 480 pieces hors des biens des lignes tranchees et 14 dossiers de lignes en
+  attente -> NON PROPOSEE comme porte avant lecture.
+  Le gel : AUCUN programme de phase2/sync ni de scheduled n'ecrit app_classeur_lien (verifie) -> un patch survit.
+LE MOUVEMENT (rejeu E = A + brouillon de 548 morceaux dans le cache, 0 refuse) : 4 535/4 535 JUSTES, 0 piece hors de
+  leurs biens ; ⭐ REJEU EXACT DE L'ETIQUETTE : 4 535/4 535, meme etiquette que le passage sur TOUTES leurs vraies pieces.
+  GEL 12 820 = 12 416 (tranchees) + 404 (attente, intouches) ; 12 208 gardes, 208 se delient, 71 se relient ; 266 lignes.
+  DOSSIERS 11 551 -> 11 614 ; 541 se recoupent ou se reunissent ; 604 neufs ; 1 357 pieces changent de compagnie.
+  ETIQUETTES : 726 pieces changent (570 NEUVES) ; par ligne : 4 211 meme, 245 NEUVE, 60 existante (en avait plusieurs),
+  16 AUTRE existante, 3 existante (n'en avait aucune) ; 45 etiquettes iraient (aussi) a une autre ligne, 46 a aucune.
+  6 lignes EN ATTENTE voient un dossier bouger (305KAY9W RGCEC677 SBH4QWDW X2714E92 YZ1B0Q44 Z3DYDC4X).
+  DEFAIRE : dossiers exacts (retirer les lignes) ; ⚠ 214 pieces n'y retrouveraient PAS leur etiquette (NEUVE) -> restaurer
+  app_dossier_uuid depuis la sauvegarde datee + l'inverse du patch du gel.
+DEUX REGLES PROPOSEES (variantes mesurees, jamais appliquees) :
+  R7a « la piece plus petite est DEJA dans le dossier de toute la ligne, possible pour elle seule : elle reste a part,
+      on ne coupe pas, l'etiquette est celle du dossier tel qu'il est » -- 26 lignes, 0 rendu, 0 ecart neuf ; 25/26
+      gardent l'etiquette de leur dossier ; ex. d6f57a72 (05/06 contre 08/06), OT0CES4C (10/04 contre 06/04), ZXLFUP4A.
+  R7b « dans un AUTRE dossier, possible pour cette seule ligne : MISE DE COTE, isolee par le fichier des coupes » --
+      10 lignes, 13 pieces, 0 rendu, 0 ecart neuf ; plus etroite que R4 (jamais une piece possible pour deux lignes :
+      DEBARD intact) ; ex. 7C1ZQYFL, I847SPN3, HGXAVYKA.
+  Ensemble : 38 lignes (passage 16) ; le verrou 107 -> 69. Temoin : passage 17 sans variante = passage 13 (0 change).
+REFERENCE : passage 13 = 4 535 + 263 = 4 798. Rapport : notice/PROTOCOLE_REPONSES_20_LES_PORTES_LE_MOUVEMENT_DEUX_
+  REGLES_2026-11-22.md ; portes : notice/PROTOCOLE_PASSAGE_13_LA_PORTE_DE_CHAQUE_LIGNE_2026-11-22.csv ; les 38 :
+  notice/PROTOCOLE_REGLES_R7A_R7B_LES_38_LIGNES_MESUREES_2026-11-22.csv.
+A LUI : R7a oui/non ; R7b oui/non ; DJEBBOUR une affaire ou deux. Le run de jour : pas demande (le rejeu sur copie suffit).
+LA SUITE : demain matin la mesure de la nuit (image, mouvement, passage, comparer 13) + le NOMBRE d'orphelines ; lire
+  les 69 du verrou, les 480 pieces de G2, puis les autres motifs.
+```
+
+---
+
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
 
 ```

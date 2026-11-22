@@ -28,8 +28,17 @@ LES ETAPES -- une par appel, `python -u` :
   temoins                fabrique les TEMOINS du protocole (temoins.json) depuis les decisions deja rendues : la V3,
                          ses 132 coupes, les 29 faibles, les 20 pieces a part, les jumelles, le bien 39845. Chaque
                          passage se compare ensuite a eux, ecart par ecart (table `temoin` du socle).
+  mouvement [de] [a]     CE QUE LA NUIT A DEPLACE entre deux images (son mot, reponses 20, point 5 : « MESURE CHAQUE
+                         MATIN ») : le Sheet (lignes, cases lues), le registre (champ par champ), le gel (liens), et
+                         les biens qui ont bouge. `comparer` entre deux images s'en sert : chaque verdict change est
+                         dit venu de la nuit (sa ligne ou son bien a bouge) ou du code. Temoin positif : 22/11.
+  LE MATIN : image, puis mouvement, puis passage, puis comparer <reference> <nouveau>.
 
 Option commune : --image <dossier> (sinon : l'image la plus recente).
+Les portes et le rejeu exact de l'etiquette : protocole_portes.py (le vrai chainage rejoue sur une copie de l'image).
+
+v2 (22/11) : la regle P1 VALIDEE (REGLES_VALIDEES) ; le motif PIECE_SUPPRIMEE_FIGEE (trouve par le rejeu exact) ;
+  les variantes R7a et R7b proposees (jamais appliquees sans son mot).
 
 LES EPREUVES (le plan du 22/11, notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md). Version 0 de ce
 22/11 : E1 et E2 sont codees ; une ligne qui les passe recoit le motif declare `E3_A_CODER` -- le compte boucle des la
@@ -68,7 +77,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v1 -- 22/11 : E1 a E9 (etiquette par la pose de nuit simulee sur le decoupage du protocole)"
+VERSION = "v2 -- 22/11 midi : la regle P1 validee (son mot, reponses au rapport 20, point 1)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -96,17 +105,36 @@ MOTIFS = {
                                      "nommee)"),
     "VERROU_PIECE_PLUS_PETITE": ("E7", "son verrou permanent : une vraie piece du bien, a part, plus petite que la plus "
                                        "petite de la ligne, peut encore rejoindre son dossier"),
+    # v2 (22/11) -- trouve par le REJEU EXACT (protocole_portes.py, rejeu E) : 6 lignes tranchees que la nuit ne peut pas
+    #   realiser. Le chainage NE RECALCULE PAS une piece supprimee chez Hektor (« la trace garde son dossier ») : ni un
+    #   rattachement ni une coupe ne la trouvent (« transaction introuvable »)
+    "PIECE_SUPPRIMEE_FIGEE": ("E9", "son morceau tient une piece SUPPRIMEE CHEZ HEKTOR (le chainage la fige dans son "
+                                    "ancien dossier) et ses pieces sont dans PLUSIEURS dossiers : aucune porte ne peut les "
+                                    "reunir"),
 }
 # a part par SA decision (20/11 soir, B3) -- la meme liste que la V3
 A_PART_PAR_DECISION = {14033: "B3, sa decision du 20/11 soir"}
 
 # ⛔ LES REGLES PROPOSEES -- jamais appliquees sans son mot. Un passage lance avec --variantes X,Y est marque
 #   « VARIANTE NON VALIDEE » : il sert a mesurer ce qu'une regle changerait (comparer), rien d'autre.
+#   Une variante VALIDEE par son mot quitte cette liste et passe dans REGLES_VALIDEES : elle joue alors a chaque passage,
+#   et le passage qui suit est rejoue sur TOUTES les lignes (« tu me dis combien de verdicts ont change »).
+REGLES_VALIDEES = {
+    "P1": ("une ligne que le gel ET le mandat mettent sur le meme bien, et le seul product_ref sur un autre, est sur le "
+           "bien du gel et du mandat (deux sources independantes contre une)",
+           "son mot du 22/11, reponses au rapport 20, point 1 : « LA REGLE P1 : OUI. [...] Applique-la. »"),
+}
 VARIANTES = {
-    "P1": "une ligne que le gel ET le mandat mettent sur le meme bien, et le seul product_ref sur un autre, est sur le "
-          "bien du gel et du mandat (deux sources independantes contre une)",
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
+    "R7a": "une piece a part, plus petite, qui est DEJA dans le dossier ou sont TOUTES les pieces de la ligne, et qui n'est "
+           "possible pour AUCUNE autre ligne, ne retient pas la ligne au verrou E7 : le dossier ne peut plus la recevoir, "
+           "il l'a deja. Elle reste a part (jamais donnee a la ligne), mais ON NE COUPE PAS le dossier entre elles : "
+           "l'etiquette de la ligne est celle du dossier tel qu'il est (22/11, lecture des 107)",
+    "R7b": "une piece a part, plus petite, possible pour CETTE seule ligne et qui est dans un AUTRE dossier, est MISE DE "
+           "COTE : isolee dans un dossier a elle seule (le fichier des coupes), elle ne peut plus rejoindre aucun dossier "
+           "-- donc elle ne retient plus la ligne (sa regle 6 : on ne supprime pas une part, on la met de cote ; sa regle "
+           "R4 du 20/11, rendue sure par le fichier) (22/11, lecture des 107)",
 }
 VARIANTES_ACTIVES: set = set()
 # son mot du 22/11, point 4 : « Le bien 39845 : je veux toujours voir ces deux affaires moi-meme. Mets-les-moi de cote »
@@ -428,12 +456,9 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
         return attente("ID_EN_DOUBLE", "ID Unique sur les lignes %s" % [x["num"] for x in I.sheet["par_id"][i]])
     if not biens:
         return attente("SANS_BIEN")
-    if len(biens) > 1 and "P1" in VARIANTES_ACTIVES:
-        par = {b: I.D.rattache_par.get((b, i), set()) for b in biens}
-        forts = [b for b, r in par.items() if {"gel", "mandat"} <= r]
-        if len(biens) == 2 and len(forts) == 1 and par[[b for b in biens if b != forts[0]][0]] == {"product_ref"}:
-            biens = forts
-            base["biens"] = biens
+    if len(biens) > 1 and bien_par_p1(I, i):
+        biens = [bien_par_p1(I, i)]              # LA REGLE P1, validee le 22/11 (REGLES_VALIDEES)
+        base["biens"] = biens
     if len(biens) > 1:
         return attente("PLUSIEURS_BIENS", "biens %s, par %s" % (biens, {b: sorted(I.D.rattache_par.get((b, i), set()))
                                                                           for b in biens}))
@@ -450,13 +475,32 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
     return None                     # E1 et E2 passees : la ligne se juge AVEC SON BIEN ENTIER (juger_bien)
 
 
+def supprimee_chez_hektor(p: dict) -> bool:
+    """La meme condition que le chainage (affaire_ledger.recalculer_les_chaines) : un numero Hektor ET absente chez
+    Hektor -> la piece n'est plus recalculee, elle garde son dossier."""
+    return bool(str(p.get("hektor_affaire_id") or "").strip()) and str(p.get("present_in_hektor")) in ("0", "false",
+                                                                                                       "False")
+
+
+def bien_par_p1(I: Image, i: str) -> str | None:
+    """LA REGLE P1 (validee le 22/11) : deux biens nommes, l'un par le gel ET le mandat, l'autre par le SEUL product_ref
+    -> le bien du gel et du mandat. Sinon : None (la ligne reste PLUSIEURS_BIENS)."""
+    bs = sorted(I.biens_de_ligne.get(i, set()))
+    if len(bs) != 2:
+        return None
+    par = {b: I.D.rattache_par.get((b, i), set()) for b in bs}
+    forts = [b for b in bs if {"gel", "mandat"} <= par[b]]
+    if len(forts) == 1 and par[[b for b in bs if b != forts[0]][0]] == {"product_ref"}:
+        return forts[0]
+    return None
+
+
 def r_bien(I: Image, i: str) -> str:
-    """Le bien d'une ligne qui a passe E1 (un seul, ou celui que la variante P1 a choisi)."""
+    """Le bien d'une ligne qui a passe E1 (un seul, ou celui que la regle P1 a choisi)."""
     bs = I.biens_de_ligne[i]
     if len(bs) == 1:
         return next(iter(bs))
-    forts = [b for b in bs if {"gel", "mandat"} <= I.D.rattache_par.get((b, i), set())]
-    return forts[0]
+    return bien_par_p1(I, i)
 
 
 def exception_nommee(gl) -> str | None:
@@ -502,10 +546,28 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         ch_t = {S[a] for a in lies if a in S}
         X = sorted(a for a in D.par_bien.get(b, []) if S.get(a) in ch_t)
     r = K.couper_le_bien(D, b, lignes_b, S, X, A_PART_PAR_DECISION)
+    # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
+    #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
+    deja = {}
+    if "R7a" in VARIANTES_ACTIVES:
+        for gl, ids in r["morceaux"].items():
+            hk_ = [a for a in ids if I.nature[a] == PC.VRAIE]
+            ch_m = {S.get(a) for a in ids}
+            if hk_ and len(ch_m) == 1:
+                deja[gl] = sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_)
+                                  and gl in r["possibles"][a] and len(r["possibles"][a]) == 1 and S.get(a) in ch_m)
+    isoles = set()
+    if "R7b" in VARIANTES_ACTIVES:
+        for gl, ids in r["morceaux"].items():
+            hk_ = [a for a in ids if I.nature[a] == PC.VRAIE]
+            ch_m = {S.get(a) for a in ids}
+            if hk_:
+                isoles |= {a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_) and gl in r["possibles"][a]
+                           and len(r["possibles"][a]) == 1 and S.get(a) not in ch_m and a not in deja.get(gl, [])}
     # E9 : la pose de nuit simulee sur le decoupage (chaque morceau devient un dossier ; le reste garde sa chaine)
-    ch_new = {}
+    ch_new = {a: ("isole", a) for a in isoles}
     for gl, ids in r["morceaux"].items():
-        for a in ids:
+        for a in ids + deja.get(gl, []):
             ch_new[a] = ("morceau", min(ids))
     for a in D.par_bien.get(b, []):
         ch_new.setdefault(a, ("chaine", S[a]))
@@ -536,23 +598,41 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         if not hk:
             out.append(attente("COPIE_SEULE", "morceau %s" % ids))
             continue
+        figees = [a for a in ids if supprimee_chez_hektor(I.pieces[a])]
+        if figees and len({S.get(a) for a in ids}) > 1:
+            out.append(attente("PIECE_SUPPRIMEE_FIGEE", "supprimees chez Hektor : %s ; ses pieces sont dans %d dossiers "
+                               "(%s)" % (figees, len({S.get(a) for a in ids}), sorted({S.get(a) for a in ids}))))
+            continue
         exc = exception_nommee(gl) if len(gl) > 1 else None
         if len(gl) > 1 and not exc:
             out.append(attente("DEUX_LIGNES_UN_DOSSIER", "avec %s ; morceau %s" % ("+".join(sorted(gl - {i})), ids)))
             continue
         m = min(hk)
         bloque = [] if "R4" in VARIANTES_ACTIVES else \
-            sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < m and gl in r["possibles"][a])
+            sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < m and gl in r["possibles"][a]
+                   and a not in deja.get(gl, []) and a not in isoles)
         if bloque:
             out.append(attente("VERROU_PIECE_PLUS_PETITE", "plus petite de la ligne %d ; a part et plus petites : %s"
                                % (m, "; ".join("%d (%s)" % (a, r["apart"][a]) for a in bloque))))
             continue
-        neutres = sorted(a for a in r["apart"] if gl in r["possibles"][a])
+        neutres = sorted(a for a in r["apart"] if gl in r["possibles"][a] and a not in deja.get(gl, [])
+                         and a not in isoles)
         preuves = [preuve_nommee(I, a, gl, r["preuve"].get(a, "")) for a in ids]
         if neutres:
             preuves.append("a part sans effet sur l'etiquette (son critere 2) : %s" % " ".join(map(str, neutres)))
+        mis_de_cote = sorted(a for a in isoles if a < m and gl in r["possibles"][a])
+        if mis_de_cote:
+            preuves.append("a part MISE DE COTE, isolee, possible pour elle seule, hors de son dossier (VARIANTE R7b) : %s"
+                           % " ".join("%d" % a for a in mis_de_cote))
+        if deja.get(gl):
+            preuves.append("a part deja dans son dossier, possible pour elle seule (VARIANTE R7a) : %s" % " ".join(
+                "%d" % a for a in deja[gl]))
         if exc:
             preuves.append("exception nommee : %s -- %s" % (exc, "+".join(sorted(gl))))
+        if len(I.biens_de_ligne.get(i, set())) > 1:
+            autre = sorted(I.biens_de_ligne[i] - {b})
+            preuves.append("son bien %s par la regle P1 (gel + mandat) ; ecarte : %s (product_ref seul) -- %s"
+                           % (b, "+".join(autre), REGLES_VALIDEES["P1"][1]))
         out.append(dict(base, verdict="TRANCHEE", etiquette=lab1[m], pieces=ids, preuves=preuves, epreuve="E9"))
     return out
 
@@ -638,6 +718,16 @@ def etape_comparer(p1: int, p2: int) -> int:
         dire("   %-26s -> %-26s %5d" % (k[0], k[1], n))
     for i in rendus[:20]:
         dire("   ⛔ verdict rendu qui change : %s %s -> %s" % (i, a[i], b[i]))
+    # deux passages sur DEUX IMAGES : chaque changement est-il venu de la nuit (son bien a bouge) ou du code ?
+    im1, im2 = (con.execute("select image from passage where id=?", (p,)).fetchone()[0] for p in (p1, p2))
+    if im1 != im2 and chg:
+        M = mouvement(IMAGES / im1, IMAGES / im2)
+        bouge = set(M["biens_bouges"])
+        bs = {i: set(json.loads(x)) for i, x in con.execute("select id_unique, biens from verdict where passage in (?, ?)",
+                                                              (p1, p2))}
+        nuit = [i for i in chg if bs.get(i, set()) & bouge or i in M["sheet"]["lignes_changees"]]
+        dire("   IMAGES DIFFERENTES (%s -> %s) : %d changements sur une ligne ou un bien que LA NUIT a deplace, %d sans "
+             "aucun mouvement de la nuit (donc DU CODE)" % (im1, im2, len(nuit), len(chg) - len(nuit)))
     con.close()
     return 0
 
@@ -654,6 +744,88 @@ def etape_compter(p: int | None) -> int:
                             "order by 2 desc", (p,)):
         dire("   %-24s %5d" % (m, k))
     con.close()
+    return 0
+
+
+# ══════════════════════════════════════ CE QUE LA NUIT A DEPLACE (son mot, reponses 20, point 5) ═════════════════════
+# « le sol bouge sous tes pieds chaque matin [...] MESURE CHAQUE MATIN CE QUE LA NUIT A DEPLACE -- sinon tu comparerais
+#   deux passages sans savoir ce qui vient de toi et ce qui vient de la nuit. »
+CHAMPS_PIECE = ["hektor_annonce_id", "kind", "state", "date", "montant", "hektor_affaire_id", "present_in_hektor",
+                "numero_mandat", "transaction_origine", "app_chaine_id", "app_dossier_uuid", "acquereurs_json"]
+
+
+def mouvement(d1: Path, d2: Path) -> dict:
+    """Deux images -> ce qui a bouge entre elles : le Sheet (lignes, cases lues), le registre (pieces, champ par champ),
+    le gel (liens). Et LES BIENS QUI ONT BOUGE -- tout verdict d'un autre bien qui change vient du code, pas de la nuit."""
+    S1, S2 = (json.loads((d / "sheet.json").read_text(encoding="utf-8")) for d in (d1, d2))
+    lus = [c for c in COLONNES_LUES + ["ID Unique"] if c in S1["entete"] and c in S2["entete"]]
+    k1, k2 = ({c: S["entete"].index(c) for c in lus} for S in (S1, S2))
+    l1 = {i: v[0] for i, v in S1["par_id"].items()}
+    l2 = {i: v[0] for i, v in S2["par_id"].items()}
+    cases, chang = Counter(), set()
+    for i in set(l1) & set(l2):
+        if l1[i]["num"] != l2[i]["num"]:
+            cases["(numero de ligne)"] += 1
+            chang.add(i)
+        for c in lus:
+            if l1[i]["row"][k1[c]].strip() != l2[i]["row"][k2[c]].strip():
+                cases[c] += 1
+                chang.add(i)
+    sheet = {"nouvelles": sorted(set(l2) - set(l1)), "disparues": sorted(set(l1) - set(l2)),
+             "lignes_changees": sorted(chang), "cases_changees": dict(cases),
+             "entete_change": S1["entete"] != S2["entete"]}
+    # le registre, champ par champ
+    P = []
+    for d in (d1, d2):
+        con = sqlite3.connect("file:%s?mode=ro" % (d / "registre.sqlite").as_posix(), uri=True)
+        P.append({int(r[0]): r[1:] for r in con.execute("select app_affaire_id, %s from app_affaire_ledger"
+                                                         % ", ".join(CHAMPS_PIECE))})
+        con.close()
+    champs, pieces_bougees = Counter(), {}
+    for a in set(P[0]) & set(P[1]):
+        diff = [c for c, x, y in zip(CHAMPS_PIECE, P[0][a], P[1][a]) if str(x) != str(y)]
+        for c in diff:
+            champs[c] += 1
+        if diff:
+            pieces_bougees[a] = diff
+    nouv, disp = sorted(set(P[1]) - set(P[0])), sorted(set(P[0]) - set(P[1]))
+    ib = CHAMPS_PIECE.index("hektor_annonce_id")
+    biens = set()
+    for a in pieces_bougees:
+        biens |= {str(P[0][a][ib]), str(P[1][a][ib])}
+    biens |= {str(P[1][a][ib]) for a in nouv} | {str(P[0][a][ib]) for a in disp}
+    # le gel
+    G = [{(x[0], int(x[1])) for x in json.loads((d / "gel.json").read_text(encoding="utf-8"))["liens"]} for d in (d1, d2)]
+    gel = {"ajoutes": sorted(G[1] - G[0]), "retires": sorted(G[0] - G[1])}
+    for i, a in gel["ajoutes"] + gel["retires"]:
+        for p in (P[0].get(a), P[1].get(a)):
+            if p:
+                biens.add(str(p[ib]))
+    # les biens des lignes du Sheet qui ont change sont pris en compte par l'appelant (ligne par ligne)
+    return {"de": d1.name, "a": d2.name, "sheet": sheet,
+            "registre": {"pieces": [len(P[0]), len(P[1])], "nouvelles": nouv, "disparues": disp,
+                         "champs_changes": dict(champs), "pieces_bougees": {str(a): v for a, v in pieces_bougees.items()}},
+            "gel": gel, "biens_bouges": sorted(biens - {"None", ""})}
+
+
+def etape_mouvement(d1: Path, d2: Path) -> int:
+    M = mouvement(d1, d2)
+    s, r, g = M["sheet"], M["registre"], M["gel"]
+    dire("CE QUI A BOUGE de l'image %s a l'image %s" % (M["de"], M["a"]))
+    dire("   SHEET : %d lignes nouvelles, %d disparues, %d lignes dont une case lue a change%s" % (
+        len(s["nouvelles"]), len(s["disparues"]), len(s["lignes_changees"]), " ; ⚠ L'EN-TETE A CHANGE" if
+        s["entete_change"] else ""))
+    for c, n in sorted(s["cases_changees"].items(), key=lambda x: -x[1]):
+        dire("      %-22s %5d" % (c, n))
+    dire("   REGISTRE : %d -> %d pieces ; %d nouvelles, %d disparues, %d pieces dont un champ a change"
+         % (r["pieces"][0], r["pieces"][1], len(r["nouvelles"]), len(r["disparues"]), len(r["pieces_bougees"])))
+    for c, n in sorted(r["champs_changes"].items(), key=lambda x: -x[1]):
+        dire("      %-22s %5d" % (c, n))
+    dire("   GEL : %d liens ajoutes, %d retires" % (len(g["ajoutes"]), len(g["retires"])))
+    dire("   BIENS QUI ONT BOUGE : %d" % len(M["biens_bouges"]))
+    sortie = DOSSIER / ("mouvement_%s_vers_%s.json" % (M["de"], M["a"]))
+    sortie.write_text(json.dumps(M, ensure_ascii=False, indent=1), encoding="utf-8")
+    dire("-> %s" % sortie)
     return 0
 
 
@@ -859,7 +1031,7 @@ def main() -> int:
     b.add_argument("annonce")
     p = sp.add_parser("passage")
     p.add_argument("--note", default="")
-    p.add_argument("--variantes", default="", help="regles PROPOSEES a mesurer, ex. P1,R4 (jamais appliquees)")
+    p.add_argument("--variantes", default="", help="regles PROPOSEES a mesurer, ex. R4 (jamais appliquees ; P1 est validee, elle joue toujours)")
     p.add_argument("--perimetre", choices=("bien", "chaines"), default="bien",
                    help="bien : toutes les pieces du bien (le protocole) ; chaines : celles que le gel touche (le 20/11)")
     c = sp.add_parser("comparer")
@@ -870,7 +1042,17 @@ def main() -> int:
     sp.add_parser("temoins")
     r_ = sp.add_parser("rapport")
     r_.add_argument("p", type=int, nargs="?")
+    mv = sp.add_parser("mouvement", help="ce que la nuit a deplace entre deux images (par defaut : les deux dernieres)")
+    mv.add_argument("de", nargs="?")
+    mv.add_argument("a", nargs="?")
     a = ap.parse_args()
+    if a.etape == "mouvement":
+        imgs = sorted(p for p in IMAGES.iterdir() if (p / "manifeste.json").exists())
+        d1 = image_choisie(a.de) if a.de else imgs[-2]
+        d2 = image_choisie(a.a) if a.a else imgs[-1]
+        verifier_image(d1)
+        verifier_image(d2)
+        return etape_mouvement(d1, d2)
     if a.etape == "rapport":
         return etape_rapport(a.p)
     if a.etape == "image":
