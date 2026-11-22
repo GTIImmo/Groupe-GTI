@@ -57,6 +57,7 @@ sys.path.insert(0, str(RACINE / "phase2" / "checks"))
 import apparier_classeur as ac                                         # noqa: E402
 from rapport_gel_tous_les_champs import date_du_classeur_tolerante     # noqa: E402
 from phase2.sync.affaire_ledger import _date_de_tri                    # noqa: E402
+import piece_copie_ou_vraie as PC  # noqa: E402  -- LA fonction unique copie / vraie piece (22/11)
 
 BASE = RACINE / "phase2" / "phase2.sqlite"
 PAIRES = RACINE / "notice" / "TEMPS3_PAIRES_CHANGEES_2026-11-19.csv"
@@ -120,9 +121,10 @@ def preparer_juge() -> dict:
 
     src = sqlite3.connect(f"file:{BASE}?mode=ro", uri=True)
     tx = {}
-    for a, bien, k, s, d, pj, acq, mt, orig, ch, u, nm in src.execute(
+    for a, bien, k, s, d, pj, acq, mt, orig, ch, u, nm, num in src.execute(
             "SELECT app_affaire_id, hektor_annonce_id, kind, state, date, propositions_json, acquereurs_json, "
-            "montant, transaction_origine, app_chaine_id, app_dossier_uuid, numero_mandat FROM app_affaire_ledger"):
+            "montant, transaction_origine, app_chaine_id, app_dossier_uuid, numero_mandat, hektor_affaire_id "
+            "FROM app_affaire_ledger"):
         cles = set()
         if k == "offre":
             # ⭐ la proposition ET l'acceptation (journal de Hektor) : le Sheet note l'une ou l'autre
@@ -136,7 +138,7 @@ def preparer_juge() -> dict:
         elif jour_hektor(d):
             cles.add(jour_hektor(d))
         tx[a] = {"bien": str(bien), "genre": k, "etat": s, "dates": cles, "noms": noms(acq),
-                 "montant": montant(mt), "classeur": orig == "classeur", "chaine": ch, "uuid": u,
+                 "montant": montant(mt), "classeur": PC.est_copie(a, orig, num), "chaine": ch, "uuid": u,
                  "mandat": "".join(ch_ for ch_ in str(nm or "") if ch_.isdigit())}
     par_mandat = defaultdict(list)
     for rec in vue.values():

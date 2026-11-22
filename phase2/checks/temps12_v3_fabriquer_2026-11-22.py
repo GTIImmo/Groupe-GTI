@@ -566,6 +566,10 @@ def etape_gestes() -> int:
     con = sqlite3.connect("file:%s?mode=ro" % (RACINE / "phase2" / "phase2.sqlite").as_posix(), uri=True)
     KIND = {int(a): k for a, k in con.execute("select app_affaire_id, kind from app_affaire_ledger")}
     ETATS = {int(a): s for a, s in con.execute("select app_affaire_id, state from app_affaire_ledger")}
+    # ⭐ 22/11 : les copies C5 par LA fonction unique (avant : « >= 1 000 000 », qui rangeait aussi en copie les 340
+    #   vraies pieces de la plage app -- rejoue le 22/11 par l'origine : relier/delier/un-par-role et gel d'apres
+    #   IDENTIQUES, le defaut n'avait rien change ; il ne decide plus rien)
+    C5 = K.PC.copies(con)
     con.close()
     un_par_role = []
     loc = chaines_locales()
@@ -594,17 +598,17 @@ def etape_gestes() -> int:
                 #   . une piece qu'aucune des deux ne tient : elle ME REMONTE (je ne choisis pas laquelle des deux) ;
                 #   . une piece qu'une de ses lignes tient HORS du morceau : deliee, comme partout.
                 exceptions.append((b, gl, ids, w))
-                hk = {a for a in ids if a < 1000000}
+                hk = {a for a in ids if a not in C5}
                 att = {a for a in att_par_morceau[(b, tuple(gl))]}
                 for a in sorted(hk):
                     if not any(a in liens[i] for i in gl):
                         exc_a_decider.append((b, gl, a))
                 for i in gl:
-                    for a in sorted(x for x in liens[i] if x < 1000000 and x not in hk and x not in att):
+                    for a in sorted(x for x in liens[i] if x not in C5 and x not in hk and x not in att):
                         delier.append((i, a, b, "pas dans son morceau (exception nommee)"))
                 continue
             i = gl[0]
-            hk = {a for a in ids if a < 1000000}
+            hk = {a for a in ids if a not in C5}
             garde = hk | {a for a in att_par_morceau[(b, tuple(gl))] if a in liens[i]}
             # UN LIEN PAR ROLE (le gel n'en a jamais deux aujourd'hui, mesure : 0 ligne) :
             #  . SA CONVENTION APRES RENEGOCIATION (20/11) -- le role « offre » tient l'offre ACCEPTEE ; l'offre d'origine
@@ -612,14 +616,14 @@ def etape_gestes() -> int:
             #  . une COPIE C5 tient deja le role -> on ne relie pas la vraie piece par-dessus : les copies C5 se retirent
             #    a part, des deux cotes (regle du 19/11). Le dossier est le morceau dans les deux cas : l'etiquette est la meme.
             par_role = defaultdict(list)
-            for a in hk | {x for x in liens[i] if x in garde or x >= 1000000}:
+            for a in hk | {x for x in liens[i] if x in garde or x in C5}:
                 par_role[KIND.get(a)].append(a)
             sans_lien = set()
             for role_, xs in par_role.items():
                 if len(xs) < 2:
                     continue
-                if any(x >= 1000000 and x in liens[i] for x in xs):
-                    sans_lien |= {x for x in xs if x < 1000000 and x not in liens[i]}
+                if any(x in C5 and x in liens[i] for x in xs):
+                    sans_lien |= {x for x in xs if x not in C5 and x not in liens[i]}
                     continue
                 acc = [x for x in xs if role_ == "offre" and ETATS.get(x) in ("accepted", "acceptee")]
                 if role_ == "offre" and len(acc) == 1:
@@ -627,7 +631,7 @@ def etape_gestes() -> int:
             un_par_role.extend((i, a, b) for a in sorted(sans_lien))
             for a in sorted(hk - liens[i] - sans_lien):
                 relier.append((i, a, b))
-            for a in sorted(x for x in liens[i] if x < 1000000 and x not in garde):
+            for a in sorted(x for x in liens[i] if x not in C5 and x not in garde):
                 delier.append((i, a, b, "pas dans son morceau"))
     # l'exclusivite : une piece prise par une ligne est lachee par celle qui la tenait
     lachees = {(i, a) for i, a, *_ in delier}
@@ -1103,6 +1107,9 @@ def etape_rapport() -> int:
     con.close()
     photo = json.load((CACHE / "t6_photo.json").open(encoding="utf-8"))
     NUM = {i: v["num"] for i, v in photo["lignes"].items()}
+    _c = sqlite3.connect("file:%s?mode=ro" % (RACINE / "phase2" / "phase2.sqlite").as_posix(), uri=True)
+    C5_RAPPORT = K.PC.copies(_c)                     # LA fonction unique (22/11), avant : « a >= 1 000 000 »
+    _c.close()
     # G2 seule, pour separer ce que fait G2 de ce que fait le fichier V3
     mod = T10.charger(T10.MODULE, "apres")
     ch_g2, _r, _c = T10.rejouer(mod, {"APP_CHAINAGE_GARDE_G2": "1", "APP_CHAINAGE_DETACHEMENTS": "0"})
@@ -1140,7 +1147,7 @@ def etape_rapport() -> int:
     for a, ancienne, kind, valeurs, notes in vingt5:
         now = sorted(tient_ap.get(a, set()))
         meme_role = sorted(x for x in gel_ap.get(ancienne, set()) if INFO.get(x, ("",))[0] == kind)
-        if a >= 1000000:
+        if a in C5_RAPPORT:
             prop = "copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11)"
         elif len(meme_role) == 1:
             prop = "DEPLACER vers %d (le %s que la ligne %s tient aujourd'hui, et tient encore apres la V3)" % (

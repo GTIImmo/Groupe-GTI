@@ -48,6 +48,10 @@ RACINE = Path(__file__).resolve().parents[2]
 CACHE = Path(r"C:\Hektor\chantier_classeur_q6_cache")
 BASE = RACINE / "phase2" / "phase2.sqlite"
 
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import piece_copie_ou_vraie as PC  # noqa: E402  -- LA fonction unique copie / vraie piece (22/11)
+
 COLS_DATE = {"offre": ["Offre Achat"], "compromis": ["Compromis"],
              "vente": ["Vente Prévue", "Vente Fixée", "Vente Réglée", "Signée"]}
 MOIS = {"janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7,
@@ -111,9 +115,9 @@ class Donnees:
         con = sqlite3.connect("file:%s?mode=ro" % BASE, uri=True)
         self.REG: dict[int, dict] = {}
         mandats_du_bien: dict[str, set] = defaultdict(set)
-        for a, b, k, st, d, m, ps, nv, nm in con.execute(
+        for a, b, k, st, d, m, ps, nv, nm, orig, num in con.execute(
                 "select app_affaire_id, hektor_annonce_id, kind, state, date, montant, propositions_json, "
-                "prix_net_vendeur, numero_mandat from app_affaire_ledger"):
+                "prix_net_vendeur, numero_mandat, transaction_origine, hektor_affaire_id from app_affaire_ledger"):
             dd = d_reg(d)
             if k == "offre":
                 dd = None                       # la date d'une offre = sa 1re proposition (la colonne date ment)
@@ -129,7 +133,9 @@ class Donnees:
             nvf = nombre(nv) if nv not in (None, "") else None
             hh = (mm - nvf) if (mm is not None and nvf is not None and nvf > 0) else None
             self.REG[int(a)] = {"bien": str(b), "genre": k, "etat": st, "date": dd, "montant": mm, "hon": hh,
-                                "c5": bool(self.TX.get(int(a), {}).get("classeur"))}
+                                # ⭐ 22/11 : la fonction unique, sur le registre lu ICI (avant : la marque de la photo
+                                #   du 19/11 -- juste, mesure 190/190 et 0/340, mais muette sur une piece nee apres)
+                                "c5": PC.est_copie(a, orig, num)}
             if nm not in (None, ""):
                 mandats_du_bien[str(nm).strip()].add(str(b))
         refs_du_bien: dict[str, set] = defaultdict(set)
@@ -145,17 +151,23 @@ class Donnees:
             self.par_bien[r["bien"]].append(a)
         # les lignes du bien : gel + Mandat (unique) + numero de dossier (unique)
         self.lignes_bien: dict[str, set] = defaultdict(set)
+        # ⭐ 22/11 (protocole) : PAR QUOI chaque ligne est rattachee a chaque bien -- note seulement, ne decide rien
+        self.rattache_par: dict[tuple, set] = defaultdict(set)
+        self.mandats_du_bien, self.refs_du_bien = mandats_du_bien, refs_du_bien
         for i, ts in self.gel_l.items():
             for a in ts:
                 if a in self.REG:
                     self.lignes_bien[self.REG[a]["bien"]].add(i)
+                    self.rattache_par[(self.REG[a]["bien"], i)].add("gel")
         for i in self.LIG:
             m = self.case(i, "Mandat").strip()
             if m and len(mandats_du_bien.get(m, ())) == 1:
                 self.lignes_bien[next(iter(mandats_du_bien[m]))].add(i)
+                self.rattache_par[(next(iter(mandats_du_bien[m])), i)].add("mandat")
             ref = self.case(i, "product_ref").strip().upper()
             if ref and not ref.isdigit() and len(refs_du_bien.get(ref, ())) == 1:
                 self.lignes_bien[next(iter(refs_du_bien[ref]))].add(i)
+                self.rattache_par[(next(iter(refs_du_bien[ref])), i)].add("product_ref")
         # ⭐ LE LIEN CRM (20/11 soir) : deux lignes qui portent le meme lien vers la fiche du CRM parlent du meme bien
         #   (trouve sur POCHELON 6FQO29C8, dont le Mandat n'est connu d'aucun registre). On le propage depuis les
         #   lignes deja rattachees, quand le lien ne mene qu'a UN bien.
@@ -172,6 +184,7 @@ class Donnees:
             lien = self.case(i, "Lien CRM").strip()
             if lien and len(biens_du_lien.get(lien, ())) == 1:
                 self.lignes_bien[next(iter(biens_du_lien[lien]))].add(i)
+                self.rattache_par[(next(iter(biens_du_lien[lien])), i)].add("lien_crm")
 
     def case(self, i: str, colonne: str) -> str:
         r = self.LIG[i]["row"]

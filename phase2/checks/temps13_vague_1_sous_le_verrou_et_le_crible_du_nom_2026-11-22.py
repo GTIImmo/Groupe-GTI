@@ -144,10 +144,10 @@ def main() -> int:
             conf1[(i, a)] = conf0.get((i, a)) or ("bonne" if a in convention else "sûre")   # la confiance du patch V3
     con = sqlite3.connect("file:%s?mode=ro" % BASE.as_posix(), uri=True)
     ch0, lab0, C5 = {}, {}, set()
-    for a, c, u, o in con.execute("select app_affaire_id, app_chaine_id, app_dossier_uuid, transaction_origine "
-                                  "from app_affaire_ledger"):
+    for a, c, u, o, num in con.execute("select app_affaire_id, app_chaine_id, app_dossier_uuid, transaction_origine, "
+                                       "hektor_affaire_id from app_affaire_ledger"):
         ch0[int(a)], lab0[int(a)] = c, u
-        if o == "classeur":
+        if K.PC.est_copie(a, o, num):           # LA fonction unique (22/11), par l'outil de coupe qui l'importe
             C5.add(int(a))
     con.close()
     rj = json.load((CACHE / "v3_rejeu_maisons.json").open(encoding="utf-8"))

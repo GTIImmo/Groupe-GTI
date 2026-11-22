@@ -67,6 +67,8 @@ RACINE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RACINE / "monitoring"))
 sys.path.insert(0, str(RACINE / "phase2" / "sync"))
 from check_google_scopes import load_env_file  # noqa: E402
+sys.path.insert(0, str(RACINE / "phase2" / "checks"))
+import piece_copie_ou_vraie as PC  # noqa: E402  -- LA fonction unique copie / vraie piece (22/11)
 
 SHEET_ID = "1wFd3pQYItvOrbk10W0r--bmhOaV1R4tWgZ3dq1XCipk"
 ONGLET = "Sheet1"
@@ -326,9 +328,11 @@ class Registre:
         out = {}
         for t in tranches(sorted(set(txs))):
             for x in self._get("app_affaire_ledger",
-                               "app_affaire_id,app_dossier_uuid,transaction_origine,kind,state,hektor_annonce_id",
+                               "app_affaire_id,app_dossier_uuid,transaction_origine,kind,state,hektor_annonce_id,"
+                               "hektor_affaire_id",
                                {"app_affaire_id": liste_in(t, False)}, "app_affaire_id.asc"):
                 out[int(x["app_affaire_id"])] = {"uuid": x["app_dossier_uuid"], "origine": x["transaction_origine"],
+                                                 "numero": x.get("hektor_affaire_id"),
                                                  "genre": x["kind"], "etat": x["state"],
                                                  "bien": x["hektor_annonce_id"]}
         return out
@@ -336,9 +340,11 @@ class Registre:
     def transactions_des_dossiers(self, uuids) -> dict[int, dict]:
         out = {}
         for t in tranches(sorted(set(u for u in uuids if u))):
-            for x in self._get("app_affaire_ledger", "app_affaire_id,app_dossier_uuid,transaction_origine",
+            for x in self._get("app_affaire_ledger",
+                               "app_affaire_id,app_dossier_uuid,transaction_origine,hektor_affaire_id",
                                {"app_dossier_uuid": liste_in(t, True)}, "app_affaire_id.asc"):
-                out[int(x["app_affaire_id"])] = {"uuid": x["app_dossier_uuid"], "origine": x["transaction_origine"]}
+                out[int(x["app_affaire_id"])] = {"uuid": x["app_dossier_uuid"], "origine": x["transaction_origine"],
+                                                 "numero": x.get("hektor_affaire_id")}
         return out
 
 
@@ -352,26 +358,36 @@ class RegistreSimule:
     def __getattr__(self, nom):
         return getattr(self.vrai, nom)
 
+    # ⭐ 22/11 : une copie forcee perd aussi son numero Hektor -- une copie n'en a jamais, et la fonction unique
+    #   REFUSE une copie qui en porterait un (c'est son temoin).
+    def _forcer(self, ligne: dict, o: str) -> dict:
+        return dict(ligne, origine=o, numero=None if o == PC.ORIGINE_COPIE else ligne.get("numero"))
+
     def transactions(self, txs):
         out = self.vrai.transactions(txs)
         for a, o in self.forcee.items():
             if a in out:
-                out[a] = dict(out[a], origine=o)
+                out[a] = self._forcer(out[a], o)
         return out
 
     def transactions_des_dossiers(self, uuids):
         out = self.vrai.transactions_des_dossiers(uuids)
         for a, o in self.forcee.items():
             if a in out:
-                out[a] = dict(out[a], origine=o)
+                out[a] = self._forcer(out[a], o)
         return out
+
+
+def copie(a: int, info: dict[int, dict]) -> bool:
+    """LA fonction unique (22/11), sur ce que le registre de Supabase vient de dire de la piece."""
+    return PC.est_copie(a, info[a].get("origine"), info[a].get("numero"))
 
 
 def effectives(txs, info: dict[int, dict]) -> list[int]:
     """La regle C5 « a l'export » (decidee le 19/11) : une creation du Sheet ne decide JAMAIS de
     l'etiquette d'une ligne -- on prend les transactions de Hektor ; s'il n'y en a aucune, toutes."""
     connues = [a for a in txs if a in info]
-    hk = [a for a in connues if info[a]["origine"] != "classeur"]
+    hk = [a for a in connues if not copie(a, info)]
     return hk if hk else connues
 
 
@@ -566,7 +582,7 @@ def juger_paquet(entrees, col_a, col_al, reg, memo: dict, exclus_b: dict, double
         if absentes:
             sauter("TRANSACTION_ABSENTE_DU_REGISTRE", "%s" % absentes)
             continue
-        if all(info[a]["origine"] == "classeur" for a in txs):
+        if all(copie(a, info) for a in txs):
             sauter("C5_SEULE", "que des creations du Sheet : aucune ne decide de l'etiquette")
             continue
         eff = effectives(txs, info)
@@ -1095,8 +1111,8 @@ def simuler(reg: Registre, journal=print) -> int:
     for i in sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "PLUSIEURS_DOSSIERS" and i in pos0
                      and i not in exclus_b), key=lambda i: pos0[i][0])[:80]:
         e, info, l = entree_vivante(i, "SIMULATION")
-        c5_ = [a for a in e["transactions"] if info.get(a, {}).get("origine") == "classeur"]
-        hk = [a for a in e["transactions"] if a in info and info[a]["origine"] != "classeur"]
+        c5_ = [a for a in e["transactions"] if a in info and copie(a, info)]
+        hk = [a for a in e["transactions"] if a in info and not copie(a, info)]
         if not c5_ or not hk or {info[a]["uuid"] for a in c5_} <= {info[a]["uuid"] for a in hk}:
             continue
         d = juger_paquet([e], [r[A] for r in sheet.v], [r[AL] for r in sheet.v], reg, {}, exclus_b, set())[0]

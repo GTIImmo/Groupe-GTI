@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **22/11, matin (⑲ : son mot du 22/11 lu en entier ; LUNDI 23 OUVERT -- je ne peux pas nommer un défaut que seule une seconde nuit verrait ; les 7 lignes remontées avec leur preuve, 4 gestes à sa décision ; les jumelles VIALLARD et PAOLONE en EXCEPTION NOMMÉE ; deux témoins nommés ; la V3 refaite et répétée à blanc ; SA RÈGLE DES PARTS validée, règle 6 du projet, le patch des orphelines éprouvé à blanc ; le crible du nom sur la vague 1 : 16 lignes ; le classement recalculé sous son verrou : ses 8 lignes sortent)** — puis 22/11, nuit (⑱ : son mot du 21/11 lu en entier ; la V3 FABRIQUÉE et répétée à blanc, JAMAIS jouée -- 20 à part, 20 neutres qui attendent, 43 gestes du gel au lieu de 83 ; son verrou mesuré : 427 lignes sur 205 dossiers -> 38 sur 19 ; les écritures rapatriées mesurées ; R5 réécrit, D3 retirée, le critère ⑤ déplacé en verrou ; le protocole des 717 posé en R6, pas codé)** — puis 20/11, tard le soir (⑰ : les 132 MESURÉES pièce par pièce -- aucune fausse, 273 lignes sur 274 prouvées ; l'outil de coupe CORRIGÉ, témoin vert ; ses deux critères appliqués partout : 395 lignes s'écrivent, 39 pièces à part, 9 de ses OUI touchés ; R1-R5 posées ; lundi 23 tient s'il donne son mot samedi)** — puis 20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **22/11, fin de matinée (⑳ : LE PLAN CHANGE -- son mot « nouveau plan » : rien ne s'écrit avant la fin du protocole, le protocole porte sur TOUTES ses lignes (4 798 lues), la V3 devient un TÉMOIN ; la fonction unique copie / vraie pièce posée et appelée par tous les outils vivants ; le protocole v0 posé (image, lecture du bien entier, socle, témoins), passage 3 : 0 tranchée + 4 798 en attente = 4 798, le compte boucle ; les 340 croisées : rien à refaire ; 39845 mis de côté (TROIS lignes) ; ses acquis et son verrou permanent écrits, § 20.2-20.3. Avant : ⑲ : son mot du 22/11 lu en entier ; LUNDI 23 OUVERT -- je ne peux pas nommer un défaut que seule une seconde nuit verrait ; les 7 lignes remontées avec leur preuve, 4 gestes à sa décision ; les jumelles VIALLARD et PAOLONE en EXCEPTION NOMMÉE ; deux témoins nommés ; la V3 refaite et répétée à blanc ; SA RÈGLE DES PARTS validée, règle 6 du projet, le patch des orphelines éprouvé à blanc ; le crible du nom sur la vague 1 : 16 lignes ; le classement recalculé sous son verrou : ses 8 lignes sortent)** — puis 22/11, nuit (⑱ : son mot du 21/11 lu en entier ; la V3 FABRIQUÉE et répétée à blanc, JAMAIS jouée -- 20 à part, 20 neutres qui attendent, 43 gestes du gel au lieu de 83 ; son verrou mesuré : 427 lignes sur 205 dossiers -> 38 sur 19 ; les écritures rapatriées mesurées ; R5 réécrit, D3 retirée, le critère ⑤ déplacé en verrou ; le protocole des 717 posé en R6, pas codé)** — puis 20/11, tard le soir (⑰ : les 132 MESURÉES pièce par pièce -- aucune fausse, 273 lignes sur 274 prouvées ; l'outil de coupe CORRIGÉ, témoin vert ; ses deux critères appliqués partout : 395 lignes s'écrivent, 39 pièces à part, 9 de ses OUI touchés ; R1-R5 posées ; lundi 23 tient s'il donne son mot samedi)** — puis 20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -3606,6 +3606,192 @@ QUAND           les Apps Script dimanche 20:00 ; les 3 lignes lundi 08:00. (Pour
 6  la vague 0 : ses 3 lignes (ou les miennes) ; ses Apps Script.
 INCHANGÉS  rien dans le Sheet, rien chez Hektor, rien en base ; rien de poussé ; l'écrivain dort ; G2 et l'outil
    éteints ; le fichier de production V2 ; ses 7 groupes ; HUY49KEC non écrite ; le protocole des 717 pas codé.
+```
+
+---
+
+## ⑳ SON MOT DU 22/11, « LE PLAN CHANGE » : LE PROTOCOLE SUR TOUTES SES LIGNES, LA V3 EN TÉMOIN (22/11, fin de matinée)
+
+> Son mot : `C:\Hektor\mot_du_22_11_nouveau_plan.md` (278 lignes). Mes réponses : le plan, l'avis, le délai et les 340
+> dans `notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md` (envoyé vers 10:35) ; le bien 39845 dans
+> `notice/PROTOCOLE_BIEN_39845_MIS_DE_COTE_POUR_TOI_2026-11-22.md` ; les 340 croisées dans
+> `notice/PROTOCOLE_LES_340_CROISEES_AVEC_LE_DECIDE_2026-11-22.csv`. ⛔ RIEN N'EST ÉCRIT : ni V3, ni gel, ni Sheet, ni
+> base, ni Hektor, ni interrupteur ; rien de poussé.
+
+### 20.1 Ses décisions (22/11, son mot « le plan change »)
+
+```
+1  POURQUOI : la frontiere « sure / douteuse » est tracee par MES outils, et j'y ai trouve deux defauts en 24 h (le
+   nom, les 340). « Si l'outil qui dit "cette ligne est sure" est celui qui se trompait, le mot "sur" ne vaut rien. »
+   381 de ses 395 lignes d'« ou ca tombe » partagent un dossier (MESURE : 381 exactement, avant la V3 ; 2 apres, les
+   PAOLONE nommees). ⛔ « je n'ai jamais relu ces 395 lignes une par une : j'ai valide ton RAISONNEMENT. Ne l'ecris plus
+   comme si je les avais vues. »
+2  LE PROTOCOLE PORTE SUR TOUTES SES LIGNES (il dit 4 794 ; j'en lis 4 798 -- question posee). Chaque ligne : son
+   verdict (pieces + etiquette), la PREUVE NOMMEE, ou le MOTIF. Verdicts + motifs = toutes les lignes.
+2b ⛔ LA REGLE D'ARCHITECTURE, NON NEGOCIABLE : LE CODE fait le travail sur toutes les lignes (ordre ecrit, rejouable,
+   temoins) ; L'AGENT ne reflechit que la ou le code s'arrete, PAR MOTIF, et ce qu'il en sort est UNE REGLE -- qui
+   redescend dans le code, se rejoue sur toutes les lignes, et lui remonte AVANT d'etre appliquee. Trois raisons : un
+   raisonnement n'est pas rejouable ; il peut fabriquer une justification plausible d'une decision fausse ; 80 lignes
+   raisonnees une a une = 80 facons de se tromper. ⛔ Une regle neuve -> je REJOUE TOUT et je dis combien de verdicts
+   DEJA RENDUS changent, AVANT.
+3  LES ARBITRAGES PAR MOTIF : le cas, le nombre de lignes, la regle proposee, ce qu'elle change, TROIS exemples.
+   ⛔ Jamais une ligne seule si son cas en touche d'autres ; jamais « au plus probable » sans le lui demander.
+4  LA V3 NE SE JOUE PAS, ELLE DEVIENT LE TEMOIN : patch du gel dormant, fichier dans le cache, deux interrupteurs
+   eteints, ON NE JETTE RIEN. Temoins aussi : ses 132 coupes, les 29 faibles, les 20 a part, les jumelles, 39845.
+   « Dis-moi combien d'ecarts il y a. » ⛔ 39845 : il veut voir les affaires lui-meme -> mises de cote.
+5  RIEN NE S'ECRIT AVANT LA FIN DU PROTOCOLE (ni vague 1, 2, 3 ; l'ecrivain dort). Sauf LA VAGUE 0 (mes 3 lignes,
+   Q7NSHOSU 498c187b 0719d67e -- « me vont »), sur son mot. « Rien ne s'ecrit » ne veut pas dire « rien ne se fait ».
+6  CE QUI RESTE ACQUIS -> § 20.2.        7  LES 340 -> § 20.4.        8  LE VERROU PERMANENT -> § 20.3.
+9  IL RETIRE SON REPROCHE sur les 7 lignes (elles etaient dans mon CSV du 20/11, deux pieces par case) ; ce qui restait
+   juste : une piece par ligne, et les temoins pris hors des gestes en discussion. « Continue a me contredire avec des
+   chiffres quand j'ai tort. »
+11 Ses Apps Script viendront dans C:\Hektor\apps_script_du_classeur.txt (plus urgent). Il attend 26 orphelines demain
+   (la V3 ne joue pas) ; « ne me reponds jamais rouge ou vert : donne-moi le NOMBRE ».
+```
+
+### 20.2 ⭐ CE QUI RESTE ACQUIS — son point 6, écrit pour ne pas être jeté
+
+```
+. SES DEUX CRITERES (20/11) : 1. la preuve interne decide, sinon A PART, pas de « plutot » ; 2. si l'etiquette ne bouge
+  pas, le doute ne coute rien. ET LA CONVENTION APRES RENEGOCIATION : le role « offre » tient l'offre ACCEPTEE (§ 17).
+. LA REGLE « A PART » (20/11, restreinte aux 20 le 21/11) et ce qu'elle entraine (R4) : l'outil et G2 permanents ; une
+  reponse tardive ne passe que si la piece n'est pas plus petite que le dossier qui la recoit ; delier le gel.
+. LA REGLE DES PARTS -- REGLE 6 DU PROJET : ON NE SUPPRIME PAS UNE PART, ON LA MET DE COTE AVEC SON ANCIEN NUMERO DE
+  DOSSIER. Le patch des orphelines reste FABRIQUE ET NON JOUE (§ 19.6) : il passera APRES le protocole.
+. LA HIERARCHIE DES PREUVES : la date au jour exact, puis le prix + les honoraires ; LE NOM N'EST QU'UN INDICE (Hektor
+  recopie le nom du premier acheteur sur les pieces suivantes -- encore vu sur 39845).
+. LE PRIX NET VENDEUR ABSENT DES OFFRES ET DES VENTES (les honoraires d'une offre sont inconnus).
+. LE DEFAUT DU NOM, ET LE CRIBLE QUI LE DETECTE (§ 19 : 16 lignes sur 3 976 de la vague 1 de l'ecrivain).
+. LES 340 PIECES DE LA PLAGE APP : de vraies pieces Hektor ; une copie se reconnait a son ORIGINE, jamais a son numero
+  (§ 20.4, et la fonction unique).
+. LA FACON DE BATIR UN PATCH : repetition a blanc qui s'annule ; patch inverse avec empreinte ; deux temoins positifs
+  NOMMES pris HORS de ce qui est en discussion (un par sens) ; le patch refuse de se fabriquer sinon.
+. LA REGLE DE L'ORDRE : du plus sur vers le plus difficile, jamais l'inverse.
+. LE VERROU DU POINT 8 (§ 20.3).
+```
+
+### 20.3 ⛔⛔ LE VERROU PERMANENT — son point 8
+
+```
+   AUCUNE ETIQUETTE NE S'ECRIT SUR UNE LIGNE DONT LE DOSSIER PEUT ENCORE RECEVOIR UNE PIECE PLUS PETITE.
+
+Pose par moi le 20/11 : une piece rattachee plus tard ne peut changer une etiquette deja ecrite QUE si elle devient la
+plus petite transaction de son dossier (la pose de nuit garde l'etiquette de la plus petite). Dans le protocole, c'est
+l'epreuve E7 : une vraie piece du meme bien, SANS LIGNE ou DISPUTEE, plus petite que la plus petite piece de la ligne,
+met la ligne en attente. A la fin du protocole plus aucune piece n'attend -- mais le verrou reste ecrit : il resservira.
+```
+
+### 20.4 Les 340, outil par outil — et LA fonction unique
+
+```
+LE PARC (22/11) : 530 pieces >= 1 000 000 = 190 COPIES (origine « classeur », aucune n'a de numero Hektor) + 340 VRAIES
+(origine vide, toutes numerotees par Hektor) ; les deux marques s'accordent sur les 530. Le gel en relie 103 (51
+lignes, 47 biens) -- son chiffre.
+  outil de coupe (coupe_preuve_interne)   PAS de defaut : la marque venait de la photo du 19/11, calculee par l'origine
+                                          (mesure : 0 des 340 marquee copie, 190/190 copies marquees)
+  « ou ca tombe » (temps11)               PAS de defaut (il juge par l'outil de coupe)
+  le classement (temps6/8/10/13)          PAS de defaut (la meme marque)
+  le fabricant de la V3 (temps12)         ⛔ LE DEFAUT, 8 endroits (« < 1 000 000 » = vraie). REJOUE PAR L'ORIGINE le 22/11 :
+                                          relier 14, delier 29, un-par-role 5 IDENTIQUES, gel d'apres identique sur
+                                          toutes les lignes ; les notes : aucune vraie piece de la plage (1001361 est
+                                          partie du gel mais ne porte aucune ecriture). Sans effet.
+  l'ecrivain (ecrire_colonne_a)           PAS de defaut (il relit l'origine chez Supabase au moment d'ecrire)
+  le crible (temps13)                     le defaut dans sa 1re version, corrige AVANT l'envoi
+  + temps3 (19/11)                        « copie » = toute origine non vide : juste aujourd'hui, faux le jour ou une
+                                          autre origine apparaitrait (archive, laisse tel quel)
+  + le chainage de nuit                   la plage y repond a une AUTRE question (« nee dans l'app ? ») : juste, non touche
+  + les trois fonctions de la base        ne distinguent pas les copies (mesure sur leur texte)
+  + les « 28 copies » des 83 gestes du 20/11 (mon erreur de ⑱) : par l'origine, ce sont bien 28 COPIES.
+
+LA FONCTION UNIQUE : phase2/checks/piece_copie_ou_vraie.py. Copie = origine « classeur » ; le numero ne decide jamais ;
+REFUS (PieceIncoherente) si une copie porte un numero Hektor, ou si une origine inconnue apparait (elle se decide, elle
+ne se devine pas). Une piece de la plage sans origine ni numero est VRAIE (nee dans l'app, en attente de son numero :
+0 aujourd'hui), comptee a part. CONTROLE (`python phase2/checks/piece_copie_ou_vraie.py`, VERT le 22/11) : temoins
+nommes 1001361 -> vraie, 1001532 -> copie, 19131 -> vraie ; 0 piece numerotee rangee comme copie ; ⭐ TEMOIN INVERSE :
+l'ancienne regle « au numero » rejouee fait CRIER 340 desaccords, exactement les vraies pieces de la plage.
+APPELEE PAR : le protocole ; l'outil de coupe (sur le registre lu, plus sur la photo) ; le juge qui fabrique la photo
+(temps5_q5) ; le crible (temps13) ; le fabricant de la V3 (temps12, garde comme temoin) ; l'ecrivain. Pour chacun, sa
+sortie ne change pas, PROUVE : outil de coupe 0 ecart sur 31 368 pieces ; V3 `gestes` rejouee -> v3_gestes.json
+IDENTIQUE A L'OCTET (md5 a8a0308e…) ; ecrivain `simuler` -> 34 verdicts IDENTIQUES a ceux de la version d'avant,
+rejouee sur le meme etat.
+⚠ CE QUE `simuler` A MONTRE, SANS RAPPORT AVEC LA FONCTION : 1 rouge sur 34, « temoin LIEN_NON_SUR : aucune ligne
+reelle ne montre le defaut -- NON EPROUVE » -- le MEME avec la version d'avant. Depuis le patch « confiance » du 20/11,
+plus aucune ligne de la vague 1 n'a de lien « non sur » : le temoin inverse a perdu son exemple reel. A semer comme le
+temoin C5 (forcer la confiance d'une ligne dans la copie) AVANT toute ecriture -- c'est une modification de l'ecrivain,
+je ne l'ai pas faite.
+Les mesures deja rendues et datees (temps3, 6, 8, 10, 11) restent telles qu'elles ont tourne : ce sont des archives.
+```
+
+### 20.5 Le protocole, version 0 — l'image, la lecture du bien, le socle, les témoins
+
+```
+phase2/checks/protocole_classeur.py (LECTURE SEULE ; tout dans C:\Hektor\chantier_classeur_q6_cache\protocole\)
+  image     fige une image datee + empreintes : le Sheet lu en direct (1 GET), une copie du registre local (sans
+            payload_json), le gel lu chez Supabase (read only), la photo au format de l'outil de coupe. L'outil de coupe
+            est charge SUR l'image (K.CACHE, K.BASE), jamais sur le vivant.
+            1re image : 2026-11-22_104457 -- 4 798 lignes, 4 798 ID Unique distincts, 0 en double, 0 ligne avec contenu
+            sans ID ; 31 368 pieces (190 copies) ; gel 12 820, empreinte f63e54db7675531ec44641ba7abefed1.
+  bien X    LA LECTURE DU BIEN ENTIER : pieces (copie/vraie, genre, etat, date, montant, honoraires, numero Hektor,
+            chaine, etiquette, acquereurs, lignes du gel), chaines, lignes du Sheet ET PAR QUOI elles y sont rattachees
+            (gel / mandat / product_ref / lien_crm -- l'outil de coupe le note desormais, sans rien decider de plus),
+            ce que le gel dit hors du bien. JSON dans protocole\biens\.
+  passage   chaque ligne recoit son verdict ou son motif dans socle.sqlite (table verdict, contrainte : une TRANCHEE a
+            etiquette + pieces + preuves, une ATTENTE a un motif DECLARE au catalogue) ; le passage ECHOUE si le compte
+            ne boucle pas, ou si un temoin crie.
+  temoins   la V3 (456 lignes : 431 morceaux, 20 a part, 3 qui attendent, 2 exceptions), les 132 coupes (274 lignes),
+            les 29 faibles (57 lignes ; = les 161 coupes nettes du 19/11 moins les 132), les 20 a part, les 3 paires de
+            jumelles (VIALLARD 3785/3796, PAOLONE 3887/3856, DEBARD 3863/3935), le bien 39845 -- tous retrouves a leur
+            compte connu avant d'ecrire. Un temoin n'est jugeable que sur une ligne TRANCHEE ; sinon il ATTEND (jamais
+            un accord).
+  comparer  les verdicts qui changent entre deux passages, dont ceux DEJA RENDUS.
+LES PASSAGES DU 22/11 (v0 : E1 + E2 codees, le reste declare E3_A_CODER) :
+  passage 1 = passage 2 = passage 3 : 0 TRANCHEE + 4 798 EN ATTENTE = 4 798, LE COMPTE BOUCLE ; 1 -> 2 : 0 verdict
+  change (le temoin de rejouabilite). Motifs : E3_A_CODER 4 679 . PLUSIEURS_BIENS 82 . BIEN_SANS_VRAIE_PIECE 23 .
+  SANS_BIEN 11 . A_SA_DECISION 3. Temoins (passage 3) : a_sa_decision 3 accords ; tous les autres ATTENDENT (rien
+  n'est tranche) -- 0 ecart.
+  ⚠ Mes deux fautes du jour sur les temoins, attrapees par le passage : la colonne « pourquoi » de la V3 porte parfois
+  « ID (attendent ici, neutres : X) » (15 faux cris) ; et le temoin « a part » disait ACCORD alors que rien n'etait
+  tranche. Corrigees ; le passage 3 est propre.
+```
+
+### 20.6 Les 340 croisées avec le décidé — ce qui est à refaire : RIEN
+
+```
+notice/PROTOCOLE_LES_340_CROISEES_AVEC_LE_DECIDE_2026-11-22.csv -- une piece par ligne (340).
+  103 reliees au gel (51 lignes, une ligne chacune ; 38 offres, 35 compromis, 30 ventes) ; 237 sans ligne du gel.
+  11 dans la V3 = les memes 11 dans ses 132 coupes (biens de PARIN/PARADISUS et voisins : 1000115...1000263), jugees
+     VRAIES par la coupe (« chaque piece designee par sa date ») ; le fabricant de la V3 les rangeait en copie, sans
+     effet (rejoue). 0 dans les 29 faibles, 0 dans les 20 a part, 0 dans les gestes du gel du 20/11 (les 28 « copies »
+     de ces gestes sont bien des copies).
+  les lignes des 103 : 83 en VAGUE_1 du classement du 22/11 (l'ecrivain les juge par l'origine), 11 au VERROU, 5
+     PLUSIEURS_DOSSIERS, 2 AUDIT_NON_JUSTE, 2 GEL_SEUL.
+  -> aucune decision rendue n'est a refaire ; le protocole les jugera comme de vraies pieces, par la fonction unique.
+```
+
+### 20.7 Le bien 39845 — mis de côté, et une troisième ligne
+
+```
+notice/PROTOCOLE_BIEN_39845_MIS_DE_COTE_POUR_TOI_2026-11-22.md. Trois vraies pieces, un dossier (chaine 19131,
+D2023-0189) : offre 19132 87 000 acceptee le 19/04/2023 ; compromis 19131 80 000 du 08/12/2023 (6 000 d'honoraires) ;
+vente 19133 80 000 du 04/06/2024. Toutes au nom BAUDOIN ET PETIPAS chez Hektor (le nom recopie).
+⚠ La lecture du bien entier a trouve TROIS lignes, pas deux : V3FO5NDA BAUDOIN PETIPAS (3632), 6FQO29C8 POCHELON (589)
+ET SOF45TS3 DIGONNET (3587, mandat 15920, annulee 23/09/2023, commission 6 000, AUCUNE piece) -- rattachee par le
+meme Lien CRM. Les trois portent A_SA_DECISION.
+```
+
+### 20.8 Ce qui attend sa décision (22/11, fin de matinée) — sans m'arrêter
+
+```
+1  SON 4 794 : j'en lis 4 798 (ID Unique distincts, aucun en double, aucune ligne avec contenu sans ID). Sur quelle
+   colonne a-t-il compte ? Le protocole boucle sur les 4 798 en attendant.
+2  « RIEN NE S'ECRIT » : je le lis « rien de NOUVEAU » -- la nuit continue de chainer et de poser les etiquettes dans
+   l'app comme aujourd'hui. A confirmer.
+3  39845 : ses trois lignes (dont DIGONNET, sans piece), quand il les aura vues.
+4  le temoin LIEN_NON_SUR de l'ecrivain a semer avant toute ecriture (modification de l'ecrivain) -- pas urgent.
+INCHANGES  rien dans le Sheet, chez Hektor, en base ; rien de pousse ; l'ecrivain dort ; G2 et l'outil eteints ; le
+   fichier de production V2 ; le patch du gel V3 et celui des orphelines fabriques, NON JOUES.
+LA SUITE (le delai envoye) : lundi 23, les epreuves E3 a E9 sur l'image et le 1er passage tranchant ; mardi 24, la
+   reconciliation avec les temoins et le 1er lot de motifs pour lui.
 ```
 
 ---
