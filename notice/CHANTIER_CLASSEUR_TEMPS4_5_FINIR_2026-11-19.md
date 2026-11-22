@@ -18,7 +18,7 @@
 
 > Demandé par Frédéric le 19/11 : *« c'est ce qui survivra quand ta conversation sera résumée »*.
 > ⭐ **Le BUT est ⑧ : écrire nos identifiants dans le Sheet.** Le reste est le chemin.
-> Dernière mise à jour : **22/11, fin de matinée (⑳ : LE PLAN CHANGE -- son mot « nouveau plan » : rien ne s'écrit avant la fin du protocole, le protocole porte sur TOUTES ses lignes (4 798 lues), la V3 devient un TÉMOIN ; la fonction unique copie / vraie pièce posée et appelée par tous les outils vivants ; le protocole v0 posé (image, lecture du bien entier, socle, témoins), passage 3 : 0 tranchée + 4 798 en attente = 4 798, le compte boucle ; les 340 croisées : rien à refaire ; 39845 mis de côté (TROIS lignes) ; ses acquis et son verrou permanent écrits, § 20.2-20.3. Avant : ⑲ : son mot du 22/11 lu en entier ; LUNDI 23 OUVERT -- je ne peux pas nommer un défaut que seule une seconde nuit verrait ; les 7 lignes remontées avec leur preuve, 4 gestes à sa décision ; les jumelles VIALLARD et PAOLONE en EXCEPTION NOMMÉE ; deux témoins nommés ; la V3 refaite et répétée à blanc ; SA RÈGLE DES PARTS validée, règle 6 du projet, le patch des orphelines éprouvé à blanc ; le crible du nom sur la vague 1 : 16 lignes ; le classement recalculé sous son verrou : ses 8 lignes sortent)** — puis 22/11, nuit (⑱ : son mot du 21/11 lu en entier ; la V3 FABRIQUÉE et répétée à blanc, JAMAIS jouée -- 20 à part, 20 neutres qui attendent, 43 gestes du gel au lieu de 83 ; son verrou mesuré : 427 lignes sur 205 dossiers -> 38 sur 19 ; les écritures rapatriées mesurées ; R5 réécrit, D3 retirée, le critère ⑤ déplacé en verrou ; le protocole des 717 posé en R6, pas codé)** — puis 20/11, tard le soir (⑰ : les 132 MESURÉES pièce par pièce -- aucune fausse, 273 lignes sur 274 prouvées ; l'outil de coupe CORRIGÉ, témoin vert ; ses deux critères appliqués partout : 395 lignes s'écrivent, 39 pièces à part, 9 de ses OUI touchés ; R1-R5 posées ; lundi 23 tient s'il donne son mot samedi)** — puis 20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
+> Dernière mise à jour : **22/11, après-midi (⑳ + § 20.9 : le protocole v1, E3 à E9 codées EN AVANCE -- passage de référence 4 484 tranchées + 314 en attente = 4 798, chaque pièce a sa preuve nommée ; témoin V3 : 0 écart sur 395 lignes à périmètre égal ; premier lot de 9 motifs ; règle P1 proposée (57 lignes), R4 refusée par le témoin DEBARD. Avant : LE PLAN CHANGE -- son mot « nouveau plan » : rien ne s'écrit avant la fin du protocole, le protocole porte sur TOUTES ses lignes (4 798 lues), la V3 devient un TÉMOIN ; la fonction unique copie / vraie pièce posée et appelée par tous les outils vivants ; le protocole v0 posé (image, lecture du bien entier, socle, témoins), passage 3 : 0 tranchée + 4 798 en attente = 4 798, le compte boucle ; les 340 croisées : rien à refaire ; 39845 mis de côté (TROIS lignes) ; ses acquis et son verrou permanent écrits, § 20.2-20.3. Avant : ⑲ : son mot du 22/11 lu en entier ; LUNDI 23 OUVERT -- je ne peux pas nommer un défaut que seule une seconde nuit verrait ; les 7 lignes remontées avec leur preuve, 4 gestes à sa décision ; les jumelles VIALLARD et PAOLONE en EXCEPTION NOMMÉE ; deux témoins nommés ; la V3 refaite et répétée à blanc ; SA RÈGLE DES PARTS validée, règle 6 du projet, le patch des orphelines éprouvé à blanc ; le crible du nom sur la vague 1 : 16 lignes ; le classement recalculé sous son verrou : ses 8 lignes sortent)** — puis 22/11, nuit (⑱ : son mot du 21/11 lu en entier ; la V3 FABRIQUÉE et répétée à blanc, JAMAIS jouée -- 20 à part, 20 neutres qui attendent, 43 gestes du gel au lieu de 83 ; son verrou mesuré : 427 lignes sur 205 dossiers -> 38 sur 19 ; les écritures rapatriées mesurées ; R5 réécrit, D3 retirée, le critère ⑤ déplacé en verrou ; le protocole des 717 posé en R6, pas codé)** — puis 20/11, tard le soir (⑰ : les 132 MESURÉES pièce par pièce -- aucune fausse, 273 lignes sur 274 prouvées ; l'outil de coupe CORRIGÉ, témoin vert ; ses deux critères appliqués partout : 395 lignes s'écrivent, 39 pièces à part, 9 de ses OUI touchés ; R1-R5 posées ; lundi 23 tient s'il donne son mot samedi)** — puis 20/11, soir (⑯ : ses 23 questions en deux -- A 16 lignes, B 7 ; sa vérification confirmée, ses « 4 » = 3 justes + CHOUVELLON non ; ⛔ MON défaut des coupes « nom seul » trouvé : 3 lectures fausses, 5 des 67 « OUI » à corriger, 62 tiennent ; rien transformé en ligne de coupe)** — puis 20/11, 14:00 (⑮ : V2 et le patch « confiance » JOUÉS chez Supabase sur son accord, répétitions vertes ; le classeur des groupes LIVRÉ ; G2 et l'outil de coupe CODÉS, ÉTEINTS, éprouvés sur copie — éteints, la nuit de ce soir est identique)** — puis 20/11, 14:00 (§ 14.7 : il LÈVE trois règles — scission avant l'écriture, un geste par nuit, rien le week-end ; 132 coupes validées ; patch « confiance » accordé ; le calendrier le plus court : il écrit le LUNDI 23/11 si ses réponses aux groupes arrivent avant dimanche 18:00) — puis 20/11, 12:30 (⑭ : les 19 SORTIS de la vague 1 ; les 110 liens contre les deux audits ; 15 coupes au hasard : 14 justes ; un premier calendrier au 2/12) — puis 20/11, 10:30 (§ 13.7-13.10 : la table app_sheet_ecrit COLLÉE, répétition verte ; les coupes des mélanges ne touchent AUCUNE ligne de la vague 1 ; la mesure large en trouve 19) — puis 20/11, 09:30 (⑬ : l'ÉCRIVAIN de la colonne A écrit et éprouvé, DORMANT ; la 3e lecture de 4126/4496) — puis 20/11, 07:30 (§ 12.9 : ⭐ LA RÈGLE E EST ALLUMÉE, sur son mot écrit ; elle joue au run du samedi 21/11) — puis 20/11, 07:05 (§ 12.8 : la nuit des 10 VERTE, le compte définitif de E) — puis 20/11, 00:45 (chapitre ⑫) — avant : 19/11 au soir, **les neuf questions sont traitées**. Rien n'est écrit en base
 > (hors les 10 lignes décidées), rien chez Hektor, **rien dans le Sheet**. Les 8 lignes « pures » de ⑤
 > attendent sa lecture : aucune n'est écrite.
 >
@@ -3792,6 +3792,58 @@ INCHANGES  rien dans le Sheet, chez Hektor, en base ; rien de pousse ; l'ecrivai
    fichier de production V2 ; le patch du gel V3 et celui des orphelines fabriques, NON JOUES.
 LA SUITE (le delai envoye) : lundi 23, les epreuves E3 a E9 sur l'image et le 1er passage tranchant ; mardi 24, la
    reconciliation avec les temoins et le 1er lot de motifs pour lui.
+```
+
+### 20.9 Le protocole v1 (22/11 après-midi) — E3 à E9 codées en avance, le premier lot de motifs
+
+```
+EN AVANCE sur le delai envoye (E3-E9 annoncees lundi 23) : faites le 22/11 apres-midi. Rapport pour lui :
+notice/PROTOCOLE_PREMIER_PASSAGE_ET_PREMIER_LOT_DE_MOTIFS_2026-11-22.md ; verdicts : notice/PROTOCOLE_PASSAGE_7_LE_
+VERDICT_DE_CHAQUE_LIGNE_2026-11-22.csv (une piece par ligne du CSV, 12 775 lignes, 4 798 ID).
+UNE SEULE PLACE POUR LES REGLES DE COUPE (coupe_preuve_interne.py) :
+  couper_le_bien(D, b, lignes_b, S, X, a_part)  « ou ca tombe » sur un bien, en une fonction (decider, par sa chaine,
+      apres renegociation, morceaux, neutres) -- son ancetre fige est temps12.ou_ca_tombe. TEMOIN : sur les 203 biens de
+      la V3, memes entrees (gel vivant) -> 0 ecart (morceaux, a part, neutres).
+      ⚠ 1er essai : 1 ecart (1001561) -- c'etait MON test, qui donnait le gel de la photo du 19/11 au lieu du gel vivant.
+  pose_de_nuit(lab_prec, ch_new)  la pose des etiquettes (recopie de temps12.etiquettes). TEMOIN : redonne les
+      etiquettes du rejeu V3 sur les 31 368 pieces, 0 ecart.
+LES EPREUVES (protocole_classeur.py, VERSION v1) : E1 la ligne (un ID, un bien) ; E2 l'inventaire (fonction unique ;
+  BIEN_SANS_PIECE separe de BIEN_SANS_VRAIE_PIECE) ; E3-E4 la coupe du bien entier ; E8 deux lignes sur un morceau
+  (sauf VIALLARD, PAOLONE, DEBARD) ; E7 SON VERROU PERMANENT (une vraie piece a part, plus petite que la plus petite de
+  la ligne, dates compatibles -> la ligne attend) ; E9 l'etiquette = la pose de nuit SIMULEE sur le decoupage (l'exacte
+  viendra du rejeu avec le fichier de detachements du protocole, a l'application) ; chaque piece : sa PREUVE NOMMEE.
+  Option --perimetre chaines|bien (le 20/11 : les chaines que le gel touche ; le protocole : le bien entier).
+LES PASSAGES (image 2026-11-22_104457) :
+  5  chaines : 4 493 tranchees + 305 = 4 798. TEMOIN V3 : 395 tranchees par les deux, 0 ECART (pieces prouvees
+     identiques ; ses 14 neutres « rangés avec la ligne » sont tous nommes « a part sans effet ») ; 36 attendent
+     (27 E7, 4 plusieurs biens, 3 copie seule, 2 = 39845).
+  7  BIEN ENTIER (la reference) : 4 484 tranchees + 314 = 4 798. Chaque piece tranchee a sa preuve nommee, 0 sans :
+     11 666 par la date sur une colonne, 223 prix + honoraires, 96 par sa chaine, 1 renegociation, 152 copies ;
+     245 etiquettes NEUVES. 5 -> 6 (chaines -> bien entier) : 23 verdicts changent dont 19 DEJA RENDUS (12 passent au
+     verrou, 7 changent d'etiquette -- dont 0bc98552, la « reparation » des 19, qui retrouve compromis et offre dans
+     l'autre dossier -- 3 gagnent des pieces). Temoins : V3 390/3/38 (les 3 ecarts = des offres refusees d'une autre
+     chaine, au jour exact de la case Offre Achat, sans effet d'etiquette) ; 132 : 263/4/8 (DJEBBOUR = deux affaires
+     pour le protocole, une pour la coupe validee -> a lui ; PAOLONE +20075 = son exception) ; 29 : 36/14/9 (les 14 =
+     les pieces « nom seul / case vide » retirees, comme la V3) ; jumelles 2/0/1 (DEBARD attend) ; a part 9/0/11.
+  MOTIFS (7) : VERROU_PIECE_PLUS_PETITE 106 (81 biens) . PLUSIEURS_BIENS 82 (59 gel+mandat contre product_ref, 21 gel
+     contre mandat, 2 gel contre product_ref) . SES_PIECES_A_PART 29 . AUCUNE_PIECE_PROUVEE 28 . BIEN_SANS_PIECE 23 .
+     COPIE_SEULE 22 . SANS_BIEN 11 . DEUX_LIGNES_UN_DOSSIER 10 . A_SA_DECISION 3.
+LES VARIANTES (des regles PROPOSEES, mesurees, ⛔ JAMAIS appliquees : --variantes, passage marque « VARIANTE NON
+  VALIDEE ») :
+  P1 (passage 8) « gel + mandat contre le seul product_ref -> le bien du gel et du mandat » : 59 verdicts changent, 0
+     deja rendu (57 tranchees, 1 verrou, 1 copie seule) ; temoins : +2 accords V3, +2 accords 132, 0 ecart neuf.
+     -> PROPOSEE.
+  R4 (passage 9) « une piece a part ne retient pas au verrou E7 » : les 106 passent, 0 deja rendu. ⛔ MAIS LE TEMOIN
+     DES JUMELLES CRIE : DEBARD serait tranchee sur DEUX dossiers (20090 / 20089) -- le compromis 20088 a part est
+     justement ce qui les relie ; et +4 ecarts dans les 29. -> NON PROPOSEE telle quelle : lire les 81 biens et
+     chercher une regle plus etroite. ⭐ Le temoin a fait son travail : une regle plausible, refusee par un temoin.
+A LUI MONTRER, TRANCHE : 15 lignes tiennent deux vraies pieces d'un meme role, toutes prouvees (doublons Hektor, ex.
+  0bc98552 : deux compromis du 03/04/2026, deux offres du 23/02/2026) -- le protocole ne supprime rien.
+SES QUESTIONS : P1 oui/non ; garder les 106 en attente pendant que je lis leurs biens ; DJEBBOUR une ou deux affaires ;
+  son 4 794 (j'en lis 4 798).
+LA SUITE : lire par motif les biens des 106 (E7), des 23 « plusieurs biens » restants, des 29 + 28 sans preuve, des 10
+  « deux lignes » ; proposer une regle par groupe, mesuree par variante, avec trois exemples ; puis l'application
+  (fichier de detachements du protocole + rejeu exact de l'etiquette).
 ```
 
 ---

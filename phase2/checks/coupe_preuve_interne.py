@@ -416,3 +416,102 @@ def ancienne_attribution(a: int, des: list, dat: list, cls: dict, noms_tx: set, 
     if len(cs) == 1:
         return cs.pop(), "nom seul"
     return None, "sans ligne"
+
+
+# ═══════════════════════════════ COUPER UN BIEN ENTIER (22/11, le protocole du classeur) ═══════════════════════════
+def couper_le_bien(D: Donnees, b: str, lignes_b: set, S: dict, X: list, a_part_par_decision: dict) -> dict:
+    """« OU CA TOMBE » SUR UN BIEN, en UNE fonction -- la composition des regles de coupe deja validees, appelee par le
+    protocole (phase2/checks/protocole_classeur.py). Son ancetre fige est `ou_ca_tombe` de temps12 (copie fidele de
+    temps11, partie 6), garde tel quel parce que ses sorties sont le TEMOIN V3 : meme ordre, memes regles.
+      1. chaque piece de X : `decider` (la date au jour exact, puis prix + honoraires ; le nom JAMAIS ; une copie suit
+         la ligne qui l'a creee) ; une piece « a part par decision » reste a part ;
+      2. une offre ACCEPTEE a part suit le compromis prouve de sa chaine, 0 a 31 j plus tard, sans autre offre acceptee
+         entre les deux (« par sa chaine ») ;
+      3. une offre ACCEPTEE a part suit l'offre prouvee qui la precede dans sa chaine, quand aucune autre ligne n'a de
+         date entre les deux (sa convention apres renegociation, 20/11) ;
+      4. les lignes qui partagent une piece forment un MORCEAU (groupe de lignes -> ses pieces) ;
+      5. une piece a part est NEUTRE (son critere 2) quand elle n'est la plus petite d'aucun morceau ou elle pourrait
+         aller (dates compatibles).
+    `X` = les pieces jugees (le protocole : tout le bien, ou les chaines liees comme le 20/11). Ne decide rien d'autre."""
+    va, apart, preuve = {}, {}, {}
+    for a in X:
+        if a in a_part_par_decision:
+            apart[a] = a_part_par_decision[a]
+            continue
+        ls_, quoi = decider(D, a, lignes_b)
+        if ls_:
+            va[a], preuve[a] = frozenset(ls_), quoi
+        else:
+            apart[a] = quoi
+    par_chaine, par_renego = [], []
+    for a in sorted(apart):
+        p_ = D.REG.get(a, {})
+        if p_.get("genre") != "offre" or p_.get("etat") not in ("accepted", "acceptee") or not p_.get("date") \
+                or a in a_part_par_decision:
+            continue
+        suivants = [c for c in va if S.get(c) == S.get(a) and D.REG[c]["genre"] == "compromis" and D.REG[c]["date"]
+                    and 0 <= (D.REG[c]["date"] - p_["date"]).days <= 31]
+        for c in sorted(suivants, key=lambda c: D.REG[c]["date"]):
+            entre = [o for o in X if o != a and D.REG[o]["genre"] == "offre"
+                     and D.REG[o]["etat"] in ("accepted", "acceptee") and D.REG[o]["date"]
+                     and p_["date"] < D.REG[o]["date"] <= D.REG[c]["date"]]
+            if not entre:
+                va[a] = va[c]
+                preuve[a] = "PAR SA CHAINE : offre acceptee suivie %d j plus tard par le compromis %d (prouve)" % (
+                    (D.REG[c]["date"] - p_["date"]).days, c)
+                par_chaine.append((a, c))
+                del apart[a]
+                break
+    for a in sorted(apart):
+        p_ = D.REG.get(a, {})
+        if p_.get("genre") != "offre" or p_.get("etat") not in ("accepted", "acceptee") or not p_.get("date") \
+                or a in a_part_par_decision:
+            continue
+        origines = [o for o in va if S.get(o) == S.get(a) and D.REG[o]["genre"] == "offre" and D.REG[o]["date"]
+                    and D.REG[o]["date"] < p_["date"]]
+        for o in sorted(origines, key=lambda o: D.REG[o]["date"], reverse=True):
+            autres = [i for i in lignes_b if i not in va[o]
+                      and any(d and D.REG[o]["date"] <= d <= p_["date"]
+                              for d in (d_sheet(D.case(i, c)) for c in ("Offre Achat", "Compromis")))]
+            if not autres:
+                va[a] = va[o]
+                preuve[a] = "APRES RENEGOCIATION : offre acceptee qui suit l'offre %d (prouvee), aucune autre ligne " \
+                            "datee entre les deux (sa convention du 20/11)" % o
+                par_renego.append((a, o))
+                del apart[a]
+                break
+    groupes_l = []
+    for a, ls_ in va.items():
+        fus = [gl for gl in groupes_l if gl & ls_]
+        nouveau = set(ls_).union(*fus) if fus else set(ls_)
+        groupes_l = [gl for gl in groupes_l if gl not in fus] + [nouveau]
+    morceaux = {frozenset(gl): sorted(a for a, ls_ in va.items() if ls_ & gl) for gl in groupes_l}
+    neutres, possibles_de = {}, {}
+    for a in apart:
+        possibles = [(gl, m + [a]) for gl, m in morceaux.items() if not D.contre_dates(a, set(gl))]
+        possibles_de[a] = [gl for gl, _m in possibles]
+        neutres[a] = neutre(a, [m for _gl, m in possibles]) if possibles else False
+    return {"va": va, "preuve": preuve, "apart": apart, "morceaux": morceaux, "neutres": neutres,
+            "possibles": possibles_de, "par_chaine": par_chaine, "par_renego": par_renego}
+
+
+def pose_de_nuit(lab_prec: dict, ch_new: dict) -> dict:
+    """LA POSE DES ETIQUETTES DE NUIT (app_poser_etiquettes_dossier), recopiee de temps12.etiquettes -- son temoin est
+    dans protocole_classeur.py : elle redonne les etiquettes du rejeu V3. La FUSION garde l'etiquette de la plus petite
+    transaction ; la SCISSION laisse l'etiquette au groupe de la plus petite transaction qui la porte et en donne une
+    NEUVE (« NEUVE:<plus petite> ») aux autres."""
+    mem = defaultdict(list)
+    for a, c in ch_new.items():
+        mem[c].append(a)
+    lab1 = {}
+    for c, ms in mem.items():
+        labs = {lab_prec[a] for a in ms if lab_prec.get(a)}
+        g_ = (lab_prec[min(a for a in ms if lab_prec.get(a))] if labs else "NEUVE:%s" % min(ms))
+        for a in ms:
+            lab1[a] = g_
+    tete, chaines_du_lab = {}, defaultdict(set)
+    for a in sorted(lab1):
+        tete.setdefault(lab1[a], ch_new[a])
+        chaines_du_lab[lab1[a]].add(ch_new[a])
+    return {a: (l_ if len(chaines_du_lab[l_]) == 1 or ch_new[a] == tete[l_] else "NEUVE:%s" % min(mem[ch_new[a]]))
+            for a, l_ in lab1.items()}
