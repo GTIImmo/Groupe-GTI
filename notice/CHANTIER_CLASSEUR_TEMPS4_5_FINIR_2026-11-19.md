@@ -4149,6 +4149,62 @@ Son mot : `C:\Hektor\mot_du_22_11_le_patch_accorde.md`. Rapport :
 ⛔ A LUI : coller le patch du journal ; 1001561 en famille 1 ? (et l'etat de 23995 chez Hektor) ; 1001593 (preemption).
 ```
 
+### 20.16 Son mot du 23/11 (nuit) — les 17 offres, la garde du bien, la famille 2 EN ATTENTE
+
+Son mot : `C:\Hektor\mot_du_23_11_les_17_offres_et_tes_deux_questions.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_23_11_LA_GARDE_DU_BIEN_LES_17_LES_15_2026-11-23.md`. Rien d'écrit en base ni chez Hektor,
+rien de poussé. Le cap ne change pas : le patch du journal (PAS COLLÉ à 00:20 le 23/11, fonction 815e956f), la coupe
+« C5 aux portes » (à la fin du protocole), puis la mise de côté de la famille 1.
+
+```
+1 SES DEUX REPONSES : 1001561 NE rejoint PAS la famille 1. Le critere des familles est L'ETAT DE L'OFFRE D'ORIGINE
+  CHEZ HEKTOR : famille 1 = offre reparee le 12/11 (1876, 11958) ou refusee a juste titre (5055) -> vrai doublon ;
+  famille 2 = offre TOUJOURS CASSEE, la copie est la seule trace. L'offre 23995 se repare par un LOT CADRE avec sa
+  liste validee, jamais a l'unite, jamais ce soir. ⛔ Aucune offre touchee chez Hektor avant qu'il voie la liste.
+  ⚠ 1001482 : il ecrit « son bien n'est touche par aucun de nos gestes » -- FAUX par la mesure (notre lot « table » a
+  refuse 5055, acceptee, le 11/11 a 18:21) ; sa conclusion TIENT : le bien 10527 ne porte aucune vente, le refus etait
+  juste (une des 1 127), la copie double une offre refusee -> famille 1.
+2 LA GARDE DU BIEN (⑤), Console/enqueue_refus_offres_mortes_lot.js : une offre dont LE BIEN (hektor_annonce_id) porte
+  une vente n'est pas touchee, ou que soit la vente. Dans trier(), qui sert aux DEUX modes ; TOUTES les ventes comptent
+  (supprimees, du classeur) ; temoin positif 23997/47557 (code 2 s'il manque). selectionCascade() et trier() sortis
+  de main() A L'IDENTIQUE (4 lignes changees : les parametres), exportes ; main seulement si require.main.
+  TEMOIN (Console/test_garde_du_bien_refus_offres.js, 24/24, sur l'etat du 11/11 08:00 -- sauvegarde critical,
+  extraite par phase2/checks/extraire_etat_du_11_11_pour_la_garde_du_bien.py) :
+    SANS la garde, le VRAI code rejoue retrouve EXACTEMENT les refus du 11/11 : cascade 661/661, table 523/523, 0/0 ;
+    AVEC : 36 retenues = SES 17 (13 cascade + 4 table, chacune sur son bien) + les 19 reacceptees le 12/11 ; 0 autre.
+  A BLANC AUJOURD'HUI : la cascade refusait ENCORE 2 offres -- 8018 (bien 16073) et 13984 (bien 28242) --, deux des
+  19 REPAREES le 12/11. La garde les retient. ⭐ Sa crainte « le defaut remordra » etait mesurable : il remordait.
+  Ancien essai de l'origine : 15/15 vert.
+3 LA LISTE (phase2/checks/liste_des_17_offres_refusees_a_tort_2026-11-23.py -> notice/LISTE_DES_17_..._2026-11-23.csv) :
+  ses 14 confirmees, 10 au montant EXACT, 4 renegociees ; rien depuis notre refus sur les 17.
+  ⚠ 14420 acceptee 483 JOURS APRES la vente (29 000 EUR, vente 2008) ; 18600 1 600 JOURS APRES (vente 2012) -- ce
+    n'est peut-etre pas l'offre de la vente : a lui.
+  ⚠⚠ SES 3 « MOINS GRAVES » NE GARDENT AUCUNE OFFRE ACCEPTEE CHEZ HEKTOR : celle qui reste est NOTRE COPIE DU CLASSEUR
+    (14008 -> 1001593 ; 17025 -> 1001568 ; 23995 -> 1001561). Chez Hektor : 17 biens vendus sans offre acceptee, pas 14.
+  La 18e (23139, bien 46032, enqueue_fermeture_dossiers_impossibles du 12/11) : SA decision dossier par dossier, et son
+  journal ne porte AUCUNE acceptation -- pas de la famille.
+4 LES 15 BIENS « SOUS OFFRE » DU 12/11 : DETTE SOLDEE LE 13/11 -- il les a remis « Vendu » a la main, verifies 15/15
+  par l'API a 08:59 (commit f4596c2). Aujourd'hui en base : 15/15 « Vendu », derniere modification chez Hektor le 13/11
+  08:44-08:57 (ses corrections), derniere lecture chez nous le 14/11 05:36 ; depuis le 13/11, 16 travaux sur ces biens,
+  TOUS des lectures (15 photos le 14/11, 1 detail le 18/11 ; temoin : les 45 du 12/11 sont vus) ; la sentinelle des
+  ecarts de statut : 1 ecart, aucun des 15. ⚠ Ce que la base ne voit pas : un geste humain chez Hektor apres le 14/11
+  -> 15 lectures API (~20 s) si il le veut.
+```
+
+**⛔ LA FAMILLE 2 EST EN ATTENTE — ET VOICI POURQUOI, pour que personne ne la retrouve dans six mois sans savoir.**
+Les copies **1001561** (bien 47557, offre 23995) et **1001593** (bien 28422, offre 14008) **ne se mettent PAS de
+côté**, par décision de Frédéric du 23/11. Leur offre d'origine chez Hektor est **toujours cassée** : acceptée, puis
+refusée par notre cascade le 11/11 (19:30:34 et 19:16), et jamais réparée. **La copie est donc la SEULE trace de
+l'offre acceptée qui a mené à la vente.** La retirer maintenant effacerait cette trace. **L'ordre** : on répare
+d'abord l'offre (lot cadre, liste validée par lui, **deux gestes par offre** : réaccepter, PUIS remettre « Vendu » par
+`redescendreStatutHektor()`, jamais par `change_hektor_annonce_status`, qui créerait une vente) ; ensuite la copie
+devient un vrai doublon, et elle se met de côté comme la famille 1.
+⚠ **Une troisième copie est dans la même situation, par son propre critère : 1001568** (bien 36165, ligne X2714E92,
+MAIRIE DU CHAMBON). L'offre 17025 (67 000 EUR, acceptée le 15/10/2022) a été refusée par notre lot « table » le 11/11 à
+18:49. La copie est aujourd'hui la seule offre acceptée du bien. Elle n'était pas dans mes dix cicatrices : sa date
+(05/10/2022) n'est pas celle de 17025, donc pas de jumelle, et c'est le filet ⑦ qui la nomme. **Elle attend aussi ;
+c'est à lui de la classer.**
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

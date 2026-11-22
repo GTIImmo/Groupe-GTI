@@ -113,7 +113,28 @@ const ETATS_COMPROMIS_MORTS = new Set(["cancelled", "annule"]);
 // ⛔ ③ `etat_avant` DANS LA CHARGE. Sans lui, restaurerEtatAffaire() du worker ne
 //   peut RIEN remettre si Hektor refuse : l'etat optimiste resterait faux.
 // ⚠ ④ ON NE REPOSE JAMAIS CE QUI EST EN COURS ou qui vient d'echouer.
+// ⛔⛔ ⑤ LA GARDE DU BIEN -- 23/11/2026, demande de Frederic (son mot du 23/11, § 4 a).
+//   Une offre dont LE BIEN porte une vente n'est pas touchee, quel que soit le
+//   dossier ou se trouve cette vente. On la cherche par `hektor_annonce_id`, EN
+//   PLUS de la chaine : la garde ② ne lit que le dossier (`app_chaine_id`), et la
+//   chaine est RECALCULEE CHAQUE NUIT. Le 11/11 au soir, la vente et son offre
+//   n'etaient pas encore dans la meme chaine (la regle D du 12/11 a reuni 727
+//   dossiers apres coup). Le numero du bien, lui, NE CHANGE JAMAIS.
+//   ⛔ CE QUE CA A COUTE : 36 offres refusees a tort chez Hektor, dont 19
+//     reacceptees le 12/11 et 17 qui restent refusees (13 en « cascade », 4 en
+//     « table ») -- 14 biens VENDUS sans aucune offre acceptee.
+//   ⭐ SON TEMOIN, rejoue sur l'etat du 11/11 : elle retient EXACTEMENT ces 36, et
+//     aucune autre (Console/test_garde_du_bien_refus_offres.js).
+//   ⚠ TOUTES LES VENTES COMPTENT : supprimee chez Hektor ou non, reprise du classeur
+//     ou non. Cette garde ne fait que RETENIR un geste, elle n'en declenche aucun :
+//     dans le doute, on ne refuse pas (c'est la lecon du dossier 3699).
+//   ⚠ Et une lecture ratee n'est pas « aucune vente » : la liste des ventes porte un
+//     TEMOIN POSITIF (une vente qu'on sait exister) ; s'il manque, on n'enfile rien.
 const PLAFOND_DEFAUT = 25;
+// Le temoin positif de la garde ⑤ : la vente 23997 (n° Hektor 1438) du bien 47557,
+// le bien de l'offre 23995 -- une des 17. Elle existe, et elle ne se supprime pas
+// chez nous (« un numero ne se perd jamais »).
+const TEMOIN_VENTE = { bien: "47557", vente: 23997 };
 
 function arg(nom, defaut) {
   const i = process.argv.indexOf(nom);
@@ -162,6 +183,163 @@ function vivante(t) {
   return !(String(t.hektor_affaire_id || "").trim() !== "" && t.present_in_hektor === false);
 }
 
+// ⛔⛔ ⑤ LA GARDE DU BIEN (23/11) : les ventes du bien, TOUTES (voir l'en-tete).
+function ventesDuBien(ventesParBien, annonce) {
+  return ventesParBien.get(String(annonce || "").trim()) || [];
+}
+
+// ── LA SELECTION « cascade », sortie de main() le 23/11 pour etre REJOUEE TELLE
+//   QUELLE sur l'etat du 11/11 (le temoin de la garde ⑤). Le code est le meme.
+function selectionCascade(lignes) {
+  const parChaine = new Map();
+  for (const t of lignes) {
+    if (!vivante(t)) continue;
+    // ⛔⛔ LA GARDE DE L'ORIGINE -- C.19-d, 16/11/2026. CE SCRIPT ECRIT CHEZ HEKTOR.
+    //   Une transaction REPRISE DU CLASSEUR n'a jamais existe chez Hektor : elle ne
+    //   doit donc ni declencher un refus, ni en etre la cible.
+    //   ⛔ SANS CETTE LIGNE, poser les compromis « Annulee » du classeur suffirait a
+    //     faire refuser, A LA PROCHAINE RELANCE DU LOT, les offres acceptees de leurs
+    //     dossiers -- CHEZ HEKTOR, sur la foi d'une reprise d'historique. Et poser
+    //     plus tard les offres « Vente reglee » (state 'accepted') les rendrait
+    //     elles-memes CIBLES d'un refus chez Hektor, ou elles n'existent pas.
+    //   ⚠ `vivante(t)` ne protege PAS : elle ecarte « porte un numero ET absente de
+    //     Hektor », or nos lignes n'ont PAS de numero -- elles passent donc pour
+    //     vivantes. Mesure du 16/11.
+    //   ⭐ C'est le 6e lecteur de la famille `transaction_origine`, et LE SEUL QUI
+    //     ECRIT CHEZ HEKTOR. Les cinq autres crient ou affichent : la sentinelle
+    //     data.transaction_disparue, la vue app_affaires_sans_numero_hektor, le filet
+    //     poserNumerosManquants, l'ecran, et le filet du cockpit
+    //     (export_app_payload.py). Il avait ete manque le matin du 16/11 parce que le
+    //     balayage cherchait `present_in_hektor`, alors que celui-ci se declenche sur
+    //     l'ETAT d'une autre transaction de la chaine.
+    //   ⚠ Et ce script a deja fait un degat : les 20 offres refusees a tort le 11/11.
+    //     ⛔ 23/11 : pas 20 -- TRENTE-SIX (19 reacceptees + 17 restees refusees). Voir ⑤.
+    if (String(t.transaction_origine || "").trim() !== "") continue;
+    if (!parChaine.has(t.app_chaine_id)) parChaine.set(t.app_chaine_id, []);
+    parChaine.get(t.app_chaine_id).push(t);
+  }
+  const dossiers = [];
+  for (const [chaine, membres] of parChaine) {
+    const cpAnnule = membres.some((t) => t.kind === "compromis"
+      && ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
+    const cpVivant = membres.some((t) => t.kind === "compromis"
+      && !ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
+    // ⚠ Ce `vente` ne regarde que la CHAINE. Il reste juste, mais il ne suffit pas :
+    //   la vente du meme bien peut etre dans une autre chaine -> garde ⑤, dans trier(),
+    //   qui sert aux DEUX modes.
+    const vente = membres.some((t) => t.kind === "vente");
+    const offreAcceptee = membres.some((t) => t.kind === "offre"
+      && ["accepted", "acceptee"].includes(String(t.state || "").toLowerCase()));
+    if (cpAnnule && !cpVivant && !vente && offreAcceptee) {
+      const bien = String((membres.find((t) => t.hektor_annonce_id) || {}).hektor_annonce_id || "");
+      dossiers.push({ dossier: chaine, bien, source: "coherence : compromis annule" });
+    }
+  }
+  return dossiers;
+}
+
+// ── LE TRI, cas par cas, en DISANT pourquoi on ecarte -- sorti de main() le 23/11,
+//   meme raison. Il sert aux DEUX modes : c'est donc ICI que vit la garde ⑤.
+//   `ventesParBien` : Map bien -> ventes (TOUTES). `opts` : { source, cheminTable, dire }.
+function trier(dossiers, parDossier, dejaEnCours, ventesParBien, opts = {}) {
+  const source = opts.source || "table";
+  const cheminTable = opts.cheminTable || TABLE_DEFAUT;
+  const dire = opts.dire || ((s) => console.log(s));
+  const aPoser = [];
+  const ecartes = new Map();
+  const ecarter = (quoi, detail) => {
+    ecartes.set(quoi, (ecartes.get(quoi) || 0) + 1);
+    if (detail) dire(`   ecartee -- ${detail}`);
+  };
+
+  for (const d of dossiers) {
+    // ⛔ L'EXCLUSION DECLAREE PASSE AVANT TOUT, et elle se DIT a chaque passage :
+    //   une liste d'exclusions muette redevient un oubli au bout de six mois.
+    const exclu = DOSSIERS_EXCLUS.get(d.dossier);
+    if (exclu) {
+      ecarter("EXCLU PAR DECISION",
+        `dossier ${d.dossier} (bien ${exclu.bien}) -- ${exclu.raison}`);
+      continue;
+    }
+    const membres = (parDossier.get(d.dossier) || []).filter(vivante);
+    if (!membres.length) { ecarter("dossier introuvable au registre"); continue; }
+
+    const offres = membres.filter((t) => t.kind === "offre"
+      && !ETATS_OFFRE_MORTS.has(String(t.state || "").toLowerCase()));
+    if (!offres.length) { ecarter("plus aucune offre vivante -- deja refusee ?"); continue; }
+
+    // ⛔ LA GARDE DE LA RPC, A L'IDENTIQUE (16/09). On ne lit QUE le dossier de
+    //   cette offre : une offre d'un autre acquereur, dans un autre dossier du
+    //   meme bien, reste libre.
+    //   ⛔ 23/11 : SAUF SI LE BIEN PORTE UNE VENTE -- c'est la garde ⑤, plus bas.
+    const bloc = membres.find((t) => t.kind === "vente")
+      || membres.find((t) => t.kind === "compromis"
+           && !ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
+    if (bloc) {
+      ecarter("offre VERROUILLEE par son dossier",
+        `dossier ${d.dossier} : il porte ${bloc.kind === "vente" ? "une vente" : "un compromis en cours"}`
+        + ` (n° ${bloc.hektor_affaire_id || "?"}) -- la table de controle est peut-etre perimee`);
+      continue;
+    }
+
+    for (const offre of offres) {
+      const idOffre = String(offre.hektor_affaire_id || "").trim();
+      if (!idOffre) { ecarter("offre sans numero Hektor -- le worker la jetterait"); continue; }
+      const annonce = String(offre.hektor_annonce_id || d.bien || "").trim();
+      if (!annonce) { ecarter("pas de numero d'annonce"); continue; }
+      // ⛔⛔ ⑤ LA GARDE DU BIEN (23/11) -- par le NUMERO DU BIEN, qui ne change jamais.
+      const ventes = ventesDuBien(ventesParBien, annonce);
+      if (ventes.length) {
+        ecarter("⑤ LE BIEN PORTE UNE VENTE (hors de ce dossier)",
+          `offre ${idOffre} (affaire ${offre.app_affaire_id}, dossier ${d.dossier}) : le bien ${annonce}`
+          + ` porte la vente ${ventes.map((v) => `${v.app_affaire_id}`
+              + (v.hektor_affaire_id ? ` (n° ${v.hektor_affaire_id})` : " (sans numero)")
+              + (v.app_chaine_id != null ? ` dans le dossier ${v.app_chaine_id}` : "")).join(", ")}`);
+        continue;
+      }
+      if (dejaEnCours.has(annonce)) { ecarter("un travail est deja en cours ou vient d'echouer"); continue; }
+      aPoser.push({
+        job_type: JOB_TYPE,
+        hektor_annonce_id: annonce,
+        status: "pending",
+        // ⚠ PRIORITE BASSE EXPRES. Les gestes humains (priorite 7) doivent passer
+        //   AVANT un menage de fond : personne n'attend derriere ces 514 refus.
+        priority: 60,
+        payload_json: {
+          // ⚠ LA CLE EST `type`, PAS `geste` -- le handler jette le travail sinon
+          //   (handleChangeHektorOffreStatus, console_job_worker.js l. 23667).
+          type: "refus",
+          hektor_offre_id: idOffre,
+          hektor_annonce_id: annonce,
+          app_affaire_id: offre.app_affaire_id,
+          // ⛔ SANS LUI, restaurerEtatAffaire() NE PEUT RIEN REMETTRE si Hektor refuse.
+          etat_avant: offre.state,
+          etat_apres: "refused",
+          // ⭐⭐ PAS DE RELECTURE INDIVIDUELLE (10/11/2026). Mesure : le geste prend
+          //   16,6 s, sa resynchro 26,7 s. Sur 524 refus, les relectures ajoutent
+          //   4 h 27 et TRENTE FOIS le trafic d'une journee normale (18 resynchros),
+          //   pour une information que le run de nuit relit en un seul passage.
+          //   Le worker lit ce drapeau dans enqueueRefreshConsoleDataJobBestEffort
+          //   et l'ecrit au journal : une relecture sautee n'est jamais silencieuse.
+          // ⛔ IL N'EST POSE QUE PAR CE SCRIPT. Aucun geste humain ne le porte, donc
+          //   aucun clic ne perd sa relecture.
+          sans_resynchro: true,
+          // La trace de QUI a decide, et SUR QUELLE SOURCE. Un menage de masse sans
+          // cette trace est indefendable six mois plus tard.
+          // La trace dit AUSSI par quelle source il est passe : dans six mois,
+          // « pourquoi cette offre a-t-elle ete refusee ? » doit avoir une reponse.
+          origine: source === "cascade"
+            ? "rattrapage_cascade_annulation"
+            : "enqueue_refus_offres_mortes_lot",
+          decide_par: d.source,
+          table_de_controle: path.basename(cheminTable),
+        },
+      });
+    }
+  }
+  return { aPoser, ecartes };
+}
+
 async function main() {
   console.log("═".repeat(78));
   console.log(ENVOYER ? "ENFILEMENT REEL -- des travaux vont etre poses"
@@ -206,46 +384,8 @@ async function main() {
       lignes.push(...page);
       apres = page[page.length - 1].app_affaire_id;
     }
-    const parChaine = new Map();
-    for (const t of lignes) {
-      if (!vivante(t)) continue;
-      // ⛔⛔ LA GARDE DE L'ORIGINE -- C.19-d, 16/11/2026. CE SCRIPT ECRIT CHEZ HEKTOR.
-      //   Une transaction REPRISE DU CLASSEUR n'a jamais existe chez Hektor : elle ne
-      //   doit donc ni declencher un refus, ni en etre la cible.
-      //   ⛔ SANS CETTE LIGNE, poser les compromis « Annulee » du classeur suffirait a
-      //     faire refuser, A LA PROCHAINE RELANCE DU LOT, les offres acceptees de leurs
-      //     dossiers -- CHEZ HEKTOR, sur la foi d'une reprise d'historique. Et poser
-      //     plus tard les offres « Vente reglee » (state 'accepted') les rendrait
-      //     elles-memes CIBLES d'un refus chez Hektor, ou elles n'existent pas.
-      //   ⚠ `vivante(t)` ne protege PAS : elle ecarte « porte un numero ET absente de
-      //     Hektor », or nos lignes n'ont PAS de numero -- elles passent donc pour
-      //     vivantes. Mesure du 16/11.
-      //   ⭐ C'est le 6e lecteur de la famille `transaction_origine`, et LE SEUL QUI
-      //     ECRIT CHEZ HEKTOR. Les cinq autres crient ou affichent : la sentinelle
-      //     data.transaction_disparue, la vue app_affaires_sans_numero_hektor, le filet
-      //     poserNumerosManquants, l'ecran, et le filet du cockpit
-      //     (export_app_payload.py). Il avait ete manque le matin du 16/11 parce que le
-      //     balayage cherchait `present_in_hektor`, alors que celui-ci se declenche sur
-      //     l'ETAT d'une autre transaction de la chaine.
-      //   ⚠ Et ce script a deja fait un degat : les 20 offres refusees a tort le 11/11.
-      if (String(t.transaction_origine || "").trim() !== "") continue;
-      if (!parChaine.has(t.app_chaine_id)) parChaine.set(t.app_chaine_id, []);
-      parChaine.get(t.app_chaine_id).push(t);
-    }
-    dossiers = [];
-    for (const [chaine, membres] of parChaine) {
-      const cpAnnule = membres.some((t) => t.kind === "compromis"
-        && ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
-      const cpVivant = membres.some((t) => t.kind === "compromis"
-        && !ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
-      const vente = membres.some((t) => t.kind === "vente");
-      const offreAcceptee = membres.some((t) => t.kind === "offre"
-        && ["accepted", "acceptee"].includes(String(t.state || "").toLowerCase()));
-      if (cpAnnule && !cpVivant && !vente && offreAcceptee) {
-        const bien = String((membres.find((t) => t.hektor_annonce_id) || {}).hektor_annonce_id || "");
-        dossiers.push({ dossier: chaine, bien, source: "coherence : compromis annule" });
-      }
-    }
+    // ⭐ La selection est dans selectionCascade() (plus haut), avec la garde de l'origine.
+    dossiers = selectionCascade(lignes);
     console.log(`source             : CASCADE (coherence du dossier, pas de CSV)`);
   } else {
     const table = lireTable(CHEMIN_TABLE);
@@ -277,6 +417,36 @@ async function main() {
     parDossier.get(t.app_chaine_id).push(t);
   }
 
+  // ── 2 bis. ⛔⛔ LES VENTES DES BIENS -- la garde ⑤ (23/11) ──────────────────────
+  //   Par le NUMERO DU BIEN, pas par la chaine. TOUTES les ventes : supprimees chez
+  //   Hektor comprises, reprises du classeur comprises (voir l'en-tete).
+  const biens = new Set([TEMOIN_VENTE.bien]);
+  for (const d of dossiers) if (String(d.bien || "").trim()) biens.add(String(d.bien).trim());
+  for (const t of transactions) if (String(t.hektor_annonce_id || "").trim()) biens.add(String(t.hektor_annonce_id).trim());
+  const listeBiens = [...biens];
+  const ventesParBien = new Map();
+  for (let i = 0; i < listeBiens.length; i += 200) {
+    const tranche = listeBiens.slice(i, i + 200);
+    const page = await rest("app_affaire_ledger?select=app_affaire_id,app_chaine_id,hektor_annonce_id,"
+      + "hektor_affaire_id,present_in_hektor,transaction_origine"
+      + "&kind=eq.vente&hektor_annonce_id=in.(" + tranche.join(",") + ")");
+    for (const v of page) {
+      const b = String(v.hektor_annonce_id || "").trim();
+      if (!ventesParBien.has(b)) ventesParBien.set(b, []);
+      ventesParBien.get(b).push(v);
+    }
+  }
+  // ⛔ LE TEMOIN POSITIF : une lecture ratee ne vaut jamais « aucune vente ».
+  if (!ventesDuBien(ventesParBien, TEMOIN_VENTE.bien).some((v) => Number(v.app_affaire_id) === TEMOIN_VENTE.vente)) {
+    console.log(`⛔ garde ⑤ : la vente temoin ${TEMOIN_VENTE.vente} du bien ${TEMOIN_VENTE.bien} n'est pas lue --`
+      + " la lecture des ventes est ratee, ON N'ENFILE RIEN (code 2).");
+    return 2;
+  }
+  let nVentes = 0;
+  for (const vs of ventesParBien.values()) nVentes += vs.length;
+  console.log(`garde ⑤ du bien    : ${listeBiens.length} bien(s) regarde(s), ${ventesParBien.size} portent`
+    + ` ${nVentes} vente(s) (temoin ${TEMOIN_VENTE.vente} lu)`);
+
   // ── 3. CE QUI EST DEJA EN COURS OU QUI VIENT D'ECHOUER ───────────────────────
   const dejaEnCours = new Set();
   const erreursRecentes = [];
@@ -296,87 +466,9 @@ async function main() {
   }
 
   // ── 4. LE TRI, cas par cas, en DISANT pourquoi on ecarte ─────────────────────
-  const aPoser = [];
-  const ecartes = new Map();
-  const ecarter = (quoi, detail) => {
-    ecartes.set(quoi, (ecartes.get(quoi) || 0) + 1);
-    if (detail) console.log(`   ecartee -- ${detail}`);
-  };
-
-  for (const d of dossiers) {
-    // ⛔ L'EXCLUSION DECLAREE PASSE AVANT TOUT, et elle se DIT a chaque passage :
-    //   une liste d'exclusions muette redevient un oubli au bout de six mois.
-    const exclu = DOSSIERS_EXCLUS.get(d.dossier);
-    if (exclu) {
-      ecarter("EXCLU PAR DECISION",
-        `dossier ${d.dossier} (bien ${exclu.bien}) -- ${exclu.raison}`);
-      continue;
-    }
-    const membres = (parDossier.get(d.dossier) || []).filter(vivante);
-    if (!membres.length) { ecarter("dossier introuvable au registre"); continue; }
-
-    const offres = membres.filter((t) => t.kind === "offre"
-      && !ETATS_OFFRE_MORTS.has(String(t.state || "").toLowerCase()));
-    if (!offres.length) { ecarter("plus aucune offre vivante -- deja refusee ?"); continue; }
-
-    // ⛔ LA GARDE DE LA RPC, A L'IDENTIQUE (16/09). On ne lit QUE le dossier de
-    //   cette offre : une offre d'un autre acquereur, dans un autre dossier du
-    //   meme bien, reste libre.
-    const bloc = membres.find((t) => t.kind === "vente")
-      || membres.find((t) => t.kind === "compromis"
-           && !ETATS_COMPROMIS_MORTS.has(String(t.state || "").toLowerCase()));
-    if (bloc) {
-      ecarter("offre VERROUILLEE par son dossier",
-        `dossier ${d.dossier} : il porte ${bloc.kind === "vente" ? "une vente" : "un compromis en cours"}`
-        + ` (n° ${bloc.hektor_affaire_id || "?"}) -- la table de controle est peut-etre perimee`);
-      continue;
-    }
-
-    for (const offre of offres) {
-      const idOffre = String(offre.hektor_affaire_id || "").trim();
-      if (!idOffre) { ecarter("offre sans numero Hektor -- le worker la jetterait"); continue; }
-      const annonce = String(offre.hektor_annonce_id || d.bien || "").trim();
-      if (!annonce) { ecarter("pas de numero d'annonce"); continue; }
-      if (dejaEnCours.has(annonce)) { ecarter("un travail est deja en cours ou vient d'echouer"); continue; }
-      aPoser.push({
-        job_type: JOB_TYPE,
-        hektor_annonce_id: annonce,
-        status: "pending",
-        // ⚠ PRIORITE BASSE EXPRES. Les gestes humains (priorite 7) doivent passer
-        //   AVANT un menage de fond : personne n'attend derriere ces 514 refus.
-        priority: 60,
-        payload_json: {
-          // ⚠ LA CLE EST `type`, PAS `geste` -- le handler jette le travail sinon
-          //   (handleChangeHektorOffreStatus, console_job_worker.js l. 23667).
-          type: "refus",
-          hektor_offre_id: idOffre,
-          hektor_annonce_id: annonce,
-          app_affaire_id: offre.app_affaire_id,
-          // ⛔ SANS LUI, restaurerEtatAffaire() NE PEUT RIEN REMETTRE si Hektor refuse.
-          etat_avant: offre.state,
-          etat_apres: "refused",
-          // ⭐⭐ PAS DE RELECTURE INDIVIDUELLE (10/11/2026). Mesure : le geste prend
-          //   16,6 s, sa resynchro 26,7 s. Sur 524 refus, les relectures ajoutent
-          //   4 h 27 et TRENTE FOIS le trafic d'une journee normale (18 resynchros),
-          //   pour une information que le run de nuit relit en un seul passage.
-          //   Le worker lit ce drapeau dans enqueueRefreshConsoleDataJobBestEffort
-          //   et l'ecrit au journal : une relecture sautee n'est jamais silencieuse.
-          // ⛔ IL N'EST POSE QUE PAR CE SCRIPT. Aucun geste humain ne le porte, donc
-          //   aucun clic ne perd sa relecture.
-          sans_resynchro: true,
-          // La trace de QUI a decide, et SUR QUELLE SOURCE. Un menage de masse sans
-          // cette trace est indefendable six mois plus tard.
-          // La trace dit AUSSI par quelle source il est passe : dans six mois,
-          // « pourquoi cette offre a-t-elle ete refusee ? » doit avoir une reponse.
-          origine: SOURCE === "cascade"
-            ? "rattrapage_cascade_annulation"
-            : "enqueue_refus_offres_mortes_lot",
-          decide_par: d.source,
-          table_de_controle: path.basename(CHEMIN_TABLE),
-        },
-      });
-    }
-  }
+  //   Il vit dans trier() (plus haut), qui sert aux DEUX modes, avec la garde ⑤.
+  const { aPoser, ecartes } = trier(dossiers, parDossier, dejaEnCours, ventesParBien,
+    { source: SOURCE, cheminTable: CHEMIN_TABLE });
 
   // ── 5. LE COMPTE RENDU, AVANT d'ecrire ───────────────────────────────────────
   console.log("");
@@ -460,7 +552,15 @@ async function main() {
   return 0;
 }
 
-main().then((code) => process.exit(code)).catch((e) => {
-  console.error("PANNE :", e && e.message ? e.message : e);
-  process.exit(1);
-});
+// ⭐ 23/11 : les fonctions pures s'exportent, pour que le temoin de la garde ⑤ rejoue
+//   LE VRAI CODE sur l'etat du 11/11 (Console/test_garde_du_bien_refus_offres.js).
+//   Appele directement, le script fait exactement ce qu'il faisait.
+module.exports = { vivante, ventesDuBien, selectionCascade, trier, lireTable, TABLE_DEFAUT,
+  TEMOIN_VENTE, DOSSIERS_EXCLUS };
+
+if (require.main === module) {
+  main().then((code) => process.exit(code)).catch((e) => {
+    console.error("PANNE :", e && e.message ? e.message : e);
+    process.exit(1);
+  });
+}
