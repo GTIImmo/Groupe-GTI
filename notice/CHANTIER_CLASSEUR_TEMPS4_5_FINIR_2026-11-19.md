@@ -4205,6 +4205,39 @@ MAIRIE DU CHAMBON). L'offre 17025 (67 000 EUR, acceptée le 15/10/2022) a été 
 (05/10/2022) n'est pas celle de 17025, donc pas de jumelle, et c'est le filet ⑦ qui la nomme. **Elle attend aussi ;
 c'est à lui de la classer.**
 
+### 20.17 Son mot du 23/11 (2) — ses onze sûres, les six à examiner, les 15 lus, le détecteur de l'offre de la vente
+
+Son mot : `C:\Hektor\mot_du_23_11_les_onze_sures_et_les_six_a_examiner.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_23_11_2_LES_ONZE_LES_SIX_LES_15_LUS_2026-11-23.md`. La garde ⑤ est ACCORDÉE (son témoin à
+36). Rien réparé chez Hektor, rien écrit en base, rien poussé. Le patch : il le colle, j'attends son mot.
+
+```
+1 LES 15 LECTURES (son « OUI, lecture seule ») -- phase2/checks/lire_statut_des_15_biens_2026-11-23.py, un seul client,
+  16 GET AnnonceById espaces de 1,2 s, 23/11 00:48 : 15/15 statut 5 « Vendu », datemaj inchangee depuis ses
+  corrections du 13/11 (08:44-08:57) ; TEMOIN 55086 lu « Sous offre » (statut 3) -- le lecteur distingue. Code 0.
+2 LE DETECTEUR -- phase2/checks/detecteur_offre_de_la_vente.py, juger(offre, pieces_du_bien) pure, pour les prochains
+  lots. HORS (pas de vente / jamais acceptee) . R_APRES . R_MONTANT (SA REGLE) . R_SEULE . R_DELAI (> 1 an) . R_AMBIGUE
+  (une AUTRE ACCEPTEE au meme montant -> son arbitrage) . SURE (montant exact, avant la vente, < 1 an, SEULE ACCEPTEE au
+  montant). TEMOIN : ses onze SURE 11/11, ses six A EXAMINER 6/6, 23139 HORS ; 3 essais fabriques verts.
+  -> notice/LES_ONZE_SURES_ET_LES_SIX_A_EXAMINER_2026-11-23.csv
+  ⚠ MESURE : « l'autre offre au montant » n'est JAMAIS acceptee -- les 12 sont proposees et refusees LE MEME JOUR. Sa
+    regle prouve un DOUTE, pas que l'autre a mene a la vente : le juge ne rend jamais « reaccepter l'autre ».
+  ⚠ 6 de ses onze ont AUSSI une autre offre au montant exact (531, 14112 x2, 17322, 22446, 24159, 23995), jamais
+    acceptee : c'est d'etre la SEULE ACCEPTEE qui les rend sures.
+  ⚠ Borne ecrite a UN AN, pas 11 mois : 14112 (340 j) depasse 11 mois de 3 jours et il est dans ses onze.
+3 LE BIEN 28653 (son arbitrage) : C'EST 14112 -- seule des trois a 113 000 jamais acceptee (25/03/2021), puis compromis
+  le 06/04/2021 (12 jours), vente le 28/02/2022 ; 14114 (05/11/2020) et 14113 (19/01/2021) proposees et refusees le
+  meme jour. A lui de valider avant toute reacceptation.
+4 16421 : son PROPRE compromis (16420, 40 000, 06/03/2019, 22 jours apres l'acceptation, meme dossier) est ANNULE ; la
+  vente (35 000) passe par un autre compromis (16419, 13/02/2020) sans aucune offre -> l'offre d'une affaire tombee.
+5 ⚠ FAIT NEUF, MEME FAMILLE : passees au meme juge, les 19 REACCEPTEES le 12/11 (critere du nom) -> 11 SURE, 8 A
+  EXAMINER, toutes R_SEULE (montant different, aucune autre au montant, la forme de 16421) : 2087 . 3427 . 8018 . 13984 .
+  16363 . 18957 . 19951 . 21137. Rien propose chez Hektor.
+6 1001568 REJOINT LA FAMILLE 2 EN ATTENTE (son « OUI ») -- et elle attendra PLUS LONGTEMPS que 1001561 et 1001593 :
+  son offre d'origine 17025 est une des SIX A EXAMINER (R_MONTANT : 67 000 acceptee, vente 67 500, 17026 porte 67 500).
+  Tant que 17025 n'est pas tranchee, la copie reste la seule trace d'une acceptation sur le bien 36165.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
