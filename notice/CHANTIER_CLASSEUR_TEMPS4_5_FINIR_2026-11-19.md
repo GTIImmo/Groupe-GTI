@@ -4113,6 +4113,42 @@ Rien d'écrit en base, dans le Sheet ni chez Hektor.
   mesurant d'abord ce que chaque retrait fait aux dossiers) ?
 ```
 
+### 20.15 Son mot « le patch est accordé » (22/11 soir) — les deux familles de copies, la mise de côté fabriquée
+
+Son mot : `C:\Hektor\mot_du_22_11_le_patch_accorde.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_PATCH_ACCORDE_LES_DEUX_FAMILLES_DE_COPIES_2026-11-22.md`. Rien d'écrit, rien de joué.
+
+```
+1 LE PATCH : il le colle. Controle pret, LECTURE SEULE : controle_patch_journal_en_production.py
+  apres-collage (repetition 9/9 . les 190 lignes d'avant remplies, 0 vide . l'empreinte en clair, attendue e695bf7e)
+  -- essaye avant le collage : il CRIE « pas colle » (22:20, 22:36). matin : (a) contre la PHOTO d'avant la nuit
+  (22:21 : 11 551 dossiers, 31 368 pieces, journal 34 545), chaque disparu / renumerote explique par le journal, sinon
+  INVERSE ; (b) chaque fusion / scission neuve porte son ancien numero, juste. (c) ensuite la mesure du matin.
+3 LES DEUX FAMILLES, jugees acheteur contre acheteur MAIS par des faits (regle du 19/11 : une date au jour exact bat un
+  nom seul) -- classeur_copies_par_motif.py :
+  FAMILLE 1 prouvee : 1001482 STAUFFER/STAUFFER ; 1001563 GUERIN/GUERIN (note de vente FERNANDES/GUERIN) ; 1001580
+    CIMINO -- colonnes Acquereur/Vendeur INVERSEES sur sa ligne 2388 (la 4113 dit « Vendeur DI FORTI »).
+  FAMILLE 2 : 1001561 -> LA MESURE LA RAMENE A LA CAUSE ETABLIE : la copie est sur la ligne de MARTINEZ (TRJ5Y59U),
+    pas de MAITRIAS (DAMOO7OU, Annulee) ; sa note de vente « BELLAN/MARTINEZ GAY- 44 600 € » ; 23995 (GAY Frederic)
+    acceptee 25/03/2024 a 44 600 € = le prix de la vente, REFUSEE PAR NOTRE CASCADE 11/11 19:30, jamais reacceptee.
+    1001593 -> une PREEMPTION : « La locataire Liliane Matra [...] l'AR pour la preemption », « OKUTAN Hamza et Guler
+    ont ete avertis » ; l'offre du 28/06/2025 est celle des OKUTAN, le contact MATRA nait le 06/08/2025 -- pas notre
+    geste.
+  PAR MOTIF (190) : M1 4 . M2 20 (a meme nom autrement 2 . e note du classeur 2 . b ligne soeur 9 . d la date seule 7)
+    . M3 3 . M4 155 (le vide que le lot comblait) . M5 8. Famille 2 au sens strict (offre Vente reglee reproduite au nom
+    d'un autre) : 3 sur 59, et aucune autre.
+4 LA MISE DE COTE DE LA FAMILLE 1 -- FABRIQUEE, REPETEE SUR COPIE, NON JOUEE :
+  effet (vrai chainage sur copie) : nuit d'aujourd'hui SANS les 3 -> 10 pieces sur 2 biens (GUERIN+PAYSAC,
+  CIMINO+SOUDANI re-reunis ; 1001482 seule : 0) ; arrivee avec la coupe -> 0 piece, 0 etiquette. ⛔ LA COUPE D'ABORD.
+  numeros D2019-0649 / D2024-0505 / D2020-0607 : nes d'elles seules (scission 18/11 06:34), 0 autre piece, 0 avis,
+  0 verdict -- gardes au registre app_classeur_cicatrice_mise_de_cote (regle 6).
+  supabase/patch_mise_de_cote_cicatrices_famille1_2026-11-22{,_INVERSE,_REPETITION}.sql + le cote LOCAL
+  mettre_de_cote_cicatrices_du_local_2026-11-22.py (--verifier-avant / a blanc / --pour-de-vrai ; refuse sans la coupe).
+  REPETITION SUR COPIE (repeter_mise_de_cote_cicatrices_sur_copie.py, Postgres 17.6, 53 colonnes reelles) : patch
+  PASSE, repetition 7/7, INVERSE = empreintes d'avant, temoin inverse (numero change) REFUSE sans ecrire, rejoue REFUSE.
+⛔ A LUI : coller le patch du journal ; 1001561 en famille 1 ? (et l'etat de 23995 chez Hektor) ; 1001593 (preemption).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
