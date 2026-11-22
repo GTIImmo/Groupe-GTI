@@ -3014,6 +3014,7 @@ idempotente et reprenable (chaque lot est indépendant, un lot en échec n'arrê
 3. **Une action a toujours une fin visible** — surtout quand elle rate.
 4. **Tant que la diffusion passe par Hektor, Hektor doit rester à jour.**
 5. **Le miroir se met à jour, il ne se remplace pas.** *(posée le 21/08, tâche 0.2)*
+6. **On ne supprime pas une part, on la met de côté avec son ancien numéro de dossier.** *(posée par Frédéric le 22/11/2026, chantier classeur ⑲ : un dossier disparu peut revenir ; une part supprimée ne se recalcule jamais. Deux parts identiques -> la table de garde `app_affaire_repartition_mise_de_cote`, qui garde l'ancien numéro ; différentes -> elles lui remontent. Détail : `notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_2026-11-19.md`, § 19.5)*
 
 ### La règle 5, en clair
 

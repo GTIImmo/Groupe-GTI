@@ -13,7 +13,12 @@
 --     sont (le gel les garde quand il les donne deja a la ligne de leur morceau) ;
 --   . UN LIEN PAR ROLE : le role « offre » tient l'offre ACCEPTEE (sa convention du 20/11) ; une copie C5 qui tient
 --     deja un role n'est pas doublee (les copies se retirent a part) ;
---   . les deux morceaux a DEUX de ses lignes (biens 9748 et 41467) ne sont PAS touches (son verrou, point 3).
+--   . LES JUMELLES, EXCEPTION NOMMEE (son mot du 22/11, point 3) : VIALLARD (bien 9748, lignes 3308P0UX et YRUF0S9H) et
+--     PAOLONE (bien 41467, lignes O6R10ZQA et T2GZOY5O) s'ecrivent ; leurs lignes tiennent DEJA leurs pieces -- le gel
+--     n'a qu'une ligne par transaction, il ne les recopie pas sur la jumelle ;
+--   . ⛔ A SA DECISION, PAS ENCORE VALIDES (son mot du 22/11, point 2) : 6FQO29C8 19131 ; 6FQO29C8 19133 ; V3FO5NDA 19131 ; V3FO5NDA 19133
+--     -- s'il les refuse, le patch est refabrique sans eux ; il ne se joue pas avant son mot ;
+--   . LES TEMOINS (son mot du 22/11, point 2) : NOMMES, hors de ces gestes-la -- c08ff7cb tient 3678 ; 721e650c ne tient plus 3678.
 -- CE QU'IL NE FAIT PAS : il ne touche NI le chainage (c'est le fichier des detachements V3 + G2, sur le meme
 --   « vas-y »), NI les ecritures rapatriees (repartitions, factures, reglements, notes : mesurees, a part), NI Hektor.
 -- RETOUR ARRIERE : patch_gel_v3_ou_ca_tombe_2026-11-22_INVERSE.sql
@@ -251,7 +256,12 @@ begin
    where (l.role, l.confiance, l.preuves, l.etage, l.gele_par, l.ligne_classeur, l.gele_le)
          is distinct from (s.role, s.confiance, s.preuves, s.etage, s.gele_par, s.ligne_classeur, s.gele_le);
   if temoin <> 0 then raise exception '⛔ temoin inverse : % lien(s) non vise(s) ont change', temoin; end if;
-  raise notice '✅ gel V3 : -29 +14 = 12805 liens, exclusivite tenue, un lien par role, voisins intacts.';
+  -- LES DEUX TEMOINS POSITIFS NOMMES (son mot du 22/11, point 2) : pris dans les gestes qu'il a vus, un par sens
+  select count(*) into temoin from app_classeur_lien where id_unique = 'c08ff7cb' and app_affaire_id = 3678;
+  if temoin <> 1 then raise exception '⛔ temoin positif : c08ff7cb ne tient pas 3678 (% lien)', temoin; end if;
+  select count(*) into temoin from app_classeur_lien where id_unique = '721e650c' and app_affaire_id = 3678;
+  if temoin <> 0 then raise exception '⛔ temoin positif : 721e650c tient encore 3678 (% lien)', temoin; end if;
+  raise notice '✅ gel V3 : -29 +14 = 12805 liens, exclusivite tenue, un lien par role, voisins intacts, temoins nommes verts.';
 end $$;
 
 rollback;

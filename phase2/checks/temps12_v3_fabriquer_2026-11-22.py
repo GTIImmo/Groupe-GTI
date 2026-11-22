@@ -58,6 +58,38 @@ A_PART_PAR_DECISION = {14033: "B3, sa decision du 20/11 soir"}
 PROUVEES = (K.PROUVEE_DATE, K.PROUVEE_PH, K.PROPRE_C5, "PROUVEE PAR SA CHAINE")
 TEMOIN_20_11 = {"morceaux": 433, "a_part": 39, "neutres": 19, "ecrites": 395, "gestes": 83}
 
+# ⭐ SON MOT DU 22/11, POINT 3 -- LES JUMELLES : « EXCEPTION DECLAREE ET NOMMEE ». Son « ecris-les toutes les deux » du
+#   20/11 tient : VIALLARD et PAOLONE s'ecrivent (395 lignes, pas 393), MAIS PAS EN SILENCE : une affaire que SON classeur
+#   porte sur deux lignes, de la meme facon que 20088 (§ 18.9). Le controle « deux lignes sur un dossier » ne les compte
+#   PAS comme un echec : il les SAUTE EN LES NOMMANT, a chaque passage, pour qu'on sache toujours qu'elles existent.
+#   (bien, ses deux lignes) -> le nom en clair. ⛔ Une exception ne s'ajoute ici que sur SA demande, datee.
+EXCEPTIONS_NOMMEES = {
+    ("9748", ("3308P0UX", "YRUF0S9H")): "VIALLARD -- une affaire saisie sur deux lignes du Sheet (3785 et 3796), "
+                                        "bien 9748 ; exception nommee le 22/11 (son mot, point 3)",
+    ("41467", ("O6R10ZQA", "T2GZOY5O")): "PAOLONE -- une affaire saisie sur deux lignes du Sheet (3887 et 3856), "
+                                         "bien 41467 ; exception nommee le 22/11 (son mot, point 3)",
+}
+LIGNES_EXCEPTION = {frozenset(gl): w for (_b, gl), w in EXCEPTIONS_NOMMEES.items()}
+
+
+def exception_du_verrou(lignes) -> str | None:
+    """Le nom de l'exception si ces lignes (celles d'un dossier partage) sont TOUTES dans UNE exception nommee."""
+    s = set(lignes)
+    for gl, w in LIGNES_EXCEPTION.items():
+        if s <= gl:
+            return w
+    return None
+
+
+# ⭐ SON MOT DU 22/11, POINT 2 -- LE TEMOIN DU PATCH : « Un temoin ne doit jamais porter sur le geste le MOINS valide du
+#   lot ». Celui du 22/11 (« 6FQO29C8 tient 19131 ») etait le premier par ordre alphabetique -- justement un des quatre
+#   gestes qu'il n'a pas valides. On ne le tire plus au sort : on le NOMME, pris dans les gestes qu'il a vus, et on en met
+#   DEUX, un de chaque sens : la piece 3678 (offre du 14/08/2025, prouvee par la date sur la case « Offre Achat » de
+#   c08ff7cb) passe de 721e650c a c08ff7cb.
+GESTES_A_SA_DECISION = {("6FQO29C8", 19131), ("6FQO29C8", 19133), ("V3FO5NDA", 19131), ("V3FO5NDA", 19133)}
+TEMOIN_RELIER = ("c08ff7cb", 3678)
+TEMOIN_DELIER = ("721e650c", 3678)
+
 
 def dire(s: str = "") -> None:
     ligne = "%s  %s" % (datetime.now().strftime("%H:%M:%S"), s)
@@ -332,12 +364,19 @@ def ecrire_brouillon(d: dict, maisons: dict) -> int:
     n = 0
     for b, v in sorted(d["par_bien"].items(), key=lambda kv: int(kv[0])):
         for gl, ids in v["morceaux"]:
+            geste = "v3_morceau"
             if len(gl) > 1:
-                # ⛔ SON VERROU (point 3) : deux de ses lignes sur un dossier -- la V3 ne le cree pas, ca lui remonte
-                continue
+                # ⛔ SON VERROU (point 3) : deux de ses lignes sur un dossier -- la V3 ne le cree pas, ca lui remonte ;
+                #   SAUF une EXCEPTION NOMMEE (son mot du 22/11, point 3 : les jumelles s'ecrivent, declarees)
+                w = EXCEPTIONS_NOMMEES.get((str(b), tuple(sorted(gl))))
+                if not w:
+                    continue
+                geste = "v3_exception_nommee"
             att = sorted(int(a) for a, m in maisons.items() if m == (b, tuple(gl)))
-            sortie.append("%s;%s;v3_morceau;%s%s" % (" ".join(map(str, sorted(ids + att))), b, " ".join(gl),
-                                                    (" (attendent ici, neutres : %s)" % " ".join(map(str, att))) if att else ""))
+            sortie.append("%s;%s;%s;%s%s%s" % (" ".join(map(str, sorted(ids + att))), b, geste, " ".join(gl),
+                                               (" (attendent ici, neutres : %s)" % " ".join(map(str, att))) if att else "",
+                                               (" -- EXCEPTION NOMMEE : %s" % EXCEPTIONS_NOMMEES[(str(b), tuple(sorted(gl)))]
+                                                .replace(";", ",")) if geste != "v3_morceau" else ""))
             n += 1
     for b, a, w in d["a20"]:
         sortie.append("%d;%s;v3_a_part;%s" % (a, b, w.replace(";", ",")))
@@ -541,11 +580,28 @@ def etape_gestes() -> int:
     for a, (b, gl) in maisons.items():
         if gl and gl[0] != "SEULE_AVEC":
             att_par_morceau[(b, tuple(gl))].add(int(a))
-    relier, delier, deux_lignes = [], [], []
+    relier, delier, deux_lignes, exceptions, exc_a_decider = [], [], [], [], []
     for b, v in sorted(d["par_bien"].items(), key=lambda kv: int(kv[0])):
         for gl, ids in v["morceaux"]:
             if len(gl) > 1:
-                deux_lignes.append((b, gl, ids))
+                w = EXCEPTIONS_NOMMEES.get((str(b), tuple(sorted(gl))))
+                if not w:
+                    deux_lignes.append((b, gl, ids))
+                    continue
+                # L'EXCEPTION NOMMEE (son mot du 22/11, point 3) : ses lignes, ENSEMBLE, tiennent les pieces du morceau.
+                #   . une piece du morceau deja tenue par l'une de ses lignes : rien a faire (le gel n'a qu'UNE ligne
+                #     par transaction -- on ne la recopie pas sur la jumelle) ;
+                #   . une piece qu'aucune des deux ne tient : elle ME REMONTE (je ne choisis pas laquelle des deux) ;
+                #   . une piece qu'une de ses lignes tient HORS du morceau : deliee, comme partout.
+                exceptions.append((b, gl, ids, w))
+                hk = {a for a in ids if a < 1000000}
+                att = {a for a in att_par_morceau[(b, tuple(gl))]}
+                for a in sorted(hk):
+                    if not any(a in liens[i] for i in gl):
+                        exc_a_decider.append((b, gl, a))
+                for i in gl:
+                    for a in sorted(x for x in liens[i] if x < 1000000 and x not in hk and x not in att):
+                        delier.append((i, a, b, "pas dans son morceau (exception nommee)"))
                 continue
             i = gl[0]
             hk = {a for a in ids if a < 1000000}
@@ -602,6 +658,15 @@ def etape_gestes() -> int:
     deux_roles_avant = sorted(i for i, c in roles.items() if i not in touchees and any(n > 1 for n in c.values()))
     sur_deux = sorted(i for i in touchees if len({ch3.get(a) for a in apres[i] if a in ch3}) > 1)
     p_avant, p_apres = lignes_partagees(liens, loc), lignes_partagees(apres, ch3)
+    # LES EXCEPTIONS NOMMEES : sautees PAR LEUR NOM (jamais en silence) -- elles ne comptent pas comme un echec
+    exc_avant = {c: (ls, exception_du_verrou(ls)) for c, ls in p_avant.items() if exception_du_verrou(ls)}
+    exc_apres = {c: (ls, exception_du_verrou(ls)) for c, ls in p_apres.items() if exception_du_verrou(ls)}
+    p_avant = {c: ls for c, ls in p_avant.items() if c not in exc_avant}
+    p_apres = {c: ls for c, ls in p_apres.items() if c not in exc_apres}
+    dire("   exceptions nommees : %d morceau(x) %s ; pieces qu'aucune de leurs lignes ne tient (a lui) : %s"
+         % (len(exceptions), [(b, gl) for b, gl, _i, _w in exceptions], exc_a_decider))
+    for c, (ls, w) in sorted(exc_apres.items()):
+        dire("   ⭐ VERROU, SAUTEE EN LA NOMMANT : dossier %s, lignes %s -- %s" % (c, " ".join(sorted(ls)), w))
     n_av, n_ap = len(set().union(*p_avant.values())) if p_avant else 0, len(set().union(*p_apres.values())) if p_apres else 0
     dire("   relier %d . delier %d (dont %d pour l'exclusivite : %s) . morceaux a deux lignes, NON TOUCHES : %d %s"
          % (len(relier), len(delier), len(par_qui), par_qui[:6], len(deux_lignes), [(b, gl) for b, gl, _ in deux_lignes]))
@@ -622,12 +687,15 @@ def etape_gestes() -> int:
     json.dump({"relier": [(i, a, b, KIND.get(a), NUM.get(i)) for i, a, b in relier], "un_par_role": un_par_role,
                "delier": [(i, a, b, w, KIND.get(a)) for i, a, b, w in delier],
                "deux_lignes": deux_lignes, "doubles": doubles, "deux_roles": deux_roles, "sur_deux": sur_deux,
+               "exceptions": [(b, gl, ids, w) for b, gl, ids, w in exceptions], "exc_a_decider": exc_a_decider,
+               "exc_verrou_apres": {str(c): [sorted(ls), w] for c, (ls, w) in exc_apres.items()},
+               "exc_verrou_avant": {str(c): [sorted(ls), w] for c, (ls, w) in exc_avant.items()},
                "partagees_avant": {str(c): sorted(l) for c, l in p_avant.items()},
                "partagees_apres": {str(c): sorted(l) for c, l in p_apres.items()},
                "bloquees": bloquees, "gel_n": n_gel, "gel_emp": emp,
                "gel_apres": {i: sorted(s) for i, s in apres.items()}},
               (CACHE / "v3_gestes.json").open("w", encoding="utf-8"))
-    ok = not doubles and not deux_roles and not sur_deux
+    ok = not doubles and not deux_roles and not sur_deux and not exc_a_decider
     dire("GESTES : %s" % ("VERT" if ok else "⛔ A REGARDER"))
     return 0 if ok else 1
 
@@ -794,6 +862,15 @@ def etape_patch() -> int:
     aj = [(i, a, k, num, "bonne" if a in convention else "sûre", 1 if a in convention else 2)
           for i, a, _b, k, num in g["relier"]]
     n_apres = n_gel - len(ret) + len(aj)
+    # LES DEUX TEMOINS NOMMES (son mot du 22/11, point 2) : ils doivent etre DANS le lot, et HORS des gestes a sa decision
+    if TEMOIN_RELIER not in {(i, a) for i, a, *_ in aj} or TEMOIN_DELIER not in {(i, a) for i, a, _r in ret}:
+        dire("PATCH : ⛔ un temoin nomme n'est plus dans le lot (%s / %s) -- refaire le choix" % (TEMOIN_RELIER, TEMOIN_DELIER))
+        return 1
+    if {TEMOIN_RELIER, TEMOIN_DELIER} & GESTES_A_SA_DECISION:
+        dire("PATCH : ⛔ un temoin porte sur un geste a sa decision")
+        return 1
+    a_sa_decision = sorted({(i, a) for i, a, *_ in aj} | {(i, a) for i, a, _r in ret} & GESTES_A_SA_DECISION)
+    a_sa_decision = sorted(x for x in a_sa_decision if x in GESTES_A_SA_DECISION)
     v_ret = ",\n".join("    (%s, %d, %s)" % (q(i), a, q(r)) for i, a, r in sorted(ret))
     v_aj = ",\n".join("    (%s, %d, %s)" % (q(i), a, q(k)) for i, a, k, *_ in sorted(aj))
     lignes_ins = ",\n".join("    (%d, %d, %s, %s, %d, %s, now(), %s, %s)" % (num, a, q(k), q(cf), pr, q(ETAGE), q(GELE_PAR), q(i))
@@ -812,13 +889,20 @@ def etape_patch() -> int:
 --     sont (le gel les garde quand il les donne deja a la ligne de leur morceau) ;
 --   . UN LIEN PAR ROLE : le role « offre » tient l'offre ACCEPTEE (sa convention du 20/11) ; une copie C5 qui tient
 --     deja un role n'est pas doublee (les copies se retirent a part) ;
---   . les deux morceaux a DEUX de ses lignes (biens 9748 et 41467) ne sont PAS touches (son verrou, point 3).
+--   . LES JUMELLES, EXCEPTION NOMMEE (son mot du 22/11, point 3) : VIALLARD (bien 9748, lignes 3308P0UX et YRUF0S9H) et
+--     PAOLONE (bien 41467, lignes O6R10ZQA et T2GZOY5O) s'ecrivent ; leurs lignes tiennent DEJA leurs pieces -- le gel
+--     n'a qu'une ligne par transaction, il ne les recopie pas sur la jumelle ;
+--   . ⛔ A SA DECISION, PAS ENCORE VALIDES (son mot du 22/11, point 2) : @@A_SA_DECISION@@
+--     -- s'il les refuse, le patch est refabrique sans eux ; il ne se joue pas avant son mot ;
+--   . LES TEMOINS (son mot du 22/11, point 2) : NOMMES, hors de ces gestes-la -- @@TEMOINS@@.
 -- CE QU'IL NE FAIT PAS : il ne touche NI le chainage (c'est le fichier des detachements V3 + G2, sur le meme
 --   « vas-y »), NI les ecritures rapatriees (repartitions, factures, reglements, notes : mesurees, a part), NI Hektor.
 -- RETOUR ARRIERE : patch_gel_v3_ou_ca_tombe_2026-11-22_INVERSE.sql
 -- CONTROLE       : patch_gel_v3_ou_ca_tombe_2026-11-22_REPETITION.sql (lecture seule)
 -- ════════════════════════════════════════════════════════════════════════════════════════════════
 """ % (len(ret), len(aj), n_gel, n_apres)
+    entete = entete.replace("@@A_SA_DECISION@@", " ; ".join("%s %d" % x for x in a_sa_decision) or "aucun").replace(
+        "@@TEMOINS@@", "%s tient %d ; %s ne tient plus %d" % (TEMOIN_RELIER + TEMOIN_DELIER))
     corps = """begin;
 
 -- ── ① LA GARDE : le gel est EXACTEMENT celui que le calcul a lu ─────────────────────────────────
@@ -900,10 +984,17 @@ begin
    where (l.role, l.confiance, l.preuves, l.etage, l.gele_par, l.ligne_classeur, l.gele_le)
          is distinct from (s.role, s.confiance, s.preuves, s.etage, s.gele_par, s.ligne_classeur, s.gele_le);
   if temoin <> 0 then raise exception '⛔ temoin inverse : %% lien(s) non vise(s) ont change', temoin; end if;
-  raise notice '✅ gel V3 : -%(nret)d +%(naj)d = %(napres)d liens, exclusivite tenue, un lien par role, voisins intacts.';
+  -- LES DEUX TEMOINS POSITIFS NOMMES (son mot du 22/11, point 2) : pris dans les gestes qu'il a vus, un par sens
+  select count(*) into temoin from app_classeur_lien where id_unique = %(tr_i)s and app_affaire_id = %(tr_a)d;
+  if temoin <> 1 then raise exception '⛔ temoin positif : %(tr_i_)s ne tient pas %(tr_a)d (%% lien)', temoin; end if;
+  select count(*) into temoin from app_classeur_lien where id_unique = %(td_i)s and app_affaire_id = %(td_a)d;
+  if temoin <> 0 then raise exception '⛔ temoin positif : %(td_i_)s tient encore %(td_a)d (%% lien)', temoin; end if;
+  raise notice '✅ gel V3 : -%(nret)d +%(naj)d = %(napres)d liens, exclusivite tenue, un lien par role, voisins intacts, temoins nommes verts.';
 end $$;
 """ % {"n": n_gel, "emp": q(emp), "sauve": SAUVEGARDE, "ret": v_ret, "aj": v_aj, "ins": lignes_ins,
-       "nret": len(ret), "naj": len(aj), "napres": n_apres, "gp": q(GELE_PAR)}
+       "nret": len(ret), "naj": len(aj), "napres": n_apres, "gp": q(GELE_PAR),
+       "tr_i": q(TEMOIN_RELIER[0]), "tr_i_": TEMOIN_RELIER[0], "tr_a": TEMOIN_RELIER[1],
+       "td_i": q(TEMOIN_DELIER[0]), "td_i_": TEMOIN_DELIER[0], "td_a": TEMOIN_DELIER[1]}
     PATCH.write_text(entete + corps + "\ncommit;\n", encoding="utf-8", newline="\n")
     blanc = PATCH.with_name(PATCH.stem + "_A_BLANC.sql")
     blanc.write_text(entete.replace("-- ⛔ DORMANT", "-- ⭐ REPETITION A BLANC : le patch ENTIER, puis ROLLBACK -- il ne laisse rien.\n-- ⛔ DORMANT")
@@ -943,9 +1034,11 @@ union all select 'deux liens pour un role', count(*)::text, case when count(*) =
   from (select id_unique, role from app_classeur_lien group by 1, 2 having count(*) > 1) x
 union all select 'sauvegarde', count(*)::text, case when count(*) = %(n)d then 'OK' else 'ROUGE' end from %(sauve)s
 union all select 'temoin positif : ' || %(t_id)s || ' tient ' || %(t_a)s, count(*)::text, case when count(*) = 1 then 'OK' else 'ROUGE' end
-  from app_classeur_lien where id_unique = %(t_id)s and app_affaire_id = %(t_a)s;
+  from app_classeur_lien where id_unique = %(t_id)s and app_affaire_id = %(t_a)s
+union all select 'temoin positif : ' || %(d_id)s || ' ne tient plus ' || %(d_a)s, count(*)::text, case when count(*) = 0 then 'OK' else 'ROUGE' end
+  from app_classeur_lien where id_unique = %(d_id)s and app_affaire_id = %(d_a)s;
 """ % {"napres": n_apres, "naj": len(aj), "gp": q(GELE_PAR), "n": n_gel, "sauve": SAUVEGARDE,
-       "t_id": q(sorted(aj)[0][0]), "t_a": sorted(aj)[0][1]}
+       "t_id": q(TEMOIN_RELIER[0]), "t_a": TEMOIN_RELIER[1], "d_id": q(TEMOIN_DELIER[0]), "d_a": TEMOIN_DELIER[1]}
     PATCH.with_name(PATCH.stem + "_REPETITION.sql").write_text(repet, encoding="utf-8", newline="\n")
     dire("PATCH : %s (+ _A_BLANC, _INVERSE, _REPETITION) -- retirer %d, ajouter %d, gel %d -> %d"
          % (PATCH.name, len(ret), len(aj), n_gel, n_apres))
@@ -991,7 +1084,9 @@ def etape_blanc() -> int:
 
 
 # ══ rapport ════════════════════════════════════════════════════════════════════════════════════════════════════════
-SORTIE_CSV = NOTICE / "TEMPS12_LA_V3_FABRIQUEE_2026-11-22.csv"
+# 22/11 nuit : TEMPS12_LA_V3_FABRIQUEE_2026-11-22.csv (celle qu'il a lue, gardee telle quelle) ; 22/11 matin, apres son
+# mot du 22/11 (jumelles en exception nommee, temoins nommes, base du 22/11 apres la nuit) : la V3 REFAITE.
+SORTIE_CSV = NOTICE / "TEMPS13_LA_V3_REFAITE_2026-11-22.csv"
 
 
 def etape_rapport() -> int:
@@ -1073,12 +1168,18 @@ def etape_rapport() -> int:
             else:
                 ou = "ATTEND dans son dossier d'aujourd'hui (%d), tel quel" % loc.get(a, 0)
             w.writerow(["sans preuve", b, a, k, s, mt, "", "", ou, why, "NON -- elle attend"])
+        marque = lambda i, a: ("A TA DECISION (ton mot du 22/11, point 2)" if (i, a) in GESTES_A_SA_DECISION  # noqa: E731
+                               else "TEMOIN NOMME du patch" if (i, a) in (TEMOIN_RELIER, TEMOIN_DELIER) else "")
         for i, a, b, k, num in g["relier"]:
             w.writerow(["gel V3 : relier", b, a, k, INFO.get(a, ("", ""))[1], INFO.get(a, ("", "", ""))[2], i, num,
-                        "relier", "la preuve interne la donne a cette ligne", ""])
+                        "relier", "la preuve interne la donne a cette ligne", marque(i, a)])
         for i, a, b, why, k in g["delier"]:
             w.writerow(["gel V3 : delier", b, a, k, INFO.get(a, ("", ""))[1], INFO.get(a, ("", "", ""))[2], i, NUM.get(i),
-                        "delier", why, ""])
+                        "delier", why, marque(i, a)])
+        for b, gl, ids, why in g.get("exceptions", []):
+            w.writerow(["EXCEPTION NOMMEE (ton mot du 22/11, point 3)", b, " ".join(map(str, ids)), "", "", "",
+                        " ".join(gl), " ".join(str(NUM.get(x)) for x in gl), "un dossier pour ses deux lignes, ecrites toutes les deux",
+                        why, "le controle « deux lignes sur un dossier » la SAUTE EN LA NOMMANT"])
         for i, a, b in g["un_par_role"]:
             w.writerow(["gel V3 : reste sans lien", b, a, INFO.get(a, ("",))[0], INFO.get(a, ("", ""))[1],
                         INFO.get(a, ("", "", ""))[2], i, NUM.get(i), "dans le dossier de la ligne, sans lien",
