@@ -4075,6 +4075,44 @@ B phase2/checks/protocole_ce_qui_a_deplace_les_2560_depuis_le_16_11.py -- 17 lig
   copie defait le morceau) + 20673 (sans ligne) -- les copies ne se jettent pas : note, rien a faire.
 ```
 
+### 20.14 Ses réponses au rapport ㉑ ter (22/11 soir, plus tard) — le patch prouvé, la coupe, dix cicatrices, le filet
+
+Son mot : `C:\Hektor\mot_du_22_11_reponses_21quater.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_21QUATER_LE_PATCH_PROUVE_LA_COUPE_LES_CICATRICES_LE_FILET_2026-11-22.md`.
+Rien d'écrit en base, dans le Sheet ni chez Hektor.
+
+```
+1 POSTGRES PORTABLE (son oui) : @embedded-postgres/windows-x64@17.6.0-beta.15, npm, archive 37,7 Mo, sha512 = registre,
+  C:\Hektor\outils\postgres17. MOTEUR 17.6 FINAL (postgres --version, fiche du fichier, journal du serveur) : « beta »
+  est le numero du PAQUET npm ; PostgreSQL n'a pas de preversion de mineure. Ecarts dits : Windows x86_64 / collation C
+  / binaires non signes -- la comparaison est avant/apres sur le meme moteur, et S0 = 0 ecart sur 31 368 contre le reel.
+  ⚠ outil bloque au 1er essai (pg_ctl garde les tuyaux sous Windows) -> sortie vers DEVNULL.
+  LE CHIFFRE (copie 20:12, identique a Supabase, 5 fonctions comprises) : patch joue tel quel -> e695bf7e, 190 lignes,
+  repetition 9/9, inverse -> 815e956f. S0 0 . S1 728 bougent, 0 ecart piece/compteur/journal (493), 275/275 predits .
+  S2 3 302 bougent, 0 (1 933) . S3 a blanc 0 . S4 limite 25 : 1 501, 0 (1 260) ; ancien numero 0 faux partout.
+  TEMOIN INVERSE (rang de scission + 1) : 571 ecarts de piece, 10 au compteur -- ATTRAPE.
+  ⚠ 1er rejeu ROUGE au journal (42 / 718 / 50) : l'ORDRE des lignes suit l'uuid tire au hasard -> comparaison en
+  ENSEMBLE ; TEMOIN DU HASARD (la fonction d'aujourd'hui contre elle-meme) : 0 en ensemble, 29 par position.
+2 LA COUPE (son oui) : regle « C5 AUX PORTES » dans protocole_portes.py (RIEN/MISE_DE_COTE que le chainage SANS LES
+  COPIES ne tient plus -> COUPE_NEUVE). Rejouee sur les 4 573 : EXACTEMENT 535, 3540, 2388, 4113 ; RIEN 4 010 -> 4 006,
+  COUPE_NEUVE 122 -> 126 ; 0 verdict ; brouillon 559 -> 563 (les 4 morceaux de la variante, mot pour mot) ; arrivee :
+  0 piece / 0 numero / 0 etiquette ; 4 573 justes, etiquette exacte 4 573. G2 ne juge plus ces 4 (B porte les copies).
+3-4 LA CAUSE : sa chaine juste a la minute ; LE LECTEUR FAUTIF = la garde ⑤ du lot (date BRUTE). ⛔ DIX cicatrices, pas
+  sept : A (chaine de la jumelle) 5 retirees le 18/11 ; B (seule) 3 : 1001482 UTLG66LE/5055, 1001563/1876, 1001580/11958 ;
+  C (autre chaine) 2 : 1001561 TRJ5Y59U/23995 (= la « 6e autre cause » du 18/11), 1001593 1cc703d9/14008. Son « 2 »
+  ne vaut que pour les 19 reacceptations ; les refus ont aussi deplace la date (642 au 11/11). ⚠ 23995 et 14008 :
+  « Vente reglee » au classeur, REFUSEES par notre cascade, jamais reacceptees -- sa decision chez Hektor.
+  + 20 jumelles SANS cicatrice = les 25 de l'audit du 18/11 § 4.3 (au jour pres : 25 ; exacte : 24 = 5 + 19).
+5 LE FILET : phase2/checks/classeur_detecteur_cicatrices.py (lecture seule, vraie date PAR LA BASE). En base : son motif
+  11 (3 cicatrices + 8 sans jumelle), forme 18/11 1, cicatrices 5 ; temoin 18/11 : 5/5 par la forme, 3/5 par la
+  signature. Dans le lot : etape ⑦, le BIEN entier, CRIE et ARRETE (code 3, --entendu=ID). Rejoue au 16/11 : 36 / 195,
+  dont les 10. Essai dans le vrai script, sortie detournee : code 3, 0 fichier, les 3 patchs du 16/11 intacts (md5).
+6 LA GARDE ⑤ lit la VRAIE date : des 5 du 18/11, elle en arrete 3 (H6CTRVR6, 0GV2LNV2, c08ff7cb), le filet les 2 autres.
+7 Memoire des cicatrices corrigee (dix, trois formes).
+⛔ A LUI : il colle le patch (§ 2 du rapport) ; les 5 cicatrices encore en base -- fabriquer leur mise de cote (en
+  mesurant d'abord ce que chaque retrait fait aux dossiers) ?
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

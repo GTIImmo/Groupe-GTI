@@ -33,6 +33,11 @@ LA PORTE D'UNE LIGNE TRANCHEE (sur les dossiers du rejeu A) -- M = ses pieces, N
                 « une piece mise de cote GARDE SON ANCIEN NUMERO DE DOSSIER »)
   HEKTOR        en surimpression : la ligne tient deux vraies pieces d'un meme genre (un doublon chez Hektor) -- sans
                 effet sur l'etiquette, c'est sa decision, bien par bien
+  ⭐ C5 AUX PORTES (sur son « OUI, ECRIS LA COUPE », reponses 21 quater, 22/11 soir) : une ligne RIEN (ou MISE_DE_COTE)
+                que le chainage SANS LES COPIES ne tient plus juste ne doit sa separation qu'a une copie -- « une creation
+                du Sheet ne decide jamais » (C5, 19/11). Elle devient COUPE_NEUVE : son morceau s'ecrit au brouillon,
+                et la separation tient sans la copie. Mesure du 22/11 : 4 lignes (535, 3540 bien 5262 ; 2388, 4113
+                bien 24733), et l'arrivee ne change pas (0 piece).
 
 USAGE (un rejeu du chainage prend ~4 min 30 : la mesure est DECOUPEE, chaque rejeu ecrit au fil dans le cache) :
   python -u phase2/checks/protocole_portes.py --rejeu A     la nuit telle qu'elle tourne (et son temoin)
@@ -146,6 +151,49 @@ def membres(ch: dict) -> dict:
     for a, c in ch.items():
         m[c].add(a)
     return m
+
+
+def rejeu_sans_copies(image: str, I) -> dict:
+    """Le chainage de la nuit (rejeu A : G2 et l'outil eteints) sur une copie EN MEMOIRE de l'image, les copies C5
+    retirees -- en cache (cle : image, module, rattachements, detachements, liste des copies). Ecrit le 22/11 dans
+    protocole_ce_qui_a_deplace_les_2560_depuis_le_16_11.py, rapatrie ici quand C5 est entree aux portes (meme cle)."""
+    copies = sorted(a for a, n in I.nature.items() if n == PC.COPIE)
+    h = hashlib.md5()
+    for p_ in (MODULE, FICHIER_RAT_PROD, FICHIER_DET_PROD):
+        h.update(p_.read_bytes().replace(b"\r\n", b"\n"))
+    h.update(json.dumps([ETEINTS, copies], sort_keys=True).encode())
+    f = P.DOSSIER / ("rejeu_%s_A_SANS_COPIES_%s.json" % (image, h.hexdigest()[:12]))
+    if f.exists():
+        d = json.loads(f.read_text(encoding="utf-8"))
+        return {int(k): v for k, v in d["ch"].items()}
+    t0 = time.time()
+    mod = charger("sans_copies", FICHIER_DET_PROD)
+    gardes = {k: os.environ.get(k) for k in ETEINTS}
+    os.environ.update(ETEINTS)
+    try:
+        src = sqlite3.connect("file:%s?mode=ro" % (P.IMAGES / image / "registre.sqlite").as_posix(), uri=True)
+        mem = sqlite3.connect(":memory:")
+        src.backup(mem)
+        src.close()
+        n = mem.execute("delete from %s where app_affaire_id in (%s)" % (mod.LEDGER_TABLE, ",".join(map(str, copies)))
+                        ).rowcount
+        if n != len(copies):
+            raise SystemExit("⛔ %d copies retirees sur %d" % (n, len(copies)))
+        with contextlib.redirect_stdout(io.StringIO()):
+            mod.recalculer_les_chaines(mem)
+        ch = {int(a): (int(c) if c is not None else None) for a, c in
+              mem.execute("select app_affaire_id, app_chaine_id from %s" % mod.LEDGER_TABLE)}
+        mem.close()
+    finally:
+        for k, v in gardes.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    f.write_text(json.dumps({"ch": {str(k): v for k, v in ch.items()}, "copies": copies,
+                             "duree_s": round(time.time() - t0)}), encoding="utf-8")
+    dire("   rejeu SANS LES %d COPIES fait en %.0f s -> %s" % (len(copies), time.time() - t0, f.name))
+    return ch
 
 
 def neutres_de(preuves: list) -> set:
@@ -265,6 +313,29 @@ def main() -> int:
             porte[i] = "MISE_DE_COTE"
             detail[i]["porte"] = "MISE_DE_COTE"
         detail[i]["mise_de_cote"] = sorted(mdc_de_ligne[i])
+    # ⭐ C5 AUX PORTES (son « OUI, ECRIS LA COUPE », 21 quater) : une ligne RIEN ou MISE_DE_COTE que le chainage SANS LES
+    #   COPIES ne tient plus juste ne doit sa separation qu'a une copie -> COUPE_NEUVE (son morceau s'ecrit au brouillon)
+    ch0 = rejeu_sans_copies(image, I)
+    m0 = membres(ch0)
+    c5p = []
+    for i, x in sorted(T.items()):
+        if porte[i] not in ("RIEN", "MISE_DE_COTE"):
+            continue
+        Mv = {q for q in x["pieces"] if q in ch0}
+        Nv = {q for q in neutres_de(x["preuves"]) if q in ch0}
+        Cs0 = {ch0[q] for q in Mv}
+        if Mv and len(Cs0) == 1 and not (m0[next(iter(Cs0))] - Mv - Nv):
+            continue
+        c5p.append(i)
+        detail[i]["c5_aux_portes"] = {"porte_sans_la_regle": porte[i], "dossiers_sans_copies": len(Cs0),
+                                      "pieces_de_trop_sans_copies": sorted(set().union(*(m0[c] for c in Cs0)) - Mv - Nv)
+                                      if Cs0 else []}
+        porte[i] = "COUPE_NEUVE"
+        detail[i]["porte"] = "COUPE_NEUVE"
+    dire("   C5 AUX PORTES : %d ligne(s) juste(s) aujourd'hui que le chainage SANS LES COPIES ne tient plus -> COUPE_NEUVE "
+         ": %s" % (len(c5p), " ".join("%s (ligne %s, etait %s)" % (i, T[i]["num"],
+                                                                   detail[i]["c5_aux_portes"]["porte_sans_la_regle"])
+                                      for i in c5p)))
     # R7a (validee le 22/11) : la piece a part DEJA dans le dossier de la ligne y reste -- « on ne coupe pas le dossier
     #   entre elles » : si la ligne doit etre coupee d'autre chose, son morceau l'emporte avec elle (mesure du 22/11 :
     #   sans cela, 305KAY9W perdait sa 24124 dans le reste de l'ancien dossier)
@@ -297,7 +368,9 @@ def main() -> int:
         M, N = T[i]["pieces"], neutres_de(T[i]["preuves"])
         Cs = {ch[p_] for p_ in M}
         return len(Cs) == 1 and not (mm[next(iter(Cs))] - M - N)
-    par_g2 = sorted(i for i in T if porte[i] not in ("RIEN", "MISE_DE_COTE") and juste(i, chB, mB)) if chB else []
+    # ⚠ les lignes « C5 aux portes » ne se jugent pas sur B : B porte encore les copies, qui les tiennent justes
+    par_g2 = sorted(i for i in T if porte[i] not in ("RIEN", "MISE_DE_COTE") and i not in c5p
+                    and juste(i, chB, mB)) if chB else []
     casse_g2 = sorted(i for i in T if porte[i] in ("RIEN", "MISE_DE_COTE") and not juste(i, chB, mB)) if chB else []
     bouge_g2 = sum(1 for p_ in chA if chA[p_] != chB.get(p_)) if chB else -1
     dire("   REJEU B (+ G2) : %d pieces changent de dossier ; G2 mettrait JUSTES %d lignes a corriger, et en CASSERAIT %d "

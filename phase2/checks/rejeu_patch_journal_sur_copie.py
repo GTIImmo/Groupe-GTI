@@ -50,6 +50,7 @@ import os
 import subprocess
 import sys
 import time
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
@@ -177,11 +178,15 @@ class Local:
         if not (self.data / "PG_VERSION").exists():
             subprocess.run([self._exe("initdb"), "-D", str(self.data), "-U", "postgres", "-A", "trust", "-E", "UTF8",
                             "--locale=C"], check=True, capture_output=True)
+        # ⚠ PAS de capture_output ici (22/11, 21:40) : sous Windows le serveur lance par pg_ctl HERITE des tuyaux, et
+        #   subprocess.run attend leur fin -- qui ne vient jamais. Le serveur ecrit deja dans son journal (-l).
         subprocess.run([self._exe("pg_ctl"), "-D", str(self.data), "-l", str(self.journal), "-w", "-o",
-                        "-p %d -c listen_addresses=localhost" % PORT, "start"], check=True, capture_output=True)
+                        "-p %d -c listen_addresses=localhost" % PORT, "start"], check=True,
+                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def arreter(self) -> None:
-        subprocess.run([self._exe("pg_ctl"), "-D", str(self.data), "-m", "fast", "-w", "stop"], capture_output=True)
+        subprocess.run([self._exe("pg_ctl"), "-D", str(self.data), "-m", "fast", "-w", "stop"],
+                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     @staticmethod
     def cnx(base: str = "postgres", autocommit: bool = True):
@@ -197,7 +202,7 @@ def charger_modele(L: Local, d: Path, man: dict) -> list[str]:
     rouges = []
     cn = L.cnx()
     cu = cn.cursor()
-    for b in ("modele", "modele_apres", "avant", "apres", "faux", "inverse"):
+    for b in ("modele", "modele_apres", "avant", "apres", "avant2", "faux", "inverse"):
         cu.execute("drop database if exists %s" % b)
     cu.execute("create database modele")
     cn.close()
@@ -307,7 +312,7 @@ def journal_neuf(base: str, depuis: int, apres: bool) -> list:
     cu.execute("select evenement, dossier_uuid::text, dossier_numero, autre_uuid::text, app_chaine_id, transactions, "
                "combien, pourquoi%s from public.app_dossier_etiquette_journal where id > %%s order by id" % (
                    ", ancien_numero" if apres else ""), (depuis,))
-    rows = [tuple(r) for r in cu.fetchall()]
+    rows = [tuple(tuple(x) if isinstance(x, list) else x for x in r) for r in cu.fetchall()]
     cn.rollback()
     cn.close()
     return rows
@@ -339,11 +344,20 @@ def comparer(nom: str, dep_a: dict, fin_a: dict, j_a: list, r_a: list, dep_b: di
     ec_led = sorted(a for a in set(led_a) | set(led_b) if led_a.get(a) != led_b.get(a))
     ec_cpt = sorted(an for an in set(fin_a["compteur"]) | set(fin_b["compteur"])
                     if fin_a["compteur"].get(an) != fin_b["compteur"].get(an))
-    ec_j = sum(1 for x, y in zip(ja, jb) if x != y) + abs(len(ja) - len(jb))
+    # ⚠ 22/11, 21:55 -- LE JOURNAL SE COMPARE EN ENSEMBLE, PAS LIGNE A LIGNE. La pose ecrit ses lignes dans l'ordre de
+    #   l'uuid du dossier, et cet uuid est TIRE AU HASARD (gen_random_uuid) : deux passages de LA MEME fonction ecrivent
+    #   les memes lignes dans un autre ordre (prouve par le temoin « avant contre avant » de S1). La 1re version comparait
+    #   par position et criait 42 / 718 / 50 ecarts -- c'etait l'ordre, pas le patch. On compare donc le MULTI-ENSEMBLE
+    #   des lignes, les uuid nes pendant le rejeu nommes par leur plus petite piece ; l'ecart par position reste dit.
+    ca, cb = Counter(ja), Counter(jb)
+    ec_j = sum((ca - cb).values()) + sum((cb - ca).values())
+    ec_j_ordre = sum(1 for x, y in zip(ja, jb) if x != y) + abs(len(ja) - len(jb))
     bouge = sum(1 for a in fin_a["ledger"] if fin_a["ledger"][a] != dep_a["ledger"].get(a))
     return {"etat": nom, "pieces": len(led_a), "pieces_qui_bougent_avant": bouge, "ecarts_pieces": len(ec_led),
             "ex_ecarts": ec_led[:10], "ecarts_compteur": ec_cpt, "journal_avant": len(ja), "journal_apres": len(jb),
-            "ecarts_journal": ec_j, "rend_avant": r_a, "rend_apres": r_b, "rend_egal": r_a == r_b}
+            "ecarts_journal": ec_j, "ecarts_journal_par_position": ec_j_ordre,
+            "ex_journal": [list(map(str, x)) for x in list((ca - cb).elements())[:3] + list((cb - ca).elements())[:3]],
+            "rend_avant": r_a, "rend_apres": r_b, "rend_egal": r_a == r_b}
 
 
 def verifier_ancien(dep: dict, j_b: list) -> tuple[int, list]:
@@ -483,7 +497,29 @@ def etape_rejouer(binaires: Path, copie: str | None) -> int:
                      (" ; contre la prediction : %d / %d numeros neufs egaux" % (
                          c["contre_la_prediction"]["egales"], c["contre_la_prediction"]["nees"]))
                      if "contre_la_prediction" in c else "", "VERT" if vert else "⛔ ROUGE"))
+            dire("      journal : %d ligne(s) differente(s) en ENSEMBLE ; %d par POSITION (l'ordre suit l'uuid tire au hasard)"
+                 % (c["ecarts_journal"], c["ecarts_journal_par_position"]))
             if etat == "S1":
+                # LE TEMOIN DU HASARD : la fonction d'AUJOURD'HUI contre elle-meme -- l'ordre du journal doit differer
+                #   (sinon le choix de comparer en ensemble ne serait pas justifie), et l'ensemble doit etre egal
+                base_depuis("modele", "avant2")
+                preparer("avant2", etat, chE)
+                dep_2 = photo("avant2", False)
+                rend_2 = jouer_pose("avant2", args)
+                fin_2 = photo("avant2", False)
+                jn_2 = journal_neuf("avant2", dep_2["jmax"], False)
+                c2 = comparer("S1-avant-contre-avant", dep["avant"], fin["avant"], jn["avant"], rend["avant"], dep_2,
+                              fin_2, jn_2 + [], rend_2)
+                hasard = c2["ecarts_journal_par_position"] > 0 and c2["ecarts_journal"] == 0 and c2["ecarts_pieces"] == 0
+                dire("   TEMOIN DU HASARD (la fonction d'aujourd'hui contre elle-meme) : %d ecart(s) de piece ; journal %d "
+                     "en ensemble, %d par position -- %s" % (
+                         c2["ecarts_pieces"], c2["ecarts_journal"], c2["ecarts_journal_par_position"],
+                         "l'ORDRE du journal est du hasard, l'ENSEMBLE est stable" if hasard else
+                         "⛔ le temoin ne dit pas ce qu'on croit"))
+                if not hasard:
+                    rouges.append("temoin du hasard")
+                res["temoin_du_hasard"] = {k: c2[k] for k in ("ecarts_pieces", "ecarts_journal",
+                                                              "ecarts_journal_par_position")}
                 # LE TEMOIN INVERSE : le patch fausse expres (le rang d'une scission + 1) -- la comparaison doit crier
                 base_depuis("modele", "faux")
                 jouer_fichier("faux", PATCH, remplacer=FAUSSE)

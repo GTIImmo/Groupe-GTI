@@ -56,6 +56,11 @@ def dire(s: str = "") -> None:
 
 
 def rejeu_sans_copies(image: str, I) -> dict:
+    """Rapatrie dans protocole_portes.py le 22/11 (21 quater : C5 entre aux portes) -- meme code, meme cle de cache."""
+    return PO.rejeu_sans_copies(image, I)
+
+
+def _rejeu_sans_copies_d_origine(image: str, I) -> dict:
     """Le chainage de la nuit (rejeu A : G2 et l'outil eteints) sur une copie EN MEMOIRE de l'image, les copies C5
     retirees -- en cache (cle : image, module, rattachements, detachements, liste des copies)."""
     copies = sorted(a for a, n in I.nature.items() if n == PC.COPIE)

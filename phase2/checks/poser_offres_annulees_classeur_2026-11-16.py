@@ -125,7 +125,11 @@ FAMILLES = {
         "lot": "offres vente reglee", "exige_chaine_mixte": True,
         "pourquoi": "la regle [B] est ecartee des que la chaine n est pas QUE des offres"},
 }
-FAMILLE = (sys.argv[1] if len(sys.argv) > 1 else "offres-annulees")
+# --entendu=ID,ID (21 quater) : les lignes que le FILET DES CICATRICES a nommees et qu'un humain a regardees
+_ARGS = [x for x in sys.argv[1:] if not x.startswith("--")]
+ENTENDU = {i.strip() for x in sys.argv[1:] if x.startswith("--entendu=") for i in x.split("=", 1)[1].split(",")
+           if i.strip()}
+FAMILLE = (_ARGS[0] if _ARGS else "offres-annulees")
 if FAMILLE not in FAMILLES:
     raise SystemExit("⛔ famille inconnue : %s\n   au choix : %s"
                      % (FAMILLE, ", ".join(FAMILLES)))
@@ -329,8 +333,26 @@ def main() -> int:
     # ⚠ ET LE GEL LAISSE DES OFFRES SANS LIEN : 63 sur 4 583 (1,4 %), dont 55
     #   'refused'. Mesure du 16/11. Une seule touche nos cibles -- 60CLRO51 --
     #   mais la garde doit tenir pour les autres le jour ou le lot s'elargira.
-    deja = par_lots(cl, "app_affaire_ledger", "app_chaine_id,kind,date",
-                    "app_chaine_id", [c["chaine"] for c in pretes])
+    # ⛔⛔ 22/11 (reponses 21 quater, § 5) : CETTE GARDE LISAIT LA COLONNE `date` BRUTE -- et c'est elle qui a laisse
+    #   passer les cicatrices du 16/11. Chez Hektor `date` porte le DERNIER mouvement d'une offre : nos gestes du
+    #   11-12/11 l'avaient deplacee au 11/11 ou au 12/11, la date du classeur ne la retrouvait plus, le lot croyait
+    #   l'offre absente et en posait une seconde (1876 -> copie 1001563, 11958 -> copie 1001580, et 8 autres).
+    #   « ON CORRIGE LES LECTEURS, JAMAIS LA DONNEE » : elle lit maintenant LA VRAIE DATE, calculee PAR LA BASE
+    #   (app_dossier_jour_date_transaction, le journal de l'offre) -- aucune regle recopiee ici.
+    import classeur_detecteur_cicatrices as DC
+    try:
+        cn_, cu_ = DC.connexion()
+        cu_.execute("select app_chaine_id, kind, public.app_dossier_jour_date_transaction(kind, date, "
+                    "propositions_json, app_affaire_id) from public.app_affaire_ledger where app_chaine_id = any(%s)",
+                    (sorted({int(c["chaine"]) for c in pretes}),))
+        deja = [{"app_chaine_id": ch_, "kind": k_, "date": d_} for ch_, k_, d_ in cu_.fetchall()]
+        cn_.rollback()
+        cn_.close()
+    except Exception as e:  # noqa: BLE001
+        print("⛔ la garde ⑤ n'a pas pu lire la VRAIE date (%s) -- rien n'est genere."
+              % str(e).splitlines()[0][:160])
+        print("   ⚠ il lui faut psycopg2 : lancer le lot avec le python du systeme (python -X utf8 ...)")
+        return 2
     dates_par_chaine: dict[str, set[str]] = {}
     for r in deja:
         if str(r.get("kind")) == F_ROLE:
@@ -378,6 +400,23 @@ def main() -> int:
         if len(ecartees6) > 10:
             print("     ... et %d autres" % (len(ecartees6) - 10))
         print()
+
+    # ── ⑦ LE FILET DES CICATRICES -- 22/11 (reponses 21 quater, § 3) ─────────────────────────────────────────────
+    # ⛔⛔ POURQUOI. Le filet du 18/11 cherchait « une ligne posee sur une chaine qui en portait DEJA une » : il a trouve
+    #   5 doublons. Mais d'autres copies ont CREE LEUR PROPRE CHAINE (1001563, 1001580 : seules dans leur chaine) --
+    #   une forme qu'il ne pouvait pas voir. Celui-ci regarde LE BIEN ENTIER, pas la chaine (qui n'existe qu'apres la
+    #   nuit) : une JUMELLE (meme genre, meme VRAIE date), ou un bien dont un de nos gestes a touche une offre.
+    # ⭐ IL CRIE, IL NE CORRIGE PAS (son mot) : la ligne est NOMMEE et le lot S'ARRETE ; l'humain la declare hors jeu
+    #   (app_classeur_ligne_exclue) ou relance avec --entendu=ID,ID. Rejoue le 22/11 sur les 195 copies posees le
+    #   16/11 : il aurait crie sur 36, dont les 10 cicatrices (les 5 du 18/11 : 5 sur 5).
+    # ⛔ Aucune ligne n'est retiree ici en silence -- voir classeur_detecteur_cicatrices.py.
+    import classeur_detecteur_cicatrices as DC
+    code_filet = DC.crier_avant_de_poser(
+        [{"id_unique": c["id_unique"], "kind": F_ROLE, "date": c["date"], "annonce": c["annonce"]} for c in pretes],
+        ENTENDU)
+    if code_filet:
+        return code_filet
+    print()
 
     if not pretes:
         print("⛔ aucune ligne ne passe toutes les gardes -- rien n'est genere.")
