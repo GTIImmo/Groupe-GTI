@@ -4238,6 +4238,40 @@ Son mot : `C:\Hektor\mot_du_23_11_les_onze_sures_et_les_six_a_examiner.md`. Rapp
   Tant que 17025 n'est pas tranchee, la copie reste la seule trace d'une acceptation sur le bien 36165.
 ```
 
+### 20.18 Son mot du 23/11 (3) — le patch est COLLÉ, et l'écart d'empreinte expliqué : 214 retours chariot
+
+Son mot : `C:\Hektor\mot_du_23_11_patch_colle_et_un_ecart_a_trancher.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_23_11_3_LE_PATCH_COLLE_L_ECART_EST_LE_COLLAGE_2026-11-23.md`. ⛔ L'inverse n'est PAS joué
+(son mot). Rien chez Hektor, rien poussé.
+
+```
+1 LE PATCH DU JOURNAL EST EN PRODUCTION (colle par lui le 23/11, avant 01:00). apres-collage (01:02) : repetition 9/9 ;
+  190/190 fusions (47) et scissions (143) portent leur ancien numero, 0 vide ; journal 11 657 ; seul ROUGE : l'empreinte
+  -- b9fa8dea au lieu de e695bf7e (copie).
+2 L'ECART, MESURE (comparer_corps_fonction_copie_et_production.py) : MEME version (17.6) ; en-tete IDENTIQUE (securite,
+  volatilite, search_path, langage, cout, proprietaire, arguments, resultat) ; LE CORPS differe de 214 RETOURS CHARIOT,
+  un a CHAQUE fin de ligne : production md5(prosrc) 1431b364 / 10 455 = copie ea1d0db1 / 10 241 + 214. Sans les CR :
+  corps identique a la copie ET au fichier du patch ; et EN PRODUCTION md5(replace(pg_get_functiondef, chr(13), ''))
+  = e695bf7e, celle de la copie, a l'octet. 16 chaines '...' dans le corps, AUCUNE sur plusieurs lignes : les CR ne
+  tombent que dans du blanc ou une fin de commentaire -- aucune valeur ne change. 28 fonctions publiques portent des CR
+  (la meme cause : un CREATE OR REPLACE colle depuis Windows -- memoire empreinte-md5-faussee-par-fins-de-ligne-windows).
+3 LE COLLAGE REPRODUIT SUR LA COPIE (rejeu_patch_tel_que_colle_crlf.py : le meme rejeu, chaque fichier colle passe en
+  CRLF) : la fonction posee = b9fa8deae9d73caa7b059918488e7f94, L'EMPREINTE DE LA PRODUCTION, a l'octet. S0-S4 : 0 ecart
+  de piece / compteur / journal, 275/275 predits, temoin du hasard 0 en ensemble, temoin inverse 571 -- la fonction QUI
+  TOURNE est prouvee. Seul rouge : l'inverse (colle en CRLF -> 9581f8d2 brut, 815e956f sans les CR, colonne retiree :
+  il MARCHE -- ses gardes sont des ancres d'une ligne, insensibles).
+4 ⛔ LE DEFAUT EST DANS MON CONTROLE, pas dans le patch : il comparait md5(pg_get_functiondef) BRUT. La memoire le disait
+  depuis le 08/10 (« ne pas ecrire 0 CR attendu dans un controle de patch qui CREE une fonction »). 5e fois. Et mon rejeu du
+  22/11 ne traversait pas le collage (lecon 30) -- le rejeu CRLF le fait. Correction PROPOSEE, NON FAITE (son « RIEN
+  D'AUTRE ») : comparer md5(replace(..., chr(13), '')) a e695bf7e, et afficher le brut avec son nombre de CR.
+  Le mode matin AFFICHE l'empreinte sans la juger : il ne criera pas dessus.
+  ⚠ Pour tout PROCHAIN patch de cette fonction : son empreinte d'avant BRUTE est b9fa8dea -- sa garde doit retirer les CR.
+5 SES DECISIONS : 14112 VALIDEE pour le bien 28653 (ses onze tiennent) ; 16421 SORT de la liste (affaire tombee) -> ONZE
+  a reparer, CINQ a examiner ; la borne a UN AN ; les 8 douteuses des 19 du 12/11 : on ne touche a rien, tranchees APRES
+  les onze, par le meme detecteur, JAMAIS dans le meme lot.
+⛔ A LUI : garder le patch (la difference est du blanc, prouvee) ou jouer l'inverse avant 05:00 ; la correction du controle.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
