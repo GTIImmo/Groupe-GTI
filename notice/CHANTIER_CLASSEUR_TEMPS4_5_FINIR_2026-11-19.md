@@ -5030,6 +5030,96 @@ Mesure : phase2/checks/protocole_les_dates_du_11_11_2026-11-23.py (lecture seule
   attendent le meme arbitrage ; une regle d'abord, pas un cas.
 ```
 
+
+### 20.32 Le verrou ouvert : ses trois familles mesurées, ses 20 à part dedans, R17 (la sœur de chaîne) à blanc
+
+Son mot du 23/11 (20) (`C:\Hektor\mot_du_23_11_le_verrou_mesure_trois_familles.md`) : « 56 lignes, deux causes [...] 7 se
+débloquent par simple élimination [...] CE QUI RESTE A TOI : 1. LE TEMOIN INVERSE de la famille B [...] 2. LE POINT 1 DE TA
+PROPRE REGLE : aucun verdict deja rendu ne change [...] 3. Pour les 8 « melange » : refais le passage ». Et dans son
+message : dates du 11/11 CLOSES ; la piste UTC RÉFUTÉE par lui (21:59:59 et 22:59:59 = minuit moins une seconde, heure de
+Paris, été et hiver) ; « Ouvre le verrou maintenant ». Mesure : phase2/checks/protocole_le_verrou_mesure_2026-11-23.py
+(lecture seule, image du 23/11 08:02).
+
+```
+0 LE REJEU : juger_bien() sur les 33 biens du verrou redonne le passage 51 a l'identique (77 lignes, 0 ecart). Sa
+  decomposition se retrouve a l'unite : 46 « prix + honoraires de plusieurs acheteurs », 6 « sans date, ceux d'aucune
+  ligne », 4 « une date sur aucune case » ; et ses trois etats du couple aussi : 7 / 8 / 31. 33 pieces pour 56 lignes,
+  aucune ligne retenue par deux pieces.
+
+1 CE QUE LA MESURE RETOURNE DANS SON MOT
+  . LE « PEIGNE » N'EST PAS DEUX AFFAIRES CREEES EN ALTERNANCE : sur les 25 biens de la famille A, c'est une PREMIERE
+    AFFAIRE TOMBEE (ligne « Annulee » : offre refusee, compromis annule) PUIS LA VENTE, au MEME prix affiche -- d'ou
+    « plusieurs acheteurs ». La piece qui retient est TOUJOURS le compromis annule de l'affaire tombee : 25 sur 25, dont
+    24 sans date. Le gel du 16/11 la donne a la ligne annulee 20 fois (aucun gel 5 fois).
+  . SES SEPT « PAR ELIMINATION » : l'elimination tient 7 fois sur 7 (la jumelle tranchee tient son PROPRE compromis au
+    meme prix + honoraires). Mais 4126 (P252U1JH) est une de SES 20 A PART.
+  . FAMILLE B, 5 PIECES SUR 8 NE SONT PAS « SANS LIGNE » :
+    - les trois biens recents ONT leur ligne : 83919b13, 02b42a23, 057f78c7 (« Annulee », deja TRANCHEES sur leur compromis
+      28609, 28680, 28643). La piece a part est l'OFFRE de cette ligne (meme chaine, meme montant, 4, 28 et 2 jours apres sa
+      case). « Le Sheet ne porte que la vivante » est faux ;
+    - 20088 : son montant EST le Prix de ZW7MKTWH (50 000), et sa soeur 20089 est l'offre de ZW7MKTWH au jour exact ;
+    - 4542 : sa soeur 4544 (108 000, 10/09/2021, autre chaine) tombe 5 jours apres la case de 40ELE6SQ (05/09/2021, Prix
+      110 000, Commission 8 000 = les honoraires du compromis) -- probablement l'affaire de 40ELE6SQ, prix negocie.
+    Seules 11204 (ZZ5WKMWM) et 24649 (ESVJUR12, ULA087KO) sont des affaires tombees completes SANS ligne. Pour 11204, sa
+    correction de ma conclusion est juste sur le fond : 11204 a sa soeur 11207 au meme montant.
+  . ⛔ CE QUE SON MOT NE DIT PAS : 11 DES 33 PIECES SONT PARMI SES 20 A PART (sa decision du 21/11, « aucune regle ne les
+    donne a une ligne ») : 4126, 4327, 4533, 4542, 4560, 4621, 4669, 7710, 14110, 20088, 21520. Elles retiennent 21 des 56
+    lignes. Aucune regle ne les libere sans son mot -- et 5 ventes reglees qu'elles retiennent (FYNZEKI6 D2020-0556,
+    SWDW99J5 D2021-0610, ZMQZSE9Q D2021-0045, 910O0A2Q D2020-0462, BNWNKPJH D2021-0080) ont pour numero du 16/11 le dossier
+    qu'elles PARTAGENT avec ce compromis tombe, plus petit : toute coupe leur donnerait un numero NEUF (la regle du plus
+    ancien). C'est exactement pourquoi elles sont dans ses 20 (« leur place bougerait une etiquette »).
+
+2 SON POINT 1, LE TEMOIN INVERSE DE B : 1 269 affaires tombees completes (compromis annule + offre refusee au meme montant,
+  meme bien), sur 1 096 biens : 687 sur un bien sans aucune ligne ; 534 au montant d'une ligne (476 tenues par elle, 55
+  par aucune, 3 par une autre) ; 48 au montant d'AUCUNE ligne, dont 6 TENUES PAR UNE LIGNE TRANCHEE (prouvees autrement :
+  par la date de leur compromis, 4203/4204 NNA8LNEF et 11667/11670 13KBCS85 ; par R9, 12475/12476 2K0LUIIG). « Complete + montant d'aucune ligne =>
+  pas de ligne » se trompe 6 fois sur les 48 verifiables (et 4542 serait une 7e) : CE N'EST PAS UNE REGLE TELLE QUELLE.
+
+3 LA REGLE QUE LA MESURE PROPOSE -- R17, LA SOEUR DE CHAINE (VARIANTE) : une vraie piece A PART dont la chaine Hektor porte
+  UNE seule piece de l'autre moitie de la meme affaire tombee (compromis ANNULE <-> offre REFUSEE), au MEME montant,
+  prouvee a UNE seule ligne, suit cette piece a cette ligne. Gardes : g1 les dates (contre_dates) ; g2 l'offre n'est pas
+  apres le compromis ; g3 la ligne ne tient deja aucune vraie piece de son genre ; g4 jamais a une ligne deja tranchee
+  (la piece devient la plus petite de la ligne, et elle est possible pour PLUSIEURS lignes -- sinon R7a / R7b la tiennent).
+  TEMOIN POSITIF : 302 paires tenues au passage 51 -> 300 la meme ligne, 2 des lignes DIFFERENTES, NOMMEES : biens 2393
+    (1101 compromis 16/06/2021 = 2FBR2M9U ; 1104 offre 19/04/2021 = E6RLLKMN) et 23353 (11145 = 4f7b9749 ; 11147 =
+    e9260960) -- la chaine Hektor y mele deux affaires au meme prix affiche, chacune prouvee par sa date exacte.
+  REJOUEE AVEC SES GARDES, DANS LES DEUX SENS : 581 la bonne ligne, 0 une autre, 23 abstentions -- dont les 4 cas des deux
+    ecarts (g1 trois fois, g3 une fois).
+  LE PASSAGE, EN TROIS TEMPS (les deux premiers NOMMES, pas effaces) :
+    52 (g1-g3) : 18 tranchees, 0 etiquette changee -- MAIS 23 lignes deja tranchees recoivent une piece de plus, et un temoin
+       bouge (0OO1BEZD : coupes_29 +1 accord, V3 +1 ecart, V3 neutres +1 ecart). Effet de bord sur du deja-rendu : refuse
+       par sa regle de methode (§ 20.29).
+    53 (+ g4 « la plus petite ») : 15 tranchees, temoins identiques -- MAIS 4 lignes rendues par R7a recoivent encore leur
+       piece (7Y9XCYOJ, J1FY054Q, O8BY6AC8, XP7WNTKK), contre le texte valide de R7a (« jamais donnee a la ligne »).
+    54 (g4 complete) : 15 VERROU -> TRANCHEE ; 0 VERDICT RENDU NE CHANGE, NI ETIQUETTE NI PIECE ; TEMOINS IDENTIQUES LIGNE
+       POUR LIGNE (788 / 788, les memes 19 ecarts). Seules 6 PREUVES de lignes rendues perdent la mention d'une piece a part
+       neutre, qui a maintenant sa ligne : GO6J9CFL (205), ROWC4ZPG (20470), 5NAOUTP0 (27081), PPCKX6OZ (24163), 1F6LUQGR
+       (14966), YXJMR8DU (10015).
+  LES 15 : 2G1YQEXA, 7CZTM50L, 7M4U001G, BG0Z1U4O, C8CU5TDK, HSSRAELU, I7DTFBQT, J3C6TGAU, J8ZB7EV1, NTOMOIK6, SBT1INZT,
+    TK5JTXYP, UBSIJYPW, V0IAZOO7, VI2U6G1N -- chacune prend le numero de SON dossier, aucun numero neuf. Les deux ventes
+    reglees (UBSIJYPW D2024-0279, 7M4U001G D2021-0139) retrouvent EXACTEMENT leur numero du 16/11 (sentinelle des 2 560 ;
+    aucune autre ne bouge, puisque aucun verdict rendu ne change). LE VERROU : 56 -> 41 ; LE RESTE A VIDER : 91 -> 76.
+
+4 SES POINTS 2 ET 3 : ses 7 -> 4 tombent par R17 (2G1YQEXA, BG0Z1U4O, J8ZB7EV1, VI2U6G1N : leur soeur de chaine, une preuve
+  plus forte que l'elimination) ; restent P252U1JH (4126, ses 20), UAER0F0F (7903) et ULFVA1AQ (11579), que seule
+  l'elimination liberait. Ses 8 « melange » -> 6 tombent (7CZTM50L, C8CU5TDK, HSSRAELU, I7DTFBQT, J3C6TGAU, SBT1INZT) ; les
+  2 autres (L2B2WGCF, Z3DYDC4X) sont retenues par 14110, une de ses 20. Et 5 de ses 31 tombent aussi.
+
+5 CE QUI RESTE AU VERROU (41), PAR CAUSE :
+  21 retenues par SES 20 A PART (11 pieces) -> sa decision (garder le numero de la vente, ou couper) ;
+   3 dont la piece est l'offre d'une affaire tombee dont la ligne est DEJA tranchee (29cf0ca8, 8bcc3b63, b884cbd4) : R17
+     les liberait (passage 52) en ajoutant la piece a une ligne rendue (83919b13, 02b42a23, 057f78c7, etiquette inchangee)
+     -> sa decision, parce que ca touche au deja-rendu ;
+   3 affaires tombees completes sans ligne (ZZ5WKMWM ; ESVJUR12 et ULA087KO) -> la mise de cote, regle a mesurer (⚠ isoler
+     24649 donnerait D2018-0535 au compromis tombe et un numero NEUF a la vente reglee ESVJUR12) ;
+   8 que l'ELIMINATION liberait (ULFVA1AQ, UAER0F0F, d47d6790, 5e112aba, SUVPN4BH, 3THZJOOG, SC58GWXX, VYNGKCR0) -> la
+     regle suivante, mesuree APRES son mot sur R17 ;
+   5 ou l'elimination s'abstient (deux candidates libres) : LNWLBVKG, ODF1PWJ0 (17203) ; MYILWKZQ, R7NU9NPM, 4G2UHO35 (19815) ;
+   1 offre isolee, hors famille comme il l'a dit : OAUI9CKR (27609).
+RIEN D'ECRIT (ni base, ni Sheet, ni Hektor) ; rien pousse. Les passages 52-54 sont des VARIANTES au socle. A LUI : R17 ;
+ses 20 a part ; les 3 offres des affaires deja tranchees.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

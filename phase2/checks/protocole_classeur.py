@@ -228,6 +228,13 @@ VARIANTES = {
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
            "du 20/11, jamais a une ligne deja tranchee si elle est plus petite que la plus petite piece de son morceau)",
+    # R17 (23/11, le verrou : son mot (20), « trois familles, zero exception ») -- PROPOSEE, mesuree a blanc
+    "R17": "LA SOEUR DE CHAINE : une vraie piece A PART dont la chaine Hektor porte UNE seule piece de l'autre moitie de la "
+           "meme affaire tombee (compromis ANNULE <-> offre REFUSEE), au MEME montant, prouvee a UNE seule ligne, suit cette "
+           "piece a cette ligne -- SAUF si les dates la contredisent (apres l'annulation + 15 j, compromis avant l'offre), "
+           "si l'offre est datee APRES le compromis, ou si la ligne tient deja une vraie piece de son genre (temoin : rejouee "
+           "dans les deux sens sur les 302 paires tenues au passage 51, elle donne la BONNE ligne 581 fois, une AUTRE 0 ; "
+           "elle s'abstient 23 fois, dont les 4 cas des 2 chaines qui melent deux affaires -- biens 2393 et 23353)",
     # 14033 (sa B3 du 20/11) : ses DEUX options, mesurees a blanc cote a cote (son mot (15)) -- jamais appliquees
     "B3A": "14033 A PART POUR TOUJOURS : mise de cote comme R7b, avec son dossier d'aujourd'hui (elle garde son numero)",
     "B3B": "14033 A DONNADIEU (ea6a28a7) : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU (critere 1)",
@@ -936,6 +943,68 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
     return out
 
 
+# R17 (variante, 23/11) : les deux moities d'une affaire TOMBEE, dans la meme chaine Hektor
+AUTRE_MOITIE_R17 = {("compromis", "cancelled"): ("offre", "refused"), ("offre", "refused"): ("compromis", "cancelled")}
+
+
+def regle_r17(I: Image, b: str, r: dict) -> dict:
+    """R17 (VARIANTE, son mot (20) du 23/11 sur le verrou) : LA SOEUR DE CHAINE. Une affaire tombee laisse deux pieces dans
+    la MEME chaine Hektor : son compromis ANNULE et son offre REFUSEE, au meme montant. Quand l'une est A PART et que
+    l'autre -- sa soeur UNIQUE dans la chaine, et reciproquement -- est prouvee a UNE seule ligne, la piece a part suit sa
+    soeur. Ses trois gardes : g1 les dates (contre_dates) ; g2 l'offre n'est pas datee apres le compromis ; g3 la ligne ne
+    tient deja aucune vraie piece du genre de la piece (sinon : deux affaires, ou une renegociation -- elle s'abstient).
+    Temoin (protocole_le_verrou_mesure_2026-11-23.py, section 6) : rejouee dans les deux sens sur les 302 paires tenues au
+    passage 51 -- 581 la bonne ligne, 0 une autre, 23 abstentions (dont les 4 cas des chaines 2393 et 23353, qui melent
+    deux affaires au meme prix affiche). Rend {piece: (ligne, preuve)}."""
+    D = I.D
+    S = {a: I.pieces[a]["app_chaine_id"] for a in D.par_bien.get(b, [])}
+
+    def soeurs(a: int) -> list:
+        p = D.REG[a]
+        k = AUTRE_MOITIE_R17.get((p["genre"], p["etat"]))
+        if not k or p["montant"] is None:
+            return []
+        return [q for q in D.par_bien.get(b, []) if q != a and S.get(q) == S.get(a) and I.nature[q] == PC.VRAIE
+                and (D.REG[q]["genre"], D.REG[q]["etat"]) == k and D.REG[q]["montant"] is not None
+                and abs(D.REG[q]["montant"] - p["montant"]) <= 1]
+    out = {}
+    for a in sorted(r["apart"]):
+        if I.nature[a] != PC.VRAIE or a in les_20_a_part() or a in A_PART_PAR_DECISION:
+            continue
+        s = soeurs(a)
+        if len(s) != 1 or len(soeurs(s[0])) != 1:
+            continue
+        q = s[0]
+        ls = r["va"].get(q)
+        if not ls or len(ls) != 1:
+            continue
+        L = next(iter(ls))
+        if D.contre_dates(a, {L}):
+            continue                                                       # g1
+        o, cp = (a, q) if D.REG[a]["genre"] == "offre" else (q, a)
+        if D.REG[o]["date"] and D.REG[cp]["date"] and D.REG[o]["date"] > D.REG[cp]["date"]:
+            continue                                                       # g2
+        if [x for x, l_ in r["va"].items() if L in l_ and x != a and I.nature[x] == PC.VRAIE
+                and D.REG[x]["genre"] == D.REG[a]["genre"]]:
+            continue                                                       # g3
+        # g4 (passage 52 -> 53) : JAMAIS A UNE LIGNE DEJA TRANCHEE. Sans elle, le passage 52 donnait la piece a 23 lignes
+        #   deja tranchees (etiquette identique, une piece de plus) et faisait bouger un temoin (0OO1BEZD : coupes_29 +1
+        #   accord, V3 +1 ecart, V3 neutres +1 ecart) -- « un temoin parfait ne rachete pas un effet de bord sur du
+        #   deja-rendu ». La piece n'est donnee que si elle devient la PLUS PETITE vraie piece de la ligne : la ligne etait
+        #   alors retenue par elle (verrou) ou sans vraie piece -- elle n'avait pas de verdict rendu.
+        #   ET (passage 53 -> 54) : la piece doit etre possible pour PLUSIEURS lignes. Possible pour cette seule ligne,
+        #   R7a (deja dans son dossier) ou R7b (mise de cote) la tient deja et la ligne est tranchee SANS elle -- le
+        #   passage 53 la donnait encore a 4 lignes rendues par R7a (7Y9XCYOJ, J1FY054Q, O8BY6AC8, XP7WNTKK), contre le
+        #   texte valide de R7a (« elle reste a part, jamais donnee a la ligne »).
+        vraies_L = [x for x, l_ in r["va"].items() if L in l_ and I.nature[x] == PC.VRAIE]
+        if (vraies_L and a > min(vraies_L)) or len(r["possibles"].get(a, [])) < 2:
+            continue                                                       # g4
+        out[a] = (L, "REGLE R17 (variante) : sa soeur de chaine %d (%s %s, meme montant %d) est prouvee a cette ligne -- "
+                     "l'autre moitie de la meme affaire tombee" % (q, D.REG[q]["genre"], D.REG[q]["etat"],
+                                                                   round(D.REG[q]["montant"])))
+    return out
+
+
 def nombre_case(s) -> int | None:
     try:
         return round(float(str(s).replace(" ", "").replace(",", ".")))
@@ -986,6 +1055,12 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         r9 = regle_r9(I, b, lignes_b, r)
         if r9:
             donnee.update(r9)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
+    if joue("R17"):
+        # VARIANTE R17 (proposee le 23/11) : la soeur de chaine -- voir VARIANTES et regle_r17
+        r17 = regle_r17(I, b, r)
+        if r17:
+            donnee.update(r17)
             r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
