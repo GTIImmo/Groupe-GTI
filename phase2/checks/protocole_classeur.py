@@ -206,6 +206,10 @@ VARIANTES = {
            "date d'offre que l'autre, que son gel tient : la meme affaire ecrite deux fois -- la ligne du gel prend le "
            "dossier, l'annulee n'a rien a etiqueter (sa convention des jumelles du 20/11 : « celle que le gel tient deja ; "
            "l'autre sans etiquette »)",
+    # R14 (23/11, le paquet PIECE_SUPPRIMEE_FIGEE : 6 lignes, dont 5 « une saisie refaite chez Hektor ») -- PROPOSEE
+    "R14": "une piece SUPPRIMEE chez Hektor dont une JUMELLE vivante est dans le meme morceau (meme genre, meme date, meme "
+           "montant -- ou montant inconnu) est la trace d'une saisie refaite : elle sort du morceau, reste FIGEE dans son "
+           "ancien dossier avec son numero (on ne supprime pas une part), et la ligne se tranche sur ses pieces vivantes",
     # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
@@ -880,6 +884,19 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if hk_ and len(ch_m) == 1:
                 deja[gl] = sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_)
                                   and gl in r["possibles"][a] and len(r["possibles"][a]) == 1 and S.get(a) in ch_m)
+    if joue("R14"):
+        # VARIANTE R14 (proposee le 23/11) : la trace supprimee d'une saisie refaite sort du morceau, figee dans son dossier
+        for gl_, ids_ in list(r["morceaux"].items()):
+            vivantes = [q for q in ids_ if not supprimee_chez_hektor(I.pieces[q])]
+            retirees = [q for q in ids_ if supprimee_chez_hektor(I.pieces[q]) and any(
+                D.REG[v]["genre"] == D.REG[q]["genre"] and D.REG[v]["date"] and D.REG[v]["date"] == D.REG[q]["date"]
+                and (D.REG[q]["montant"] is None or D.REG[v]["montant"] == D.REG[q]["montant"]) for v in vivantes)]
+            if retirees:
+                r["morceaux"][gl_] = [q for q in ids_ if q not in retirees]
+                for q in retirees:
+                    r["apart"][q] = ("REGLE R14 (variante) : la trace supprimee chez Hektor d'une saisie refaite -- sa "
+                                     "jumelle vivante est dans le morceau ; figee dans son ancien dossier, avec son numero")
+                    r["possibles"][q] = []
     isoles, isoles_r7c = set(), set()
     if joue("R7b"):
         for gl, ids in r["morceaux"].items():

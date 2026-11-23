@@ -4773,6 +4773,26 @@ bien 39845 : garde-les de cote, Frederic les tranche. »
     deux lignes ecrites sur le meme dossier) ? R13 suit la 1re.
 ```
 
+5 LE PAQUET PIECE_SUPPRIMEE_FIGEE (6) -- UNE CAUSE DANS 5 CAS : UNE SAISIE REFAITE CHEZ HEKTOR. Une transaction supprimee
+  (present_in_hektor 0) a une JUMELLE vivante recreee a l'identique (meme genre, meme date, meme montant ; une offre
+  supprimee peut avoir un montant vide) : 998 / 999 (compromis 12/03/2026, bien 1970), 19543 / 19544 (40519), 25699 / 25700
+  (49584), 21803 + 21805 / 21804 + 21806 (43437), 28808 + 28810 / 28809 + 28811 (61534). Le chainage fige la supprimee dans
+  son ancien dossier ; la preuve donne les deux jumelles a la ligne ; la ligne tombe sur deux dossiers. Le 6e, 6684bcf1,
+  est AUTRE : sa supprimee 19029 n'a pas de jumelle vivante (seulement une copie C5).
+  LA REGLE R14 (VARIANTE) : « une piece supprimee chez Hektor dont une jumelle vivante est dans le meme morceau est la
+    trace d'une saisie refaite : elle sort du morceau, reste FIGEE dans son ancien dossier avec son numero (on ne supprime
+    pas une part), et la ligne se tranche sur ses pieces vivantes ». TEMOIN INVERSE : 6684bcf1 -> non touchee.
+  MESURE (passage 44 contre 42) : 5 TRANCHEES, EXACTEMENT les 5 ; 0 deja rendu ; 0 ecart neuf ; chaque ligne prend le
+    numero de son dossier VIVANT, et les 4 des 2 560 gardent EXACTEMENT le leur (3250892d D2025-0295, 87eb399e D2026-0033,
+    0bc98552 D2026-0049, 6095c819 D2026-0053) ; dfb32f2b -> D2025-0278.
+  ECART LU : dfb32f2b -- la supprimee 19543 etait un compromis « active », sa jumelle vivante 19544 est « cancelled » ; la
+    ligne dit « Annulee » : coherent (la saisie refaite porte l'annulation).
+6 R13 + R14 ENSEMBLE (passage 45 contre 42) : 13 changent, 0 deja rendu, 0 ecart neuf ; 4 655 tranchees + 143 ; dont 50 rien
+  a etiqueter -> RESTE A VIDER 93. Le reste : verrou 55 . copie seule 10 . a part 7 . sans bien 7 (les mandats recycles)
+  . affaire sur un autre bien 4 (a lui) . a sa decision 3 (a lui) . aucune preuve 3 . deux lignes 2 (PEE1XTR8 / 9B7U8221)
+  . plusieurs biens 1 (SHN6RKDI) . supprimee figee 1 (6684bcf1).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
