@@ -4669,6 +4669,58 @@ paquets [...] Tu choisis l'ordre, tu ne reviens qu'avec des regles »).
 RIEN D'ECRIT ; rien pousse. A LUI : R9, R9b, R10, R11 (R12 ecartee par sa propre regle) ; 14033 A ou B.
 ```
 
+### 20.25 Son mot du 23/11 (16) — R9b, R10, R11 validées ; les huit écarts de R9 nommés ; 14033 à DONNADIEU
+
+Son mot : `C:\Hektor\mot_du_23_11_trois_regles_oui_r9_nomme_tes_huit.md` (« R9b OUI [...] R11 OUI [...] R10 OUI, mais nomme
+sa 59e [...] R9 : NON, PAS ENCORE. Tes 8 ecarts ne sont pas nommes [...] 14033 : OPTION B [...] une regle a la fois, ses
+ecarts LUS avant de passer a la suivante »). Rapport : `notice/PROTOCOLE_REPONSES_23_11_10_LES_HUIT_DE_R9_2026-11-23.md`.
+
+```
+1 LES HUIT ECARTS DE R9, NOMMES (protocole_r9_les_huit_ecarts_2026-11-23.py) -- UNE CAUSE COMMUNE (son issue a)) : dans les
+  8, une AUTRE ligne du meme bien a la MEME Commission TTC ; les honoraires collaient par hasard ; le gel a pris la mauvaise
+  ligne ; LA PREUVE STRICTE A RAISON les 8 fois (7 par la date exacte du compromis, 1 par prix + honoraires) :
+    1 bien 2393  piece 1101  gel E6RLLKMN  preuve 2FBR2M9U  (compromis 16/06/2021 = sa case ; 44 600 / 4 600 aux deux)
+    2 bien 30376 piece 14813 gel FJS4IJGZ  preuve SWSN80FQ  (16/03/2023 ; commission 3 000 aux deux)
+    3 bien 36165 piece 17024 gel X2714E92  preuve JAW5U9OF  (20/06/2022 ; 5 500 aux deux)
+    4 bien 37032 piece 17387 gel 60CLRO51  preuve S3HOG6UL  (03/11/2021 ; 9 700 aux deux)
+    5 bien 41699 piece 20264 gel E1WD68ZB  preuve EO8MXFE9  (15/04/2024 ; 14 000 aux deux)
+    6 bien 48093 piece 24380 gel RF9KYWSY  preuve 9KHYVR1M  (04/12/2020 ; 4 000 aux deux)
+    7 bien 48154 piece 24450 gel 4PW2L3MG  preuve 6U5DQQ4J  (28/10/2021 ; 15 000 aux deux)
+    8 bien 53342 piece 27134 gel 2HOL5ISX  preuve IEYXREWQ  (prix + honoraires ; 7 000 aux deux) -- le bien COUDERT/
+      HERITIER : 27134 a TORE, comme sa lecture du 22/11 (§ 18.3)
+  L'EXCEPTION NOMMEE : « AUCUNE autre ligne du bien n'a la meme Commission TTC ». TEMOIN AVEC ELLE : 3 838 fois la meme
+  ligne, 0 une autre (26 a part) ; commission partagee : 370 / 8 / 27 -- les 8 y sont tous.
+  R9 (avec l'exception, VARIANTE) mesuree apres les validees (passage 41 contre 40) : 12 TRANCHEES (10 COPIE_SEULE, 2
+  SES_PIECES_A_PART), 0 deja rendu, 0 ecart neuf ; reste a vider 118 -> 106. Elle ECARTE une seule ligne que la 1re R9
+  prenait : SYA8MH79 (7499, 9 000 d'honoraires = la commission de DPK4WZC3, la vente du meme bien) -- elle attend, et R7c
+  garde 7499 de cote avec son numero.
+2 R9b, R10, R11 VALIDEES (protocole_classeur.py v5, REGLES_VALIDEES) ; LA 59e DE R10, NOMMEE : SHN6RKDI (ligne 3423), biens
+  52166 (gel + mandat) et 41713 (product_ref seul) ; P1 -> 52166 ; R10 -> AUCUN bien (la ligne n'a de piece prouvee sur
+  aucun des deux : elle ne tient que sa copie, sa vraie piece 26613 est une de ses 20 a part). La 59e ne rend aucun bien,
+  elle ne contredit pas P1.
+3 14033 -> DONNADIEU (OPTION B) : PIECE_DONNEE_PAR_DECISION ; A_PART_PAR_DECISION vide ; SES_DECISIONS « 14033 (bien
+  28506) » remplace sa B3 et l'attendu « 14033 a personne » des 20 a part. COLAS ne retrouve pas son D2025-0257 du 16/11
+  dans AUCUNE des deux options (absorbe le 21/11 par la fusion de la regle E) -- ce n'est pas 14033 qui le lui fait perdre.
+  ⚠ Pour lui, en une ligne : beeaf847 (la VENTE) recoit un numero neuf, l'affaire annulee plus ancienne prenant le sien --
+  conforme a sa regle du plus ancien (22/11, « n'y reviens plus »).
+  PASSAGE 40 (v5, regles validees seules) : 4 634 tranchees + 164 ; dont 46 rien a etiqueter -> RESTE A VIDER 118 ;
+  contre 28 : 72 changent, 0 deja rendu ; les MEMES 19 ecarts ; ses_decisions 4 accords.
+4 ⚠⚠ UN SUJET, PAS UNE LIGNE : QUATRE VENTES REELLES SOUS UN MAUVAIS NUMERO DE MANDAT (+ I3TFR2KG, sans numero) :
+    QXDW8EQA  Sheet 13411 -> la vente est sur le bien 2070  (D2020-0014, mandat 12931), 39 000 EUR d'honoraires, 2020
+    2U5QPKRC  Sheet 5030  -> bien 37875 (D2018-0271, mandat 2691), 6 800 EUR, 2018
+    MQ6H8TVQ  Sheet 8644  -> bien 52460 (D2017-0313, mandat 11331), 1 000 EUR, 2018
+    EJN79TJ1  Sheet 12234 -> bien 53953 (compromis 27712 du 03/06/2020), 13 000 EUR, 2020
+    I3TFR2KG  « NON TROUVE » -> bien 48340 (D2019-0510, mandat 3273), 6 000 EUR, 2020 (rattachee par sa decision)
+  CE QU'ELLES ONT EN COMMUN (sa question, mesuree) : ce sont des LIGNES RECONSTITUEES (Prix et Ville « NON TROUVE »,
+    Nature « Autre », acquereur « nan X », commentaire « reglee »). Parmi les lignes TRANCHEES : le mandat du Sheet est
+    celui des pieces pour 18 reconstituees sur 56, et un AUTRE pour 31 (55 %) -- contre 130 sur 4 590 (2,8 %) pour les
+    autres. ⭐ Les 31 sont tranchees par la PREUVE (date, prix + honoraires) sur le bien de leurs pieces : le bien est
+    juste, c'est le numero du Sheet qui est faux. Les 4 du sujet sont celles ou ce faux numero menait a un bien SANS piece.
+5 CE QUI RESTE (passage 41, lu dans le socle : 152 en attente) : verrou 55 . rien a etiqueter 46 (hors du reste) . deux
+  lignes un dossier 10 . copie seule 10 . a part 7 . sans bien 7 . supprimee figee 6 . affaire sur un autre bien 4 . a sa
+  decision 3 . aucune piece prouvee 3 . plusieurs biens 1 -> reste a vider 106. Les 2 « transaction introuvable » : avant l'ecriture.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

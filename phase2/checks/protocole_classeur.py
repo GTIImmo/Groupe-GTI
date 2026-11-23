@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v4 -- 23/11 : R8 et R7c validees (son message du 23/11)"
+VERSION = "v5 -- 23/11 : R9b, R10, R11 validees ; 14033 a DONNADIEU (son mot (16))"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -140,7 +140,8 @@ MOTIFS = {
                                     "reunir"),
 }
 # a part par SA decision (20/11 soir, B3) -- la meme liste que la V3
-A_PART_PAR_DECISION = {14033: "B3, sa decision du 20/11 soir"}
+# 14033 : sa B3 du 20/11 (« a part ») est REMPLACEE le 23/11 par son option B (a DONNADIEU) -- PIECE_DONNEE_PAR_DECISION
+A_PART_PAR_DECISION: dict = {}
 
 # ⛔ LES REGLES PROPOSEES -- jamais appliquees sans son mot. Un passage lance avec --variantes X,Y est marque
 #   « VARIANTE NON VALIDEE » : il sert a mesurer ce qu'une regle changerait (comparer), rien d'autre.
@@ -177,6 +178,16 @@ REGLES_VALIDEES = {
             "d'AUCUNE de ces lignes, est TRANCHEE : MISE DE COTE comme R7b (isolee AVEC son dossier d'aujourd'hui, elle "
             "garde son ancien numero) -- elle ne retient plus aucune ligne",
             "son message du 23/11 : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact »"),
+    "R9b": ("R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
+           "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
+            "son mot du 23/11 (16) : « R9b : OUI. Temoin 3 659 fois la meme ligne, 0 fois une autre [...] Pose-la. » « R11 : OUI. Les 24 lignes qu'elle ferme disent TOUTES Annulee [...] Pose-la. » « R10 : OUI, mais NOMME SON UNIQUE ECART avant [...] la 59e ne rend aucun bien, elle ne contredit pas P1 »"),
+    "R10": ("une ligne qui nomme DEUX biens (deux sources) est sur celui des deux ou elle a des pieces PROUVEES (date au jour "
+           "exact, prix + honoraires) quand elle n'en a sur AUCUN autre -- la preuve departage les sources",
+            "son mot du 23/11 (16) : « R9b : OUI. Temoin 3 659 fois la meme ligne, 0 fois une autre [...] Pose-la. » « R11 : OUI. Les 24 lignes qu'elle ferme disent TOUTES Annulee [...] Pose-la. » « R10 : OUI, mais NOMME SON UNIQUE ECART avant [...] la 59e ne rend aucun bien, elle ne contredit pas P1 »"),
+    "R11": ("une ligne SANS gel, dont aucune piece n'est prouvee, et dont TOUTES les vraies pieces du bien sont prouvees a "
+           "d'AUTRES lignes : son affaire n'a aucune piece chez nous -> RIEN A ETIQUETER (rejugee a chaque passage) -- sauf "
+           "si la triple preuve de R8 trouve son affaire sur un autre bien",
+            "son mot du 23/11 (16) : « R9b : OUI. Temoin 3 659 fois la meme ligne, 0 fois une autre [...] Pose-la. » « R11 : OUI. Les 24 lignes qu'elle ferme disent TOUTES Annulee [...] Pose-la. » « R10 : OUI, mais NOMME SON UNIQUE ECART avant [...] la 59e ne rend aucun bien, elle ne contredit pas P1 »"),
 }
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
@@ -185,13 +196,8 @@ VARIANTES = {
     "R9": "une ligne sans vraie piece prouvee (qui ne tient que sa copie C5, ou rien) recoit chaque vraie piece que son gel lui donne, quand cette piece est A "
           "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
           "honoraires sont la « Commission TTC » de la ligne, qu'AUCUNE autre ligne n'a son prix + honoraires, et qu'elle "
-          "n'est pas une de SES 20 pieces a part (son mot du 21/11)",
-    # R10 (23/11, le paquet PLUSIEURS_BIENS : 23 lignes, UNE cause) -- PROPOSEE, jamais appliquee sans son mot.
-    "R10": "une ligne qui nomme DEUX biens (deux sources) est sur celui des deux ou elle a des pieces PROUVEES (date au jour "
-           "exact, prix + honoraires) quand elle n'en a sur AUCUN autre -- la preuve departage les sources",
-    "R11": "une ligne SANS gel, dont aucune piece n'est prouvee, et dont TOUTES les vraies pieces du bien sont prouvees a "
-           "d'AUTRES lignes : son affaire n'a aucune piece chez nous -> RIEN A ETIQUETER (rejugee a chaque passage) -- sauf "
-           "si la triple preuve de R8 trouve son affaire sur un autre bien",
+          "n'est pas une de SES 20 pieces a part (son mot du 21/11) -- ⭐ ET, L'EXCEPTION NOMMEE DE SES HUIT ECARTS : AUCUNE "
+          "autre ligne du bien n'a la meme Commission TTC (temoin : 3 838 fois la meme ligne, 0 une autre)",
     # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
@@ -199,8 +205,6 @@ VARIANTES = {
     # 14033 (sa B3 du 20/11) : ses DEUX options, mesurees a blanc cote a cote (son mot (15)) -- jamais appliquees
     "B3A": "14033 A PART POUR TOUJOURS : mise de cote comme R7b, avec son dossier d'aujourd'hui (elle garde son numero)",
     "B3B": "14033 A DONNADIEU (ea6a28a7) : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU (critere 1)",
-    "R9b": "R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
-           "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
 }
 # R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
@@ -229,6 +233,9 @@ LIGNE_SUR_LE_BIEN_PAR_DECISION = {
 }
 # ses pieces donnees par decision (une preuve qu'il a validee et que les epreuves ne savent pas lire) : piece -> ligne
 PIECE_DONNEE_PAR_DECISION = {
+    14033: ("ea6a28a7", "sa decision du 23/11, OPTION B : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU "
+                        "et d'aucune autre ligne ; COLAS recoit le meme numero neuf dans les deux options (son D2025-0257 "
+                        "du 16/11 a ete absorbe le 21/11 par la fusion E) -- B ne lui coute rien et tranche une ligne de plus"),
     30830: ("54376c72", "sa decision du 23/11 : 13 800 EUR = 12 000 + 1 800 a l'euro, DAUPHIN des deux cotes -- ⚠ la "
                         "case « Offre Achat » dit 11/11/2026, le commentaire de la meme ligne « 18.11 », l'offre est "
                         "proposee le 18/11 a 14:46 : on ne corrige pas une date, on corrige les lecteurs"),
@@ -260,6 +267,11 @@ SES_DECISIONS = {
                   "TROISIEME, SEPAREE [...] CE BIEN PORTE TROIS AFFAIRES : HUGON COTTIN 2023, DJEBBOUR 2024, DJEBBOUR 2025 »",
         "remplace": "sa coupe des 132 du 20/11 (un seul morceau 14940 14941 14942 14944 pour 3461 et 155)",
         "lignes": {"ZE9WZW22": [14939, 14943], "Q3KTCMVB": [14941], "DKTK22F2": [14940, 14942, 14944]}},
+    "14033 (bien 28506)": {
+        "source": "son mot du 23/11 (16) : « 14033 : OPTION B. COLAS a le meme sort dans les deux cas, donc B ne coute rien "
+                  "et tranche une ligne de plus -- et la preuve donne 140 500 / 9 500 a DONNADIEU, a personne d'autre »",
+        "remplace": "sa B3 du 20/11 soir (14033 a part) -- et son attendu « 14033 a personne » des 20 a part",
+        "lignes": {"ea6a28a7": [14033]}},
 }
 ATTENDU_TEMOINS = {"v3_lignes": 456, "v3_morceau": 431, "v3_a_part": 20, "v3_attend_avec_sa_ligne": 3,
                    "v3_exception_nommee": 2, "coupes_132": 132, "lignes_132": 274, "coupes_29": 29, "lignes_29": 57,
@@ -617,7 +629,7 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
         biens = [bien_par_p1(I, i)]              # LA REGLE P1, validee le 22/11 (REGLES_VALIDEES)
         base["biens"] = biens
     if len(biens) > 1 and joue("R10") and bien_par_r10(I, i):
-        biens = [bien_par_r10(I, i)]             # VARIANTE R10 (proposee le 23/11, jamais appliquee sans son mot)
+        biens = [bien_par_r10(I, i)]             # REGLE R10 (validee le 23/11)
         base["biens"] = biens
     if len(biens) > 1:
         return attente("PLUSIEURS_BIENS", "biens %s, par %s" % (biens, {b: sorted(I.D.rattache_par.get((b, i), set()))
@@ -771,6 +783,10 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
                              "montant %d = le « Prix » de la ligne, qu'aucune autre ligne du bien n'a" % prix)
                 continue
             if not joue("R9") or round(h) != com or any(D.touche_ph(a, j) for j in lignes_b if j != i):
+                continue
+            # L'EXCEPTION NOMMEE (son mot (16), « nomme tes huit ») : les 8 ecarts du temoin avaient TOUS une autre ligne
+            #   du bien a la MEME Commission TTC -- les honoraires collaient par hasard. Commission unique : 3 838 / 0.
+            if any(nombre_case(D.case(j, "Commission TTC")) == com for j in lignes_b if j != i):
                 continue
             out[a] = (i, "REGLE R9 (variante) : le gel du 16/11 ne la donne qu'a cette ligne, et ses honoraires %d = sa "
                          "« Commission TTC » ; aucune autre ligne n'a son prix + honoraires" % com)
@@ -1328,7 +1344,10 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
         if v == "TRANCHEE":
             for a in p or []:
                 tenues[a].append(i)
+    pieces_redecidees = {q for d_ in SES_DECISIONS.values() for ps in d_["lignes"].values() for q in ps}
     for x in T["familles"]["a_part_20"]:
+        if x["piece"] in pieces_redecidees:       # sa decision posterieure remplace l'attendu (14033, 23/11)
+            continue
         jugees = [i for i in I.D.lignes_bien.get(x["bien"], set()) if V.get(i, ("",))[0] == "TRANCHEE"]
         if not jugees and not tenues.get(x["piece"]):
             noter("a_part_20", "", "%d a personne" % x["piece"], "ATTEND (aucune ligne du bien tranchee)", None)
