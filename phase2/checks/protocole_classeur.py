@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v7 -- 23/11 : R13 (deux paires) et R14 validees"
+VERSION = "v8 -- 23/11 : R16 validee (passage 49 : 6 lignes, 0 verdict rendu) ; ZZ5WKMWM a la main"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -208,6 +208,13 @@ REGLES_VALIDEES = {
            "d'AUTRES lignes : son affaire n'a aucune piece chez nous -> RIEN A ETIQUETER (rejugee a chaque passage) -- sauf "
            "si la triple preuve de R8 trouve son affaire sur un autre bien",
             "son mot du 23/11 (16) : « R9b : OUI. Temoin 3 659 fois la meme ligne, 0 fois une autre [...] Pose-la. » « R11 : OUI. Les 24 lignes qu'elle ferme disent TOUTES Annulee [...] Pose-la. » « R10 : OUI, mais NOMME SON UNIQUE ECART avant [...] la 59e ne rend aucun bien, elle ne contredit pas P1 »"),
+    "R16": ("une ligne « Annulee » SANS BIEN (SANS_BIEN), dont le vendeur est mandant d'au moins un bien, et dont les biens de "
+           "ce vendeur n'ont AUCUNE vraie piece (offre, compromis) LIBRE -- tenue par aucune ligne a la fin du passage -- a "
+           "un an de sa case ni sans date : son affaire n'a aucune piece chez Hektor -> RIEN A ETIQUETER (temoin du zero : "
+           "626 des 662 « Annulee » tranchees qui tiennent une offre retrouvent LEUR piece a 7 j ; les 36 ratees = vendeur "
+           "absent des mandants 31, date a plus de 7 j 5 -- la regle exige le vendeur TROUVE et regarde a UN AN). Elle ne "
+           "donne aucune piece et joue APRES tous les verdicts : elle ne peut faire jouer aucune autre ligne",
+            "son mot du 23/11 : « R16 : LANCE LE PASSAGE ENTIER. ⛔ Elle n'est validee que SI le passage prouve qu'aucun verdict rendu ne bouge » -- passage 49 (variante) contre 47 : 6 verdicts changes, les 6 nommes (SANS_BIEN -> RIEN_A_ETIQUETER), 0 deja rendu, temoins identiques ligne pour ligne (806 / 806), ZZ5WKMWM non touchee"),
 }
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
@@ -225,7 +232,13 @@ VARIANTES = {
     "B3A": "14033 A PART POUR TOUJOURS : mise de cote comme R7b, avec son dossier d'aujourd'hui (elle garde son numero)",
     "B3B": "14033 A DONNADIEU (ea6a28a7) : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU (critere 1)",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
+    # R16 a quitte cette liste le 23/11 (son mot, et la preuve du passage 49) : elle est dans REGLES_VALIDEES
 }
+# R16 : les mandants des biens au registre (mandants_texte), FIGES le 23/11 hors de l'image -- l'image ne porte que trois
+#   colonnes du registre des mandats ; le fichier est verifie par son empreinte, le passage reste rejouable
+MANDANTS_R16 = Path(r"C:\Hektor\chantier_classeur_q6_cache\protocole\mandants_des_biens_2026-11-23.json")
+MANDANTS_R16_MD5 = "da3b63b6612813f29d66e4532008bac5"
+STOP_R16 = {"SAS", "SARL", "EURL", "SOCIETE", "SOCIÉTÉ"}
 # R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
 VARIANTES_ACTIVES: set = set()
 
@@ -249,6 +262,10 @@ LIGNE_SUR_LE_BIEN_PAR_DECISION = {
                           "cotes, mandat de vente 18053 (la ligne porte le mandat de recherche 18993)"),
     "9O6NKRIJ": ("52931", "sa decision du 23/11 : le mandat de vente 18014 EST le bien 52931 (archive, clos, sans piece) -- "
                           "R8, elle rentre seule si une piece arrive"),
+    # ⭐ UNE DECISION A LA MAIN, PAS UNE REGLE (son mot du 23/11) : « la REGLE est mauvaise (elle se trompe 9 fois) ; le
+    #   CAS, lui, est prouve [...] On refuse la regle et on accepte le cas avec sa preuve ecrite -- exactement la methode
+    #   des onze offres sures »
+    "ZZ5WKMWM": ("23562", "sa decision du 23/11, A LA MAIN : offre 11206 du 02/12/2019 (sa case : 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 = sa Commission a l'euro), vendeur THEVENOT parmi les mandants, le seul bien a porter les deux ; personne ne tient ces pieces ; le Prix « 63 » du Sheet est une faute de frappe"),
 }
 # ses pieces donnees par decision (une preuve qu'il a validee et que les epreuves ne savent pas lire) : piece -> ligne
 PIECE_DONNEE_PAR_DECISION = {
@@ -258,6 +275,8 @@ PIECE_DONNEE_PAR_DECISION = {
     30830: ("54376c72", "sa decision du 23/11 : 13 800 EUR = 12 000 + 1 800 a l'euro, DAUPHIN des deux cotes -- ⚠ la "
                         "case « Offre Achat » dit 11/11/2026, le commentaire de la meme ligne « 18.11 », l'offre est "
                         "proposee le 18/11 a 14:46 : on ne corrige pas une date, on corrige les lecteurs"),
+    11206: ("ZZ5WKMWM", "sa decision du 23/11, A LA MAIN (pas une regle) : son offre -- offre 11206 du 02/12/2019 (sa case : 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 = sa Commission a l'euro), vendeur THEVENOT parmi les mandants, le seul bien a porter les deux ; personne ne tient ces pieces ; le Prix « 63 » du Sheet est une faute de frappe"),
+    11205: ("ZZ5WKMWM", "sa decision du 23/11, A LA MAIN (pas une regle) : son compromis -- offre 11206 du 02/12/2019 (sa case : 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 = sa Commission a l'euro), vendeur THEVENOT parmi les mandants, le seul bien a porter les deux ; personne ne tient ces pieces ; le Prix « 63 » du Sheet est une faute de frappe"),
 }
 RIEN_A_ETIQUETER_PAR_DECISION = {
     "JZ9693S0": "sa decision du 23/11 : ni bien (mandat 92560 inconnu), ni nom ; ⚠ le fil FACTURE + AVOIR (GGTI00002792 / "
@@ -628,6 +647,52 @@ def affaire_sur_un_autre_bien(I: Image, i: str) -> dict:
                     out.setdefault(D.REG[a_]["bien"], "%s %d du %s = colonne « %s », honoraires %d = Commission TTC, "
                                                       "vendeur parmi ses mandants" % (g, a_, d, c, com))
     return out
+
+
+def rien_par_r16(I: Image, i: str, tenues: set) -> str | None:
+    """REGLE R16 (validee le 23/11, passage 49) : la ligne « Annulee » sans bien dont l'affaire n'a aucune piece chez Hektor. Rend le texte du
+    motif RIEN_A_ETIQUETER, ou None. `tenues` : les pieces que les verdicts du passage donnent deja (et ses decisions)."""
+    D = I.D
+    if D.case(i, "Etat Actuel").strip() != "Annulée" or I.gel_par_ligne.get(i):
+        return None
+    ns = {x for x in re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü'\-]{2,}", D.case(i, "Vendeur").upper())
+          if x not in STOP_VENDEUR | STOP_R16}
+    if not ns:
+        return None
+    if not hasattr(I, "_vendeur_r16"):
+        brut = MANDANTS_R16.read_bytes()
+        if hashlib.md5(brut).hexdigest() != MANDANTS_R16_MD5:
+            raise SystemExit("⛔ R16 : %s n'a plus son empreinte" % MANDANTS_R16)
+        par_nom = defaultdict(set)
+        for b, t in json.loads(brut.decode("utf-8"))["biens"].items():
+            for x in set(re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü'\-]{2,}", t.upper())):
+                par_nom[x].add(b)
+        for a, p in I.pieces.items():
+            for x in set(re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü'\-]{2,}", str(p.get("mandants_json") or "").upper())):
+                par_nom[x].add(D.REG[a]["bien"])
+        I._vendeur_r16 = par_nom
+    biens = set().union(*(I._vendeur_r16.get(n, set()) for n in ns))
+    if not biens:
+        return None                                      # le vendeur n'est pas trouve : la 1re cause de ratee n'est pas ecartee
+    d_off, d_cpr = K.d_sheet(D.case(i, "Offre Achat")), K.d_sheet(D.case(i, "Compromis"))
+    if not (d_off or d_cpr):
+        return None
+    vues = []
+    for b in biens:
+        for a in D.par_bien.get(b, []):
+            r = D.REG[a]
+            if I.nature[a] != PC.VRAIE or r["genre"] not in ("offre", "compromis"):
+                continue
+            ref = d_off if r["genre"] == "offre" else (d_cpr or d_off)
+            if r["date"] and (not ref or abs((r["date"] - ref).days) > 365):
+                continue
+            if a not in tenues:
+                return None                              # une piece libre (a un an, ou sans date) peut etre son affaire
+            vues.append(a)
+    return ("REGLE R16 : « Annulee », sans bien ; son vendeur (%s) est mandant de %d bien(s), et %s : son affaire n'a "
+            "aucune piece chez Hektor -- rien a etiqueter" % ("/".join(sorted(ns)), len(biens),
+            "ces biens n'ont aucune vraie piece a un an de sa case" if not vues else
+            "leurs %d vraie(s) piece(s) a un an de sa case sont toutes tenues par d'autres lignes" % len(vues)))
 
 
 def juger_ligne(I: Image, i: str, v: dict) -> dict:
@@ -1123,6 +1188,14 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
     for x in I.sheet["sans_id"]:
         rangs.append({"id_unique": "#%d" % x["num"], "num": x["num"], "biens": [], "verdict": "ATTENTE",
                       "motif": "SANS_ID_UNIQUE", "motif_texte": MOTIFS["SANS_ID_UNIQUE"][1], "epreuve": "E1"})
+    # R16 (validee le 23/11) : APRES tous les verdicts -- les pieces tenues sont alors connues ; elle ne touche que SANS_BIEN
+    if joue("R16"):
+        tenues = {a for r in rangs for a in (r.get("pieces") or [])} | set(PIECE_DONNEE_PAR_DECISION)
+        for r in rangs:
+            if r.get("motif") == "SANS_BIEN":
+                t16 = rien_par_r16(I, r["id_unique"], tenues)
+                if t16:
+                    r.update(motif="RIEN_A_ETIQUETER", motif_texte=t16, epreuve=MOTIFS["RIEN_A_ETIQUETER"][0])
     inconnus = sorted({r["motif"] for r in rangs if r.get("motif") and r["motif"] not in MOTIFS})
     con.executemany(
         "insert into verdict (passage, id_unique, num, biens, verdict, etiquette, pieces, preuves, motif, motif_texte, "

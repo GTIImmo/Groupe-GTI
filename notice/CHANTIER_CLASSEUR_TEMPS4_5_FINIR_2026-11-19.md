@@ -4938,6 +4938,52 @@ le bien de leur mandat. ET RAPPROCHE DEUX LIGNES [...] BR8ZTN5F (-3 000 €) [..
     decision « rien a etiqueter » tient.
 ```
 
+### 20.30 R16 validée par le passage ; ZZ5WKMWM à la main, au verrou ; la donnée fausse 16806 rangée à part
+
+Son message du 23/11 : « NOMME A FREDERIC CE QUE TU AS TROUVE AU PASSAGE : la piece 16806 [...] Ecris-la a part, dans sa
+liste. R16 : LANCE LE PASSAGE ENTIER. ⛔ Elle n'est validee que SI le passage prouve qu'aucun verdict rendu ne bouge [...]
+ZZ5WKMWM : OUI, SUR LE BIEN 23562 -- mais comme une DECISION A LA MAIN, nommee, PAS comme une regle [...] On refuse la
+regle et on accepte le cas avec sa preuve ecrite -- c'est exactement la methode des onze offres sures. [...] un zero qui
+porte son temoin positif ET l'explication de ses 36 ratees, c'est un zero qui se croit. Garde cette forme. »
+
+```
+1 LA DONNEE FAUSSE 16806 -- RANGEE A PART : notice/DONNEES_FAUSSES_CHEZ_HEKTOR_TROUVEES_EN_PASSANT.md (liste neuve,
+  « ce n'est plus du classeur », rien n'y est corrige). Le compromis Hektor 14573 (bien 35538, mandat 17645) : net vendeur
+  1 650 000 pour 175 000 - 10 000 = 165 000. SA FAMILLE MESUREE : 10 637 compromis portent les trois montants, 10 125
+  tombent juste, UN SEUL ecart s'explique par un facteur 10 -- celui-ci. Cas isole. A juger (pas dit faux) : 7176 (les trois
+  montants ne tombent pas juste ; ses honoraires d'entree 7 000 = la Commission de BR8ZTN5F) ; 512 compromis ou montant
+  ≠ net + honoraires (510 positifs : honoraires de sortie, TVA, renegociation ?) -- non ouvert.
+
+2 R16 -- CODEE EN VARIANTE, MESUREE AU PASSAGE ENTIER, PUIS VALIDEE PAR SA CONDITION :
+  . le code : rien_par_r16() ; elle joue APRES tous les verdicts (les pieces tenues sont alors connues) et ne touche que
+    les SANS_BIEN ; les mandants du registre sont FIGES hors de l'image (l'image n'en porte que 3 colonnes) :
+    C:\Hektor\chantier_classeur_q6_cache\protocole\mandants_des_biens_2026-11-23.json, 24 517 biens, empreinte
+    da3b63b6... verifiee a chaque passage -- le passage reste rejouable ;
+  . PASSAGE 49 (variante R16) CONTRE 47 : 6 verdicts changes, EXACTEMENT les 6 (SANS_BIEN -> RIEN_A_ETIQUETER), 0 DEJA
+    RENDU ; temoins IDENTIQUES ligne pour ligne (806 / 806, 0 difference) ; ⭐ temoin inverse : ZZ5WKMWM NON touchee (sa
+    piece libre l'en garde) ;
+  . sa condition est remplie -> R16 dans REGLES_VALIDEES (v8) ; PASSAGE 50 (regles validees seules) = 49 : 0 changement.
+    LE RESTE A VIDER : 97 -> 91.
+
+3 ZZ5WKMWM -- SA DECISION A LA MAIN (LIGNE_SUR_LE_BIEN_PAR_DECISION 23562 ; PIECE_DONNEE_PAR_DECISION 11206 et 11205,
+  preuve ecrite au code ; la regle refusee) :
+  . PASSAGE 51 CONTRE 50 : 1 verdict change, 0 deja rendu, temoins identiques -- MAIS ELLE NE SE TRANCHE PAS :
+    SANS_BIEN -> VERROU_PIECE_PLUS_PETITE (« plus petite de la ligne 11205 ; a part et plus petite : 11204 »).
+  . LA CAUSE, MESUREE : le chainage a mis LES DEUX AFFAIRES du bien dans UN dossier (1350748) -- la chaine 11204 tient
+    11204 (compromis 265 000, annule, sans date), 11207 (offre 265 000 du 04/09/2019, refusee le jour meme) ET 11205 (son
+    compromis) ; son offre 11206 est sa propre chaine. 11204 est plus petite et a part (prix + honoraires de personne).
+  . SA QUESTION DU VERROU, posee a 11204 : « ce compromis annule a-t-il une jumelle vivante ? » -> NON (aucun compromis
+    vivant sur le bien) -> rien ne justifie de le donner a ZZ5WKMWM : c'est l'affaire de septembre 2019, SANS ligne au
+    Sheet. Elle se traitera AVEC la famille du verrou (56 lignes desormais), pas ici.
+  . ⚠ VU AU PASSAGE, ET VERIFIE : l'offre 11206 a ete ACCEPTEE le 02/12/2019 et REFUSEE le 11/11/2026 a 18:40 -- c'est
+    une des 1 176 du lot du 11/11. Elle n'est PAS dans les 17 ni dans les onze / six : son affaire est ANNULEE (compromis
+    11205 annule, aucune vente sur le bien), le refus est donc juste. Sa colonne date porte le 11/11 (une cicatrice) ;
+    nos lecteurs prennent la 1re proposition (02/12/2019) -- on corrige les lecteurs, pas la date.
+
+4 ⭐ LA FORME DU ZERO, A GARDER (son mot) : un zero + son temoin POSITIF + l'explication de CHACUNE de ses ratees (ici
+  626 / 662, et les 36 rangees en deux causes, chacune ecartee pour les lignes du zero).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
