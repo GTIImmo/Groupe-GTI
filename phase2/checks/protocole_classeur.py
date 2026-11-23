@@ -212,6 +212,11 @@ REGLES_VALIDEES = {
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
+    # R15 (23/11, les offres refusees sous le prix : RKWNRBV1, BQAVSRA1, 40ELE6SQ) -- PROPOSEE
+    "R15": "R9b quand le MONTANT ne colle pas : une OFFRE que le gel ne donne qu'a cette ligne (sans vraie piece prouvee) va "
+           "a la ligne si sa date tombe a 7 JOURS AU PLUS de sa case « Offre Achat », et a 7 jours d'AUCUNE autre ligne du "
+           "bien (temoin : sur les offres prouvees par la date exacte, la proximite unique donne la meme ligne 4 243 fois, "
+           "une autre 0)",
     # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
@@ -842,6 +847,15 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
                 m = D.REG[a]["montant"]
                 if prix is None or m is None or round(m) != prix or any(nombre_case(D.case(j, "Prix")) == prix
                                                                          for j in lignes_b if j != i):
+                    # VARIANTE R15 (proposee le 23/11) : l'offre dont la date est proche (7 j) de SA case, et d'aucune autre
+                    dt_ = D.REG[a]["date"]
+                    if joue("R15") and D.REG[a]["genre"] == "offre" and dt_:
+                        proches = [j for j in lignes_b if K.d_sheet(D.case(j, "Offre Achat"))
+                                   and abs((dt_ - K.d_sheet(D.case(j, "Offre Achat"))).days) <= 7]
+                        if proches == [i]:
+                            out[a] = (i, "REGLE R15 (variante) : le gel du 16/11 ne la donne qu'a cette ligne ; sa date %s "
+                                         "tombe a %d jour(s) de sa case « Offre Achat », et a 7 jours d'aucune autre ligne" % (
+                                             dt_, abs((dt_ - K.d_sheet(D.case(i, "Offre Achat"))).days)))
                     continue
                 out[a] = (i, "REGLE R9b (validee le 23/11) : le gel du 16/11 ne la donne qu'a cette ligne ; honoraires inconnus, son "
                              "montant %d = le « Prix » de la ligne, qu'aucune autre ligne du bien n'a" % prix)

@@ -4841,6 +4841,35 @@ pas pouvoir fabriquer une exception toute seule : verifie que tes 3 paires sont 
     (la piece est plus petite que leur plus petite) : elle se mesure avec ses ecarts lus, et sa regle (b) du 20/11.
 ```
 
+### 20.28 R13 et R14 validées ; les restes COPIE_SEULE et SES_PIECES_A_PART ; R15 mesurée et suspecte
+
+Son message du 23/11 : « R13 ET R14 : VALIDEES [...] LES AUTRES PAQUETS D'ABORD (COPIE_SEULE 10, SES_PIECES_A_PART 7, les 7
+mandats recycles). L'hypothese inverse touche aux VENTES [...] la question n'est pas « le compromis annule va-t-il a la
+vente ? » mais « CE compromis annule a-t-il une jumelle vivante ? ». Si oui -> re-signe, il est a la vente. Si non -> rien
+ne justifie de le lui donner. Mesure-le comme ca, pas en bloc. »
+
+```
+1 LES 17 RESTES (COPIE_SEULE 10 + SES_PIECES_A_PART 7, passage 47) -- CINQ CAUSES NOMMEES, pas une :
+  . SES 20 A PART (4) : HUY49KEC (3741), C0HXVVCW (28116), SHN6RKDI (26613), d2108609 (21520) -- sa decision les tient ;
+  . « PLUSIEURS ACHETEURS » (5) : c24ea869, 0a733659 (prix + honoraires de deux lignes), PPIM4947, 3QZ4DAD1 (une date sur
+    deux lignes), ARF57GC5 -- la famille du verrou ;
+  . LES GARDES DE R9 / R9b (3) : SYA8MH79 (commission partagee), KPDROR30 et af8d7986 (Prix partage) ;
+  . UNE DONNEE ABERRANTE (1) : BR8ZTN5F (honoraires -3 000 ; 100 000 contre Prix 118 000) ;
+  . DES OFFRES REFUSEES SOUS LE PRIX (4) : RKWNRBV1 (203 000 / 213 000, 2 j), BQAVSRA1 (190 000 / 198 500, 1 j), 40ELE6SQ
+    (108 000 / 110 000, 5 j), XBR8QD6L (20 000 / 22 700, 81 j).
+2 LA SEULE FAMILLE QUI POUVAIT AVOIR UNE REGLE -- R15 (la date proche) : « une OFFRE que le gel ne donne qu'a cette ligne
+  va a la ligne si sa date tombe a 7 jours au plus de sa case Offre Achat, et a 7 jours d'aucune autre ligne du bien ».
+  SON TEMOIN, A ZERO : sur les offres prouvees par la date EXACTE, la proximite unique donne la MEME ligne 4 243 fois, une
+    autre 0 (35 ambigues : plusieurs lignes a 7 j -> la regle ne joue pas).
+  ⛔ MAIS SA MESURE (passage 48 contre 47) : 3 TRANCHEES (BQAVSRA1 D2024-0070, RKWNRBV1 D2023-0412, af8d7986 D2026-0226)
+    ET 2 VERDICTS RENDUS QUI CHANGENT : G8ND5KJ7 et ZFLFAQ0T, tranchees, RETOMBENT AU VERROU (+ 4 SES_PIECES_A_PART ->
+    verrou). La cause : en recevant leur offre, ARF57GC5 et 3QZ4DAD1 font jouer leur AUTRE piece -- un compromis
+    « plusieurs acheteurs » -- contre leur voisine tranchee. -> SUSPECTE (sa regle), PAS PROPOSEE. A reprendre avec la
+    famille du verrou (une regle qui ne touche pas une ligne dont le gel tient aussi une piece « plusieurs acheteurs »).
+3 RESTENT A FAIRE (dans l'ordre) : les 7 mandats recycles ; puis le verrou PAR SA QUESTION (« ce compromis annule a-t-il
+  une jumelle vivante ? » -- le critere de R14) ; les prealables a l'ecriture (§ 20.26).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
