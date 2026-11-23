@@ -4559,6 +4559,55 @@ vert. » Rapport : `notice/PROTOCOLE_REPONSES_23_11_8_LES_5_LECTURES_R8_R7C_LE_R
 A LUI, DANS LE MESSAGE : les 4 lignes sans aucun bien (en clair) et 14033 (3 lignes, une question).
 ```
 
+### 20.24 Son mot du 23/11 (15) — ses décisions posées, puis LES QUATRE GROS PAQUETS (en cours)
+
+Son mot : `C:\Hektor\mot_du_23_11_avance_sur_les_quatre_gros_paquets.md` (+ son message : « TES DEUX RATTACHEMENTS : OUI [...]
+range 9O6NKRIJ sous R8 [...] 14033 : mesure les DEUX options a blanc [...] MAINTENANT AVANCE COMME PREVU : les quatre gros
+paquets [...] Tu choisis l'ordre, tu ne reviens qu'avec des regles »).
+
+```
+0 SES DECISIONS POSEES (protocole_classeur.py : LIGNE_SUR_LE_BIEN_PAR_DECISION, PIECE_DONNEE_PAR_DECISION,
+  RIEN_A_ETIQUETER_PAR_DECISION ; coupe_preuve_interne.couper_le_bien accepte des pieces donnees -- vide par defaut) :
+  I3TFR2KG -> 48340 (TRANCHEE par ses trois dates exactes) ; 54376c72 -> 54734 (TRANCHEE : l'offre 30830/33147 donnee par
+  sa decision -- ⚠ NOTE, RIEN A REPARER : la case dit 11/11/2026, le commentaire de la MEME ligne « 18.11 », l'offre est
+  proposee le 18/11 a 14:46 ; on ne corrige pas une date, on corrige les lecteurs) ; 9O6NKRIJ -> 52931 (R8 : RIEN A
+  ETIQUETER, elle rentre seule si une piece arrive) ; JZ9693S0 : RIEN A ETIQUETER (⚠ NOTE : le fil FACTURE + AVOIR
+  GGTI00002792 / AVR00000465 dit que l'affaire a existe en comptabilite ; « reglee » au commentaire contre « Annulee » a
+  l'etat : signale, pas tranche). Passage 27 : 4 changent (2 TRANCHEES, 2 RIEN A ETIQUETER), 0 deja rendu ; reste 189.
+  ⭐ SA LECON : ne JAMAIS chercher un rattachement par le nom de l'acquereur (Hektor reutilise le contact de l'acheteur
+  precedent) -- le bien, le montant, les dates.
+
+1 L'ORDRE CHOISI PAR LA MESURE : COPIE_SEULE d'abord (23 lignes, 23 biens, une copie chacune : le plus homogene).
+
+2 LE PAQUET COPIE_SEULE (protocole_paquet_copie_seule_2026-11-23.py ; CSV notice/PROTOCOLE_PAQUET_COPIE_SEULE_...) --
+  UNE CAUSE, 23 / 23 : la ligne tient sa copie C5 (une offre refusee ou un compromis annule recree depuis le Sheet), et SON
+  GEL (16/11, « sure ») lui donne UNE vraie piece du bien -- surtout le compromis ANNULE de l'affaire, sans date, aux
+  honoraires de la ligne mais a un autre prix -- que la coupe laisse A PART (aucune preuve entiere). Aucune autre ligne ne
+  tient cette piece au gel.
+  TEMOIN DU CRITERE, sur TOUTES les lignes : quand le gel nomme une vraie piece pour une SEULE ligne et que ses honoraires
+  = la Commission TTC, la preuve la donne a CETTE ligne 4 208 fois, a une AUTRE 8 fois, a part 53. Quand les honoraires
+  sont inconnus et que son MONTANT = le Prix de la ligne (aucune autre ligne au meme Prix) : CETTE ligne 3 659, une AUTRE 0,
+  a part 134.
+  LES REGLES (VARIANTES, jamais appliquees sans son mot) :
+    R9  la ligne qui ne tient que sa copie recoit LA vraie piece que son gel lui donne, si elle est A PART, que le gel ne
+        la donne a aucune autre ligne, que ses honoraires = la Commission TTC, qu'aucune autre ligne n'a son prix +
+        honoraires, et qu'elle n'est pas une de SES 20 pieces a part (son mot du 21/11).
+    R9b la meme, honoraires INCONNUS : son montant = le Prix de la ligne, qu'aucune autre ligne du bien n'a.
+  ⭐ LE TEMOIN A MORDU : la 1re R9 donnait 28116 a C0HXVVCW -- le temoin a_part_20 (sa decision du 21/11 : « 28116 a
+    personne ») et la V3 ont crie (+2 ecarts). D'ou la clause « pas une de ses 20 ».
+  MESURE : passage 28 (sans elles) = 27 (0 change) ; passage 31 (R9 + R9b) : 15 TRANCHEES (14 COPIE_SEULE + beeaf847, que
+  le verrou lache : sa piece plus petite 28546 va a b42affe7), 0 deja rendu change, les MEMES 19 ecarts ; reste a vider
+  174. Les numeros : chaque ligne prend celui du dossier de sa piece (LTJYTEVC D2024-0453, SYA8MH79 D2024-0458, MIO9L8C9
+  D2024-0455 : les dossiers que R7c avait mis de cote) ; ⚠ beeaf847 (la VENTE, une des 2 560, affichait D2026-0184) recoit
+  un numero NEUF : b42affe7 (l'affaire annulee, plus ancienne) prend 28546 et D2025-0435 -- la regle du plus ancien.
+  CE QUI BLOQUE LES 9 RESTANTES (a lui) :
+    . SES 20 A PART (4) : HUY49KEC (3741 -- et sa vente 54 500 = Prix 49 500 + Commission 5 000), C0HXVVCW (28116),
+      SHN6RKDI (26613), d2108609 (21520) -- sa decision du 21/11 les tient ;
+    . une AUTRE ligne a le prix + honoraires (3) : c24ea869, d2108609, 0a733659 -- les « plusieurs acheteurs » ;
+    . BR8ZTN5F (honoraires -3 000 : une donnee aberrante, 100 000 contre Prix 118 000), RKWNRBV1 (offre 203 000 contre
+      Prix 213 000), af8d7986 (25710 = 40 000 = son Prix, mais d6cd8868 a le meme Prix).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

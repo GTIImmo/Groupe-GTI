@@ -419,7 +419,8 @@ def ancienne_attribution(a: int, des: list, dat: list, cls: dict, noms_tx: set, 
 
 
 # ═══════════════════════════════ COUPER UN BIEN ENTIER (22/11, le protocole du classeur) ═══════════════════════════
-def couper_le_bien(D: Donnees, b: str, lignes_b: set, S: dict, X: list, a_part_par_decision: dict) -> dict:
+def couper_le_bien(D: Donnees, b: str, lignes_b: set, S: dict, X: list, a_part_par_decision: dict,
+                   donnee_par_decision: dict | None = None) -> dict:
     """« OU CA TOMBE » SUR UN BIEN, en UNE fonction -- la composition des regles de coupe deja validees, appelee par le
     protocole (phase2/checks/protocole_classeur.py). Son ancetre fige est `ou_ca_tombe` de temps12 (copie fidele de
     temps11, partie 6), garde tel quel parce que ses sorties sont le TEMOIN V3 : meme ordre, memes regles.
@@ -438,6 +439,14 @@ def couper_le_bien(D: Donnees, b: str, lignes_b: set, S: dict, X: list, a_part_p
         if a in a_part_par_decision:
             apart[a] = a_part_par_decision[a]
             continue
+        # SA DECISION (23/11) : la piece va a la ligne qu'il a nommee (une preuve qu'il a validee). Sans decision : rien
+        #   ne change (le parametre est vide par defaut -- le temoin V3 et les anciens appelants ne le voient pas).
+        if donnee_par_decision and a in donnee_par_decision:
+            dest = donnee_par_decision[a]
+            ligne_, pourquoi_ = dest if isinstance(dest, tuple) else (dest, "sa decision (23/11)")
+            if ligne_ in lignes_b:
+                va[a], preuve[a] = frozenset({ligne_}), pourquoi_
+                continue
         ls_, quoi = decider(D, a, lignes_b)
         if ls_:
             va[a], preuve[a] = frozenset(ls_), quoi

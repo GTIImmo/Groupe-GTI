@@ -181,6 +181,13 @@ REGLES_VALIDEES = {
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
+    # R9 (23/11, le paquet COPIE_SEULE : 23 lignes, UNE cause) -- PROPOSEE, jamais appliquee sans son mot.
+    "R9": "une ligne qui ne tient que sa copie C5 recoit LA vraie piece que son gel lui donne, quand cette piece est A "
+          "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
+          "honoraires sont la « Commission TTC » de la ligne, qu'AUCUNE autre ligne n'a son prix + honoraires, et qu'elle "
+          "n'est pas une de SES 20 pieces a part (son mot du 21/11)",
+    "R9b": "R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
+           "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
 }
 # R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
@@ -196,6 +203,28 @@ def joue(regle: str) -> bool:
 MISES_DE_COTE: dict = {}
 # son mot du 22/11, point 4 : « Le bien 39845 : je veux toujours voir ces deux affaires moi-meme. Mets-les-moi de cote »
 BIENS_A_SA_DECISION = {"39845": "son mot du 22/11, point 4 -- les deux affaires du bien, il les voit lui-meme"}
+# SES DECISIONS DE LIGNE (son message et son mot du 23/11 (15)) : la ligne est sur CE bien -- elles remplacent ce que le
+#   gel, le Mandat, le product_ref et le Lien CRM nommaient. ⛔ Jamais par le nom de l'acquereur (Hektor reutilise le contact
+#   de l'acheteur precedent) : le bien, le montant, les dates.
+LIGNE_SUR_LE_BIEN_PAR_DECISION = {
+    "I3TFR2KG": ("48340", "sa decision du 23/11 : trois dates exactes (offre 22/10/2019, compromis 19/11/2019, vente "
+                          "24/04/2020), 6 000 EUR des deux cotes, mandant CHAPPAT (la ligne : CHAPAT)"),
+    "54376c72": ("54734", "sa decision du 23/11 : l'offre 33147, 13 800 EUR = 12 000 + 1 800 a l'euro, DAUPHIN des deux "
+                          "cotes, mandat de vente 18053 (la ligne porte le mandat de recherche 18993)"),
+    "9O6NKRIJ": ("52931", "sa decision du 23/11 : le mandat de vente 18014 EST le bien 52931 (archive, clos, sans piece) -- "
+                          "R8, elle rentre seule si une piece arrive"),
+}
+# ses pieces donnees par decision (une preuve qu'il a validee et que les epreuves ne savent pas lire) : piece -> ligne
+PIECE_DONNEE_PAR_DECISION = {
+    30830: ("54376c72", "sa decision du 23/11 : 13 800 EUR = 12 000 + 1 800 a l'euro, DAUPHIN des deux cotes -- ⚠ la "
+                        "case « Offre Achat » dit 11/11/2026, le commentaire de la meme ligne « 18.11 », l'offre est "
+                        "proposee le 18/11 a 14:46 : on ne corrige pas une date, on corrige les lecteurs"),
+}
+RIEN_A_ETIQUETER_PAR_DECISION = {
+    "JZ9693S0": "sa decision du 23/11 : ni bien (mandat 92560 inconnu), ni nom ; ⚠ le fil FACTURE + AVOIR (GGTI00002792 / "
+                "AVR00000465) dit que l'affaire a existe en comptabilite ; « reglee » au commentaire contre « Annulee » a "
+                "l'etat : signale, pas tranche",
+}
 
 # LES SOURCES DES TEMOINS -- des decisions deja rendues, jamais recalculees ici
 NOTICE = RACINE / "notice"
@@ -385,6 +414,15 @@ class Image:
         for b, ls in self.D.lignes_bien.items():
             for i in ls:
                 self.biens_de_ligne[i].add(b)
+        # SES DECISIONS DE LIGNE (23/11) : la ligne est sur CE bien, et sur lui seul
+        for i, (b, _pourquoi) in LIGNE_SUR_LE_BIEN_PAR_DECISION.items():
+            if i not in self.sheet["par_id"]:
+                continue
+            for b_ in self.biens_de_ligne.get(i, set()):
+                self.D.lignes_bien[b_].discard(i)
+            self.biens_de_ligne[i] = {b}
+            self.D.lignes_bien[b].add(i)
+            self.D.rattache_par[(b, i)].add("sa_decision")
 
 
 # ═════════════════════════════════════════ LA LECTURE DU BIEN ENTIER ═══════════════════════════════════════════════
@@ -558,6 +596,8 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
     # E1
     if len(I.sheet["par_id"][i]) > 1:
         return attente("ID_EN_DOUBLE", "ID Unique sur les lignes %s" % [x["num"] for x in I.sheet["par_id"][i]])
+    if i in RIEN_A_ETIQUETER_PAR_DECISION:
+        return attente("RIEN_A_ETIQUETER", RIEN_A_ETIQUETER_PAR_DECISION[i])
     if not biens:
         return attente("SANS_BIEN")
     if len(biens) > 1 and bien_par_p1(I, i):
@@ -645,6 +685,70 @@ def preuve_nommee(I: Image, a: int, gl, quoi: str) -> str:
     return "%s : %s" % (tete, quoi)
 
 
+_A_PART_20: set = set()
+
+
+def les_20_a_part() -> set:
+    """SES 20 PIECES A PART (« a part » restreinte aux 20, son mot du 21/11) -- une decision rendue : aucune regle ne les
+    donne a une ligne. Lues ou les temoins les lisent (SRC_V3_CALCUL, « a20 »)."""
+    if not _A_PART_20:
+        _A_PART_20.update(int(a) for _b, a, _w in json.loads(SRC_V3_CALCUL.read_text(encoding="utf-8"))["a20"])
+    return _A_PART_20
+
+
+def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
+    """R9 : pour chaque ligne du bien qui ne tient que des copies C5, la vraie piece que SON GEL lui donne -- si elle est a
+    part, que le gel ne la donne a aucune autre ligne, que ses honoraires sont la Commission TTC de la ligne, et qu'aucune
+    autre ligne n'a son prix + honoraires. Rend {piece: (ligne, preuve)}. Temoin du 23/11 (toutes les lignes) : quand le
+    gel nomme une vraie piece pour une seule ligne et que ses honoraires sont la commission, la preuve la donne a CETTE
+    ligne 4 208 fois, a une AUTRE 8 fois, et la laisse a part 53 fois."""
+    D = I.D
+    out = {}
+    for gl, ids in r["morceaux"].items():
+        if any(I.nature[q] == PC.VRAIE for q in ids) or len(gl) != 1:
+            continue
+        i = next(iter(gl))
+        vraies_gel = sorted({int(g["piece"]) for g in I.gel_par_ligne.get(i, [])
+                             if int(g["piece"]) in D.REG and D.REG[int(g["piece"])]["bien"] == b
+                             and I.nature.get(int(g["piece"])) == PC.VRAIE})
+        if len(vraies_gel) != 1:
+            continue
+        a = vraies_gel[0]
+        if a not in r["apart"] or [x for x in I.gel_par_piece.get(a, []) if x != i]:
+            continue
+        if a in les_20_a_part():          # sa decision du 21/11 : elle reste a part (le temoin a_part_20 l'a crie le 23/11)
+            continue
+        try:
+            com = round(float(str(D.case(i, "Commission TTC")).replace(" ", "").replace(",", ".")))
+        except ValueError:
+            continue
+        h = D.REG[a]["hon"]
+        if h is None:
+            # R9b (variante) : honoraires inconnus -- le MONTANT est le Prix de la ligne, et lui seul l'a
+            if not joue("R9b"):
+                continue
+            prix = nombre_case(D.case(i, "Prix"))
+            m = D.REG[a]["montant"]
+            if prix is None or m is None or round(m) != prix or any(nombre_case(D.case(j, "Prix")) == prix
+                                                                     for j in lignes_b if j != i):
+                continue
+            out[a] = (i, "REGLE R9b (variante) : le gel du 16/11 ne la donne qu'a cette ligne ; honoraires inconnus, son "
+                         "montant %d = le « Prix » de la ligne, qu'aucune autre ligne du bien n'a" % prix)
+            continue
+        if not joue("R9") or round(h) != com or any(D.touche_ph(a, j) for j in lignes_b if j != i):
+            continue
+        out[a] = (i, "REGLE R9 (variante) : le gel du 16/11 ne la donne qu'a cette ligne, et ses honoraires %d = sa "
+                     "« Commission TTC » ; aucune autre ligne n'a son prix + honoraires" % com)
+    return out
+
+
+def nombre_case(s) -> int | None:
+    try:
+        return round(float(str(s).replace(" ", "").replace(",", ".")))
+    except ValueError:
+        return None
+
+
 def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
     """E3 a E9 sur UN BIEN ENTIER : la coupe (K.couper_le_bien, les regles deja validees), puis pour chaque ligne :
     ses pieces, son verrou des deux lignes (E8), son verrou permanent (E7), son etiquette (la pose de nuit simulee)."""
@@ -657,7 +761,14 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         lies = {a for i in lignes_b for a in D.gel_l.get(i, set()) if a in D.REG and D.REG[a]["bien"] == b}
         ch_t = {S[a] for a in lies if a in S}
         X = sorted(a for a in D.par_bien.get(b, []) if S.get(a) in ch_t)
-    r = K.couper_le_bien(D, b, lignes_b, S, X, A_PART_PAR_DECISION)
+    donnee = {a_: l_ for a_, (l_, _w) in PIECE_DONNEE_PAR_DECISION.items()}
+    r = K.couper_le_bien(D, b, lignes_b, S, X, A_PART_PAR_DECISION, donnee)
+    if joue("R9") or joue("R9b"):
+        # VARIANTE R9 (proposee le 23/11, jamais appliquee sans son mot) -- voir VARIANTES
+        r9 = regle_r9(I, b, lignes_b, r)
+        if r9:
+            donnee.update(r9)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, A_PART_PAR_DECISION, donnee)
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
     deja = {}
