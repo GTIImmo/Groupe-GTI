@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v9 -- 23/11 : R17 validee (passage 54 : 15 lignes, 0 verdict rendu ; sa reserve app_chaine_id)"
+VERSION = "v16 -- 23/11 : R25 validee (passage 72 : SYA8MH79, 0 verdict rendu) ; je tranche seul"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -229,6 +229,29 @@ REGLES_VALIDEES = {
             "son message du 23/11 : « R17 : oui, pose-la. J'ai verifie de mon cote entre les passages 51 et 54 : aucun "
             "verdict rendu change, aucune etiquette, aucune piece. Et tes deux refus (passages 52 et 53) sont le vrai "
             "travail. » -- avec SA RESERVE sur app_chaine_id (ci-dessus), a mesurer avant l'ecriture"),
+    # ⭐ A PARTIR D'ICI (son message du 23/11 au soir) : « Tranche par ton raisonnement tout ce que tu peux trancher. Pour
+    #   chaque paquet, construis ta regle, porte son temoin, verifie qu'aucun verdict rendu ne bouge, et avance. Tu n'as
+    #   pas besoin de mon accord a chaque regle. » -- une regle est validee ICI quand son passage (variante) le prouve :
+    #   0 etiquette, 0 piece d'une ligne rendue, 0 ecart de temoin nouveau (protocole_juger_un_passage_2026-11-23.py).
+    "R19": ("L'ELIMINATION : une vraie piece A PART dont le prix + honoraires designent PLUSIEURS lignes va a la SEULE qui ne "
+            "tient aucune vraie piece prouvee de son genre, quand TOUTES les autres tiennent deja la leur au MEME prix + "
+            "honoraires (gardes : jamais une de SES 20 a part ; les dates ; jamais a une ligne deja tranchee) -- temoin : "
+            "rejouee sur chaque piece prouvee dont le prix + honoraires designent au moins deux lignes, la BONNE ligne 18 "
+            "fois, une AUTRE 0, abstention 10",
+            "son message du 23/11 au soir (« tranche seul ») -- passage 59 (variante) contre 58 : 10 lignes (8 VERROU, 2 "
+            "COPIE_SEULE), 0 verdict rendu (ni etiquette, ni piece), temoins identiques ligne pour ligne (788 / 788)"),
+    "R20": ("LA SOEUR DE CHAINE RECONNAIT SANS DONNER : une vraie piece a part dont la soeur de chaine (critere de R17) est prouvee a une ligne DEJA tranchee, dont elle n'est pas la plus petite, est reconnue comme une piece de cette affaire : jamais donnee, rien ne change pour la ligne tranchee, mais elle ne retient plus aucune AUTRE ligne au verrou (temoin : celui de R17, 581 / 0)",
+            "son message du 23/11 au soir (« tranche seul ») ; sa decision « les 3 offres : non, c'est du deja-rendu » est tenue (rien n'est donne) -- passage 61 contre 60 : 3 lignes (29cf0ca8, 8bcc3b63, b884cbd4), 0 verdict rendu, 0 preuve de ligne rendue, temoins identiques (788 / 788)"),
+    "R21": ("L'AFFAIRE TOMBEE SANS LIGNE : une affaire tombee complete (compromis annule + offre refusee au meme montant, partenaires uniques), ses deux pieces a part, sans AUCUN lien avec les lignes du bien (ni montant, ni honoraires, ni date a 30 j, ni gel) est MISE DE COTE comme R7b / R7c, jamais donnee, jamais une de SES 20 a part (temoin : 0 / 26 sans lien tenues par une ligne tranchee ; 432 / 460 avec un lien tenues)",
+            'son message du 23/11 au soir (« tranche seul ») -- passage 63 contre 62 : 3 lignes (ZZ5WKMWM, ESVJUR12, ULA087KO), 0 verdict rendu, temoins identiques (788 / 788) ; 11204 et 24649 GARDENT leur ancien numero (sa regle 6) ; la vente ESVJUR12 (hors des 2 560) recoit un numero NEUF, la regle du plus ancien'),
+    "R22": ("R15 SOUS LA GARDE DU DEJA-RENDU : l'offre que le gel ne donne qu'a une ligne sans vraie piece prouvee va a cette ligne si sa date tombe a 7 jours au plus de sa case « Offre Achat », et a 7 jours d'aucune autre ligne (temoin de R15 : 4 243 / 0) -- et SEULEMENT sur un bien ou aucune ligne tranchee sans elle ne bouge avec elle (juger_bien_garde ; sinon le bien est juge sans elle et nomme)",
+            'son message du 23/11 au soir (« tranche seul ») -- passage 65 contre 64 : 5 lignes (ARF57GC5, BQAVSRA1, KPDROR30, RKWNRBV1, af8d7986), 0 verdict rendu, temoins identiques (788 / 788) ; la garde a juge SANS elle les biens 25921 (2K0LUIIG aurait bouge) et 37243 (ZFLFAQ0T aurait bouge : 3QZ4DAD1 reste impossible)'),
+    "R23": ("R11 ETENDUE : une vraie piece datee a plus d'UN AN de toutes les cases de date de la ligne n'est pas de son affaire -- elle ne retient plus la ligne hors de R11 (temoin T2 : 0 piece prouvee sur 12 237 n'est a plus d'un an de sa ligne)",
+            'son message du 23/11 au soir (« tranche seul ») -- passage 68 contre 67 : 1 verdict (91IHSGNC : AUCUNE_PIECE_PROUVEE -> AFFAIRE_SUR_UN_AUTRE_BIEN, la triple preuve trouve son affaire sur le bien 10229), 0 verdict rendu, temoins identiques'),
+    "R24": ("R11 ETENDUE, ligne « Annulee » : une VENTE dont le compromis ACTIF de sa chaine (au meme montant) est prouve a une AUTRE ligne n'est pas de son affaire -- une affaire annulee n'a pas de vente (temoins : T1, 803 « Annulee » tranchees sur 804 ne tiennent aucune vente, l'ecart LQXGFCKH tenant la vente de SA chaine ; T4, 3 608 ventes sur 3 609 sont a la ligne du compromis actif de leur chaine, l'ecart 17027 allant a l'acheteur suivant, jamais a une ligne annulee)",
+            'son message du 23/11 au soir (« tranche seul ») -- passage 70 contre 69 : 1 verdict (5C80H7ZF : AUCUNE_PIECE_PROUVEE -> RIEN_A_ETIQUETER ; sa seule piece libre, la vente 22191, suit le compromis 22189 de 6VSA6EOZ), 0 verdict rendu, temoins identiques'),
+    "R25": ("L'ELIMINATION PAR LES HONORAIRES : une vraie piece a part dont le prix ne colle a aucune ligne, mais dont les honoraires sont la Commission de PLUSIEURS lignes, va a la SEULE qui ne tient aucune vraie piece de son genre, quand toutes les autres tiennent deja la leur aux memes honoraires ; jamais une de SES 20 a part ; sous la garde du deja-rendu (temoin : 46 / 0, abstention 18)",
+            'son message du 23/11 au soir (« tranche seul ») -- passage 72 contre 71 : 1 ligne (SYA8MH79, D2024-0458), 0 verdict rendu, temoins identiques (788 / 788)'),
 }
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
@@ -253,6 +276,13 @@ VARIANTES = {
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
     # R16 a quitte cette liste le 23/11 (son mot, et la preuve du passage 49) : elle est dans REGLES_VALIDEES
     # R17 a quitte cette liste le 23/11 (son message, et la preuve du passage 54) : elle est dans REGLES_VALIDEES
+    # R19 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve du passage 59)
+    # R25 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve de son passage)
+    # R24 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve de son passage)
+    # R23 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve de son passage)
+    # R22 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve de son passage)
+    # R21 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve de son passage)
+    # R20 a quitte cette liste le 23/11 (son message « tranche seul », et la preuve de son passage)
 }
 # R16 : les mandants des biens au registre (mandants_texte), FIGES le 23/11 hors de l'image -- l'image ne porte que trois
 #   colonnes du registre des mandats ; le fichier est verifie par son empreinte, le passage reste rejouable
@@ -264,8 +294,17 @@ VARIANTES_ACTIVES: set = set()
 
 
 def joue(regle: str) -> bool:
-    """Une regle joue si elle est VALIDEE (toujours) ou si un passage de mesure l'active (--variantes)."""
-    return regle in REGLES_VALIDEES or regle in VARIANTES_ACTIVES
+    """Une regle joue si elle est VALIDEE (toujours) ou si un passage de mesure l'active (--variantes) -- sauf pendant que la
+    garde du deja-rendu rejoue un bien SANS elle (SUSPENDUES)."""
+    return (regle in REGLES_VALIDEES or regle in VARIANTES_ACTIVES) and regle not in SUSPENDUES
+
+
+SUSPENDUES: set = set()
+# LA GARDE DU DEJA-RENDU, BIEN PAR BIEN (23/11, son message : « verifie qu'aucun verdict rendu ne bouge ») : une regle de
+#   cette liste ne joue sur un bien que si AUCUNE ligne tranchee SANS elle n'y change (ni etiquette, ni pieces) AVEC elle.
+#   Sinon le bien est juge sans elle, et il est NOMME (GARDE_DEJA_RENDU) -- R15 avait echoue la-dessus le 23/11.
+REGLES_GARDEES = {"R22", "R25"}
+GARDE_DEJA_RENDU: dict = {}
 
 
 # LES PIECES MISES DE COTE par R7b dans le dernier passage : piece -> son ancien dossier, l'etiquette simulee, le reste
@@ -934,11 +973,11 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
                                                                          for j in lignes_b if j != i):
                     # VARIANTE R15 (proposee le 23/11) : l'offre dont la date est proche (7 j) de SA case, et d'aucune autre
                     dt_ = D.REG[a]["date"]
-                    if joue("R15") and D.REG[a]["genre"] == "offre" and dt_:
+                    if (joue("R15") or joue("R22")) and D.REG[a]["genre"] == "offre" and dt_:
                         proches = [j for j in lignes_b if K.d_sheet(D.case(j, "Offre Achat"))
                                    and abs((dt_ - K.d_sheet(D.case(j, "Offre Achat"))).days) <= 7]
                         if proches == [i]:
-                            out[a] = (i, "REGLE R15 (variante) : le gel du 16/11 ne la donne qu'a cette ligne ; sa date %s "
+                            out[a] = (i, ("REGLE R22 (R15 sous la garde du deja-rendu)" if joue("R22") else "REGLE R15 (variante)") + " : le gel du 16/11 ne la donne qu'a cette ligne ; sa date %s "
                                          "tombe a %d jour(s) de sa case « Offre Achat », et a 7 jours d'aucune autre ligne" % (
                                              dt_, abs((dt_ - K.d_sheet(D.case(i, "Offre Achat"))).days)))
                     continue
@@ -1018,6 +1057,200 @@ def regle_r17(I: Image, b: str, r: dict) -> dict:
     return out
 
 
+def restantes_r11(I: Image, b: str, i: str, X: list, r: dict, pourquoi: int | None = None):
+    """Les vraies pieces du bien qui pourraient ENCORE etre l'affaire de la ligne i (R11 ne la ferme que s'il n'en reste
+    aucune) : celles qui ne sont prouvees a aucune ligne, MOINS --
+      R23 (23/11) celles datees a plus d'UN AN de toutes les cases de date de la ligne (temoin T2 : 0 piece prouvee sur
+          12 237 n'est a plus d'un an de sa ligne) ;
+      R24 (23/11, ligne « Annulee » seulement) les VENTES dont la chaine porte un compromis ACTIF au meme montant, prouve a
+          une AUTRE ligne (temoins : T1, 803 « Annulee » tranchees sur 804 ne tiennent aucune vente -- l'ecart LQXGFCKH
+          tient la vente de SA chaine ; T4, 3 608 ventes sur 3 609 sont a la ligne du compromis actif de leur chaine -- l'ecart
+          17027 va a l'acheteur suivant, jamais a la ligne annulee).
+    Avec `pourquoi` : rend la raison pour laquelle CETTE piece est hors de son affaire."""
+    D = I.D
+    cases = [d for d in (K.d_sheet(D.case(i, c)) for c in ("Offre Achat", "Compromis", "Signé", "Vente Prévue",
+                                                           "Vente Fixée", "Signée", "Vente Réglée", "Annulée")) if d]
+    annulee = D.case(i, "Etat Actuel").strip().startswith("Annul")
+    out, raison = [], {}
+    for q in X:
+        if q in r["va"] or I.nature[q] != PC.VRAIE:
+            continue
+        p = D.REG[q]
+        if joue("R23") and p["date"] and cases and min(abs((p["date"] - d).days) for d in cases) > 365:
+            raison[q] = "REGLE R23 : datee le %s, a plus d'un an de toutes ses cases" % p["date"]
+            continue
+        if joue("R24") and annulee and p["genre"] == "vente" and p["montant"] is not None:
+            ch = I.pieces[q]["app_chaine_id"]
+            cps = [c_ for c_ in D.par_bien.get(b, []) if I.pieces[c_]["app_chaine_id"] == ch
+                   and D.REG[c_]["genre"] == "compromis" and D.REG[c_]["etat"] == "active" and I.nature[c_] == PC.VRAIE
+                   and D.REG[c_]["montant"] is not None and abs(D.REG[c_]["montant"] - p["montant"]) <= 1]
+            if len(cps) == 1 and r["va"].get(cps[0]) and i not in r["va"][cps[0]]:
+                raison[q] = ("REGLE R24 : une vente, dont le compromis actif %d de sa chaine est prouve a %s -- une affaire "
+                             "annulee n'a pas de vente" % (cps[0], "+".join(sorted(r["va"][cps[0]]))))
+                continue
+        out.append(q)
+    if pourquoi is not None:
+        return raison.get(pourquoi, "")
+    return out
+
+
+def reconnues_r20(I: Image, b: str, r: dict) -> dict:
+    """R20 (23/11) : LA SOEUR DE CHAINE RECONNAIT SANS DONNER. Une vraie piece A PART dont la soeur de chaine (le critere de
+    R17 : compromis ANNULE <-> offre REFUSEE, unique et reciproque dans la chaine, meme montant ; g1 les dates, g2 l'ordre,
+    g3 un seul de son genre) est prouvee a une ligne L DEJA TRANCHEE, dont elle n'est PAS la plus petite (l'etiquette de L
+    ne depend pas d'elle -- c'est pourquoi la g4 de R17 la refuse), est RECONNUE comme une piece de l'affaire de L : elle
+    reste a part (jamais donnee, rien ne change pour L), mais elle ne retient plus AUCUNE AUTRE ligne au verrou. Sa decision
+    du 23/11 (« les 3 offres sur une ligne deja tranchee : non [...] c'est du deja-rendu ») est tenue : on ne touche pas a
+    L. Temoin : celui de R17 (581 la bonne ligne, 0 une autre). Rend {piece: (ligne L, soeur)}."""
+    D = I.D
+    S = {a: I.pieces[a]["app_chaine_id"] for a in D.par_bien.get(b, [])}
+
+    def soeurs(a: int) -> list:
+        p = D.REG[a]
+        k = AUTRE_MOITIE_R17.get((p["genre"], p["etat"]))
+        if not k or p["montant"] is None:
+            return []
+        return [q for q in D.par_bien.get(b, []) if q != a and S.get(q) == S.get(a) and I.nature[q] == PC.VRAIE
+                and (D.REG[q]["genre"], D.REG[q]["etat"]) == k and D.REG[q]["montant"] is not None
+                and abs(D.REG[q]["montant"] - p["montant"]) <= 1]
+    out = {}
+    for a in sorted(r["apart"]):
+        if I.nature[a] != PC.VRAIE or a in les_20_a_part() or a in A_PART_PAR_DECISION:
+            continue
+        s = soeurs(a)
+        if len(s) != 1 or len(soeurs(s[0])) != 1:
+            continue
+        q = s[0]
+        ls = r["va"].get(q)
+        if not ls or len(ls) != 1:
+            continue
+        L = next(iter(ls))
+        if D.contre_dates(a, {L}):
+            continue
+        o, cp = (a, q) if D.REG[a]["genre"] == "offre" else (q, a)
+        if D.REG[o]["date"] and D.REG[cp]["date"] and D.REG[o]["date"] > D.REG[cp]["date"]:
+            continue
+        vraies_L = [x for x, l_ in r["va"].items() if L in l_ and I.nature[x] == PC.VRAIE]
+        if [x for x in vraies_L if x != a and D.REG[x]["genre"] == D.REG[a]["genre"]]:
+            continue
+        if not vraies_L or a < min(vraies_L):
+            continue                       # elle serait la plus petite de L : c'est R17 (ou rien), pas R20
+        out[a] = (L, q)
+    return out
+
+
+def tombees_sans_ligne_r21(I: Image, b: str, lignes_b: set, r: dict) -> dict:
+    """R21 (23/11) : L'AFFAIRE TOMBEE SANS LIGNE. Une affaire tombee COMPLETE (un compromis ANNULE et une offre REFUSEE au
+    meme montant, chacun l'unique partenaire de l'autre a ce montant sur le bien), dont les DEUX pieces sont a part, et
+    qui n'a AUCUN LIEN avec les lignes du bien : l1 son montant n'est ni le Prix ni une offre prouvee d'aucune ligne ; l2
+    les honoraires du compromis ne sont la Commission d'aucune ligne ; l3 l'offre est a plus de 30 jours de toute case
+    « Offre Achat », le compromis (s'il est date) sur aucune case « Compromis » ; l4 aucune ligne du bien ne les tient au
+    gel. Ses pieces sont MISES DE COTE (comme R7b / R7c : isolees avec leur dossier d'aujourd'hui, jamais donnees) -- elles
+    ne retiennent plus aucune ligne. Jamais une de SES 20 a part. Temoin (protocole_r21_affaire_tombee_sans_ligne_
+    2026-11-23.py) : sur 486 affaires tombees completes d'un bien qui a des lignes, les 26 SANS AUCUN LIEN ne sont tenues
+    par AUCUNE ligne tranchee (0 / 26) ; temoin positif : 432 des 460 AVEC un lien sont tenues. Rend {piece: soeur}."""
+    D = I.D
+    ids = D.par_bien.get(b, [])
+    cps = [q for q in ids if D.REG[q]["genre"] == "compromis" and D.REG[q]["etat"] == "cancelled" and I.nature[q] == PC.VRAIE
+           and D.REG[q]["montant"] is not None]
+    ofs = [q for q in ids if D.REG[q]["genre"] == "offre" and D.REG[q]["etat"] == "refused" and I.nature[q] == PC.VRAIE
+           and D.REG[q]["montant"] is not None]
+    out = {}
+    for cp in cps:
+        o_ = [o for o in ofs if abs(D.REG[o]["montant"] - D.REG[cp]["montant"]) <= 1]
+        if len(o_) != 1 or len([x for x in cps if abs(D.REG[x]["montant"] - D.REG[o_[0]]["montant"]) <= 1]) != 1:
+            continue
+        o = o_[0]
+        if cp not in r["apart"] or o not in r["apart"] or {cp, o} & les_20_a_part() or {cp, o} & set(A_PART_PAR_DECISION):
+            continue
+        mt = D.REG[cp]["montant"]
+        lien = False
+        for i in lignes_b:
+            com = nombre_case(D.case(i, "Commission TTC"))
+            do, dc = K.d_sheet(D.case(i, "Offre Achat")), K.d_sheet(D.case(i, "Compromis"))
+            l1 = any(abs(mt - x) <= 1 for x in D.offres_de_la_ligne(i, b))
+            l2 = D.REG[cp]["hon"] is not None and com is not None and abs(D.REG[cp]["hon"] - com) <= 1
+            l3 = bool((do and D.REG[o]["date"] and abs((D.REG[o]["date"] - do).days) <= 30)
+                      or (dc and D.REG[cp]["date"] and D.REG[cp]["date"] == dc))
+            if l1 or l2 or l3:
+                lien = True
+        if lien or [i for q in (cp, o) for i in I.gel_par_piece.get(q, []) if i in lignes_b]:
+            continue
+        out[cp], out[o] = o, cp
+    return out
+
+
+def regle_r25(I: Image, b: str, lignes_b: set, r: dict) -> dict:
+    """R25 (23/11), L'ELIMINATION PAR LES HONORAIRES : une vraie piece A PART dont le prix + honoraires ne collent a AUCUNE
+    ligne, mais dont les honoraires sont la Commission TTC de PLUSIEURS lignes, va a la SEULE d'entre elles qui ne tient
+    aucune vraie piece prouvee de son genre, quand TOUTES les autres tiennent deja la leur AUX MEMES honoraires. Jamais une
+    de SES 20 a part ; les dates (contre_dates) ; sous la GARDE DU DEJA-RENDU (REGLES_GARDEES). Temoin
+    (protocole_r19_elimination_2026-11-23.py, section R25) : rejouee sur chaque piece prouvee dont les honoraires sont la
+    Commission d'au moins deux lignes -- la BONNE ligne 46 fois, une AUTRE 0, abstention 18."""
+    D = I.D
+    out = {}
+    for a in sorted(r["apart"]):
+        p = D.REG[a]
+        if I.nature[a] != PC.VRAIE or a in les_20_a_part() or a in A_PART_PAR_DECISION or p["hon"] is None:
+            continue
+        if any(D.touche_ph(a, i) for i in lignes_b):
+            continue                                   # le prix colle : c'est R19, pas elle
+        cands = sorted(i for i in lignes_b if nombre_case(D.case(i, "Commission TTC")) is not None
+                       and abs(p["hon"] - nombre_case(D.case(i, "Commission TTC"))) <= 1 and not D.contre_dates(a, {i}))
+        if len(cands) < 2:
+            continue
+
+        def du_genre(i):
+            return [q for q, ls in r["va"].items() if i in ls and q != a and I.nature[q] == PC.VRAIE
+                    and D.REG[q]["genre"] == p["genre"]]
+        libre = [i for i in cands if not du_genre(i)]
+        if len(libre) != 1 or not all([q for q in du_genre(i) if D.REG[q]["hon"] is not None
+                                       and abs(D.REG[q]["hon"] - p["hon"]) <= 1] for i in cands if i != libre[0]):
+            continue
+        L = libre[0]
+        out[a] = (L, "REGLE R25 (23/11) : PAR ELIMINATION, SUR LES HONORAIRES -- son prix %s ne colle a aucune ligne ; ses "
+                     "honoraires %d sont la Commission de %s ; %s tiennent deja leur %s a ces honoraires, %s n'en tient aucun"
+                  % (p["montant"], round(p["hon"]), " ".join(cands), " ".join(i for i in cands if i != L), p["genre"], L))
+    return out
+
+
+def regle_r19(I: Image, b: str, lignes_b: set, r: dict) -> dict:
+    """R19 (23/11), L'ELIMINATION : une vraie piece A PART dont le prix + honoraires designent PLUSIEURS lignes va a la
+    SEULE d'entre elles qui ne tient AUCUNE vraie piece prouvee de son genre, quand TOUTES les autres tiennent deja une
+    vraie piece de son genre AU MEME prix + honoraires (une affaire n'a qu'un compromis a ce prix). Gardes : jamais une de
+    SES 20 a part (sa liste des impossibles) ; les dates (contre_dates) ; g4 de R17 -- jamais a une ligne deja tranchee (la
+    piece devient sa plus petite vraie piece, et elle est possible pour plusieurs lignes). Temoin
+    (protocole_r19_elimination_2026-11-23.py), rejouee sur chaque piece prouvee dont le prix + honoraires designent au
+    moins deux lignes : la BONNE ligne 18 fois, une AUTRE 0, elle s'abstient 10 fois. Rend {piece: (ligne, preuve)}."""
+    D = I.D
+    out = {}
+    for a in sorted(r["apart"]):
+        p = D.REG[a]
+        if I.nature[a] != PC.VRAIE or a in les_20_a_part() or a in A_PART_PAR_DECISION or p["montant"] is None \
+                or p["hon"] is None:
+            continue
+        cands = sorted(i for i in lignes_b if D.touche_ph(a, i) and not D.contre_dates(a, {i}))
+        if len(cands) < 2:
+            continue
+
+        def du_genre(i):
+            return [q for q, ls in r["va"].items() if i in ls and q != a and I.nature[q] == PC.VRAIE
+                    and D.REG[q]["genre"] == p["genre"]]
+        libre = [i for i in cands if not du_genre(i)]
+        if len(libre) != 1 or not all([q for q in du_genre(i) if D.REG[q]["montant"] == p["montant"]
+                                       and D.REG[q]["hon"] == p["hon"]] for i in cands if i != libre[0]):
+            continue
+        L = libre[0]
+        vraies_L = [x for x, l_ in r["va"].items() if L in l_ and I.nature[x] == PC.VRAIE]
+        if (vraies_L and a > min(vraies_L)) or len(r["possibles"].get(a, [])) < 2:
+            continue                                                       # g4 (celle de R17)
+        out[a] = (L, "REGLE R19 (23/11) : PAR ELIMINATION -- son prix %d + honoraires %d designent %s ; %s tiennent deja "
+                     "leur %s a ce prix + honoraires, %s n'en tient aucun" % (
+                         round(p["montant"]), round(p["hon"]), " ".join(cands), " ".join(i for i in cands if i != L),
+                         p["genre"], L))
+    return out
+
+
 def nombre_case(s) -> int | None:
     try:
         return round(float(str(s).replace(" ", "").replace(",", ".")))
@@ -1075,6 +1308,18 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         if r17:
             donnee.update(r17)
             r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
+    if joue("R19"):
+        # REGLE R19 (validee le 23/11) : l'elimination -- voir regle_r19
+        r19 = regle_r19(I, b, lignes_b, r)
+        if r19:
+            donnee.update(r19)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
+    if joue("R25"):
+        # R25 (23/11) : l'elimination par les honoraires, sous la garde du deja-rendu -- voir regle_r25
+        r25 = regle_r25(I, b, lignes_b, r)
+        if r25:
+            donnee.update(r25)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
     deja = {}
@@ -1127,6 +1372,16 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if retient and not (date_exacte or prix_hon or case_vide or dans_un_dossier):
                 isoles.add(a)
                 isoles_r7c.add(a)
+    isoles_r21 = set()
+    if joue("R21"):
+        # R21 (23/11) : l'affaire tombee sans ligne -- voir tombees_sans_ligne_r21 ; seules les pieces qui RETIENNENT une ligne
+        for a, s_ in sorted(tombees_sans_ligne_r21(I, b, lignes_b, r).items()):
+            if a in isoles:
+                continue
+            if any(a < min([q for q in r["morceaux"].get(gl, []) if I.nature[q] == PC.VRAIE] or [0])
+                   and a not in deja.get(gl, []) for gl in r["possibles"].get(a, [])):
+                isoles.add(a)
+                isoles_r21.add(a)
     isoles_r18 = set()
     if joue("R18"):
         # VARIANTE R18 (son message du 23/11 : « mesure la regle de mise de cote a blanc » -- MESURE SEULEMENT) : une de SES
@@ -1166,10 +1421,11 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         MISES_DE_COTE[a] = {"bien": b, "ancien_uuid": ancien, "ancien_numero": I.pieces[a]["app_dossier_numero"],
                             "ancienne_chaine": S.get(a), "etiquette_simulee": lab1[a],
                             "garde_son_numero": lab1[a] == ancien, "mise_de_cote_avec": [q for q in g_ if q != a],
-                            "regle": "R18" if a in isoles_r18 else ("R7c" if a in isoles_r7c else "R7b"),
+                            "regle": "R21" if a in isoles_r21 else ("R18" if a in isoles_r18 else ("R7c" if a in isoles_r7c else "R7b")),
                             "pieces_du_dossier_prises_par_un_morceau": hors,
                             "etiquettes_du_groupe": sorted({str(lab1[q]) for q in g_}),
                             "groupe": g_, "lignes_du_gel": {str(q): sorted(I.gel_par_piece.get(q, [])) for q in g_}}
+    recon = reconnues_r20(I, b, r) if joue("R20") else {}
     out = []
     for i in sorted(a_juger):
         base = {"id_unique": i, "num": D.LIG[i]["num"], "biens": [b]}
@@ -1186,7 +1442,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             elif gel_b and ailleurs:
                 out.append(attente("SES_PIECES_AILLEURS", "; ".join("%d -> %s" % (a, "+".join(v))
                                                                      for a, v in ailleurs.items())))
-            elif joue("R11") and not gel_b and X and not [q for q in X if q not in r["va"] and I.nature[q] == PC.VRAIE]:
+            elif joue("R11") and not gel_b and X and not restantes_r11(I, b, i, X, r):
                 # VARIANTE R11 (proposee le 23/11) : sans gel, et TOUTES les vraies pieces du bien sont prouvees a
                 #   d'autres lignes -- son affaire n'a aucune piece chez nous ; sauf si la triple preuve la trouve ailleurs
                 autre = affaire_sur_un_autre_bien(I, i)
@@ -1195,9 +1451,12 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                     out.append(attente("AFFAIRE_SUR_UN_AUTRE_BIEN", "bien %s : aucune piece pour elle ; son affaire est "
                                        "sur le bien %s -- %s" % (b, bb, pr_)))
                 else:
+                    ecartees = sorted(set(q for q in X if q not in r["va"] and I.nature[q] == PC.VRAIE))
                     out.append(attente("RIEN_A_ETIQUETER", "REGLE R11 (variante) : bien %s -- sans gel, et ses %d piece(s) "
-                                       "sont toutes prouvees a d'autres lignes : son affaire n'a aucune piece chez nous"
-                                       % (b, len(X))))
+                                       "sont toutes prouvees a d'autres lignes : son affaire n'a aucune piece chez nous%s"
+                                       % (b, len(X), (" ; hors d'elle : %s" % ", ".join(
+                                           "%d (%s)" % (q, restantes_r11(I, b, i, X, r, pourquoi=q)) for q in ecartees))
+                                          if ecartees else "")))
             else:
                 out.append(attente("AUCUNE_PIECE_PROUVEE", "bien %s : %d piece(s) jugee(s), aucune pour elle ; gel %s"
                                    % (b, len(X), gel_b or "aucun")))
@@ -1227,23 +1486,38 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         m = min(hk)
         bloque = [] if "R4" in VARIANTES_ACTIVES else \
             sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < m and gl in r["possibles"][a]
-                   and a not in deja.get(gl, []) and a not in isoles)
+                   and a not in deja.get(gl, []) and a not in isoles
+                   and not (a in recon and recon[a][0] not in gl))
         if bloque:
             out.append(attente("VERROU_PIECE_PLUS_PETITE", "plus petite de la ligne %d ; a part et plus petites : %s"
                                % (m, "; ".join("%d (%s)" % (a, r["apart"][a]) for a in bloque))))
             continue
         neutres = sorted(a for a in r["apart"] if gl in r["possibles"][a] and a not in deja.get(gl, [])
-                         and a not in isoles)
+                         and a not in isoles and not (a in recon and recon[a][0] not in gl and a < m))
+        reconnues_ici = sorted(a for a in recon if recon[a][0] not in gl and a < m and gl in r["possibles"].get(a, []))
         preuves = [preuve_nommee(I, a, gl, r["preuve"].get(a, "")) for a in ids]
         if neutres:
             preuves.append("a part sans effet sur l'etiquette (son critere 2) : %s" % " ".join(map(str, neutres)))
+        if reconnues_ici:
+            preuves.append("a part plus petite mais RECONNUE a une autre affaire par sa soeur de chaine (REGLE R20) : %s"
+                           % "; ".join("%d est a %s (sa soeur %d y est prouvee ; jamais donnee)" % (a, recon[a][0], recon[a][1])
+                                       for a in reconnues_ici))
         mis_de_cote = sorted(a for a in isoles if a < m and gl in r["possibles"][a])
         if mis_de_cote:
             if any(a in isoles_r7c for a in mis_de_cote):
                 preuves.append("a part TRANCHEE PAR LA REGLE R7c (validee le 23/11) -- aucune preuve ne peut la donner a "
                                "aucune de ses lignes possibles, hors de leurs dossiers : %s" % " ".join(
                                    "%d" % a for a in mis_de_cote if a in isoles_r7c))
-            m7 = [a for a in mis_de_cote if a not in isoles_r18]
+            m7 = [a for a in mis_de_cote if a not in isoles_r18 and a not in isoles_r21]
+            m21 = [a for a in mis_de_cote if a in isoles_r21]
+            if m21:
+                preuves.append("a part MISE DE COTE PAR LA REGLE R21 : une affaire tombee complete (compromis annule + offre "
+                               "refusee au meme montant) SANS AUCUN LIEN avec les lignes du bien -- jamais donnee ; son ancien "
+                               "numero dans la pose simulee : %s" % ", ".join(
+                                   "%d %s %s (dossier fige : %s)" % (
+                                       a, "GARDE" if lab1[a] == I.pieces[a]["app_dossier_uuid"] else "⛔ PERD (numero NEUF)",
+                                       I.pieces[a]["app_dossier_numero"] or "aucun", " ".join(map(str, groupe_isole[S[a]])))
+                                   for a in m21))
             if m7:
                 preuves.append("a part MISE DE COTE avec son dossier d'aujourd'hui, possible pour elle seule, hors de son "
                                "dossier (REGLE R7b, validee le 22/11 ; elle garde son ancien numero : %s) : %s" % (", ".join(
@@ -1272,10 +1546,43 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
     return out
 
 
+def juger_bien_garde(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
+    """juger_bien, sous LA GARDE DU DEJA-RENDU : si une regle de REGLES_GARDEES joue, le bien est juge AVEC et SANS elles ;
+    une ligne tranchee SANS qui change AVEC (etiquette ou pieces) -> le bien est juge SANS, et nomme dans GARDE_DEJA_RENDU."""
+    gardees = {x for x in REGLES_GARDEES if joue(x)}
+    if not gardees:
+        return juger_bien(I, b, a_juger, perimetre)
+    avant = dict(MISES_DE_COTE)
+    SUSPENDUES.update(gardees)
+    try:
+        sans = juger_bien(I, b, a_juger, perimetre)
+    finally:
+        SUSPENDUES.difference_update(gardees)
+    m_sans = dict(MISES_DE_COTE)
+    MISES_DE_COTE.clear()
+    MISES_DE_COTE.update(avant)
+    avec = juger_bien(I, b, a_juger, perimetre)
+    s_ = {o["id_unique"]: o for o in sans}
+    a_ = {o["id_unique"]: o for o in avec}
+    bouge = sorted(i for i, o in s_.items() if o["verdict"] == "TRANCHEE"
+                   and (a_[i]["verdict"], a_[i].get("etiquette"), a_[i].get("pieces"))
+                   != (o["verdict"], o.get("etiquette"), o.get("pieces")))
+    if bouge:
+        GARDE_DEJA_RENDU[b] = {"regles": sorted(gardees), "lignes_rendues_qui_bougeraient": bouge,
+                               "lignes_que_la_regle_aurait_tranchees": sorted(i for i, o in a_.items()
+                                                                              if o["verdict"] == "TRANCHEE"
+                                                                              and s_[i]["verdict"] != "TRANCHEE")}
+        MISES_DE_COTE.clear()
+        MISES_DE_COTE.update(m_sans)
+        return sans
+    return avec
+
+
 def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set | None = None) -> int:
     VARIANTES_ACTIVES.clear()
     VARIANTES_ACTIVES.update(variantes or ())
     MISES_DE_COTE.clear()
+    GARDE_DEJA_RENDU.clear()
     if VARIANTES_ACTIVES - set(VARIANTES):
         raise SystemExit("⛔ variante inconnue : %s" % sorted(VARIANTES_ACTIVES - set(VARIANTES)))
     if VARIANTES_ACTIVES:
@@ -1295,7 +1602,7 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
         else:
             rangs.append(r)
     for b in sorted(par_bien, key=lambda x: int(x) if x.isdigit() else 0):
-        rangs.extend(juger_bien(I, b, par_bien[b], perimetre))
+        rangs.extend(juger_bien_garde(I, b, par_bien[b], perimetre))
     for x in I.sheet["sans_id"]:
         rangs.append({"id_unique": "#%d" % x["num"], "num": x["num"], "biens": [], "verdict": "ATTENTE",
                       "motif": "SANS_ID_UNIQUE", "motif_texte": MOTIFS["SANS_ID_UNIQUE"][1], "epreuve": "E1"})
@@ -1364,6 +1671,12 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
         dire("   R7b -- FIGEES N'EST PAS REGLEES : %d ligne(s) EN ATTENTE portent un dossier fige ; elles restent dans le "
              "reste a vider : %s" % (len(att_f), " . ".join("%s (%s)" % (i_, "+".join(sorted(n_))) for i_, n_ in
                                                              sorted(att_f.items())) or "aucune"))
+    if GARDE_DEJA_RENDU:
+        dire("   GARDE DU DEJA-RENDU : %d bien(s) juge(s) SANS %s, parce qu'une ligne tranchee y bougerait : %s" % (
+            len(GARDE_DEJA_RENDU), "+".join(sorted({r_ for x in GARDE_DEJA_RENDU.values() for r_ in x["regles"]})),
+            " . ".join("%s (rendues : %s ; aurait tranche : %s)" % (b_, "+".join(x["lignes_rendues_qui_bougeraient"]),
+                                                                 "+".join(x["lignes_que_la_regle_aurait_tranchees"]) or "-")
+                       for b_, x in sorted(GARDE_DEJA_RENDU.items()))))
     if crie:
         dire("   ⛔ un temoin crie : voir la table `temoin` du socle (passage %d)" % pid)
     return 0 if boucle and not crie else 1

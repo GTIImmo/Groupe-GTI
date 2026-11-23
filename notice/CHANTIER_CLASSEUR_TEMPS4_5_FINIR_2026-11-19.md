@@ -5175,6 +5175,62 @@ RIEN D'ECRIT (ni base, ni Sheet, ni Hektor) ; rien tire, rien pousse (74 commits
 faire de ses 20 a part. Ensuite, a son signal : l'elimination (8 lignes).
 ```
 
+
+### 20.34 La fin du protocole, tranchée seul : R19 à R25, et la liste des 53 impossibles
+
+Son message du 23/11 au soir : « Change de methode pour la fin : arrete de me demander un arbitrage a chaque pas. Tranche par
+ton raisonnement tout ce que tu peux trancher. Pour chaque paquet, construis ta regle, porte son temoin, verifie qu'aucun
+verdict rendu ne bouge, et avance. [...] donne-moi UNE SEULE liste : les lignes que tu ne peux pas trancher, et pour chacune,
+en une phrase, pourquoi c'est impossible pour toi. [...] Les 20 a part : laisse-les de cote -- elles sont deja sur ma liste des
+impossibles [...] mesure l'elimination maintenant. Rien d'ecrit, rien de tire, rien de pousse. »
+Outils (lecture seule) : protocole_juger_un_passage_2026-11-23.py (le juge : etiquette, pieces, preuves des lignes rendues,
+temoins ligne par ligne) ; protocole_r19_elimination_2026-11-23.py ; protocole_r21_affaire_tombee_sans_ligne_2026-11-23.py ;
+protocole_temoins_de_la_fin_2026-11-23.py.
+
+```
+LA METHODE, A CHAQUE REGLE : son temoin (chaque ecart nomme) -> un passage en variante -> le juge contre la reference (0
+etiquette, 0 piece d'une ligne rendue, 0 ecart de temoin nouveau) -> validee dans le code (source : ce message) -> la
+reference rejouee identique.
+⭐ LA GARDE DU DEJA-RENDU, BIEN PAR BIEN (juger_bien_garde, REGLES_GARDEES = R22, R25) : une regle gardee ne joue sur un bien
+  que si aucune ligne tranchee SANS elle n'y bouge AVEC elle ; sinon le bien est juge sans elle et NOMME. Elle a ecarte 25921
+  (2K0LUIIG aurait bouge, rien a gagner) et 37243 (ZFLFAQ0T aurait bouge : 3QZ4DAD1 reste impossible).
+
+LES REGLES (passage de la variante -> reference) :
+  R19 L'ELIMINATION (59 -> 60, v10) : prix + honoraires de plusieurs lignes, toutes sauf une tiennent deja leur piece de ce
+      genre a ce prix -> a la derniere. Temoin 18 / 0 (abstention 10). 10 lignes (8 du verrou, 2 copies seules).
+  R20 LA SOEUR RECONNAIT SANS DONNER (61 -> 62, v11) : l'offre dont la soeur de chaine est prouvee a une ligne DEJA tranchee
+      ne retient plus les autres ; rien n'est donne (sa decision « non » aux 3 offres est tenue). 3 lignes (29cf0ca8,
+      8bcc3b63, b884cbd4), 0 preuve de ligne rendue changee.
+  R21 L'AFFAIRE TOMBEE SANS LIGNE (63 -> 64, v12) : compromis annule + offre refusee au meme montant, sans AUCUN lien avec
+      les lignes (montant, honoraires, date a 30 j, gel) -> mise de cote. Temoin 0 / 26 tenues ; 432 / 460 avec un lien
+      tenues. 3 lignes (ZZ5WKMWM, ESVJUR12, ULA087KO) ; 11204 et 24649 gardent leur numero (regle 6).
+  R22 R15 SOUS LA GARDE (65 -> 66, v13) : l'offre a 7 jours de sa case, gel unique (temoin de R15 4 243 / 0). 5 lignes
+      (ARF57GC5, BQAVSRA1, KPDROR30, RKWNRBV1, af8d7986).
+  R23 R11 ETENDUE, UN AN (68 -> 69, v14) : une piece a plus d'un an de toutes les cases de la ligne n'est pas la sienne
+      (temoin T2 : 0 / 12 237). 91IHSGNC : la triple preuve trouve alors son affaire sur le bien 10229 -> AFFAIRE_SUR_UN_AUTRE_BIEN.
+  R24 R11 ETENDUE, LIGNE ANNULEE (70 -> 71, v15) : la vente dont le compromis actif de sa chaine est prouve a une autre ligne
+      n'est pas la sienne (T1 803 / 1 : LQXGFCKH tient la vente de SA chaine ; T4 3 608 / 1 : 17027 va a l'acheteur
+      suivant). 5C80H7ZF -> RIEN A ETIQUETER.
+  R25 L'ELIMINATION PAR LES HONORAIRES (72 -> 73, v16, gardee) : le prix ne colle a aucune ligne, les honoraires sont la
+      Commission de plusieurs. Temoin 46 / 0 (abstention 18). SYA8MH79 (D2024-0458).
+  MESURES SANS REGLE : T3 l'etat d'une offre suit l'etat de sa ligne -- refusee : 663 « Annulee » contre 17 ; le departage
+      d'un meme jour d'offre par l'etat : 7 / 0 seulement -> TROP MINCE, PPIM4947 reste impossible.
+
+LE BILAN, DU PASSAGE 51 AU 73 (le juge) : 4 653 -> 4 690 tranchees (+37) et 5C80H7ZF rien a etiqueter ; LE RESTE A VIDER :
+  91 -> 53 ; 0 etiquette et 0 piece d'une ligne rendue ne changent (12 preuves perdent la mention d'une piece neutre) ;
+  temoins identiques ligne pour ligne (788 / 788, les memes 19 ecarts).
+  Des 37 : 33 prennent un numero existant ; 4 recoivent un numero NEUF -- ULFVA1AQ, ZZ5WKMWM, et DEUX VENTES : ESVJUR12
+  (hors des 2 560 ; D2018-0535 reste au compromis tombe de 2019) et SC58GWXX (son numero du 16/11, D2021-0477, n'etait deja
+  plus son dossier : la nuit l'a deplace ; D2021-0739 va au compromis tombe 11708, plus petit). Les 5 autres des 2 560
+  (5e112aba, 7M4U001G, SUVPN4BH, UBSIJYPW, d47d6790) retrouvent EXACTEMENT leur numero du 16/11.
+
+LA LISTE DES 53 IMPOSSIBLES : notice/PROTOCOLE_LA_LISTE_DES_IMPOSSIBLES_2026-11-23.md (une ligne, une phrase).
+  26 retenues par SES 20 a part (22 au verrou, 4 copies seules) ; 12 reservees par lui (39845 : 3 ; affaire sur un autre
+  bien : 5 dont 91IHSGNC ; ses deux paires : 4) ; 15 autres, chacune avec sa raison.
+RESTE AVANT TOUTE ECRITURE, inchange : les prealables P-a a P-f (dont la reserve app_chaine_id de R17 et les regles qui la
+  suivent : R20 aussi s'appuie sur la chaine). RIEN D'ECRIT ; rien tire ; rien pousse.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
