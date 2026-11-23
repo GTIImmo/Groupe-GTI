@@ -4752,6 +4752,27 @@ bien 39845 : garde-les de cote, Frederic les tranche. »
   plusieurs biens 1).
 ```
 
+4 LE PAQUET DEUX_LIGNES_UN_DOSSIER (10 lignes = 5 paires) -- DEUX FORMES :
+  . 4 paires = LA MEME AFFAIRE ECRITE DEUX FOIS : une ligne « Vente reglee » que le gel tient, et sa jumelle « Annulee »,
+    SANS gel sur ce dossier, au MEME Prix et a la MEME date d'offre (souvent le meme compromis, le meme acquereur -- le nom
+    n'est qu'un indice) : L597FO6M / IAYQ5OG2 (bien 9705), NDJHE7QT / YBDIPVKR (44333), DTZ227ER / E9XL0N5B (48145),
+    6CFWM9TF / AISKUW87 (10059) ;
+  . 1 paire = DEUX AFFAIRES du meme acquereur : PEE1XTR8 (vente decembre 2021) / 9B7U8221 (offre du 25/05/2021 refusee,
+    compromis annule) -- leurs dates d'offre different ; elles partagent le compromis annule 26019 (prix + honoraires des
+    deux).
+  LA REGLE R13 (VARIANTE) : « deux lignes dans un meme dossier, dont l'une est Annulee, sans gel sur ce dossier, au meme Prix
+    et a la meme date d'offre que l'autre, que son gel tient : la meme affaire ecrite deux fois -- la ligne du gel prend le
+    dossier, l'annulee n'a rien a etiqueter » (sa convention des jumelles du 20/11, A8 : « celle que le gel tient deja ;
+    l'autre sans etiquette »). TEMOIN INVERSE : PEE1XTR8 / 9B7U8221 (dates d'offre differentes) -> NON touchee.
+  MESURE (passage 43 contre 42) : 8 changent, EXACTEMENT les 4 paires (4 TRANCHEES -- L597FO6M garde D2021-0711, son
+    numero des 2 560 ; NDJHE7QT D2020-0453 ; DTZ227ER D2020-0274 ; 6CFWM9TF D2020-0148 -- et 4 RIEN A ETIQUETER) ; 0 deja
+    rendu ; 0 ecart neuf ; reste a vider 106 -> 98.
+  ECART LU : E9XL0N5B (la jumelle annulee) porte une Commission de 10 400 contre 9 400 a sa vente DTZ227ER -- R13 ne compare
+    que le Prix et la date d'offre ; signale, pas tranche.
+  ⚠ A LUI : sa convention de 20/11 (« l'autre sans etiquette ») ou celle de VIALLARD / PAOLONE (exception nommee : les
+    deux lignes ecrites sur le meme dossier) ? R13 suit la 1re.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

@@ -201,6 +201,11 @@ REGLES_VALIDEES = {
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
+    # R13 (23/11, le paquet DEUX_LIGNES_UN_DOSSIER : 5 paires, dont 4 « la meme affaire ecrite deux fois ») -- PROPOSEE
+    "R13": "deux lignes dans un meme dossier, dont l'une est « Annulee », SANS gel sur ce dossier, au MEME Prix et a la MEME "
+           "date d'offre que l'autre, que son gel tient : la meme affaire ecrite deux fois -- la ligne du gel prend le "
+           "dossier, l'annulee n'a rien a etiqueter (sa convention des jumelles du 20/11 : « celle que le gel tient deja ; "
+           "l'autre sans etiquette »)",
     # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
@@ -705,6 +710,24 @@ def bien_par_r10(I: Image, i: str) -> str | None:
     return avec[0] if len(avec) == 1 else None
 
 
+def jumelle_annulee(I: Image, gl, ids) -> tuple | None:
+    """R13 : (la ligne du gel, la jumelle annulee) quand l'une des deux lignes est « Annulee », n'a AUCUNE piece du morceau a
+    son gel, et porte le MEME Prix et la MEME date d'offre que l'autre, dont le gel tient des pieces du morceau."""
+    D = I.D
+    a_, b_ = sorted(gl)
+    for x, y in ((a_, b_), (b_, a_)):
+        gel_y = {int(g["piece"]) for g in I.gel_par_ligne.get(y, [])} & set(ids)
+        gel_x = {int(g["piece"]) for g in I.gel_par_ligne.get(x, [])} & set(ids)
+        if D.case(y, "Etat Actuel").strip() != "Annulée" or gel_y or not gel_x:
+            continue
+        if nombre_case(D.case(x, "Prix")) is None or nombre_case(D.case(x, "Prix")) != nombre_case(D.case(y, "Prix")):
+            continue
+        dx, dy = K.d_sheet(D.case(x, "Offre Achat")), K.d_sheet(D.case(y, "Offre Achat"))
+        if dx and dx == dy:
+            return x, y
+    return None
+
+
 def exception_nommee(gl) -> str | None:
     """Un morceau a plusieurs lignes n'echappe au verrou E8 que si TOUTES ses lignes sont une paire de jumelles nommee."""
     for j in JUMELLES:
@@ -961,7 +984,12 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                                "(%s)" % (figees, len({S.get(a) for a in ids}), sorted({S.get(a) for a in ids}))))
             continue
         exc = exception_nommee(gl) if len(gl) > 1 else None
-        if len(gl) > 1 and not exc:
+        jum = jumelle_annulee(I, gl, ids) if (len(gl) == 2 and not exc and joue("R13")) else None
+        if jum and i == jum[1]:
+            out.append(attente("RIEN_A_ETIQUETER", "VARIANTE R13 : la jumelle annulee de %s -- meme Prix, meme date d'offre, "
+                                                   "sans gel sur ce dossier : la meme affaire ecrite deux fois" % jum[0]))
+            continue
+        if len(gl) > 1 and not exc and not (jum and i == jum[0]):
             out.append(attente("DEUX_LIGNES_UN_DOSSIER", "avec %s ; morceau %s" % ("+".join(sorted(gl - {i})), ids)))
             continue
         m = min(hk)
