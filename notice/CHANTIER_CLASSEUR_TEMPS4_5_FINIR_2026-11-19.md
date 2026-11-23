@@ -4821,6 +4821,26 @@ pas pouvoir fabriquer une exception toute seule : verifie que tes 3 paires sont 
   L597FO6M / IAYQ5OG2 et DTZ227ER / E9XL0N5B (deux affaires ou une seule ? exception nommee ou doublon ?).
 ```
 
+```
+4 LE VERROU (55 lignes, 32 pieces au passage 47 : 25 « plusieurs acheteurs » + 7 autres) -- UNE PISTE MESUREE, PUIS
+  RENVERSEE PAR LA MESURE (aucune regle proposee) :
+  LA PISTE : un compromis ANNULE que le prix + honoraires donnent a plusieurs lignes irait a la seule candidate qui n'a pas
+    deja un compromis dans son morceau -- 21 des 25 n'en ont qu'une (4 en ont plusieurs).
+  SON TEMOIN, LU ECART PAR ECART (sa regle) : parmi les lignes TRANCHEES, 4 285 tiennent un seul compromis, 6 en tiennent
+    DEUX -- nommees : 9CQ325R6 (24157 annule + 24158 actif, le meme jour), G8YSAI5Z (1000132 + 1000133, le meme jour),
+    MCD6CRNB (7080 annule 11 000 + 7081 actif 12 000 : commission renegociee), ASQO7HID (17503 annule + 17502 actif),
+    XKW2DSA9 (26189 annule + 26188 actif), HOPCBVKM (10 et 11 actifs, 73 000 / 77 000) -- TOUTES des « Vente reglee »
+    sur un bien SANS autre ligne : des compromis RE-SIGNES ou ressaisis dans UNE affaire. Un compromis annule peut donc
+    appartenir a la ligne de la VENTE.
+  ⛔ LA PISTE TOMBE : pour 19 des 21, la seule ligne « sans compromis » est une ligne Annulee dont la case « Compromis »
+    est VIDE au Sheet -- le Sheet dit que cette affaire n'a JAMAIS eu de compromis. Le compromis annule n'est donc pas le
+    sien ; c'est plutot celui de la vente (re-signe, comme les 6). Seules d2108609 (21520 : une de SES 20 a part) et
+    UAER0F0F (7903) ont une case remplie.
+  L'HYPOTHESE INVERSE, A MESURER A PART (pas faite) : « le compromis annule va a la ligne dont le Sheet porte le compromis
+    -- la vente --, quand les autres candidates n'ont pas de compromis au Sheet ». Elle touche aux etiquettes des VENTES
+    (la piece est plus petite que leur plus petite) : elle se mesure avec ses ecarts lus, et sa regle (b) du 20/11.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
