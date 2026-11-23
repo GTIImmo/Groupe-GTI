@@ -142,3 +142,30 @@ Les 38 que tu as gardées ont été remesurées sur l'état d'aujourd'hui. Les m
 - les 26 restent, parce que leurs pièces déplacent encore une étiquette ;
 - les 5 affaires sur un autre bien et les deux paires ont leur preuve et ce qu'elles coûtent ;
 - le bien 39845 a sa vue.
+
+## Mise à jour du 23/11 au soir (v19, passage 76) : tes trois décisions, il en reste 42
+
+Tu as tranché les 12 lignes que tu réservais. Elles sortent de la liste.
+
+- **Les 5 rattachements** : chaque ligne prend le numéro existant de son bien réel.
+  - 2U5QPKRC → bien 37875, D2018-0271 ;
+  - EJN79TJ1 → bien 53953, D2020-0110 ;
+  - MQ6H8TVQ → bien 52460, D2017-0313 ;
+  - QXDW8EQA → bien 2070, D2020-0014 ;
+  - 91IHSGNC → bien 10229, D2019-0311.
+- **Tes deux doublons nommés** : des exceptions pour ces quatre lignes seulement.
+  - DTZ227ER prend D2020-0274 ; E9XL0N5B n'a rien à étiqueter.
+  - L597FO6M prend D2021-0711, son numéro du 16/11 ; IAYQ5OG2 n'a rien à étiqueter.
+- **Le bien 39845** :
+  - 6FQO29C8 prend D2023-0189 ;
+  - V3FO5NDA reçoit un numéro neuf (elle n'est pas parmi les 2 560) ;
+  - SOF45TS3 n'a rien à étiqueter.
+
+Passage 76 contre 75 : exactement ces 12 lignes changent. Aucun verdict rendu ne bouge, et aucun écart de témoin n'apparaît.
+
+**Les 42 qui restent** :
+- les 26 retenues par tes 20 pièces à part ;
+- les 15 autres ;
+- 3THZJOOG.
+
+Chacune garde la phrase donnée plus haut.

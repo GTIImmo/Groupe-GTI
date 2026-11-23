@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v18 -- 23/11 soir : P-a, la piece SANS DATE invisible a la nuit (exclue de E) -> PIECE_SANS_DATE_INVISIBLE"
+VERSION = "v19 -- 23/11 soir : ses trois decisions -- les 5 rattachements, ses 2 doublons nommes, le bien 39845"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -317,7 +317,17 @@ GARDE_DEJA_RENDU: dict = {}
 # LES PIECES MISES DE COTE par R7b dans le dernier passage : piece -> son ancien dossier, l'etiquette simulee, le reste
 MISES_DE_COTE: dict = {}
 # son mot du 22/11, point 4 : « Le bien 39845 : je veux toujours voir ces deux affaires moi-meme. Mets-les-moi de cote »
-BIENS_A_SA_DECISION = {"39845": "son mot du 22/11, point 4 -- les deux affaires du bien, il les voit lui-meme"}
+# ⭐ 39845 TRANCHE PAR LUI le 23/11 au soir (« Le bien 39845 : OUI, ta V3 a raison. J'ai lu. ») -- voir
+#   PIECE_DONNEE_PAR_DECISION (19131, 19132, 19133) et RIEN_A_ETIQUETER_PAR_DECISION (SOF45TS3) ; le bien n'est plus a part
+BIENS_A_SA_DECISION: dict = {}
+# son mot du 23/11 au soir : « ⛔ Le piege du contact reutilise -- jamais de rattachement par le nom de l'acquereur. »
+#   (les trois pieces de 39845 portent BAUDOIN ET PETIPAS chez Hektor : le premier acheteur, que Hektor recopie ; le gel du
+#   16/11 les avait rangees a V3FO5NDA a l'etage 9 « sans mandat (acquereur + vendeur) », par les NOMS)
+SA_DECISION_39845 = ("sa decision du 23/11 au soir : « OUI, ta V3 a raison. J'ai lu. Il y a eu trois tentatives sur ce bien, "
+                     "pas deux » -- 6FQO29C8 (mandat 16263) prend le compromis 19131 et la vente 19133 (la date du compromis "
+                     "au jour, la date de la vente au jour, les 6 000 EUR d'honoraires a l'euro, « 80 000 EUR » dans son "
+                     "commentaire) ; V3FO5NDA (mandat 15459) ne garde que l'offre 19132 du 19/04/2023, la sienne au jour "
+                     "exact ; SOF45TS3 (mandat 15920) : rien a etiqueter")
 # SES DECISIONS DE LIGNE (son message et son mot du 23/11 (15)) : la ligne est sur CE bien -- elles remplacent ce que le
 #   gel, le Mandat, le product_ref et le Lien CRM nommaient. ⛔ Jamais par le nom de l'acquereur (Hektor reutilise le contact
 #   de l'acheteur precedent) : le bien, le montant, les dates.
@@ -332,6 +342,38 @@ LIGNE_SUR_LE_BIEN_PAR_DECISION = {
     #   CAS, lui, est prouve [...] On refuse la regle et on accepte le cas avec sa preuve ecrite -- exactement la methode
     #   des onze offres sures »
     "ZZ5WKMWM": ("23562", "sa decision du 23/11, A LA MAIN : offre 11206 du 02/12/2019 (sa case : 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 = sa Commission a l'euro), vendeur THEVENOT parmi les mandants, le seul bien a porter les deux ; personne ne tient ces pieces ; le Prix « 63 » du Sheet est une faute de frappe"),
+    # ⭐ LES CINQ AFFAIRES SUR UN AUTRE BIEN -- sa decision du 23/11 au soir : « Les 5 rattachements : OUI, les cinq. [...]
+    #   Ta preuve tient : deux dates au jour exact et les honoraires a l'euro, cinq fois de suite, et chaque bien ne porte
+    #   qu'un seul numero, celui qui existe deja. Note au carnet que leur numero de mandat au Sheet est perime -- on ne
+    #   croise jamais par le mandat. »
+    "2U5QPKRC": ("37875", "sa decision du 23/11 au soir (les cinq) : compromis 17769 du 03/07/2018 au jour, honoraires 6 800 "
+                          "a l'euro, vente 17770 du 14/12/2018 au jour -- D2018-0271 ; ⛔ son mandat 5030 au Sheet est perime"),
+    "EJN79TJ1": ("53953", "sa decision du 23/11 au soir (les cinq) : offre 27713 du 27/02/2020 et compromis 27712 du "
+                          "03/06/2020 au jour, honoraires 13 000 a l'euro, vente 27714 du 04/09/2020 au jour -- D2020-0110 ; "
+                          "⛔ son mandat 12234 au Sheet est perime"),
+    "MQ6H8TVQ": ("52460", "sa decision du 23/11 au soir (les cinq) : offre 26696 du 14/12/2017 et compromis 26695 du "
+                          "27/12/2017 au jour, honoraires 1 000 a l'euro, vente 26698 du 06/07/2018 au jour -- D2017-0313 ; "
+                          "⛔ son mandat 8644 au Sheet est perime"),
+    "QXDW8EQA": ("2070", "sa decision du 23/11 au soir (les cinq) : offre 1028 du 11/01/2020 et compromis 1027 du 29/05/2020 "
+                         "au jour, honoraires 39 000 a l'euro, vente 1029 du 04/11/2020 au jour -- D2020-0014 ; ⛔ son mandat "
+                         "13411 au Sheet est perime"),
+    "91IHSGNC": ("10229", "sa decision du 23/11 au soir (les cinq) : compromis 4781 du 18/09/2019 au jour, honoraires 4 900 a "
+                          "l'euro, vente 4783 du 18/12/2019 au jour -- D2019-0311 ; ⛔ son mandat 611 au Sheet est perime"),
+}
+# ⭐ SES DEUX EXCEPTIONS NOMMEES (23/11 au soir) -- « ⛔ Ce sont des exceptions pour ces quatre lignes seulement, pas une
+#   regle generale. » La ligne annulee SORT DU BIEN (elle n'entre pas dans sa coupe) et n'a rien a etiqueter ; la ligne
+#   reglee prend le dossier. Le numero attendu est ecrit ici : le passage le redit, ou il crie.
+DOUBLON_PAR_DECISION = {
+    "E9XL0N5B": ("48145", "DTZ227ER", "D2020-0274",
+                 "son exception nommee du 23/11 au soir : « DTZ227ER et E9XL0N5B sont la meme affaire saisie deux fois : "
+                 "meme mandat 3968, meme bien, memes dates, meme prix 149 400 EUR, meme acquereur avec ses deux noms "
+                 "inverses, commission corrigee de 10 400 a 9 400. DTZ227ER prend D2020-0274. E9XL0N5B : rien a "
+                 "etiqueter. » -- une exception pour ces deux lignes seulement, pas une regle"),
+    "IAYQ5OG2": ("9705", "L597FO6M", "D2021-0711",
+                 "son exception nommee du 23/11 au soir : « L597FO6M et IAYQ5OG2 sont la meme affaire saisie deux fois : "
+                 "meme mandat 13695, meme bien, meme offre, meme prix, meme commission 3 500 EUR, meme acquereur, seule la "
+                 "date du compromis differe. L597FO6M garde son numero du 16/11, D2021-0711. IAYQ5OG2 : rien a "
+                 "etiqueter. » -- une exception pour ces deux lignes seulement, pas une regle"),
 }
 # ses pieces donnees par decision (une preuve qu'il a validee et que les epreuves ne savent pas lire) : piece -> ligne
 PIECE_DONNEE_PAR_DECISION = {
@@ -343,8 +385,14 @@ PIECE_DONNEE_PAR_DECISION = {
                         "proposee le 18/11 a 14:46 : on ne corrige pas une date, on corrige les lecteurs"),
     11206: ("ZZ5WKMWM", "sa decision du 23/11, A LA MAIN (pas une regle) : son offre -- offre 11206 du 02/12/2019 (sa case : 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 = sa Commission a l'euro), vendeur THEVENOT parmi les mandants, le seul bien a porter les deux ; personne ne tient ces pieces ; le Prix « 63 » du Sheet est une faute de frappe"),
     11205: ("ZZ5WKMWM", "sa decision du 23/11, A LA MAIN (pas une regle) : son compromis -- offre 11206 du 02/12/2019 (sa case : 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 = sa Commission a l'euro), vendeur THEVENOT parmi les mandants, le seul bien a porter les deux ; personne ne tient ces pieces ; le Prix « 63 » du Sheet est une faute de frappe"),
+    # LE BIEN 39845 (sa decision du 23/11 au soir) -- jamais par le nom : les dates au jour et les honoraires
+    19131: ("6FQO29C8", SA_DECISION_39845),
+    19133: ("6FQO29C8", SA_DECISION_39845),
+    19132: ("V3FO5NDA", SA_DECISION_39845),
 }
 RIEN_A_ETIQUETER_PAR_DECISION = {
+    "SOF45TS3": "sa decision du 23/11 au soir (bien 39845) : « SOF45TS3 (mandat 15920) : rien a etiqueter -- sa tentative, "
+                "annulee le 23/09/2023, n'a laisse aucune piece chez Hektor »",
     "JZ9693S0": "sa decision du 23/11 : ni bien (mandat 92560 inconnu), ni nom ; ⚠ le fil FACTURE + AVOIR (GGTI00002792 / "
                 "AVR00000465) dit que l'affaire a existe en comptabilite ; « reglee » au commentaire contre « Annulee » a "
                 "l'etat : signale, pas tranche",
@@ -389,6 +437,19 @@ SES_DECISIONS = {
                   "et tranche une ligne de plus -- et la preuve donne 140 500 / 9 500 a DONNADIEU, a personne d'autre »",
         "remplace": "sa B3 du 20/11 soir (14033 a part) -- et son attendu « 14033 a personne » des 20 a part",
         "lignes": {"ea6a28a7": [14033]}},
+    "les cinq rattachements (23/11 au soir)": {
+        "source": "sa decision du 23/11 au soir : « Les 5 rattachements : OUI, les cinq. »",
+        "remplace": "AFFAIRE_SUR_UN_AUTRE_BIEN (la ligne etait sur le bien de son mandat, perime)",
+        "lignes": {"2U5QPKRC": [17769, 17770], "EJN79TJ1": [27712, 27713, 27714], "MQ6H8TVQ": [26695, 26696, 26698],
+                   "QXDW8EQA": [1027, 1028, 1029], "91IHSGNC": [4781, 4783]}},
+    "les deux doublons (23/11 au soir)": {
+        "source": "ses deux exceptions nommees du 23/11 au soir (DOUBLON_PAR_DECISION) -- pas une regle",
+        "remplace": "DEUX_LIGNES_UN_DOSSIER (R13 ne les prenait pas : commission / compromis differents)",
+        "lignes": {"DTZ227ER": [24440, 24441, 24442], "L597FO6M": [4445, 4446, 4447]}},
+    "39845 (bien 39845)": {
+        "source": SA_DECISION_39845,
+        "remplace": "A_SA_DECISION (son mot du 22/11, point 4) -- et le temoin a_sa_decision",
+        "lignes": {"6FQO29C8": [19131, 19133], "V3FO5NDA": [19132]}},
 }
 ATTENDU_TEMOINS = {"v3_lignes": 456, "v3_morceau": 431, "v3_a_part": 20, "v3_attend_avec_sa_ligne": 3,
                    "v3_exception_nommee": 2, "coupes_132": 132, "lignes_132": 274, "coupes_29": 29, "lignes_29": 57,
@@ -565,6 +626,10 @@ class Image:
             self.biens_de_ligne[i] = {b}
             self.D.lignes_bien[b].add(i)
             self.D.rattache_par[(b, i)].add("sa_decision")
+        # SES DEUX EXCEPTIONS NOMMEES (23/11 au soir) : la ligne annulee sort du bien -- elle n'entre pas dans sa coupe
+        for i, (b, _reglee, _num, _pourquoi) in DOUBLON_PAR_DECISION.items():
+            if i in self.sheet["par_id"]:
+                self.D.lignes_bien[b].discard(i)
 
 
 # ═════════════════════════════════════════ LA LECTURE DU BIEN ENTIER ═══════════════════════════════════════════════
@@ -786,6 +851,8 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
         return attente("ID_EN_DOUBLE", "ID Unique sur les lignes %s" % [x["num"] for x in I.sheet["par_id"][i]])
     if i in RIEN_A_ETIQUETER_PAR_DECISION:
         return attente("RIEN_A_ETIQUETER", RIEN_A_ETIQUETER_PAR_DECISION[i])
+    if i in DOUBLON_PAR_DECISION:
+        return attente("RIEN_A_ETIQUETER", DOUBLON_PAR_DECISION[i][3])
     if not biens:
         return attente("SANS_BIEN")
     if len(biens) > 1 and bien_par_p1(I, i):
@@ -2026,6 +2093,8 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
             noter("jumelles", "+".join(j["lignes"]), "ensemble", "ATTEND (%s)" % [v[2] for v in vs], None)
     # le bien 39845 : TOUTES ses lignes mises de cote pour lui
     for b in T["familles"]["a_sa_decision"]:
+        if b["bien"] not in BIENS_A_SA_DECISION:
+            continue                     # 39845 : tranche par lui le 23/11 au soir -- SES_DECISIONS le remplace
         for i in sorted(I.D.lignes_bien.get(b["bien"], set())):
             v = V.get(i)
             noter("a_sa_decision", i, "A_SA_DECISION", (v[2] or v[0]) if v else "ABSENTE",

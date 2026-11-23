@@ -5314,6 +5314,61 @@ LES PREALABLES : P-a explique et corrige ; P-e VERT au passage 75 (a refaire sur
 A LUI : les 5 rattachements (une par une) ; les deux exceptions nommees ; 39845. RIEN D'ECRIT ; rien tire ; rien pousse.
 ```
 
+### 20.36 Ses trois décisions du 23/11 au soir : les 5 rattachements, ses 2 doublons nommés, le bien 39845
+
+Son message : « Je valide les trois points. [...] Pose les trois, mesure-les a blanc d'abord, et verifie qu'aucun verdict deja
+rendu ne bouge. Rien d'ecrit, rien de tire, rien de pousse. »
+
+```
+1 LES 5 RATTACHEMENTS : « OUI, les cinq [...] Ta preuve tient : deux dates au jour exact et les honoraires a l'euro, cinq
+  fois de suite, et chaque bien ne porte qu'un seul numero, celui qui existe deja. »
+  2U5QPKRC -> 37875 (D2018-0271) . EJN79TJ1 -> 53953 (D2020-0110) . MQ6H8TVQ -> 52460 (D2017-0313) . QXDW8EQA -> 2070
+  (D2020-0014) . 91IHSGNC -> 10229 (D2019-0311) -- LIGNE_SUR_LE_BIEN_PAR_DECISION.
+  ⛔ SA NOTE : LEUR NUMERO DE MANDAT AU SHEET EST PERIME (5030, 12234, 8644, 13411, 611) -- ON NE CROISE JAMAIS PAR LE MANDAT.
+     (deja mesure le 23/11, § 20.25 : sur les reconstituees, le mandat du Sheet est faux 55 % du temps ; c'est le
+     prealable P-b, les lignes tranchees par le mandat seul.)
+
+2 SES DEUX EXCEPTIONS NOMMEES -- « ⛔ Ce sont des exceptions pour ces quatre lignes seulement, pas une regle generale. »
+  « DTZ227ER et E9XL0N5B sont la meme affaire saisie deux fois : meme mandat 3968, meme bien, memes dates, meme prix
+    149 400 EUR, meme acquereur avec ses deux noms inverses, commission corrigee de 10 400 a 9 400. DTZ227ER prend
+    D2020-0274. E9XL0N5B : rien a etiqueter. »
+  « L597FO6M et IAYQ5OG2 sont la meme affaire saisie deux fois : meme mandat 13695, meme bien, meme offre, meme prix, meme
+    commission 3 500 EUR, meme acquereur, seule la date du compromis differe. L597FO6M garde son numero du 16/11,
+    D2021-0711. IAYQ5OG2 : rien a etiqueter. »
+  DOUBLON_PAR_DECISION : l'annulee SORT DU BIEN (elle n'entre pas dans la coupe) et n'a rien a etiqueter ; R13 n'est PAS
+  elargie (elle garde ses trois conditions).
+
+3 LE BIEN 39845 : « OUI, ta V3 a raison. J'ai lu. Il y a eu trois tentatives sur ce bien, pas deux » --
+  6FQO29C8 (mandat 16263) prend le compromis 19131 et la vente 19133 (dates au jour, 6 000 EUR a l'euro, « 80 000 EUR »
+  dans son commentaire) ; V3FO5NDA (mandat 15459) ne garde que l'offre 19132 du 19/04/2023 ; SOF45TS3 (mandat 15920) :
+  rien a etiqueter (sa tentative, annulee le 23/09/2023, n'a laisse aucune piece chez Hektor).
+  PIECE_DONNEE_PAR_DECISION (19131, 19133 -> 6FQO29C8 ; 19132 -> V3FO5NDA) ; RIEN_A_ETIQUETER_PAR_DECISION (SOF45TS3) ;
+  BIENS_A_SA_DECISION vide ; le temoin a_sa_decision remplace par SES_DECISIONS.
+  ⛔ POURQUOI LE RANGEMENT ACTUEL SE TROMPAIT (sa demande) : les trois pieces portent BAUDOIN ET PETIPAS chez Hektor parce
+     que c'est le PREMIER acheteur et que Hektor le RECOPIE sur les pieces suivantes ; le gel du 16/11 les a donc rangees
+     toutes les trois a V3FO5NDA, « a valider », a l'etage 9 « sans mandat (acquereur + vendeur) » -- PAR LES NOMS. Le
+     compromis et la vente sont a POCHELON (6FQO29C8) par leurs dates au jour et leurs honoraires.
+     LE PIEGE DU CONTACT REUTILISE : JAMAIS DE RATTACHEMENT PAR LE NOM DE L'ACQUEREUR.
+
+LA MESURE A BLANC (v19, passage 76 contre 75 -- le juge) : EXACTEMENT 12 verdicts changent, les 12 de ses decisions ; 0
+  verdict rendu ne bouge (ni etiquette, ni pieces, ni preuves) ; 0 ecart de temoin nouveau (les 19 memes) -- 14 lignes de
+  temoin changent, toutes nommees : 3 a_sa_decision retirees (remplacees), 9 ses_decisions neuves en accord, 2 v3 qui
+  ATTENDAIENT et sont en accord (6FQO29C8 19131 19133 ; V3FO5NDA 19132 -- la V3 du 22/11 avait raison).
+  9 TRANCHEES : 2U5QPKRC D2018-0271 . EJN79TJ1 D2020-0110 . MQ6H8TVQ D2017-0313 . QXDW8EQA D2020-0014 . 91IHSGNC
+  D2019-0311 . DTZ227ER D2020-0274 . L597FO6M D2021-0711 (= son numero du 16/11) . 6FQO29C8 D2023-0189 . V3FO5NDA NUMERO
+  NEUF (l'etiquette D2023-0189 suit la plus petite piece, le compromis 19131, chez 6FQO29C8 ; V3FO5NDA n'est pas dans les
+  2 560). 3 RIEN A ETIQUETER : E9XL0N5B, IAYQ5OG2, SOF45TS3.
+  4 698 tranchees + 100 ; dont 58 rien a etiqueter -> LE RESTE A VIDER : 54 -> 42.
+LE REJEU EXACT DU PASSAGE 76 : VERT -- 0 « introuvable » (decide a la main 437, deja obtenu
+  170) ; JUSTES 4 698 / 4 698 ; ETIQUETTE EXACTE 4 698 / 4 698 ; R7b 19 / 19 ; 0 piece hors des biens ; les memes 2 en
+  attente dont le dossier bouge (RGCEC677, Z3DYDC4X). LES PORTES DES 9 : les 5 rattachements et les 2 doublons -> RIEN (leur
+  dossier est deja juste : aucun geste de nuit) ; 39845 -> COUPE_NEUVE (6FQO29C8 D2023-0189, V3FO5NDA numero donne par la
+  nuit) -- la nuit sait la realiser.
+P-c : les 5 et 39845 sont tranchees par lui -- elles peuvent entrer dans une vague d'ecriture (comme I3TFR2KG).
+LA LISTE DES IMPOSSIBLES : 42 (26 retenues par ses 20 a part, 15 autres, 3THZJOOG).
+RIEN D'ECRIT ; rien tire ; rien pousse.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
