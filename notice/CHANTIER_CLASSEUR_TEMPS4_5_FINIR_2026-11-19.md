@@ -4793,6 +4793,34 @@ bien 39845 : garde-les de cote, Frederic les tranche. »
   . plusieurs biens 1 (SHN6RKDI) . supprimee figee 1 (6684bcf1).
 ```
 
+### 20.27 R14 validée ; R13 validée sur DEUX paires ; la suite
+
+Son message du 23/11 : « R14 : OUI, validee [...] R13 : OUI, MAIS SUR TROIS PAIRES, PAS QUATRE. SORS E9XL0N5B [...] Une regle
+n'avale pas son propre ecart [...] meme affaire -> R13 ; deux affaires -> exception NOMMEE, jamais implicite. Et R13 ne doit
+pas pouvoir fabriquer une exception toute seule : verifie que tes 3 paires sont bien des doublons. »
+
+```
+1 LA VERIFICATION DES PAIRES, CASE PAR CASE -- elle sort UNE paire de plus :
+  NDJHE7QT / YBDIPVKR : tout pareil (offre 03/10/2020, compromis 20/10/2020, 235 000, 9 000, acquereur, vendeur, nego) ;
+    l'annulee est datee du jour du compromis -> PUR DOUBLON.
+  6CFWM9TF / AISKUW87 : meme offre 28/04/2020, Prix « 63 » des deux cotes, 5 000, acquereur, vendeur, nego ; l'annulee
+    (20/05/2020) n'a pas de compromis -> PUR DOUBLON (une seule offre chez Hektor, celle qui a abouti).
+  ⛔ L597FO6M / IAYQ5OG2 : l'annulee a SON PROPRE compromis (24/02/2022 contre 28/03/2022), et elle est dite annulee le
+    01/02/2022, AVANT son propre compromis -- un doublon mal saisi, ou un premier compromis annule : ce n'est plus « la
+    meme affaire ecrite deux fois » -> SORTIE, raison nommee, a Frederic.
+  ⛔ DTZ227ER / E9XL0N5B : la commission differe (10 400 contre 9 400 ; acquereurs dans l'autre ordre) -> SORTIE (son mot).
+  PEE1XTR8 / 9B7U8221 : deux affaires (dates d'offre differentes) -> non touchee, comme avant.
+2 R13 RESSERREE ET VALIDEE (protocole_classeur.py v7) : + la MEME Commission TTC, + le MEME compromis quand les deux en ont
+  un, + UNE SEULE piece de chaque genre au dossier (une seule affaire : R13 ne peut pas fabriquer une exception du genre
+  VIALLARD / PAOLONE). R14 VALIDEE.
+  Le motif DEUX_LIGNES_UN_DOSSIER porte desormais LA RAISON NOMMEE des deux paires ecartees (pas_jumelle_pourquoi :
+  « R13 NE LA PREND PAS : la commission differe [...] / l'annulee a son propre compromis [...] -- a Frederic »).
+  PASSAGE 46 contre 42 : 9 changent (R14 5 ; R13 2 TRANCHEES + 2 RIEN A ETIQUETER), 0 deja rendu, 0 ecart neuf ;
+  4 653 tranchees + 145 ; dont 48 rien a etiqueter -> RESTE A VIDER 97. Passage 47 (la raison nommee, affichage) = 46.
+3 POUR FREDERIC, CE QUI ATTEND SA MAIN : les 5 lignes du sujet d'argent (65 800 EUR), les 3 du bien 39845, et maintenant
+  L597FO6M / IAYQ5OG2 et DTZ227ER / E9XL0N5B (deux affaires ou une seule ? exception nommee ou doublon ?).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

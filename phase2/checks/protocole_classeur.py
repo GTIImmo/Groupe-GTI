@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v6 -- 23/11 : R9 validee, avec sa garde (la commission UNIQUE AU BIEN)"
+VERSION = "v7 -- 23/11 : R13 (deux paires) et R14 validees"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -178,6 +178,17 @@ REGLES_VALIDEES = {
             "d'AUCUNE de ces lignes, est TRANCHEE : MISE DE COTE comme R7b (isolee AVEC son dossier d'aujourd'hui, elle "
             "garde son ancien numero) -- elle ne retient plus aucune ligne",
             "son message du 23/11 : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact »"),
+    "R13": ("deux lignes dans un meme dossier, dont l'une est « Annulee », SANS gel sur ce dossier, au MEME Prix et a la MEME "
+           "date d'offre que l'autre, que son gel tient : la meme affaire ecrite deux fois -- la ligne du gel prend le "
+           "dossier, l'annulee n'a rien a etiqueter (sa convention des jumelles du 20/11 : « celle que le gel tient deja ; "
+           "l'autre sans etiquette ») -- ⭐ AVEC LA MEME COMMISSION, LE MEME COMPROMIS QUAND LES DEUX EN ONT UN, ET UNE SEULE PIECE DE CHAQUE GENRE AU DOSSIER (une seule affaire : deux affaires -> exception NOMMEE, jamais implicite)",
+            "son message du 23/11 : « R13 : OUI, MAIS SUR TROIS PAIRES [...] SORS E9XL0N5B [...] Une regle n'avale pas son "
+            "propre ecart [...] meme affaire -> R13 ; deux affaires -> exception NOMMEE, jamais implicite » -- la verification "
+            "demandee a sorti aussi IAYQ5OG2 (son propre compromis au 24/02/2022) : DEUX paires"),
+    "R14": ("une piece SUPPRIMEE chez Hektor dont une JUMELLE vivante est dans le meme morceau (meme genre, meme date, meme "
+           "montant -- ou montant inconnu) est la trace d'une saisie refaite : elle sort du morceau, reste FIGEE dans son "
+           "ancien dossier avec son numero (on ne supprime pas une part), et la ligne se tranche sur ses pieces vivantes",
+            "son message du 23/11 : « R14 : OUI, validee. Temoin inverse en place (6684bcf1 non touchee). »"),
     # ⛔ LA PHRASE DE GARDE (son mot du 23/11) : « R9 NE VAUT QUE SI LA COMMISSION EST UNIQUE AU BIEN ».
     "R9": ("une ligne sans vraie piece prouvee (qui ne tient que sa copie C5, ou rien) recoit chaque vraie piece que son gel lui donne, quand cette piece est A "
           "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
@@ -201,15 +212,6 @@ REGLES_VALIDEES = {
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
-    # R13 (23/11, le paquet DEUX_LIGNES_UN_DOSSIER : 5 paires, dont 4 « la meme affaire ecrite deux fois ») -- PROPOSEE
-    "R13": "deux lignes dans un meme dossier, dont l'une est « Annulee », SANS gel sur ce dossier, au MEME Prix et a la MEME "
-           "date d'offre que l'autre, que son gel tient : la meme affaire ecrite deux fois -- la ligne du gel prend le "
-           "dossier, l'annulee n'a rien a etiqueter (sa convention des jumelles du 20/11 : « celle que le gel tient deja ; "
-           "l'autre sans etiquette »)",
-    # R14 (23/11, le paquet PIECE_SUPPRIMEE_FIGEE : 6 lignes, dont 5 « une saisie refaite chez Hektor ») -- PROPOSEE
-    "R14": "une piece SUPPRIMEE chez Hektor dont une JUMELLE vivante est dans le meme morceau (meme genre, meme date, meme "
-           "montant -- ou montant inconnu) est la trace d'une saisie refaite : elle sort du morceau, reste FIGEE dans son "
-           "ancien dossier avec son numero (on ne supprime pas une part), et la ligne se tranche sur ses pieces vivantes",
     # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
@@ -726,10 +728,42 @@ def jumelle_annulee(I: Image, gl, ids) -> tuple | None:
             continue
         if nombre_case(D.case(x, "Prix")) is None or nombre_case(D.case(x, "Prix")) != nombre_case(D.case(y, "Prix")):
             continue
+        # son mot du 23/11 : « une regle n'avale pas son propre ecart » -- la MEME commission (E9XL0N5B : 10 400 contre
+        #   9 400 -> deux affaires ou une renegociation) et le MEME compromis quand les deux en ont un (IAYQ5OG2 : 24/02
+        #   contre 28/03/2022) ; et « R13 ne doit pas pouvoir fabriquer une exception toute seule » : le dossier ne porte
+        #   qu'UNE piece de chaque genre (une seule affaire -- jamais une paire du genre VIALLARD / PAOLONE)
+        if nombre_case(D.case(x, "Commission TTC")) != nombre_case(D.case(y, "Commission TTC")):
+            continue
+        cx, cy = K.d_sheet(D.case(x, "Compromis")), K.d_sheet(D.case(y, "Compromis"))
+        if cx and cy and cx != cy:
+            continue
+        genres = Counter(D.REG[q]["genre"] for q in ids if q in D.REG and I.nature[q] == PC.VRAIE)
+        if any(n > 1 for n in genres.values()):
+            continue
         dx, dy = K.d_sheet(D.case(x, "Offre Achat")), K.d_sheet(D.case(y, "Offre Achat"))
         if dx and dx == dy:
             return x, y
     return None
+
+
+def pas_jumelle_pourquoi(I: Image, gl) -> str:
+    """La raison NOMMEE pour laquelle R13 ne prend pas une paire « Vente reglee » / « Annulee » au meme Prix et a la meme
+    date d'offre (son mot du 23/11 : « elle reste en attente avec sa raison nommee, et tu la remontes a Frederic »)."""
+    D = I.D
+    a_, b_ = sorted(gl)
+    for x, y in ((a_, b_), (b_, a_)):
+        if D.case(y, "Etat Actuel").strip() != "Annulée":
+            continue
+        if nombre_case(D.case(x, "Prix")) != nombre_case(D.case(y, "Prix")) or not K.d_sheet(D.case(x, "Offre Achat"))                 or K.d_sheet(D.case(x, "Offre Achat")) != K.d_sheet(D.case(y, "Offre Achat")):
+            continue
+        if nombre_case(D.case(x, "Commission TTC")) != nombre_case(D.case(y, "Commission TTC")):
+            return (" ; R13 NE LA PREND PAS : la commission differe (%s contre %s) -- deux affaires ou une renegociation, "
+                    "a Frederic" % (D.case(y, "Commission TTC").strip(), D.case(x, "Commission TTC").strip()))
+        cx, cy = K.d_sheet(D.case(x, "Compromis")), K.d_sheet(D.case(y, "Compromis"))
+        if cx and cy and cx != cy:
+            return (" ; R13 NE LA PREND PAS : l'annulee a son propre compromis (%s contre %s) -- un doublon mal saisi ou un "
+                    "premier compromis annule, a Frederic" % (cy, cx))
+    return ""
 
 
 def exception_nommee(gl) -> str | None:
@@ -885,7 +919,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 deja[gl] = sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_)
                                   and gl in r["possibles"][a] and len(r["possibles"][a]) == 1 and S.get(a) in ch_m)
     if joue("R14"):
-        # VARIANTE R14 (proposee le 23/11) : la trace supprimee d'une saisie refaite sort du morceau, figee dans son dossier
+        # REGLE R14 (validee le 23/11) : la trace supprimee d'une saisie refaite sort du morceau, figee dans son dossier
         for gl_, ids_ in list(r["morceaux"].items()):
             vivantes = [q for q in ids_ if not supprimee_chez_hektor(I.pieces[q])]
             retirees = [q for q in ids_ if supprimee_chez_hektor(I.pieces[q]) and any(
@@ -894,7 +928,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if retirees:
                 r["morceaux"][gl_] = [q for q in ids_ if q not in retirees]
                 for q in retirees:
-                    r["apart"][q] = ("REGLE R14 (variante) : la trace supprimee chez Hektor d'une saisie refaite -- sa "
+                    r["apart"][q] = ("REGLE R14 : la trace supprimee chez Hektor d'une saisie refaite -- sa "
                                      "jumelle vivante est dans le morceau ; figee dans son ancien dossier, avec son numero")
                     r["possibles"][q] = []
     isoles, isoles_r7c = set(), set()
@@ -1001,13 +1035,15 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                                "(%s)" % (figees, len({S.get(a) for a in ids}), sorted({S.get(a) for a in ids}))))
             continue
         exc = exception_nommee(gl) if len(gl) > 1 else None
-        jum = jumelle_annulee(I, gl, ids) if (len(gl) == 2 and not exc and joue("R13")) else None
+        jum = jumelle_annulee(I, gl, ids) if (len(gl) == 2 and not exc and joue("R13")) else None   # REGLE R13 (validee 23/11)
         if jum and i == jum[1]:
-            out.append(attente("RIEN_A_ETIQUETER", "VARIANTE R13 : la jumelle annulee de %s -- meme Prix, meme date d'offre, "
+            out.append(attente("RIEN_A_ETIQUETER", "REGLE R13 : la jumelle annulee de %s -- meme Prix, meme date d'offre, "
                                                    "sans gel sur ce dossier : la meme affaire ecrite deux fois" % jum[0]))
             continue
         if len(gl) > 1 and not exc and not (jum and i == jum[0]):
-            out.append(attente("DEUX_LIGNES_UN_DOSSIER", "avec %s ; morceau %s" % ("+".join(sorted(gl - {i})), ids)))
+            pourquoi_ = pas_jumelle_pourquoi(I, gl) if len(gl) == 2 else ""
+            out.append(attente("DEUX_LIGNES_UN_DOSSIER", "avec %s ; morceau %s%s" % ("+".join(sorted(gl - {i})), ids,
+                                                                                    pourquoi_)))
             continue
         m = min(hk)
         bloque = [] if "R4" in VARIANTES_ACTIVES else \
