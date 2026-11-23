@@ -186,6 +186,9 @@ VARIANTES = {
           "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
           "honoraires sont la « Commission TTC » de la ligne, qu'AUCUNE autre ligne n'a son prix + honoraires, et qu'elle "
           "n'est pas une de SES 20 pieces a part (son mot du 21/11)",
+    # R10 (23/11, le paquet PLUSIEURS_BIENS : 23 lignes, UNE cause) -- PROPOSEE, jamais appliquee sans son mot.
+    "R10": "une ligne qui nomme DEUX biens (deux sources) est sur celui des deux ou elle a des pieces PROUVEES (date au jour "
+           "exact, prix + honoraires) quand elle n'en a sur AUCUN autre -- la preuve departage les sources",
     "R9b": "R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
            "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
@@ -603,6 +606,9 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
     if len(biens) > 1 and bien_par_p1(I, i):
         biens = [bien_par_p1(I, i)]              # LA REGLE P1, validee le 22/11 (REGLES_VALIDEES)
         base["biens"] = biens
+    if len(biens) > 1 and joue("R10") and bien_par_r10(I, i):
+        biens = [bien_par_r10(I, i)]             # VARIANTE R10 (proposee le 23/11, jamais appliquee sans son mot)
+        base["biens"] = biens
     if len(biens) > 1:
         return attente("PLUSIEURS_BIENS", "biens %s, par %s" % (biens, {b: sorted(I.D.rattache_par.get((b, i), set()))
                                                                           for b in biens}))
@@ -652,7 +658,26 @@ def r_bien(I: Image, i: str) -> str:
     bs = I.biens_de_ligne[i]
     if len(bs) == 1:
         return next(iter(bs))
-    return bien_par_p1(I, i)
+    return bien_par_p1(I, i) or (bien_par_r10(I, i) if joue("R10") else None)
+
+
+def bien_par_r10(I: Image, i: str) -> str | None:
+    """R10 : parmi les biens que la ligne nomme, le SEUL ou elle a des pieces vraies PROUVEES (la coupe du bien entier,
+    comme le passage). Mesure du 23/11 : 22 des 23 lignes du paquet PLUSIEURS_BIENS -- toujours le bien du gel."""
+    D = I.D
+    if not hasattr(I, "_coupes"):
+        I._coupes = {}
+    avec = []
+    for b in sorted(I.biens_de_ligne.get(i, set())):
+        if b not in I._coupes:
+            S = {q: I.pieces[q]["app_chaine_id"] for q in D.par_bien.get(b, [])}
+            I._coupes[b] = K.couper_le_bien(D, b, set(D.lignes_bien.get(b, set())), S, sorted(D.par_bien.get(b, [])),
+                                            A_PART_PAR_DECISION,
+                                            {a_: l_ for a_, (l_, _w) in PIECE_DONNEE_PAR_DECISION.items()})
+        r = I._coupes[b]
+        if any(i in ls and I.nature[a] == PC.VRAIE for a, ls in r["va"].items()):
+            avec.append(b)
+    return avec[0] if len(avec) == 1 else None
 
 
 def exception_nommee(gl) -> str | None:

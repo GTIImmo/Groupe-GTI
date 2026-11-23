@@ -4606,6 +4606,19 @@ paquets [...] Tu choisis l'ordre, tu ne reviens qu'avec des regles »).
     . une AUTRE ligne a le prix + honoraires (3) : c24ea869, d2108609, 0a733659 -- les « plusieurs acheteurs » ;
     . BR8ZTN5F (honoraires -3 000 : une donnee aberrante, 100 000 contre Prix 118 000), RKWNRBV1 (offre 203 000 contre
       Prix 213 000), af8d7986 (25710 = 40 000 = son Prix, mais d6cd8868 a le meme Prix).
+
+3 LE PAQUET PLUSIEURS_BIENS (23 lignes) -- UNE CAUSE, 22 / 23 : la ligne nomme DEUX biens, l'un par son GEL, l'autre par
+  son Mandat (21) ou son product_ref (2) ; elle n'a des pieces PROUVEES (date au jour exact, prix + honoraires) que sur le
+  bien de son gel -- l'autre n'a souvent AUCUNE piece (un mandat passe sur une autre annonce). La 23e (M2G1Z1K8) n'est
+  prouvee sur aucun des deux : elle attend.
+  LA REGLE R10 (VARIANTE, jamais appliquee sans son mot) : « une ligne qui nomme deux biens est sur celui des deux ou elle
+    a des pieces PROUVEES quand elle n'en a sur aucun autre -- la preuve departage les sources ».
+  TEMOIN POSITIF : sur les 59 lignes a deux biens que P1 (validee) tranche, R10 donne le MEME bien 58 fois, ne le
+    contredit JAMAIS, ne tranche pas 1 fois. TEMOIN INVERSE : prouvee sur aucun (M2G1Z1K8) ou sur les deux -> elle attend.
+  MESURE : passage 32 (R10 seule) : 22 TRANCHEES, 0 deja rendu change, les MEMES 19 ecarts (deux temoins gagnent un
+    accord : coupes_29 +1, V3 +1) ; 0 etiquette NEUVE ; 10 sont des 2 560 et gardent EXACTEMENT leur numero (03BAPZFZ
+    D2021-0391, 7G2I4DSK D2022-0450, 9LHNTO9R D2022-0147, B16X241B D2021-0126, H2JZ0S63 D2024-0186, PMNCF58W D2024-0048,
+    R3CAYTF6 D2021-0381, T47ZI6GS D2021-0013, YZ1B0Q44 D2021-0002, f0ec39fc D2026-0164).
 ```
 
 ---
