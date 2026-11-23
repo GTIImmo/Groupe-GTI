@@ -5120,6 +5120,61 @@ RIEN D'ECRIT (ni base, ni Sheet, ni Hektor) ; rien pousse. Les passages 52-54 so
 ses 20 a part ; les 3 offres des affaires deja tranchees.
 ```
 
+
+### 20.33 R17 validée (v9) ; sa réserve sur app_chaine_id ; les 3 offres refusées ; ses 20 à part mesurés à blanc (R18)
+
+Son message du 23/11 : « R17 : oui, pose-la [...] Inscris juste une reserve au carnet : R17 s'appuie sur app_chaine_id,
+une cle recalculee [...] A mesurer avant l'ecriture, pas maintenant. » -- « Les 20 a part : ce n'est pas a toi de trancher
+[...] Mesure la regle de mise de cote a blanc et presente deux colonnes -- lignes debloquees, et les cinq ventes nommees avec
+l'ancien numero et le neuf. Ne demande rien avant d'avoir ces colonnes. » -- « Les 3 offres sur une ligne deja tranchee :
+non [...] Au carnet, et passe. » -- « Rien d'ecrit, et ne tire rien : 74 commits d'une autre session en face. »
+
+```
+1 R17 VALIDEE (v9) : elle quitte les variantes. Passage 55 (regles validees seules) = passage 54 : 0 verdict, 0 temoin
+  different (788 / 788). Passage 58 (sans variante, APRES l'ajout du code de R18) = passage 55, preuves comprises : le code
+  de la variante R18 dort.
+
+2 ⚠ SA RESERVE, A MESURER AVANT L'ECRITURE (un prealable de plus, P-f) : R17 s'appuie sur app_chaine_id, une cle
+  RECALCULEE. Sur cinq biens au profil identique (affaire tombee puis vente au meme prix), la chaine decide de trois
+  facons : 41822 reunit les deux moities (20470 + 20472) ; 9232 et 15881 les separent (4126 / 4128, 7903 / 7904) ; 24390
+  et 28653 collent le compromis annule a l'affaire VIVANTE (11579 et 14110 dans la chaine de la vente). Si la nuit
+  recalcule autrement, R17 peut changer d'avis : a mesurer sur deux images avant d'ecrire.
+
+3 LES 3 OFFRES D'AFFAIRES TOMBEES DONT LA LIGNE EST DEJA TRANCHEE (28610 -> 83919b13, 28681 -> 02b42a23, 28644 -> 057f78c7) :
+  NON, par sa decision. L'etiquette ne bouge pas, donc le gain est nul pour l'ecriture ; c'est du deja-rendu, ce que g4
+  interdit. 29cf0ca8, 8bcc3b63 et b884cbd4 restent au verrou ; le reste reste a 76.
+
+4 SES 20 A PART, LA MISE DE COTE MESUREE A BLANC (variante R18, MESURE SEULEMENT -- ce n'est pas a moi de trancher) :
+  « une de SES 20 a part qui retient une ligne au verrou est mise de cote comme R7b / R7c : isolee avec son dossier
+  d'aujourd'hui, jamais donnee ». Passages 56 et 57 (57 = 56, texte de preuve corrige : GARDE / PERD son numero selon la
+  pose simulee). 11 pieces mises de cote ; 21 VERROU -> TRANCHEE ; 0 VERDICT RENDU NE CHANGE ; verrou 41 -> 20 ; reste
+  76 -> 55.
+  COLONNE 1, LES 21 LIGNES DEBLOQUEES ET LEUR NUMERO :
+    gardent un numero existant (5) : 0EMKY4ZS D2021-0282 ; P252U1JH D2021-0567 ; L2B2WGCF D2020-0535 ; 1c7b38f9 D2025-0263
+      et ACB4D8WI D2022-0542 (= leur numero du 16/11) ;
+    recoivent un numero NEUF (16) : les cinq ventes, et 5QE9107L, ZW7MKTWH, 9DK01H85, G41FTEZ8, GYGF5F1X, PCDZXTIY,
+      PYG8JZ0C, QV5AYD2K, RGCEC677, TND2I31B, Z3DYDC4X.
+  COLONNE 2, LES CINQ VENTES (numero du 16/11 -> le neuf ; « le neuf » n'existe pas encore, la nuit l'attribuera -- la
+  pose simulee le nomme par la plus petite piece) ; leur ancien numero irait au compromis annule mis de cote, SEUL :
+    FYNZEKI6  D2020-0556 -> neuf (NEUVE:4534) ; D2020-0556 reste a 4533
+    SWDW99J5  D2021-0610 -> neuf (NEUVE:7711) ; D2021-0610 reste a 7710
+    ZMQZSE9Q  D2021-0045 -> neuf (NEUVE:4670) ; D2021-0045 reste a 4669
+    910O0A2Q  D2020-0462 -> neuf (NEUVE:4622) ; D2020-0462 reste a 4621
+    BNWNKPJH  D2021-0080 -> neuf (NEUVE:4561) ; D2021-0080 reste a 4560
+  LES ECARTS, NOMMES UN PAR UN :
+    . 2 pieces mises de cote PERDRAIENT leur numero (contre sa regle 6) : 4542 (bien 9877, D2021-0130, qui est aussi le
+      dossier de la vente Z0BDVNBZ, dont 4541 est plus petite) et 14110 (bien 28653, D2021-0025, dossier de la vente
+      AYIHPHF5, 14109).
+    . coupes_29, 4 ecarts : 9DK01H85 (attendu 7710 + 7712, obtenu 7712), PCDZXTIY (4533 + 4536 -> 4536), RGCEC677
+      (4542 + 4545 -> 4545), TND2I31B (4621 + 4625 -> 4625) -- ses 29 coupes faibles du 20/11 donnaient la piece a la ligne
+      annulee ; sa decision du 21/11 (« a personne ») la garde a part. Les deux temoins se contredisent : a lui.
+    . jumelles, 1 ecart : DEBARD (5QE9107L + ZW7MKTWH), sa paire nommee -- une seule affaire sur deux lignes ; mettre de
+      cote 20088 (le compromis de cette affaire) les separe, chacune avec un numero neuf.
+    . les temoins gagnent aussi des accords : a_part_20 +8 (« a personne »), coupes_132 +2, coupes_29 +3, V3 +21.
+RIEN D'ECRIT (ni base, ni Sheet, ni Hektor) ; rien tire, rien pousse (74 commits d'une autre session en face). A LUI : que
+faire de ses 20 a part. Ensuite, a son signal : l'elimination (8 lignes).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

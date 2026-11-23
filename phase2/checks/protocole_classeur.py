@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v8 -- 23/11 : R16 validee (passage 49 : 6 lignes, 0 verdict rendu) ; ZZ5WKMWM a la main"
+VERSION = "v9 -- 23/11 : R17 validee (passage 54 : 15 lignes, 0 verdict rendu ; sa reserve app_chaine_id)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -215,6 +215,20 @@ REGLES_VALIDEES = {
            "absent des mandants 31, date a plus de 7 j 5 -- la regle exige le vendeur TROUVE et regarde a UN AN). Elle ne "
            "donne aucune piece et joue APRES tous les verdicts : elle ne peut faire jouer aucune autre ligne",
             "son mot du 23/11 : « R16 : LANCE LE PASSAGE ENTIER. ⛔ Elle n'est validee que SI le passage prouve qu'aucun verdict rendu ne bouge » -- passage 49 (variante) contre 47 : 6 verdicts changes, les 6 nommes (SANS_BIEN -> RIEN_A_ETIQUETER), 0 deja rendu, temoins identiques ligne pour ligne (806 / 806), ZZ5WKMWM non touchee"),
+    # ⚠ SA RESERVE (23/11, a mesurer AVANT L'ECRITURE, pas maintenant) : R17 s'appuie sur app_chaine_id, une cle
+    #   RECALCULEE -- sur cinq biens au profil identique (affaire tombee puis vente au meme prix), elle decide de trois
+    #   facons : 41822 reunit les deux moities (20470 + 20472) ; 9232 et 15881 les separent (4126 / 4128, 7903 / 7904) ;
+    #   24390 et 28653 collent le compromis annule a l'affaire vivante (11579 dans la chaine de la vente, 14110 de meme).
+    "R17": ("LA SOEUR DE CHAINE : une vraie piece A PART dont la chaine Hektor porte UNE seule piece de l'autre moitie de la "
+            "meme affaire tombee (compromis ANNULE <-> offre REFUSEE), au MEME montant, prouvee a UNE seule ligne, suit cette "
+            "piece a cette ligne -- SAUF si les dates la contredisent (apres l'annulation + 15 j, compromis avant l'offre), "
+            "si l'offre est datee APRES le compromis, si la ligne tient deja une vraie piece de son genre, ou si la ligne "
+            "est DEJA TRANCHEE (g4 : la piece doit devenir sa plus petite, et etre possible pour plusieurs lignes) (temoin : "
+            "rejouee dans les deux sens sur les 302 paires tenues au passage 51, la BONNE ligne 581 fois, une AUTRE 0 ; elle "
+            "s'abstient 23 fois, dont les 4 cas des 2 chaines qui melent deux affaires -- biens 2393 et 23353)",
+            "son message du 23/11 : « R17 : oui, pose-la. J'ai verifie de mon cote entre les passages 51 et 54 : aucun "
+            "verdict rendu change, aucune etiquette, aucune piece. Et tes deux refus (passages 52 et 53) sont le vrai "
+            "travail. » -- avec SA RESERVE sur app_chaine_id (ci-dessus), a mesurer avant l'ecriture"),
 }
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
@@ -228,18 +242,17 @@ VARIANTES = {
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
            "du 20/11, jamais a une ligne deja tranchee si elle est plus petite que la plus petite piece de son morceau)",
-    # R17 (23/11, le verrou : son mot (20), « trois familles, zero exception ») -- PROPOSEE, mesuree a blanc
-    "R17": "LA SOEUR DE CHAINE : une vraie piece A PART dont la chaine Hektor porte UNE seule piece de l'autre moitie de la "
-           "meme affaire tombee (compromis ANNULE <-> offre REFUSEE), au MEME montant, prouvee a UNE seule ligne, suit cette "
-           "piece a cette ligne -- SAUF si les dates la contredisent (apres l'annulation + 15 j, compromis avant l'offre), "
-           "si l'offre est datee APRES le compromis, ou si la ligne tient deja une vraie piece de son genre (temoin : rejouee "
-           "dans les deux sens sur les 302 paires tenues au passage 51, elle donne la BONNE ligne 581 fois, une AUTRE 0 ; "
-           "elle s'abstient 23 fois, dont les 4 cas des 2 chaines qui melent deux affaires -- biens 2393 et 23353)",
+    # R18 (23/11, son message : « Mesure la regle de mise de cote a blanc et presente deux colonnes ») -- MESURE SEULEMENT,
+    #   ⛔ ce n'est PAS a moi de trancher : ses 20 a part sont SA decision du 21/11 ; cinq ventes y perdraient leur numero
+    "R18": "SES 20 A PART QUI RETIENNENT UNE LIGNE AU VERROU sont MISES DE COTE comme R7b / R7c : isolees AVEC leur dossier "
+           "d'aujourd'hui (ce qu'aucun morceau ne prend), elles gardent leur ancien numero et ne sont JAMAIS donnees -- elles "
+           "ne retiennent plus aucune ligne (sa decision du 21/11, « a personne », reste vraie)",
     # 14033 (sa B3 du 20/11) : ses DEUX options, mesurees a blanc cote a cote (son mot (15)) -- jamais appliquees
     "B3A": "14033 A PART POUR TOUJOURS : mise de cote comme R7b, avec son dossier d'aujourd'hui (elle garde son numero)",
     "B3B": "14033 A DONNADIEU (ea6a28a7) : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU (critere 1)",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
     # R16 a quitte cette liste le 23/11 (son mot, et la preuve du passage 49) : elle est dans REGLES_VALIDEES
+    # R17 a quitte cette liste le 23/11 (son message, et la preuve du passage 54) : elle est dans REGLES_VALIDEES
 }
 # R16 : les mandants des biens au registre (mandants_texte), FIGES le 23/11 hors de l'image -- l'image ne porte que trois
 #   colonnes du registre des mandats ; le fichier est verifie par son empreinte, le passage reste rejouable
@@ -943,12 +956,12 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
     return out
 
 
-# R17 (variante, 23/11) : les deux moities d'une affaire TOMBEE, dans la meme chaine Hektor
+# R17 (validee le 23/11) : les deux moities d'une affaire TOMBEE, dans la meme chaine Hektor
 AUTRE_MOITIE_R17 = {("compromis", "cancelled"): ("offre", "refused"), ("offre", "refused"): ("compromis", "cancelled")}
 
 
 def regle_r17(I: Image, b: str, r: dict) -> dict:
-    """R17 (VARIANTE, son mot (20) du 23/11 sur le verrou) : LA SOEUR DE CHAINE. Une affaire tombee laisse deux pieces dans
+    """R17 (VALIDEE le 23/11, son message ; mesuree sur son mot (20) du verrou) : LA SOEUR DE CHAINE. Une affaire tombee laisse deux pieces dans
     la MEME chaine Hektor : son compromis ANNULE et son offre REFUSEE, au meme montant. Quand l'une est A PART et que
     l'autre -- sa soeur UNIQUE dans la chaine, et reciproquement -- est prouvee a UNE seule ligne, la piece a part suit sa
     soeur. Ses trois gardes : g1 les dates (contre_dates) ; g2 l'offre n'est pas datee apres le compromis ; g3 la ligne ne
@@ -999,7 +1012,7 @@ def regle_r17(I: Image, b: str, r: dict) -> dict:
         vraies_L = [x for x, l_ in r["va"].items() if L in l_ and I.nature[x] == PC.VRAIE]
         if (vraies_L and a > min(vraies_L)) or len(r["possibles"].get(a, [])) < 2:
             continue                                                       # g4
-        out[a] = (L, "REGLE R17 (variante) : sa soeur de chaine %d (%s %s, meme montant %d) est prouvee a cette ligne -- "
+        out[a] = (L, "REGLE R17 (validee le 23/11) : sa soeur de chaine %d (%s %s, meme montant %d) est prouvee a cette ligne -- "
                      "l'autre moitie de la meme affaire tombee" % (q, D.REG[q]["genre"], D.REG[q]["etat"],
                                                                    round(D.REG[q]["montant"])))
     return out
@@ -1057,7 +1070,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             donnee.update(r9)
             r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     if joue("R17"):
-        # VARIANTE R17 (proposee le 23/11) : la soeur de chaine -- voir VARIANTES et regle_r17
+        # REGLE R17 (validee le 23/11) : la soeur de chaine -- voir REGLES_VALIDEES et regle_r17
         r17 = regle_r17(I, b, r)
         if r17:
             donnee.update(r17)
@@ -1114,6 +1127,18 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if retient and not (date_exacte or prix_hon or case_vide or dans_un_dossier):
                 isoles.add(a)
                 isoles_r7c.add(a)
+    isoles_r18 = set()
+    if joue("R18"):
+        # VARIANTE R18 (son message du 23/11 : « mesure la regle de mise de cote a blanc » -- MESURE SEULEMENT) : une de SES
+        #   20 a part qui RETIENT une ligne au verrou (plus petite que sa plus petite vraie piece, possible pour elle, hors
+        #   R7a) est mise de cote comme R7b / R7c, jamais donnee
+        for a in sorted(r["apart"]):
+            if I.nature[a] != PC.VRAIE or a not in les_20_a_part() or a in isoles:
+                continue
+            if any(a < min([q for q in r["morceaux"].get(gl, []) if I.nature[q] == PC.VRAIE] or [0])
+                   and a not in deja.get(gl, []) for gl in r["possibles"].get(a, [])):
+                isoles.add(a)
+                isoles_r18.add(a)
     # E9 : la pose de nuit simulee sur le decoupage (chaque morceau devient un dossier ; le reste garde sa chaine)
     ch_new = {}
     for gl, ids in r["morceaux"].items():
@@ -1141,7 +1166,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         MISES_DE_COTE[a] = {"bien": b, "ancien_uuid": ancien, "ancien_numero": I.pieces[a]["app_dossier_numero"],
                             "ancienne_chaine": S.get(a), "etiquette_simulee": lab1[a],
                             "garde_son_numero": lab1[a] == ancien, "mise_de_cote_avec": [q for q in g_ if q != a],
-                            "regle": "R7c" if a in isoles_r7c else "R7b",
+                            "regle": "R18" if a in isoles_r18 else ("R7c" if a in isoles_r7c else "R7b"),
                             "pieces_du_dossier_prises_par_un_morceau": hors,
                             "etiquettes_du_groupe": sorted({str(lab1[q]) for q in g_}),
                             "groupe": g_, "lignes_du_gel": {str(q): sorted(I.gel_par_piece.get(q, [])) for q in g_}}
@@ -1218,11 +1243,22 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 preuves.append("a part TRANCHEE PAR LA REGLE R7c (validee le 23/11) -- aucune preuve ne peut la donner a "
                                "aucune de ses lignes possibles, hors de leurs dossiers : %s" % " ".join(
                                    "%d" % a for a in mis_de_cote if a in isoles_r7c))
-            preuves.append("a part MISE DE COTE avec son dossier d'aujourd'hui, possible pour elle seule, hors de son "
-                           "dossier (REGLE R7b, validee le 22/11 ; elle garde son ancien numero : %s) : %s" % (", ".join(
-                               "%d -> %s (dossier fige : %s)" % (a, I.pieces[a]["app_dossier_numero"] or "aucun",
-                                                                  " ".join(map(str, groupe_isole[S[a]])))
-                               for a in mis_de_cote), " ".join("%d" % a for a in mis_de_cote)))
+            m7 = [a for a in mis_de_cote if a not in isoles_r18]
+            if m7:
+                preuves.append("a part MISE DE COTE avec son dossier d'aujourd'hui, possible pour elle seule, hors de son "
+                               "dossier (REGLE R7b, validee le 22/11 ; elle garde son ancien numero : %s) : %s" % (", ".join(
+                                   "%d -> %s (dossier fige : %s)" % (a, I.pieces[a]["app_dossier_numero"] or "aucun",
+                                                                      " ".join(map(str, groupe_isole[S[a]])))
+                                   for a in m7), " ".join("%d" % a for a in m7)))
+            m18 = [a for a in mis_de_cote if a in isoles_r18]
+            if m18:
+                preuves.append("a part MISE DE COTE PAR LA VARIANTE R18 (mesure seulement) -- une de SES 20 a part (sa "
+                               "decision du 21/11), jamais donnee ; son ancien numero dans la pose simulee : %s" % ", ".join(
+                                   "%d %s %s (dossier fige : %s)" % (
+                                       a, "GARDE" if lab1[a] == I.pieces[a]["app_dossier_uuid"] else "⛔ PERD (numero NEUF)",
+                                       I.pieces[a]["app_dossier_numero"] or "aucun",
+                                       " ".join(map(str, groupe_isole[S[a]])))
+                                   for a in m18))
         if deja.get(gl):
             preuves.append("a part deja dans son dossier, possible pour elle seule (REGLE R7a, validee le 22/11) : %s" % " ".join(
                 "%d" % a for a in deja[gl]))
