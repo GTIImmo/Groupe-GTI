@@ -4645,6 +4645,28 @@ paquets [...] Tu choisis l'ordre, tu ne reviens qu'avec des regles »).
   meme Prix ; PPIM4947, 3QZ4DAD1, ARF57GC5 : la date ou le prix + honoraires de plusieurs acheteurs ; ea6a28a7 : 14033,
   sa B3) ; AUCUNE_PIECE_PROUVEE 3 (9Q0FHAKK et 91IHSGNC « Vente reglee » avec une piece a part sur le bien ; 5C80H7ZF) ;
   PLUSIEURS_BIENS 1 (M2G1Z1K8, prouvee sur aucun).
+
+7 LES QUATRE VARIANTES ENSEMBLE (passage 34 : R9, R9b, R10, R11) : 83 verdicts changent, 0 DEJA RENDU, les MEMES 19
+  ecarts ; 4 645 tranchees + 153 ; dont 46 rien a etiqueter -> LE RESTE A VIDER : 107 (189 avant) ; des 103 lignes des
+  quatre paquets, il en reste 21.
+
+8 EN SECOND (son mot) -- 14033, SES DEUX OPTIONS A BLANC, COTE A COTE (variantes B3A, B3B ; passages 35 et 36) :
+  aujourd'hui : COLAS (205f62be) au verrou ; DONNADIEU (ea6a28a7) en attente (SES_PIECES_A_PART) ; 232d82c0 D2025-0235.
+  A, a part pour toujours (mise de cote, elle garde D2025-0417) : COLAS TRANCHEE, numero NEUF (14034) ; DONNADIEU attend.
+  B, a DONNADIEU : COLAS TRANCHEE, numero NEUF (14034) ; DONNADIEU TRANCHEE, D2025-0417 (le numero de 14033).
+  Dans les DEUX, COLAS recoit le meme numero neuf : son numero du 16/11 (D2025-0257, celui des 2 560) a ete ABSORBE le
+    21/11 par la fusion E dans D2025-0417, dont 14033 est la plus petite piece -- aucune option ne le lui rend. B ne fait
+    donc pas bouger COLAS plus que A ; seule DONNADIEU change. Chaque option : 1 ou 2 verdicts, 0 deja rendu.
+9 EN SECOND -- LES 25 « PLUSIEURS ACHETEURS », SES DEUX CHIFFRES : (1) les lignes que chaque piece debloquerait : 24163 -> 4 ;
+  4621, 19815, 4327, 9979 -> 3 ; dix pieces -> 2 ; dix -> 1 (46 lignes) ; (2) un departage non regarde : LE GEL ne nomme
+  qu'UNE des lignes candidates pour 19 pieces sur 25 (aucune pour 6) ; le negociateur ne departage pas (le meme partout).
+  LA 4e REGLE MESUREE, R12 (le gel departage une preuve qui designe plusieurs lignes) -- SUSPECTE, PAS PROPOSEE :
+  telle quelle, 25 lignes liberees mais 1 VERDICT RENDU change (XCK96Z01 : 177 < 178 -> numero neuf) ; avec SA REGLE (b)
+  DU 20/11 (« pas plus petite que la plus petite du dossier qui la recoit »), 4 lignes seulement, et 1 verdict rendu
+  change encore (ZFLFAQ0T retombe au verrou). Le gel reste une INDICATION pour sa main (19 pieces).
+10 NON FAIT, EXPRES (son mot) : les 2 signaux « transaction introuvable » -- avant l'ecriture, pas maintenant (sa piste :
+  ce qui est LU AU DEPART, une piece supprimee chez Hektor ou figee).
+RIEN D'ECRIT ; rien pousse. A LUI : R9, R9b, R10, R11 (R12 ecartee par sa propre regle) ; 14033 A ou B.
 ```
 
 ---

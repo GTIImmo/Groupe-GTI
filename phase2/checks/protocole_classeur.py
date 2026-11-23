@@ -192,6 +192,13 @@ VARIANTES = {
     "R11": "une ligne SANS gel, dont aucune piece n'est prouvee, et dont TOUTES les vraies pieces du bien sont prouvees a "
            "d'AUTRES lignes : son affaire n'a aucune piece chez nous -> RIEN A ETIQUETER (rejugee a chaque passage) -- sauf "
            "si la triple preuve de R8 trouve son affaire sur un autre bien",
+    # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
+    "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
+           "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
+           "du 20/11, jamais a une ligne deja tranchee si elle est plus petite que la plus petite piece de son morceau)",
+    # 14033 (sa B3 du 20/11) : ses DEUX options, mesurees a blanc cote a cote (son mot (15)) -- jamais appliquees
+    "B3A": "14033 A PART POUR TOUJOURS : mise de cote comme R7b, avec son dossier d'aujourd'hui (elle garde son numero)",
+    "B3B": "14033 A DONNADIEU (ea6a28a7) : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU (critere 1)",
     "R9b": "R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
            "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
@@ -790,13 +797,37 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         ch_t = {S[a] for a in lies if a in S}
         X = sorted(a for a in D.par_bien.get(b, []) if S.get(a) in ch_t)
     donnee = {a_: l_ for a_, (l_, _w) in PIECE_DONNEE_PAR_DECISION.items()}
-    r = K.couper_le_bien(D, b, lignes_b, S, X, A_PART_PAR_DECISION, donnee)
+    a_part_dec = dict(A_PART_PAR_DECISION)
+    if joue("B3B") and 14033 in a_part_dec:         # 14033 : l'option B (variante, mesure seulement)
+        del a_part_dec[14033]
+        donnee[14033] = ("ea6a28a7", "VARIANTE B3B (mesure) : a DONNADIEU -- prix 140 500 et commission 9 500")
+    r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
+    if joue("R12"):
+        # VARIANTE R12 (proposee le 23/11) : le gel departage une preuve qui designe plusieurs lignes
+        r12 = {}
+        for a_ in sorted(r["apart"]):
+            if I.nature[a_] != PC.VRAIE or a_ in les_20_a_part() or a_ in a_part_dec:
+                continue
+            cands = {j for j in lignes_b if D.touche_ph(a_, j)}
+            gel_ = set(I.gel_par_piece.get(a_, [])) & cands
+            if len(cands) > 1 and len(gel_) == 1:
+                j_ = next(iter(gel_))
+                # SA REGLE (b) DU 20/11 : la piece ne va a une ligne deja tranchee que si elle n'est pas plus petite que
+                #   la plus petite vraie piece de son morceau -- sinon l'etiquette de cette ligne changerait
+                deja_ = [q for gl_, ids_ in r["morceaux"].items() if j_ in gl_ for q in ids_ if I.nature[q] == PC.VRAIE]
+                if deja_ and a_ < min(deja_):
+                    continue
+                r12[a_] = (next(iter(gel_)), "REGLE R12 (variante) : son prix + honoraires sont ceux de %s ; le gel du "
+                                             "16/11 ne nomme que %s" % (" ".join(sorted(cands)), next(iter(gel_))))
+        if r12:
+            donnee.update(r12)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     if joue("R9") or joue("R9b"):
         # VARIANTE R9 (proposee le 23/11, jamais appliquee sans son mot) -- voir VARIANTES
         r9 = regle_r9(I, b, lignes_b, r)
         if r9:
             donnee.update(r9)
-            r = K.couper_le_bien(D, b, lignes_b, S, X, A_PART_PAR_DECISION, donnee)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
     deja = {}
@@ -815,6 +846,8 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if hk_:
                 isoles |= {a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_) and gl in r["possibles"][a]
                            and len(r["possibles"][a]) == 1 and S.get(a) not in ch_m and a not in deja.get(gl, [])}
+    if joue("B3A") and 14033 in r["apart"]:          # 14033 : l'option A (variante, mesure seulement)
+        isoles.add(14033)
     if joue("R7c"):
         # REGLE R7c (validee le 23/11, son message : « Ensuite R8, puis R7c ») -- voir REGLES_VALIDEES
         for a in sorted(r["apart"]):
