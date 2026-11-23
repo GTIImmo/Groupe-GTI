@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v5 -- 23/11 : R9b, R10, R11 validees ; 14033 a DONNADIEU (son mot (16))"
+VERSION = "v6 -- 23/11 : R9 validee, avec sa garde (la commission UNIQUE AU BIEN)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -178,6 +178,15 @@ REGLES_VALIDEES = {
             "d'AUCUNE de ces lignes, est TRANCHEE : MISE DE COTE comme R7b (isolee AVEC son dossier d'aujourd'hui, elle "
             "garde son ancien numero) -- elle ne retient plus aucune ligne",
             "son message du 23/11 : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact »"),
+    # ⛔ LA PHRASE DE GARDE (son mot du 23/11) : « R9 NE VAUT QUE SI LA COMMISSION EST UNIQUE AU BIEN ».
+    "R9": ("une ligne sans vraie piece prouvee (qui ne tient que sa copie C5, ou rien) recoit chaque vraie piece que son gel lui donne, quand cette piece est A "
+          "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
+          "honoraires sont la « Commission TTC » de la ligne, qu'AUCUNE autre ligne n'a son prix + honoraires, et qu'elle "
+          "n'est pas une de SES 20 pieces a part (son mot du 21/11) -- ⭐ ET, L'EXCEPTION NOMMEE DE SES HUIT ECARTS : AUCUNE "
+          "autre ligne du bien n'a la meme Commission TTC (temoin : 3 838 fois la meme ligne, 0 une autre)",
+           "son message du 23/11 : « R9 AVEC SON EXCEPTION : OUI, VALIDEE. La preuve stricte avait raison les 8 fois, temoin "
+           "a ZERO sur 3 838, cout = 1 ligne, 0 verdict rendu change. Pose-la, et note la phrase de garde : R9 ne vaut que "
+           "si la commission est UNIQUE AU BIEN »"),
     "R9b": ("R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
            "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
             "son mot du 23/11 (16) : « R9b : OUI. Temoin 3 659 fois la meme ligne, 0 fois une autre [...] Pose-la. » « R11 : OUI. Les 24 lignes qu'elle ferme disent TOUTES Annulee [...] Pose-la. » « R10 : OUI, mais NOMME SON UNIQUE ECART avant [...] la 59e ne rend aucun bien, elle ne contredit pas P1 »"),
@@ -192,12 +201,6 @@ REGLES_VALIDEES = {
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
-    # R9 (23/11, le paquet COPIE_SEULE : 23 lignes, UNE cause) -- PROPOSEE, jamais appliquee sans son mot.
-    "R9": "une ligne sans vraie piece prouvee (qui ne tient que sa copie C5, ou rien) recoit chaque vraie piece que son gel lui donne, quand cette piece est A "
-          "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
-          "honoraires sont la « Commission TTC » de la ligne, qu'AUCUNE autre ligne n'a son prix + honoraires, et qu'elle "
-          "n'est pas une de SES 20 pieces a part (son mot du 21/11) -- ⭐ ET, L'EXCEPTION NOMMEE DE SES HUIT ECARTS : AUCUNE "
-          "autre ligne du bien n'a la meme Commission TTC (temoin : 3 838 fois la meme ligne, 0 une autre)",
     # R12 (23/11, les 25 « plusieurs acheteurs » : son mot (15), « existe-t-il un departage non regarde ? ») -- PROPOSEE
     "R12": "une piece a part dont le prix + honoraires sont ceux de PLUSIEURS lignes va a la SEULE d'entre elles que son "
            "gel nomme -- le gel departage la preuve, il ne la remplace pas (jamais une de SES 20 a part ; et, sa regle (b) "
@@ -779,7 +782,7 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
                 if prix is None or m is None or round(m) != prix or any(nombre_case(D.case(j, "Prix")) == prix
                                                                          for j in lignes_b if j != i):
                     continue
-                out[a] = (i, "REGLE R9b (variante) : le gel du 16/11 ne la donne qu'a cette ligne ; honoraires inconnus, son "
+                out[a] = (i, "REGLE R9b (validee le 23/11) : le gel du 16/11 ne la donne qu'a cette ligne ; honoraires inconnus, son "
                              "montant %d = le « Prix » de la ligne, qu'aucune autre ligne du bien n'a" % prix)
                 continue
             if not joue("R9") or round(h) != com or any(D.touche_ph(a, j) for j in lignes_b if j != i):
@@ -788,7 +791,7 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
             #   du bien a la MEME Commission TTC -- les honoraires collaient par hasard. Commission unique : 3 838 / 0.
             if any(nombre_case(D.case(j, "Commission TTC")) == com for j in lignes_b if j != i):
                 continue
-            out[a] = (i, "REGLE R9 (variante) : le gel du 16/11 ne la donne qu'a cette ligne, et ses honoraires %d = sa "
+            out[a] = (i, "REGLE R9 (validee le 23/11) : le gel du 16/11 ne la donne qu'a cette ligne, et ses honoraires %d = sa "
                          "« Commission TTC » ; aucune autre ligne n'a son prix + honoraires" % com)
     return out
 
@@ -839,7 +842,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             donnee.update(r12)
             r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     if joue("R9") or joue("R9b"):
-        # VARIANTE R9 (proposee le 23/11, jamais appliquee sans son mot) -- voir VARIANTES
+        # REGLES R9 et R9b (validees le 23/11) -- voir REGLES_VALIDEES ; ⛔ R9 ne vaut que si la commission est UNIQUE AU BIEN
         r9 = regle_r9(I, b, lignes_b, r)
         if r9:
             donnee.update(r9)

@@ -4721,6 +4721,37 @@ ecarts LUS avant de passer a la suivante »). Rapport : `notice/PROTOCOLE_REPONS
   decision 3 . aucune piece prouvee 3 . plusieurs biens 1 -> reste a vider 106. Les 2 « transaction introuvable » : avant l'ecriture.
 ```
 
+### 20.26 R9 validée (sa garde) ; LES PRÉALABLES À L'ÉCRITURE ; la suite du reste
+
+Son message du 23/11 : « R9 AVEC SON EXCEPTION : OUI, VALIDEE [...] note la phrase de garde : R9 ne vaut que si la
+commission est UNIQUE AU BIEN [...] A FAIRE AVANT L'ECRITURE, pas maintenant [...] Tes 5 lignes a 65 800 EUR et les 3 du
+bien 39845 : garde-les de cote, Frederic les tranche. »
+
+```
+1 R9 VALIDEE (protocole_classeur.py v6, REGLES_VALIDEES), avec SA PHRASE DE GARDE ecrite au code :
+  « R9 NE VAUT QUE SI LA COMMISSION EST UNIQUE AU BIEN ». Passage 42 = passage 41 (0 change) ; contre 40 : 12 changent,
+  0 deja rendu ; 4 646 tranchees + 152 ; dont 46 rien a etiqueter -> RESTE A VIDER 106.
+
+2 ⛔⛔ LES PREALABLES A L'ECRITURE -- RIEN NE S'ECRIT AVANT QU'ILS SOIENT TOUS FAITS (sa liste, tenue ici) :
+  P-a LES 2 SIGNAUX « [X] detachement : transaction introuvable » du rejeu exact du passage 26 (577 / 577 morceaux obtenus
+      quand meme). Sa piste, a MESURER : ce qui est LU AU DEPART -- une piece supprimee chez Hektor, ou figee dans son
+      ancien dossier (PIECE_SUPPRIMEE_FIGEE). « Un rejeu vert avec deux lignes qu'on n'explique pas n'est pas un rejeu vert. »
+  P-b LES LIGNES TRANCHEES DONT LA PREUVE CITE LE MANDAT (80 au passage 41) : combien tiennent PAR LE MANDAT SEUL et sont
+      RECONSTITUEES (le mandat du Sheet est faux 55 % du temps sur elles, § 20.25) -- avec un TEMOIN POSITIF.
+  P-c LES 5 LIGNES DU SUJET D'ARGENT (65 800 EUR : QXDW8EQA 39 000, 2U5QPKRC 6 800, MQ6H8TVQ 1 000, EJN79TJ1 13 000,
+      I3TFR2KG 6 000) et LES 3 DU BIEN 39845 : HORS DE TOUTE VAGUE D'ECRITURE tant que Frederic ne les a pas tranchees.
+      ⚠ I3TFR2KG est TRANCHEE (sa decision de rattachement) : elle reste tranchee au protocole, mais l'ecrivain ne la
+      touche pas avant son mot.
+  P-d LA VRAIE SAUVEGARDE juste avant la 1re ecriture (sauvegarde_datee_classeur.py : prendre, relire, epreuve) -- deja
+      ecrit le 22/11, rappele ici.
+  P-e LE REJEU EXACT sur l'etat d'arrivee des regles validees le jour meme (le dernier vert : passage 26 ; depuis :
+      R9, R9b, R10, R11, 14033) -- avant le fichier de production.
+
+3 SUR LE RESTE, UNE REGLE A LA FOIS ET SES ECARTS LUS (sa consigne) : DEUX_LIGNES_UN_DOSSIER (10), PIECE_SUPPRIMEE_FIGEE
+  (6), les 7 mandats recycles, le verrou (55), puis les restes des paquets (copie seule 10, a part 7, aucune preuve 3,
+  plusieurs biens 1).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
