@@ -4272,6 +4272,58 @@ Son mot : `C:\Hektor\mot_du_23_11_patch_colle_et_un_ecart_a_trancher.md`. Rappor
 ⛔ A LUI : garder le patch (la difference est du blanc, prouvee) ou jouer l'inverse avant 05:00 ; la correction du controle.
 ```
 
+### 20.19 Son mot du 23/11 (6) — le contrôle du matin : le patch a passé la nuit ; mon contrôle corrigé
+
+Son mot : `C:\Hektor\mot_du_23_11_controle_du_matin_le_patch_a_passe_la_nuit.md`. Rapport :
+`notice/PROTOCOLE_REPONSES_23_11_4_LE_CONTROLE_CORRIGE_ET_SON_TEMOIN_DE_L_APPEL_2026-11-23.md`. ⛔ Pas d'inverse, rien
+chez Hektor, rien poussé, pas de mise de côté, pas de réparation d'offre.
+
+```
+1 SES MESURES, PRISES AVANT DE ME LIRE (run 04:00:02 -> 06:33:25, « finished successfully ») :
+  (a) 11 551 dossiers, 31 368 pieces, 11 551 numerotes, 11 551 numeros distincts ; journal 11 657 (dernier id 34 545,
+      0 ligne au-dela) ; gel 12 820 ; 190 fusions + scissions, 0 sans ancien numero ; md5(replace(functiondef, chr(13),
+      '')) = e695bf7e -> ⛔ (a) NE CRIE PAS, L'INVERSE N'EST PAS JOUE, LE SUJET EST CLOS.
+  (b) 0 ligne neuve, ET SON TEMOIN POSITIF : le journal du run porte "etiquettes" {... "actif": true} avec ses compteurs
+      -> la fonction PATCHEE a tourne (06:07:33-06:09:05). 22/11 et 23/11 : le meme compte rendu a zero, avant ET apres
+      le patch -- le silence ne vient pas du patch, le chainage est stable.
+  (c) rien n'a bouge sur notre perimetre.
+  ⭐ L'ECART 30 / 31 DU 21/11, TRANCHE PAR LUI : « fusion: 30 » compte les dossiers GARDES, le journal les etiquettes
+     ABSORBEES (31) -- une fusion a reuni trois etiquettes. Les deux sont justes. AUCUN correctif. Ne pas le rouvrir.
+  ⚠ SA RESERVE DECLAREE : la production n'a encore ecrit AUCUNE ligne neuve depuis le patch. Prouve en production :
+     « le patch ne casse rien ». Prouve sur copie seulement : « il remplit ancien_numero sur un cas neuf ». ⏰ LE
+     RENDEZ-VOUS : a la PREMIERE vraie fusion ou scission en production, regarder la ligne neuve et son ancien numero.
+
+2 LE CONTROLE CORRIGE (controle_patch_journal_en_production.py), ses deux points, et rien d'autre :
+  1. L'EMPREINTE JUGEE SANS SES RETOURS CHARIOT : md5(replace(pg_get_functiondef, chr(13), '')) contre e695bf7e (le
+     rejeu du 22/11, fichier en LF) ; la BRUTE affichee avec son nombre de CR, contre b9fa8dea / 214 (le rejeu du 23/11
+     en CRLF, rejeu_sortie_23_11_tel_que_colle_CRLF.txt l. 14). LES DEUX ATTENDUS EN DUR, AUCUN recopie de la production.
+     Le meme corps avec d'autres fins de ligne = un ⚠ nomme, pas un rouge (la brute ne juge pas). Le juge sert a
+     apres-collage (point 3) ET, neuf, au matin (« a bis »).
+  2. LE TEMOIN DE L'APPEL, au matin (« b bis ») : CHAQUE journal du run commence apres la photo doit porter UN SEUL bloc
+     "etiquettes" avec « actif: true » ET ses HUIT compteurs (pose, propagation, fusion, scission, en dossiers et en
+     _lignes). Rouges nommes : {"actif": false} seul, "echec", « la pose a echoue », compte rendu illisible, un compteur
+     manquant, aucun bloc, deux blocs. AUCUN journal depuis la photo = rouge (un zero ne se croit pas).
+     + un RECOUPEMENT compte rendu / journal, AFFICHE, NON JUGE (voir 4).
+  ESSAIS (mode « essais », hors ligne) : 19 sur 19 -- le juge 6 (dont 3 temoins inverses : la fonction d'avant, l'inverse
+  colle 9581f8d2, la brute du collage sur un autre corps), le temoin 9 (dont 7 temoins inverses), et les VRAIS journaux
+  du 20 au 23/11 : 4 sur 4 verts, leurs compteurs non nuls lus a l'unite (20/11 propagation 4, fusion 10 ; 21/11 pose 2,
+  propagation 3, fusion 30 / 56 lignes) -- temoin POSITIF.
+
+3 LANCE EN PRODUCTION (lecture seule) : apres-collage CODE 0 (repetition 9/9 ; 190/190 ; empreinte VERTE : e695bf7e sans
+  CR, brute b9fa8dea avec 214 CR = le collage) ; matin CODE 0 -- a) 11 551 -> 11 551, 0 disparu, 0 renumerote, 0 ne ;
+  a bis) la fonction VERTE ; b) 0 ligne neuve, VERT ; b bis) quotidien_2026-11-23_04-00-02.log : run fini code 0,
+  « actif: true » et ses huit compteurs a zero -> « rien a poser », pas « pas appelee ». MES CHIFFRES = LES SIENS.
+
+4 ⭐ LE RECOUPEMENT, MESURE SUR 4 NUITS QUI ONT BOUGE (journal par nuit et par geste, lecture seule) :
+     pose        = lignes « pose » du journal              18/11 3=3 . 19/11 2=2 . 21/11 2=2
+     propagation = lignes « propagation »                  18/11 2=2 . 19/11 1=1 . 20/11 4=4 . 21/11 3=3
+     fusion      = dossiers GARDES distincts                18/11 1=1 . 20/11 10=10 . 21/11 30=30 (31 lignes)
+     scission    = lignes « scission »                      18/11 138=138 . 19/11 1=1
+  0 ecart. C'est sa lecture du 30 / 31, generalisee. ⛔ PROPOSEE comme REGLE (un rouge si un geste compte ne trouve pas
+  ses lignes au journal, ou l'inverse), NON CODEE : aujourd'hui elle s'affiche seulement.
+⛔ A LUI : la regle du recoupement (la faire juger, ou la laisser affichee).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
