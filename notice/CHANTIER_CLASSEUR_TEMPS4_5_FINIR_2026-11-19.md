@@ -4619,6 +4619,32 @@ paquets [...] Tu choisis l'ordre, tu ne reviens qu'avec des regles »).
     accord : coupes_29 +1, V3 +1) ; 0 etiquette NEUVE ; 10 sont des 2 560 et gardent EXACTEMENT leur numero (03BAPZFZ
     D2021-0391, 7G2I4DSK D2022-0450, 9LHNTO9R D2022-0147, B16X241B D2021-0126, H2JZ0S63 D2024-0186, PMNCF58W D2024-0048,
     R3CAYTF6 D2021-0381, T47ZI6GS D2021-0013, YZ1B0Q44 D2021-0002, f0ec39fc D2026-0164).
+
+4 LE PAQUET SES_PIECES_A_PART (29 ; protocole_paquets_a_part_et_sans_preuve_2026-11-23.py, CSV notice/PROTOCOLE_PAQUETS_
+  A_PART_ET_SANS_PREUVE_...) -- LA MEME CAUSE QUE COPIE_SEULE : le gel donne a la ligne SES vraies pieces, que la coupe
+  laisse a part -- surtout des OFFRES REFUSEES dont la date tombe a 1-7 jours de la case (19 ecarts : la date de 1re
+  proposition contre la date du Sheet), dont le MONTANT est le Prix de la ligne (26) et dont les honoraires sont inconnus
+  (une offre n'en a pas). -> R9 / R9b ETENDUES aux lignes SANS vraie piece prouvee (copie seule OU aucun morceau), chaque
+  piece du gel qui remplit leurs conditions -- jamais une ligne deja tranchee.
+5 LE PAQUET AUCUNE_PIECE_PROUVEE (28) -- UNE CAUSE DOMINANTE : la ligne n'a AUCUN gel, c'est une affaire ANNULEE, et toutes
+  les pieces du bien sont PROUVEES a une autre ligne (la vente d'un autre acquereur) : son affaire n'a aucune piece chez
+  nous -- le cas de R8, sur un bien qui a des pieces.
+  LA REGLE R11 (VARIANTE) : « une ligne SANS gel, dont aucune piece n'est prouvee, et dont TOUTES les vraies pieces du bien
+    sont prouvees a d'AUTRES lignes -> RIEN A ETIQUETER (rejugee a chaque passage) ; sauf si la triple preuve de R8 trouve
+    son affaire sur un autre bien ».
+  TEMOIN INVERSE : une piece a part sur le bien (une preuve pourrait encore venir) -> elle attend ; les 24 que R11 ferme
+    disent TOUTES « Annulee » au Sheet -- aucune affaire reglee ni vivante fermee. La triple preuve en trouve UNE de plus :
+    EJN79TJ1 (vente reglee 2020) -> bien 53953, compromis 27712 du 03/06/2020 (= sa case), honoraires 13 000, vendeur.
+6 LA MESURE DES TROIS VARIANTES ENSEMBLE (passage 33 : R9 + R9b etendues + R11) : 61 verdicts changent, 0 DEJA RENDU ;
+  AUCUNE_PIECE_PROUVEE -> RIEN_A_ETIQUETER 24, -> AFFAIRE_SUR_UN_AUTRE_BIEN 1 ; SES_PIECES_A_PART -> TRANCHEE 21 ;
+  COPIE_SEULE -> TRANCHEE 14 ; VERROU -> TRANCHEE 1 (beeaf847) ; les MEMES 19 ecarts de temoins (coupes_132 +1 accord) ;
+  DEBARD attend toujours. 4 623 tranchees + 175 ; dont 46 rien a etiqueter -> LE RESTE A VIDER : 129 (189 avant).
+  Avec R10 (passage 32 : 22 de plus, independantes) : le reste a vider tomberait a ~107.
+  CE QUI RESTE DES QUATRE PAQUETS : COPIE_SEULE 9 (ses 20 a part 4, « plusieurs acheteurs » 3, donnees ecartees 3 --
+  voir 2) ; SES_PIECES_A_PART 8 (BQAVSRA1, XBR8QD6L, 40ELE6SQ : montant different du Prix ; KPDROR30 : une autre ligne au
+  meme Prix ; PPIM4947, 3QZ4DAD1, ARF57GC5 : la date ou le prix + honoraires de plusieurs acheteurs ; ea6a28a7 : 14033,
+  sa B3) ; AUCUNE_PIECE_PROUVEE 3 (9Q0FHAKK et 91IHSGNC « Vente reglee » avec une piece a part sur le bien ; 5C80H7ZF) ;
+  PLUSIEURS_BIENS 1 (M2G1Z1K8, prouvee sur aucun).
 ```
 
 ---

@@ -182,13 +182,16 @@ VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
     # R9 (23/11, le paquet COPIE_SEULE : 23 lignes, UNE cause) -- PROPOSEE, jamais appliquee sans son mot.
-    "R9": "une ligne qui ne tient que sa copie C5 recoit LA vraie piece que son gel lui donne, quand cette piece est A "
+    "R9": "une ligne sans vraie piece prouvee (qui ne tient que sa copie C5, ou rien) recoit chaque vraie piece que son gel lui donne, quand cette piece est A "
           "PART (aucune preuve ne la donne a aucune ligne), que le gel ne la donne a AUCUNE autre ligne, que ses "
           "honoraires sont la « Commission TTC » de la ligne, qu'AUCUNE autre ligne n'a son prix + honoraires, et qu'elle "
           "n'est pas une de SES 20 pieces a part (son mot du 21/11)",
     # R10 (23/11, le paquet PLUSIEURS_BIENS : 23 lignes, UNE cause) -- PROPOSEE, jamais appliquee sans son mot.
     "R10": "une ligne qui nomme DEUX biens (deux sources) est sur celui des deux ou elle a des pieces PROUVEES (date au jour "
            "exact, prix + honoraires) quand elle n'en a sur AUCUN autre -- la preuve departage les sources",
+    "R11": "une ligne SANS gel, dont aucune piece n'est prouvee, et dont TOUTES les vraies pieces du bien sont prouvees a "
+           "d'AUTRES lignes : son affaire n'a aucune piece chez nous -> RIEN A ETIQUETER (rejugee a chaque passage) -- sauf "
+           "si la triple preuve de R8 trouve son affaire sur un autre bien",
     "R9b": "R9 quand les honoraires de la piece sont INCONNUS (une offre, un compromis sans net vendeur) : son MONTANT est le "
            "« Prix » de la ligne, et AUCUNE autre ligne du bien n'a ce meme Prix",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
@@ -729,41 +732,41 @@ def regle_r9(I: Image, b: str, lignes_b: set, r: dict) -> dict:
     ligne 4 208 fois, a une AUTRE 8 fois, et la laisse a part 53 fois."""
     D = I.D
     out = {}
-    for gl, ids in r["morceaux"].items():
-        if any(I.nature[q] == PC.VRAIE for q in ids) or len(gl) != 1:
-            continue
-        i = next(iter(gl))
+    # les lignes SANS vraie piece prouvee : celles dont le morceau n'a que des copies (COPIE_SEULE), et celles qui n'ont
+    #   AUCUN morceau (SES_PIECES_A_PART) -- jamais une ligne deja tranchee (elle ne gagne rien, rien ne lui est retire)
+    lignes_sans = [next(iter(gl)) for gl, ids in r["morceaux"].items()
+                   if len(gl) == 1 and not any(I.nature[q] == PC.VRAIE for q in ids)]
+    lignes_sans += sorted(lignes_b - {x for gl in r["morceaux"] for x in gl})
+    for i in lignes_sans:
         vraies_gel = sorted({int(g["piece"]) for g in I.gel_par_ligne.get(i, [])
                              if int(g["piece"]) in D.REG and D.REG[int(g["piece"])]["bien"] == b
                              and I.nature.get(int(g["piece"])) == PC.VRAIE})
-        if len(vraies_gel) != 1:
-            continue
-        a = vraies_gel[0]
-        if a not in r["apart"] or [x for x in I.gel_par_piece.get(a, []) if x != i]:
-            continue
-        if a in les_20_a_part():          # sa decision du 21/11 : elle reste a part (le temoin a_part_20 l'a crie le 23/11)
-            continue
-        try:
-            com = round(float(str(D.case(i, "Commission TTC")).replace(" ", "").replace(",", ".")))
-        except ValueError:
-            continue
-        h = D.REG[a]["hon"]
-        if h is None:
-            # R9b (variante) : honoraires inconnus -- le MONTANT est le Prix de la ligne, et lui seul l'a
-            if not joue("R9b"):
+        for a in vraies_gel:
+            if a not in r["apart"] or [x for x in I.gel_par_piece.get(a, []) if x != i]:
                 continue
-            prix = nombre_case(D.case(i, "Prix"))
-            m = D.REG[a]["montant"]
-            if prix is None or m is None or round(m) != prix or any(nombre_case(D.case(j, "Prix")) == prix
-                                                                     for j in lignes_b if j != i):
+            if a in les_20_a_part():          # sa decision du 21/11 : elle reste a part (le temoin a_part_20 l'a crie le 23/11)
                 continue
-            out[a] = (i, "REGLE R9b (variante) : le gel du 16/11 ne la donne qu'a cette ligne ; honoraires inconnus, son "
-                         "montant %d = le « Prix » de la ligne, qu'aucune autre ligne du bien n'a" % prix)
-            continue
-        if not joue("R9") or round(h) != com or any(D.touche_ph(a, j) for j in lignes_b if j != i):
-            continue
-        out[a] = (i, "REGLE R9 (variante) : le gel du 16/11 ne la donne qu'a cette ligne, et ses honoraires %d = sa "
-                     "« Commission TTC » ; aucune autre ligne n'a son prix + honoraires" % com)
+            try:
+                com = round(float(str(D.case(i, "Commission TTC")).replace(" ", "").replace(",", ".")))
+            except ValueError:
+                continue
+            h = D.REG[a]["hon"]
+            if h is None:
+                # R9b (variante) : honoraires inconnus -- le MONTANT est le Prix de la ligne, et lui seul l'a
+                if not joue("R9b"):
+                    continue
+                prix = nombre_case(D.case(i, "Prix"))
+                m = D.REG[a]["montant"]
+                if prix is None or m is None or round(m) != prix or any(nombre_case(D.case(j, "Prix")) == prix
+                                                                         for j in lignes_b if j != i):
+                    continue
+                out[a] = (i, "REGLE R9b (variante) : le gel du 16/11 ne la donne qu'a cette ligne ; honoraires inconnus, son "
+                             "montant %d = le « Prix » de la ligne, qu'aucune autre ligne du bien n'a" % prix)
+                continue
+            if not joue("R9") or round(h) != com or any(D.touche_ph(a, j) for j in lignes_b if j != i):
+                continue
+            out[a] = (i, "REGLE R9 (variante) : le gel du 16/11 ne la donne qu'a cette ligne, et ses honoraires %d = sa "
+                         "« Commission TTC » ; aucune autre ligne n'a son prix + honoraires" % com)
     return out
 
 
@@ -878,6 +881,18 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             elif gel_b and ailleurs:
                 out.append(attente("SES_PIECES_AILLEURS", "; ".join("%d -> %s" % (a, "+".join(v))
                                                                      for a, v in ailleurs.items())))
+            elif joue("R11") and not gel_b and X and not [q for q in X if q not in r["va"] and I.nature[q] == PC.VRAIE]:
+                # VARIANTE R11 (proposee le 23/11) : sans gel, et TOUTES les vraies pieces du bien sont prouvees a
+                #   d'autres lignes -- son affaire n'a aucune piece chez nous ; sauf si la triple preuve la trouve ailleurs
+                autre = affaire_sur_un_autre_bien(I, i)
+                if len(autre) == 1:
+                    (bb, pr_), = autre.items()
+                    out.append(attente("AFFAIRE_SUR_UN_AUTRE_BIEN", "bien %s : aucune piece pour elle ; son affaire est "
+                                       "sur le bien %s -- %s" % (b, bb, pr_)))
+                else:
+                    out.append(attente("RIEN_A_ETIQUETER", "REGLE R11 (variante) : bien %s -- sans gel, et ses %d piece(s) "
+                                       "sont toutes prouvees a d'autres lignes : son affaire n'a aucune piece chez nous"
+                                       % (b, len(X))))
             else:
                 out.append(attente("AUCUNE_PIECE_PROUVEE", "bien %s : %d piece(s) jugee(s), aucune pour elle ; gel %s"
                                    % (b, len(X), gel_b or "aucun")))
