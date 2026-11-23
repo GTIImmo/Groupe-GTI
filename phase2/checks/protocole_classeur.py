@@ -53,9 +53,11 @@ v3.1 (22/11 soir, son mot « reponses 21 bis ») : AUCUNE REGLE NE CHANGE. Le te
   (« figees ne veut pas dire reglees »). Voisins : protocole_les_numeros_neufs.py (ancien -> neuf, en clair),
   protocole_r7b_reversible.py (defaire R7b), sauvegarde_datee_classeur.py (la sauvegarde qui se relit).
 
-v3.2 (23/11, son mot (12) : « trancher les 44 », pas desserrer le verrou) : la VARIANTE R7c proposee (VARIANTES ; jamais
-  appliquee sans son mot) -- passage 24 sans elle = passage 23 (0 change) ; passage 25 avec elle : 10 pieces mises de
+v3.2 (23/11, son mot (12) : « trancher les 44 », pas desserrer le verrou) : la VARIANTE R7c proposee -- passage 24 sans elle = passage 23 (0 change) ; passage 25 avec elle : 10 pieces mises de
   cote, 12 lignes quittent le verrou, 0 deja rendu ne change, memes 19 ecarts de temoins.
+v4 (23/11, son message : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact ») : R8 et R7c VALIDEES
+  (REGLES_VALIDEES). R8 : un bien sans aucune piece -> RIEN_A_ETIQUETER, hors du reste a vider ; sauf si la triple
+  preuve (date exacte + honoraires + vendeur) trouve son affaire sur UN autre bien -> AFFAIRE_SUR_UN_AUTRE_BIEN.
 
 LES EPREUVES (le plan du 22/11, notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md). Version 0 de ce
 22/11 : E1 et E2 sont codees ; une ligne qui les passe recoit le motif declare `E3_A_CODER` -- le compte boucle des la
@@ -75,6 +77,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 import urllib.parse
@@ -94,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v3.1 -- 22/11 soir : sentinelle des 2 560, figees n'est pas reglees (affichage seul ; les regles sont celles de la v3)"
+VERSION = "v4 -- 23/11 : R8 et R7c validees (son message du 23/11)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -110,6 +113,13 @@ MOTIFS = {
     "BIEN_SANS_VRAIE_PIECE": ("E2", "le bien n'a que des copies C5 : aucune ne decide d'une etiquette (regle du 19/11)"),
     "BIEN_SANS_PIECE": ("E2", "le bien que la ligne nomme n'a AUCUNE piece chez nous (ni vraie, ni copie)"),
     "A_SA_DECISION": ("E1", "mise de cote par son mot (bien 39845, 22/11) : il veut voir ces affaires lui-meme"),
+    # R8 (validee le 23/11) : un bien sans AUCUNE piece n'a pas de dossier a nommer. ⛔ RIEN_A_ETIQUETER n'est PAS une
+    #   attente : la ligne SORT DU RESTE A VIDER (le passage la compte a part), et elle est rejugee a chaque passage.
+    "RIEN_A_ETIQUETER": ("E2", "REGLE R8 : le bien nomme n'a AUCUNE piece chez nous, et aucune piece d'un autre bien ne "
+                               "porte son affaire -- pas de dossier a nommer, rien a ecrire ; hors du reste a vider"),
+    "AFFAIRE_SUR_UN_AUTRE_BIEN": ("E2", "le bien nomme n'a aucune piece, mais UNE piece d'un autre bien porte la date "
+                                        "exacte d'une de ses cases, ses honoraires ET son vendeur : son affaire est la "
+                                        "-- a sa decision"),
     "E3_A_CODER": ("E3", "la ligne passe E1 et E2 ; les epreuves E3 a E9 ne sont pas encore codees (version 0)"),
     # v1 (22/11) -- E3 a E9
     "AUCUNE_PIECE_PROUVEE": ("E3", "aucune vraie piece du bien n'est prouvee a cette ligne (ni date au jour exact, ni "
@@ -154,17 +164,24 @@ REGLES_VALIDEES = {
             "son mot du 22/11, reponses au rapport 21, point 2 : « R7b : OUI. Applique-la. ⚠ AVEC MA REGLE, et elle ne "
             "se negocie pas : une piece mise de cote GARDE SON ANCIEN NUMERO DE DOSSIER. On ne supprime jamais une "
             "part, on l'isole. »"),
+    "R8": ("une ligne dont le bien n'a AUCUNE piece chez nous n'a pas de dossier a nommer : rien a ecrire dans sa case A ; "
+           "elle sort du reste a vider (RIEN_A_ETIQUETER) et elle est rejugee a chaque passage -- une piece qui arrive la "
+           "fait rentrer. ⭐ SAUF si UNE piece d'un autre bien porte la date exacte d'une de ses cases, ses honoraires "
+           "(= sa Commission TTC) ET son vendeur parmi ses mandants : elle attend alors, nommee (AFFAIRE_SUR_UN_AUTRE_BIEN) "
+           "-- trouve le 23/11 par les lectures chez Hektor : 3 ventes reglees vivent sur un autre bien",
+           "son message du 23/11 : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact -- et rien ne s'ecrit "
+           "avant que ce rejeu soit vert. »"),
+    "R7c": ("une piece a part, plus petite, possible pour PLUSIEURS lignes, qu'AUCUNE preuve ne peut donner a aucune "
+            "d'elles -- ni une date au jour exact sur une de leurs cases, ni le prix + honoraires d'une ligne du bien, ni "
+            "une case de date VIDE de son genre qu'on pourrait remplir de sa date -- et qui n'est dans le dossier "
+            "d'AUCUNE de ces lignes, est TRANCHEE : MISE DE COTE comme R7b (isolee AVEC son dossier d'aujourd'hui, elle "
+            "garde son ancien numero) -- elle ne retient plus aucune ligne",
+            "son message du 23/11 : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact »"),
 }
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
-    # R7c (23/11, son mot (12) : « TRANCHER LES 44 », pas desserrer le verrou ; le temoin inverse : « une piece qu'une
-    #   preuve POURRAIT encore rattacher doit CONTINUER a bloquer ») -- PROPOSEE, jamais appliquee sans son mot.
-    "R7c": "une piece a part, plus petite, possible pour PLUSIEURS lignes, qu'AUCUNE preuve ne peut donner a aucune "
-           "d'elles -- ni une date au jour exact sur une de leurs cases, ni le prix + honoraires d'une ligne du bien, ni "
-           "une case de date VIDE de son genre qu'on pourrait remplir de sa date -- et qui n'est dans le dossier "
-           "d'AUCUNE de ces lignes, est TRANCHEE : MISE DE COTE comme R7b (isolee AVEC son dossier d'aujourd'hui, elle "
-           "garde son ancien numero) -- elle ne retient plus aucune ligne",
+    # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
 }
 # R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
 VARIANTES_ACTIVES: set = set()
@@ -493,6 +510,44 @@ def socle() -> sqlite3.Connection:
     return con
 
 
+STOP_VENDEUR = {"NAN", "IND", "MME", "MLLE", "MR", "SCI", "ET", "DE", "LA", "LE", "DU", "DES", "CONSORTS",
+                "SUCCESSION", "INDIVISION"}
+
+
+def affaire_sur_un_autre_bien(I: Image, i: str) -> dict:
+    """R8 : la TRIPLE PREUVE d'une affaire portee par un autre bien -- une piece (de n'importe quel bien) dont la date
+    est au jour exact d'une case de la ligne de son genre, dont les honoraires sont la « Commission TTC » de la ligne, et
+    dont les mandants portent un nom du « Vendeur » de la ligne. Rend {bien: preuve}. Temoin du 23/11 (lignes TRANCHEES) :
+    elle donne leur bien SEUL 3 831 fois, 15 fois avec un autre ; sur les 23 « bien sans piece » : 3 (les ventes reglees
+    QXDW8EQA -> 2070, 2U5QPKRC -> 37875, MQ6H8TVQ -> 52460, verifiees chez Hektor)."""
+    D = I.D
+    if not hasattr(I, "_par_date"):
+        I._par_date = defaultdict(list)
+        for a_, r_ in D.REG.items():
+            if r_["date"]:
+                I._par_date[(r_["genre"], r_["date"])].append(a_)
+    try:
+        com = round(float(str(D.case(i, "Commission TTC")).replace(" ", "").replace(",", ".")))
+    except ValueError:
+        return {}
+    noms = {x for x in re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü'\-]{2,}", D.case(i, "Vendeur").upper()) if x not in STOP_VENDEUR}
+    out = {}
+    if not noms:
+        return out
+    for g, cols in K.COLS_DATE.items():
+        for c in cols:
+            d = K.d_sheet(D.case(i, c))
+            if not d:
+                continue
+            for a_ in I._par_date.get((g, d), []):
+                h = D.REG[a_]["hon"]
+                mand = str(I.pieces[a_].get("mandants_json") or "").upper()
+                if h is not None and round(h) == com and any(n in mand for n in noms):
+                    out.setdefault(D.REG[a_]["bien"], "%s %d du %s = colonne « %s », honoraires %d = Commission TTC, "
+                                                      "vendeur parmi ses mandants" % (g, a_, d, c, com))
+    return out
+
+
 def juger_ligne(I: Image, i: str, v: dict) -> dict:
     """LES EPREUVES, dans l'ordre. Version 0 : E1 et E2."""
     biens = sorted(I.biens_de_ligne.get(i, set()))
@@ -517,6 +572,14 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
     # E2
     vraies = [a for a in I.D.par_bien.get(b, []) if I.nature[a] == PC.VRAIE]
     if not I.D.par_bien.get(b):
+        if joue("R8"):
+            autre = affaire_sur_un_autre_bien(I, i)
+            if len(autre) == 1:
+                (bb, preuve), = autre.items()
+                return attente("AFFAIRE_SUR_UN_AUTRE_BIEN", "bien %s : aucune piece ; son affaire est sur le bien %s -- %s"
+                               % (b, bb, preuve))
+            return attente("RIEN_A_ETIQUETER", "bien %s : aucune piece, et aucune piece d'un autre bien ne porte son "
+                                               "affaire (%s)" % (b, "aucune" if not autre else "%d biens" % len(autre)))
         return attente("BIEN_SANS_PIECE", "bien %s : aucune piece" % b)
     if not vraies:
         return attente("BIEN_SANS_VRAIE_PIECE", "bien %s : %d copie(s), aucune vraie piece"
@@ -614,7 +677,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 isoles |= {a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_) and gl in r["possibles"][a]
                            and len(r["possibles"][a]) == 1 and S.get(a) not in ch_m and a not in deja.get(gl, [])}
     if joue("R7c"):
-        # VARIANTE R7c (proposee le 23/11, jamais appliquee sans son mot) -- voir VARIANTES
+        # REGLE R7c (validee le 23/11, son message : « Ensuite R8, puis R7c ») -- voir REGLES_VALIDEES
         for a in sorted(r["apart"]):
             poss = r["possibles"].get(a, [])
             if I.nature[a] != PC.VRAIE or a in isoles or len(poss) < 2:
@@ -714,7 +777,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         mis_de_cote = sorted(a for a in isoles if a < m and gl in r["possibles"][a])
         if mis_de_cote:
             if any(a in isoles_r7c for a in mis_de_cote):
-                preuves.append("a part TRANCHEE PAR LA VARIANTE R7c (proposee, NON VALIDEE) -- aucune preuve ne peut la donner a "
+                preuves.append("a part TRANCHEE PAR LA REGLE R7c (validee le 23/11) -- aucune preuve ne peut la donner a "
                                "aucune de ses lignes possibles, hors de leurs dossiers : %s" % " ".join(
                                    "%d" % a for a in mis_de_cote if a in isoles_r7c))
             preuves.append("a part MISE DE COTE avec son dossier d'aujourd'hui, possible pour elle seule, hors de son "
@@ -784,6 +847,9 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
          % (attendu, len(I.sheet["par_id"]), len(I.sheet["sans_id"]), n))
     dire("   TRANCHEES %d + EN ATTENTE %d = %d -- %s" % (tr, at, tr + at, "LE COMPTE BOUCLE" if boucle else
                                                           "⛔ LE COMPTE NE BOUCLE PAS"))
+    r8 = con.execute("select count(*) from verdict where passage=? and motif='RIEN_A_ETIQUETER'", (pid,)).fetchone()[0]
+    if r8:
+        dire("   ⭐ dont RIEN A ETIQUETER (regle R8, hors du reste a vider) %d -> LE RESTE A VIDER : %d" % (r8, at - r8))
     if inconnus:
         dire("   ⛔ motifs non declares au catalogue : %s" % inconnus)
     for m, k in con.execute("select motif, count(*) from verdict where passage=? and verdict='ATTENTE' group by 1 "

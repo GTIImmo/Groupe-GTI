@@ -4511,6 +4511,54 @@ Lis »). Rapport : `notice/PROTOCOLE_REPONSES_23_11_7_LES_34_ET_LES_44_2026-11-2
   sa B3 voulait-elle dire « a part pour toujours » ?
 ```
 
+### 20.23 Son message du 23/11 — les 5 lectures chez Hektor, R8 et R7c validées, le passage 26 et le rejeu exact VERT
+
+Son message : « FEU VERT pour les 5 lectures chez Hektor (lecture seule). C'est la priorite : si des ventes reglees manquent
+a notre registre, tout le reste passe apres [...]. ET PREPARE-MOI DE QUOI TRANCHER LES DEUX AUTRES, en clair dans ton
+message [...]. Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact -- et rien ne s'ecrit avant que ce rejeu soit
+vert. » Rapport : `notice/PROTOCOLE_REPONSES_23_11_8_LES_5_LECTURES_R8_R7C_LE_REJEU_VERT_2026-11-23.md`.
+
+```
+1 LES 5 LECTURES (lire_les_5_biens_sans_piece_2026-11-23.py ; un client, 1,2 s entre deux ; lecture seule) :
+  . les 3 « Vente reglee » : /Api/Vente/ListVentes/ sur 7 jours autour de la vente du Sheet -> 18, 9, 16 ventes ; AUCUNE
+    sur ces biens ; ⭐ TEMOIN : les 43 autres ventes de ces fenetres sont TOUTES dans notre miroir (data/hektor.sqlite).
+  . 61592 (a8aaeb2b, vente directe d'un garage fixee au 10/12/2026) et 62503 (130d81ac, compromis du 05/11/2026) :
+    AnnonceById -> « Actif » (62503 : archive 1) -- leur affaire n'est pas encore chez Hektor ; R8 les garde rejugees.
+  ⭐ AUCUNE VENTE REGLEE NE MANQUE A NOTRE REGISTRE -- elles sont sur un AUTRE BIEN, que la ligne ne nomme pas :
+     QXDW8EQA -> bien 2070, vente 9157 du 04/11/2020, D2020-0014 (mandat de la vente 12931 ; la ligne porte 13411)
+     2U5QPKRC -> bien 37875, vente 3822 du 14/12/2018, D2018-0271 (2691 ; la ligne porte 5030)
+     MQ6H8TVQ -> bien 52460, vente 1388 du 06/07/2018, D2017-0313 (11331 ; la ligne porte 8644)
+     PREUVE : le vendeur de la ligne parmi les mandants, la date de vente = sa « Vente Fixee », les honoraires = sa
+     Commission TTC (39 000 / 6 800 / 1 000) ; les acquereurs different (le Sheet reconstitue : « nan TARDY »...).
+     AUCUNE ligne du Sheet ne nomme ces trois biens.
+     + I3TFR2KG (SANS_BIEN, « NON TROUVE ») -> bien 48340 : offre 22/10/2019, compromis 19/11/2019, vente 1635 du
+     24/04/2020 -- ses TROIS dates exactes, honoraires 6 000, mandant CHAPPAT (la ligne : CHAPAT) ; D2019-0510 ; aucune
+     ligne ne le nomme.
+  ⚠ LA TRIPLE PREUVE seule (date exacte + honoraires) donne un faux sur 130d81ac (bien 59040 : une autre affaire, autre
+    vendeur) -> le VENDEUR est exige ; temoin sur les TRANCHEES : leur bien seul 3 831, avec un autre 15.
+
+2 R8 ET R7c VALIDEES (protocole_classeur.py v4, REGLES_VALIDEES) -- R8 avec UNE precaution que la lecture a imposee :
+  un bien sans aucune piece -> RIEN_A_ETIQUETER (hors du reste a vider) ; SAUF si la triple preuve (date exacte + honoraires
+  + vendeur parmi les mandants) trouve son affaire sur UN autre bien -> AFFAIRE_SUR_UN_AUTRE_BIEN (a sa decision). ⛔ R8
+  telle que proposee aurait ferme ces 3 lignes « rien a ecrire » alors que leur dossier existe.
+  PASSAGE 26 : 4 585 tranchees + 213 = 4 798 ; dont RIEN_A_ETIQUETER 20 -> LE RESTE A VIDER : 193 ; AFFAIRE_SUR_UN_AUTRE_
+  BIEN 3 ; comparer 25 -> 26 : 23 changent (20 + 3), 0 deja rendu ; les memes 19 ecarts de temoins.
+
+3 LE REJEU EXACT (protocole_portes.py, passage 26 ; A et B en cache, E refait 195 s) -- VERT :
+  4 585 / 4 585 justes a l'arrivee ; REJEU EXACT DE L'ETIQUETTE 4 585 / 4 585 ; R7b + R7c : 22 / 22 dossiers mis de cote
+  seuls a l'arrivee ET gardent leur ancien numero ; 0 piece hors des biens tranches ; dossiers 11 551 -> 11 611.
+  ⚠ RESERVE NOMMEE : le compte rendu porte 2 « [X] detachement : transaction introuvable -- le morceau est ignore »
+    (0 au passage 23). VERIFIE : les 577 morceaux du brouillon sont TOUS obtenus a l'arrivee, un par un (les 14 neufs :
+    4 appliques, 10 deja obtenus). Hypothese NON PROUVEE : l'ordre des coupes dans un meme bien (52166 : la coupe de
+    CC8TJTBR isole deja 26615, que le morceau suivant visait). A eclaircir AVANT d'ecrire le fichier de production --
+    sinon il criera chaque nuit.
+  LES EN ATTENTE (passage 26, apres « avis 26 ») : GARDE 141 . SANS_PIECE 69 . CHANGE 3 (les memes : 3900, 3990, 4005) ;
+  les 31 des 2 560 en attente : GARDE 31 ; la sentinelle : 4 lignes des 2 560 passent AU NUMERO EXACT (9a09e537,
+  CC8TJTBR, DPK4WZC3, bf277762 -- tranchees par R7c), 2 452 au numero exact (contre 2 448).
+⛔ RIEN N'EST ECRIT (base, Sheet, Hektor) ; rien pousse.
+A LUI, DANS LE MESSAGE : les 4 lignes sans aucun bien (en clair) et 14033 (3 lignes, une question).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
