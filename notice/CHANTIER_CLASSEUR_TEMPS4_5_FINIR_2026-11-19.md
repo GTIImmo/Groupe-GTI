@@ -4324,6 +4324,68 @@ chez Hektor, rien poussé, pas de mise de côté, pas de réparation d'offre.
 ⛔ A LUI : la regle du recoupement (la faire juger, ou la laisser affichee).
 ```
 
+### 20.20 Le mot (8), repris à son compte par Frédéric — le recoupement JUGÉ, et ma mesure des 26 orphelines
+
+Le mot : `C:\Hektor\mot_du_23_11_ta_question_l_alerte_rouge_et_le_motif_qui_revient.md`. Il est arrivé par l'AUTRE session
+(« Envoi données vers Google Sheets »), et il parlait de Frédéric à la troisième personne : je n'ai rien fait avant que lui
+le reprenne. ⭐ Il l'a repris (« OUI je reprends ce mot a mon compte, fais les deux dans son ordre ») ET il m'a donné raison
+sur sa réserve : ELLE RESTE OUVERTE jusqu'à la première vraie fusion ou scission en production (les 190 lignes ont été
+remplies par le patch, pas par la fonction de nuit) -- il a corrigé le mot. Rapport :
+`notice/PROTOCOLE_REPONSES_23_11_5_LE_RECOUPEMENT_JUGE_ET_LES_26_ORPHELINES_2026-11-23.md`.
+
+```
+1 LE RECOUPEMENT JUGE (controle_patch_journal_en_production.py, matin « b ter » + mode « nuits ») -- SA REGLE ASYMETRIQUE :
+     pose == lignes pose . propagation == lignes propagation . scission == lignes scission
+     fusion == dossiers GARDES distincts, ET lignes >= fusion          les « _lignes » (transactions) : affichees, non jugees
+  sens 1 (un geste compte sans ses lignes) = ROUGE « trace perdue » ; sens 2 (des lignes qu'aucun geste ne reclame,
+  une ligne HORS de la fenetre d'un run, un evenement inconnu) = ⛔⛔ ROUGE FRANC « ecrivain inconnu ». Juge PAR NUIT
+  (la fenetre du run : de l'heure de son journal a sa ligne de fin ; pas fini -> jusqu'a maintenant). Les lignes
+  « restauration » : nommees et EXCLUES, et c'est dit. Une nuit dont le temoin de l'appel est rouge : PAS JUGEABLE, rouge.
+  ESSAIS 31/31 (12 neufs) -- SES DEUX TEMOINS INVERSES : fusion 31 au lieu de 30 -> ROUGE (sens 1 : 30 gardes) ; scission
+  136 au lieu de 138 -> ROUGE (sens 2 : 138 lignes) ; plus pose, propagation, une ligne a 14:00 hors du run, une fusion de
+  trop, un evenement inconnu, un run pas fini ; et les verts : les deux nuits telles quelles, une restauration exclue,
+  fusion_lignes 999 non juge.
+  ⭐ LES VRAIES NUITS (mode « nuits », lecture seule) : 11 runs, du 13/11 (le 1er compte rendu) au 23/11, 216 lignes du
+  journal depuis le debut du premier (11 441 avant : la pose initiale du 12/11 23:08, non jugees) -> 11 / 11 VERTS,
+  0 ligne hors fenetre, 0 restauration. Sa regle tient sur 7 nuits qui ont bouge (13, 14, 17, 18, 19, 20, 21/11), pas 4.
+  matin relance : code 0, « b ter » VERT.
+
+2 MA MESURE DES 26 (mesurer_les_26_orphelines_2026-11-23.py, lecture seule ; CSV notice/LES_26_ORPHELINES_MA_MESURE_
+  2026-11-23.csv) : 26 parts sur 13 dossiers disparus (la vue : 26), TOUTES classeur_reconstitue, toutes ecrites le 13/11
+  22:56 ; chaque dossier d'arrivee est trouve comme la purge le trouve (le numero disparu = sa plus petite transaction).
+     12 DOUBLONS DE NOTRE COPIE (24 parts) : 3670 11709 14034 14052 14913 19070 19576 19737 20089 24011 28179 28547 --
+        les memes (cote, rang, negociateur, nom, 50 %) des deux cotes ;
+      1 DIVERGENT : 27135 -> 27133, l'ENTREE identique (COUDERT 50), la SORTIE differe (orpheline COUDERT 50 / en place
+        HERITIER 50) ; 0 ramenable ; 0 perdue.
+  Chaque dossier d'arrivee porte au journal SA fusion du 21/11 06:20, avec l'ANCIEN NUMERO absorbe (ex. 3669 D2025-0410
+  <- D2025-0316) : la colonne du patch dit deja d'ou vient chaque orpheline.
+  CE QUI CONFIRME LE MOT : D8 est pose (app_repartition_purger_orphelines df20fc00, 0 CR) ; son compte rendu de la nuit
+  (journal du run du 23/11) : saisies_ramenees 0, saisies_orphelines_gardees 26, orphelines_sans_transaction [],
+  13 orphelines_en_conflit ; rien n'est perdu ; le divergent est 27135 -> 27133, cote sortie.
+  ⛔ CE QUI LE CONTREDIT, MESURE :
+  a. « 22 lignes, 21 doublons » : je compte 26 parts sur 13 dossiers, 25 cotes identiques + 1 divergent (la sortie de
+     27135). Je ne sais pas d'ou vient son 22 -- je ne l'ai pas vu.
+  b. « 27135 -> 27133 est LA FUSION TRIPLE du 21/11 » : NON. Le journal du 21/11 n'a qu'UN dossier garde a deux lignes :
+     D2023-0562 (transactions 4267 a 4273), qui absorbe D2025-0014 ET D2023-0563 (lignes 34522-34523). Le dossier de 27133
+     (D2023-0316) n'a absorbe qu'UNE etiquette, D2023-0568 (ligne 34520). L'ecart de 2 n'est que la difference entre les
+     deux plus petites transactions (27135, 27133) : il ne compte pas les etiquettes absorbees -- le journal les compte, une.
+  c. « deux negociateurs, celle-la demande un humain » : deja mesure le 22/11 (§ 18.3) -- ce ne sont pas deux avis sur une
+     affaire, ce sont les parts de DEUX AFFAIRES du bien 53342 : l'orpheline de 27135 est celle de GENESTAS (COUDERT 100 %
+     -> 50 + 50), celle en place sur 27133 est celle de DE MATOS DE FARIA (HERITIER 50 / COUDERT 50). E a reuni 27135 a
+     27133 ; la V3 fait revenir le dossier 27135 -> le conflit TOMBE de lui-meme.
+  d. « l'anomalie : cette fois elle ne retombe pas » : 26 est LE NOMBRE QU'IL ATTENDAIT (§ 20.1, point 11 : « il attend
+     26 orphelines demain (la V3 ne joue pas) ») ; la purge s'ARRETE par construction quand l'arrivee porte deja une part
+     non Hektor (§ 18.3). Ne retombera qu'avec la V3 (4 dossiers reviennent) et le patch des orphelines.
+  e. SA REGLE PROPOSEE EST DEJA LA SIENNE : la REGLE 6 du 22/11 (§ 19.5, validee) -- identiques -> mises de cote avec leur
+     ancien numero ; differentes -> elles lui remontent ; le patch FABRIQUE ET EPROUVE A BLANC sur ces memes 26
+     (temps13_orphelines_mises_de_cote_2026-11-22.py, « essai_avant_v3 ») ; et SON MOMENT est decide : APRES le protocole
+     (§ 20.2), refabrique sur l'etat de ce jour-la. Une seule difference de forme : le mot exige la MEME ORIGINE des deux
+     cotes ; sa regle du 22/11 MONTRE l'origine sans la comparer. Aujourd'hui sans effet : les 26 et leurs vis-a-vis sont
+     TOUS classeur_reconstitue.
+⛔ RIEN N'EST ECRIT : ni les 26, ni la mise de cote, ni l'inverse, ni Hektor, ni push. A LUI : s'il veut que la condition
+  « meme origine » entre dans la regle 6 (aujourd'hui sans effet) ; le reste ATTEND le protocole, comme decide.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

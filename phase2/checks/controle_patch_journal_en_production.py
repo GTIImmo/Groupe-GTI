@@ -155,6 +155,109 @@ def dire_compteurs(c: dict) -> str:
                                                                                        "scission"))
 
 
+# ─── LE RECOUPEMENT COMPTE RENDU / JOURNAL, JUGE (son mot du 23/11 (8), § 1 -- repris a son compte par Frederic) ───
+#
+# LA REGLE EST ASYMETRIQUE, geste par geste -- mesuree sur les quatre nuits qui ont bouge (18-21/11), 0 ecart :
+#     pose        == lignes « pose » du journal
+#     propagation == lignes « propagation »
+#     scission    == lignes « scission »          18/11 : 138 comptees = 138 lignes (136 dossiers coupes seulement)
+#     fusion      == dossiers GARDES distincts, ET lignes >= fusion     21/11 : 30 comptees = 30 gardes (31 lignes)
+#   Une FUSION reunit N etiquettes en UN geste (1 garde, N lignes) ; une SCISSION fabrique N etiquettes NEUVES (1 ligne
+#   chacune). ⛔ Les « _lignes » du compte rendu sont des TRANSACTIONS, pas des lignes du journal : affichees, jamais
+#   recoupees (21/11 fusion 30 / fusion_lignes 56 ; 18/11 scission 138 / 142).
+# LES DEUX SENS :
+#     sens 1   un geste compte qui ne trouve pas ses lignes au journal -> ROUGE, une trace perdue
+#     sens 2   des lignes au journal qu'aucun geste compte ne reclame  -> ⛔⛔ ROUGE FRANC, un ECRIVAIN INCONNU (un geste
+#              a la main, un patch qui se rejoue, un deuxieme run) : la question « qui a ecrit ca ? » du geste du 11/11
+#   Une ligne ecrite HORS de la fenetre d'un run (entre son debut et sa fin) est du sens 2. Un evenement inconnu aussi.
+# ⛔ JUGE PAR NUIT -- la fenetre du journal du run --, jamais sur tout le journal.
+# ⛔ UNE LIGNE « restauration » (l'evenement du patch, pour la mise de cote) n'a jamais de geste au compte rendu : elle
+#   est NOMMEE et EXCLUE, et le controle le DIT.
+# ⚠ LA PREMIERE FOIS QU'UN ROUGE SORT : ON SOUPCONNE LA REGLE AVANT LE CODE. Les nuits mesurees ne portent qu'UNE fusion
+#   triple (21/11) et UNE scission qui coupe un dossier en trois (18/11).
+GESTES = ("pose", "propagation", "fusion", "scission")
+EXCLUS_DU_RECOUPEMENT = ("restauration",)
+
+
+def fenetre(f: Path, t: dict) -> tuple:
+    """La fenetre d'un run : de l'heure de son journal (le nom du fichier) a sa ligne de fin ; pas fini -> None."""
+    m = re.match(r"quotidien_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.log$", f.name)
+    debut = datetime.strptime(m.group(1), "%Y-%m-%d_%H-%M-%S")
+    return debut, (datetime.strptime(t["fin"], "%Y-%m-%d %H:%M:%S") if t["fin"] else None)
+
+
+def recouper(nuits: list, lignes: list, maintenant: datetime) -> dict:
+    """LE JUGE DU RECOUPEMENT, pur (sans base ni fichier).
+    nuits  : [{"nom", "debut", "fin" (None = run pas fini : jusqu'a maintenant), "compteurs" (les huit, ou incomplets
+             si son temoin de l'appel est rouge)}]
+    lignes : [(id, quand -- heure de Paris, sans fuseau --, evenement, dossier_uuid)] : TOUTES les lignes du journal de
+             la periode jugee (depuis la photo, ou depuis le debut du premier run).
+    Rend {"nuits": [{"nom", "texte", "rouges"}], "hors_fenetre": [...], "exclues": [...], "rouges": [...]}."""
+    par_nuit = defaultdict(list)
+    hors, exclues = [], []
+    for ligne in lignes:
+        _id, quand, ev, _du = ligne
+        if ev in EXCLUS_DU_RECOUPEMENT:
+            exclues.append(ligne)
+            continue
+        n = next((x["nom"] for x in nuits if x["debut"] <= quand <= (x["fin"] or maintenant)), None)
+        if n is None:
+            hors.append(ligne)
+        else:
+            par_nuit[n].append(ligne)
+    out = {"nuits": [], "hors_fenetre": hors, "exclues": exclues, "rouges": []}
+    for x in nuits:
+        c, ls, rg = x["compteurs"], par_nuit.get(x["nom"], []), []
+        cpt = Counter(l[2] for l in ls)
+        gardes = len({l[3] for l in ls if l[2] == "fusion"})
+        if any(g not in c for g in GESTES):
+            rg.append("PAS JUGEABLE : son temoin de l'appel est rouge, le compte rendu n'a pas ses compteurs (%d ligne(s) "
+                      "au journal dans sa fenetre)" % len(ls))
+        else:
+            for g in ("pose", "propagation", "scission"):
+                if cpt[g] < c[g]:
+                    rg.append("sens 1 -- %s : le run en compte %d, le journal n'en garde que %d ligne(s) : TRACE PERDUE"
+                              % (g, c[g], cpt[g]))
+                elif cpt[g] > c[g]:
+                    rg.append("⛔⛔ sens 2 -- %s : le journal porte %d ligne(s), le run n'en reclame que %d : un ECRIVAIN "
+                              "INCONNU" % (g, cpt[g], c[g]))
+            if gardes < c["fusion"]:
+                rg.append("sens 1 -- fusion : le run en compte %d, le journal n'en garde que %d dossier(s) garde(s) : "
+                          "TRACE PERDUE" % (c["fusion"], gardes))
+            elif gardes > c["fusion"]:
+                rg.append("⛔⛔ sens 2 -- fusion : le journal porte %d dossier(s) garde(s), le run n'en reclame que %d : un "
+                          "ECRIVAIN INCONNU" % (gardes, c["fusion"]))
+            if cpt["fusion"] < c["fusion"]:
+                rg.append("sens 1 -- fusion : %d ligne(s) pour %d fusion(s) comptee(s) (attendu lignes >= fusion)"
+                          % (cpt["fusion"], c["fusion"]))
+            inconnus = sorted(set(cpt) - set(GESTES))
+            if inconnus:
+                rg.append("⛔⛔ sens 2 -- evenement(s) INCONNU(S) au journal : %s" % ", ".join(
+                    "%s %d" % (e, cpt[e]) for e in inconnus))
+        texte = ("run %s : pose %s/%d . propagation %s/%d . fusion %s/%d garde(s) (%d ligne(s)) . scission %s/%d   "
+                 "[compte rendu / journal ; les _lignes, transactions, affichees non jugees : %s]" % (
+                     x["nom"], c.get("pose"), cpt["pose"], c.get("propagation"), cpt["propagation"], c.get("fusion"),
+                     gardes, cpt["fusion"], c.get("scission"), cpt["scission"],
+                     " . ".join("%s %s" % (g + "_lignes", c.get(g + "_lignes")) for g in GESTES)))
+        out["nuits"].append({"nom": x["nom"], "texte": texte, "rouges": rg})
+        out["rouges"] += ["%s : %s" % (x["nom"], r) for r in rg]
+    if hors:
+        out["rouges"].append("⛔⛔ sens 2 -- %d ligne(s) du journal ecrite(s) HORS de toute fenetre de run : un ECRIVAIN "
+                             "INCONNU (ids %s)" % (len(hors), [l[0] for l in hors[:10]]))
+    return out
+
+
+def dire_recoupement(r: dict) -> None:
+    for x in r["nuits"]:
+        dire("   %s -- %s" % (x["texte"], "VERT" if not x["rouges"] else "⛔ ROUGE"))
+        for t in x["rouges"]:
+            dire("      ⛔ " + t)
+    for l in r["hors_fenetre"][:10]:
+        dire("      ⛔⛔ HORS FENETRE : ligne %s du %s, %s, dossier %s" % (l[0], l[1], l[2], l[3]))
+    dire("   lignes « restauration » nommees et EXCLUES du recoupement (l'evenement du patch, aucun geste ne la compte) : "
+         "%d%s" % (len(r["exclues"]), (" -- ids %s" % [l[0] for l in r["exclues"][:20]]) if r["exclues"] else ""))
+
+
 def colonne(cu) -> bool:
     cu.execute("select exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = "
                "'app_dossier_etiquette_journal' and column_name = 'ancien_numero')")
@@ -261,6 +364,9 @@ def etape_matin() -> int:
                    "where evenement = 'pose' union all select autre_uuid::text, dossier_numero from "
                    "public.app_dossier_etiquette_journal where evenement = 'scission'")
         naissance = {u: n for u, n in cu.fetchall()}
+        cu.execute("select id, quand at time zone 'Europe/Paris', evenement, dossier_uuid::text "
+                   "from public.app_dossier_etiquette_journal where id > %s order by id", (ph["journal_max_id"],))
+        lignes_heure = cu.fetchall()
         f_md5 = empreinte(cu)
         cn.rollback()
     finally:
@@ -310,10 +416,11 @@ def etape_matin() -> int:
         dire("b bis) LE TEMOIN DE L'APPEL : AUCUN journal du run commence apres la photo (%s) dans %s -- ⛔ ROUGE : rien "
              "ne prouve que la fonction a ete appelee, un zero au journal ne se croit pas" % (ph["quand"], LOGS))
         rouges.append("temoin")
-    somme = Counter()
+    fenetres = []
     for f in nuits:
         t = temoin_de_l_appel(f.read_text(encoding="utf-8", errors="replace"))
-        somme.update(t["compteurs"])
+        debut, fin_run = fenetre(f, t)
+        fenetres.append({"nom": f.name, "debut": debut, "fin": fin_run, "compteurs": t["compteurs"]})
         dire("b bis) LE TEMOIN DE L'APPEL, %s : run %s (code %s, %s) ; %s" % (
             f.name, "fini" if t["fini"] else "⚠ PAS FINI", t["code"], t["fin"],
             ("« actif: true » et ses huit compteurs : %s -- VERT, la fonction a ete appelee" % dire_compteurs(t["compteurs"]))
@@ -322,12 +429,13 @@ def etape_matin() -> int:
             rouges.append("temoin")
     if nuits and "temoin" not in rouges and not jn:
         dire("   ⭐ le zero du journal veut donc dire « rien a poser », pas « pas appelee »")
-    # le recoupement s'AFFICHE, il ne juge pas : ce que la nuit dit avoir fait, et ce que le journal en porte
-    fus_gardes = len({r[3] for r in jn if r[2] == "fusion"})
-    dire("   recoupement (affiche, non juge) : compte rendu pose %d . propagation %d . fusion %d . scission %d | journal "
-         "pose %d . propagation %d . fusion %d ligne(s) sur %d dossier(s) garde(s) . scission %d" % (
-             somme["pose"], somme["propagation"], somme["fusion"], somme["scission"], cpt["pose"], cpt["propagation"],
-             cpt["fusion"], fus_gardes, cpt["scission"]))
+    # b ter) LE RECOUPEMENT, JUGE PAR NUIT, DANS LES DEUX SENS (son mot du 23/11 (8), § 1)
+    rec = recouper(fenetres, lignes_heure, datetime.now())
+    dire("b ter) LE RECOUPEMENT compte rendu / journal, par nuit, dans les deux sens : %s" % (
+        "VERT" if not rec["rouges"] else "⛔ ROUGE (%d) -- ⚠ ON SOUPCONNE LA REGLE AVANT LE CODE" % len(rec["rouges"])))
+    dire_recoupement(rec)
+    if rec["rouges"]:
+        rouges.append("recoupement")
     dire("c) ENSUITE SEULEMENT : la mesure du matin (ce que la nuit a deplace), puis le passage.")
     return 1 if rouges else 0
 
@@ -391,8 +499,109 @@ def etape_essais() -> int:
         exige("%s : VERT, run fini en code 0, et ses compteurs non nuls sont %s" % (jour, attendu or "aucun"),
               r["rouge"] is None and r["fini"] and r["code"] == 0 and non_nuls == attendu,
               "%s . %s" % (r["rouge"] or "appelee", dire_compteurs(r["compteurs"])))
+    dire("4. LE RECOUPEMENT, cas fabriques sur la forme des deux nuits qui decident la regle")
+    d21, f21 = datetime(2026, 11, 21, 4, 0, 2), datetime(2026, 11, 21, 6, 44, 19)
+    q21 = datetime(2026, 11, 21, 6, 20, 4)
+    c21 = {"pose": 2, "pose_lignes": 2, "propagation": 3, "propagation_lignes": 3, "fusion": 30, "fusion_lignes": 56,
+           "scission": 0, "scission_lignes": 0}
+    # 21/11 : 2 poses, 3 propagations, 31 lignes de fusion sur 30 dossiers gardes (le garde g0 absorbe deux etiquettes)
+    l21 = ([(i, q21, "pose", "p%d" % i) for i in range(2)] + [(10 + i, q21, "propagation", "q%d" % i) for i in range(3)]
+           + [(100 + i, q21, "fusion", "g%d" % i) for i in range(30)] + [(130, q21, "fusion", "g0")])
+    d18, f18 = datetime(2026, 11, 18, 4, 0, 1), datetime(2026, 11, 18, 6, 40, 0)
+    q18 = datetime(2026, 11, 18, 6, 15, 0)
+    c18 = {"pose": 0, "pose_lignes": 0, "propagation": 0, "propagation_lignes": 0, "fusion": 0, "fusion_lignes": 0,
+           "scission": 138, "scission_lignes": 142}
+    # 18/11 : 138 lignes de scission sur 136 dossiers coupes (deux dossiers coupes en trois)
+    l18 = [(200 + i, q18, "scission", "s%d" % (i if i < 136 else i - 136)) for i in range(138)]
+
+    def nuit(nom, d, f, c):
+        return {"nom": nom, "debut": d, "fin": f, "compteurs": dict(c)}
+
+    maintenant = datetime(2026, 11, 23, 9, 0)
+    r = recouper([nuit("21/11", d21, f21, c21), nuit("18/11", d18, f18, c18)], l21 + l18, maintenant)
+    exige("les deux nuits telles quelles sont VERTES (fusion = 30 gardes sur 31 lignes ; scission = 138 lignes sur 136 "
+          "dossiers)", not r["rouges"], str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, dict(c21, fusion=31))], l21, maintenant)
+    exige("TEMOIN INVERSE de la FUSION : le compte rendu dit 31 au lieu de 30 -> ROUGE (sens 1 : 30 gardes, compter les "
+          "lignes serait faux)", any("sens 1 -- fusion" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("18/11", d18, f18, dict(c18, scission=136))], l18, maintenant)
+    exige("TEMOIN INVERSE de la SCISSION : le compte rendu dit 136 au lieu de 138 -> ROUGE (sens 2 : 138 lignes, compter "
+          "les dossiers serait faux)", any("sens 2 -- scission" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, dict(c21, pose=3))], l21, maintenant)
+    exige("TEMOIN INVERSE de la POSE : 3 comptees pour 2 lignes -> ROUGE (sens 1)",
+          any("sens 1 -- pose" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, dict(c21, propagation=2))], l21, maintenant)
+    exige("TEMOIN INVERSE de la PROPAGATION : 2 comptees pour 3 lignes -> ROUGE (sens 2)",
+          any("sens 2 -- propagation" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, c21)], l21 + [(999, datetime(2026, 11, 21, 14, 0), "fusion", "g5")], maintenant)
+    exige("TEMOIN INVERSE du sens 2 : une ligne ecrite a 14:00, HORS du run -> ROUGE (ecrivain inconnu)",
+          any("HORS de toute fenetre" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, c21)], l21 + [(998, q21, "fusion", "g31")], maintenant)
+    exige("TEMOIN INVERSE du sens 2 : une fusion de plus DANS la fenetre (31 gardes pour 30) -> ROUGE",
+          any("sens 2 -- fusion" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, c21)], l21 + [(997, q21, "renumerotation", "x")], maintenant)
+    exige("TEMOIN INVERSE : un evenement INCONNU au journal -> ROUGE (sens 2)",
+          any("INCONNU" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, c21)], l21 + [(996, datetime(2026, 11, 21, 15, 0), "restauration", "m1")],
+                 maintenant)
+    exige("une ligne « restauration » est NOMMEE et EXCLUE, meme hors fenetre (VERT, 1 exclue)",
+          not r["rouges"] and len(r["exclues"]) == 1, str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, dict(c21, fusion_lignes=999, scission_lignes=7))], l21, maintenant)
+    exige("les « _lignes » ne sont PAS jugees (fusion_lignes 999 : VERT)", not r["rouges"], str(r["rouges"]))
+    r = recouper([nuit("21/11", d21, f21, {})], l21, maintenant)
+    exige("une nuit dont le temoin de l'appel est rouge -> PAS JUGEABLE, ROUGE",
+          any("PAS JUGEABLE" in x for x in r["rouges"]), str(r["rouges"]))
+    r = recouper([nuit("23/11", datetime(2026, 11, 23, 4, 0, 2), None, dict(c21, pose=0, propagation=0, fusion=0,
+                                                                           fusion_lignes=0))],
+                 [(995, datetime(2026, 11, 23, 8, 0), "pose", "z")], maintenant)
+    exige("TEMOIN INVERSE : un run PAS FINI juge jusqu'a maintenant -- une pose au journal sans geste compte -> ROUGE",
+          any("sens 2 -- pose" in x for x in r["rouges"]), str(r["rouges"]))
     dire("%s" % ("⭐ ESSAIS : tout est vert" if not echecs else "⛔ ESSAIS : %d NON -- %s" % (len(echecs), echecs)))
     return 1 if echecs else 0
+
+
+def etape_nuits() -> int:
+    """LE RECOUPEMENT REJOUE SUR LES VRAIES NUITS (lecture seule) : chaque journal du run qui porte un compte rendu
+    "etiquettes" (le premier est celui du 13/11), contre TOUTES les lignes du journal ecrites depuis le debut du premier
+    -- celles d'entre les runs comprises (le sens 2)."""
+    nuits = []
+    for f in sorted(LOGS.glob("quotidien_*.log")):
+        if not re.match(r"quotidien_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.log$", f.name):
+            continue
+        texte = f.read_text(encoding="utf-8", errors="replace")
+        if '"etiquettes"' not in texte.replace("\r", "").replace("\n", ""):
+            if nuits:          # apres le premier, une nuit SANS compte rendu est un trou : on la garde, elle criera
+                t = temoin_de_l_appel(texte)
+                d, fi = fenetre(f, t)
+                nuits.append({"nom": f.name, "debut": d, "fin": fi, "compteurs": {}})
+            continue
+        t = temoin_de_l_appel(texte)
+        d, fi = fenetre(f, t)
+        nuits.append({"nom": f.name, "debut": d, "fin": fi, "compteurs": t["compteurs"] if not t["rouge"] else {}})
+    if not nuits:
+        dire("⛔ aucun journal du run avec un compte rendu \"etiquettes\" dans %s -- code 2" % LOGS)
+        return 2
+    cn, cu = connexion()
+    try:
+        cu.execute("select id, quand at time zone 'Europe/Paris', evenement, dossier_uuid::text "
+                   "from public.app_dossier_etiquette_journal where quand at time zone 'Europe/Paris' >= %s order by id",
+                   (nuits[0]["debut"],))
+        lignes = cu.fetchall()
+        cu.execute("select count(*), min(quand at time zone 'Europe/Paris') from public.app_dossier_etiquette_journal "
+                   "where quand at time zone 'Europe/Paris' < %s", (nuits[0]["debut"],))
+        avant, plus_ancienne = cu.fetchone()
+        cn.rollback()
+    finally:
+        cn.close()
+    dire("LE RECOUPEMENT SUR LES VRAIES NUITS (lecture seule) : %d run(s), du %s au %s ; %d ligne(s) du journal depuis le "
+         "debut du premier (%d avant, non jugees : la pose initiale et ce qui l'a precedee, depuis le %s)" % (
+             len(nuits), nuits[0]["nom"], nuits[-1]["nom"], len(lignes), avant, plus_ancienne))
+    rec = recouper(nuits, lignes, datetime.now())
+    dire_recoupement(rec)
+    dire("%s" % ("⭐ VERT : chaque nuit, chaque geste compte a ses lignes, et chaque ligne a son geste" if not rec["rouges"]
+                 else "⛔ ROUGE (%d) -- ⚠ ON SOUPCONNE LA REGLE AVANT LE CODE :\n   %s" % (
+                     len(rec["rouges"]), "\n   ".join(rec["rouges"][:20]))))
+    return 1 if rec["rouges"] else 0
 
 
 def main() -> int:
@@ -407,10 +616,12 @@ def main() -> int:
             return etape_matin()
         if etape == "essais":
             return etape_essais()
+        if etape == "nuits":
+            return etape_nuits()
     except Exception as e:  # noqa: BLE001
         dire("⛔ la base n'a pas pu etre lue (%s) -- code 2" % str(e).splitlines()[0][:200])
         return 2
-    dire("usage : photo | apres-collage | matin | essais")
+    dire("usage : photo | apres-collage | matin | essais | nuits")
     return 2
 
 
