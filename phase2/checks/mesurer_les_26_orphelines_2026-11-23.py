@@ -13,7 +13,7 @@ CE QU'IL FAIT -- LECTURE SEULE (REPEATABLE READ, READ ONLY), rien n'est ecrit en
   2. pour chaque dossier disparu X, LE DOSSIER D'ARRIVEE comme la purge de nuit (app_repartition_purger_orphelines) le
      trouve : X est le numero de sa plus petite transaction -> la transaction X vit-elle, et dans quel dossier ;
   3. les parts du dossier d'arrivee, et la comparaison COTE PAR COTE, RANG PAR RANG, sur (numero du negociateur, nom,
-     pourcentage). L'ORIGINE EST MONTREE, PAS COMPAREE -- la meme forme que sa regle du 22/11 (regle 6, carnet § 19.5) ;
+     pourcentage, ORIGINE) -- sa regle 6 (carnet § 19.5), completee le 23/11 par « la meme origine » (§ 20.21) ;
   4. le journal des etiquettes : ce que la nuit a fait au dossier d'arrivee (fusion, combien d'etiquettes absorbees, et
      leurs ANCIENS NUMEROS -- la colonne du patch de cette nuit).
 CODES : 0 mesure faite . 2 pas pu lire.
@@ -100,7 +100,8 @@ def main() -> int:
             continue
         c_arr, num, uuid, kind = a
         pa = [p for p in parts_arr.get(c_arr, []) if not str(p[6] or "").startswith("hektor")]
-        cle = lambda p: (p[1], p[2], p[3], p[4], float(p[5]))   # noqa: E731
+        # sa regle 6, completee le 23/11 (§ 20.21) : l'ORIGINE compte aussi
+        cle = lambda p: (p[1], p[2], str(p[3]), (p[4] or "").strip().upper(), float(p[5]), (p[6] or "").strip())  # noqa: E731
         identiques = sorted(map(cle, ps)) == sorted(map(cle, pa))
         if not pa:
             v = "RAMENABLE -- le dossier d'arrivee n'a aucune part non Hektor (la purge aurait du la ramener)"

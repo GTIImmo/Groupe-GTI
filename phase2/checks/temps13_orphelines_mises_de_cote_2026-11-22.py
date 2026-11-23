@@ -10,8 +10,16 @@ SA REGLE (son mot du 22/11, point 4), devenue REGLE GENERALE DU PROJET :
   ce matin reviennent avec la V3 (14034, 19070, 20089, 27135). Des parts supprimees ne se recalculent jamais ; des parts
   mises de cote se REPOSENT, parce que la table garde leur ancien numero.
 
-« IDENTIQUES » : pour chaque part non Hektor, le meme (cote, rang, numero du negociateur, nom, pourcentage) des deux
-  cotes -- la meme liste, ligne pour ligne. L'origine (saisie / classeur_reconstitue / defaut) est MONTREE, pas comparee.
+« IDENTIQUES » : pour chaque part non Hektor, le meme (cote, rang, numero du negociateur, nom, pourcentage, ORIGINE) des
+  deux cotes -- la meme liste, ligne pour ligne.
+  ⭐ LA MEME ORIGINE (saisie / classeur_reconstitue / defaut) : ajoutee par Frederic le 23/11 (carnet § 20.21). Avant, elle
+  etait montree sans etre comparee -- l'angle mort : une VRAIE SAISIE humaine face a une de nos copies du classeur, aux
+  memes negociateur et pourcentage, aurait ete mise de cote A LA PLACE de la copie. Desormais elle lui REMONTE. Le 23/11
+  ca ne change rien (les 26 et leurs vis-a-vis sont tous « classeur_reconstitue ») : c'est gratuit aujourd'hui.
+  La comparaison est faite DEUX fois, et les deux portent l'origine : en Python (cle) pour fabriquer la liste, et en SQL
+  dans la garde du patch, qui la refait au moment de jouer.
+LIRE (lecture seule, aucun fichier ecrit) : la meme classification sur l'etat vivant. ESSAIS (hors ligne) : la regle sur
+  des cas fabriques, dont le temoin inverse de l'angle mort.
 ⚠ CE QUE LA NUIT FAIT DEJA, ET QUE CE PATCH NE CHANGE PAS : la purge (app_repartition_purger_orphelines) ne supprime que
   les parts DERIVEES de Hektor (origine « hektor% »), que la meme etape recalcule et repousse le meme matin depuis
   intervenants_json ; elle ne supprime JAMAIS une saisie, une part « defaut » ni une part reconstituee du Sheet.
@@ -92,20 +100,85 @@ def lire_etat() -> dict:
 
 
 def cle(r) -> tuple:
-    cote, rang, uid, nom, pct, _orig = r
-    return (cote, int(rang), str(uid), (nom or "").strip().upper(), float(pct or 0))
+    """(cote, rang, negociateur, nom, pourcentage, ORIGINE) -- l'origine compte depuis le 23/11 (sa regle 6, § 20.21)."""
+    cote, rang, uid, nom, pct, orig = r
+    return (cote, int(rang), str(uid), (nom or "").strip().upper(), float(pct or 0), (orig or "").strip())
+
+
+def classer(par: dict, arrivee: dict) -> tuple:
+    """SA REGLE 6, pure : (identiques, differentes, sans_tx). par : {(disparu, arrivee): [parts]} ; arrivee : {dossier:
+    [parts]}. Une part = (cote, rang, negociateur, nom, pourcentage, origine)."""
+    identiques, differentes, sans_tx = [], [], []
+    for (a, n), rows in sorted(par.items(), key=lambda kv: (kv[0][0], kv[0][1] or 0)):
+        if n is None:
+            sans_tx.append((a, rows))
+        elif sorted(map(cle, rows)) == sorted(map(cle, arrivee.get(n, []))):
+            identiques.append((a, n, rows))
+        else:
+            differentes.append((a, n, rows, arrivee.get(n, [])))
+    return identiques, differentes, sans_tx
+
+
+def essais() -> int:
+    """HORS LIGNE : la regle 6 avec « meme origine », et le temoin inverse de l'angle mort."""
+    ko = []
+
+    def exige(nom, ok, detail=""):
+        print("   %s %s%s" % ("OUI" if ok else "NON", nom, (" (%s)" % detail) if detail else ""))
+        if not ok:
+            ko.append(nom)
+
+    copie = [("entree", 1, "32", "CHRISTELE GENTES", 50, "classeur_reconstitue"),
+             ("sortie", 1, "32", "CHRISTELE GENTES", 50, "classeur_reconstitue")]
+    saisie = [("entree", 1, "32", "CHRISTELE GENTES", 50, "saisie"),
+              ("sortie", 1, "32", "CHRISTELE GENTES", 50, "saisie")]
+    i, d, s = classer({(3670, 3669): copie}, {3669: list(copie)})
+    exige("deux copies du classeur, memes parts, meme origine -> IDENTIQUES (mises de cote)", len(i) == 1 and not d)
+    i, d, s = classer({(3670, 3669): saisie}, {3669: list(copie)})
+    exige("TEMOIN INVERSE DE L'ANGLE MORT : une VRAIE SAISIE (orpheline) face a notre copie (en place) -> elle LUI "
+          "REMONTE, elle n'est PAS mise de cote", not i and len(d) == 1)
+    i, d, s = classer({(3670, 3669): copie}, {3669: list(saisie)})
+    exige("TEMOIN INVERSE : notre copie (orpheline) face a une vraie saisie (en place) -> elle lui remonte aussi", not i
+          and len(d) == 1)
+    mixte = [copie[0], ("sortie", 1, "32", "CHRISTELE GENTES", 50, "saisie")]
+    i, d, s = classer({(3670, 3669): mixte}, {3669: list(copie)})
+    exige("TEMOIN INVERSE : UNE seule part d'une autre origine sur deux -> le dossier entier lui remonte", not i
+          and len(d) == 1)
+    i, d, s = classer({(3670, 3669): copie}, {3669: [copie[0], ("sortie", 1, "82", "CELINE HERITIER", 50,
+                                                                 "classeur_reconstitue")]})
+    exige("un autre negociateur, meme origine -> lui remonte (inchange)", not i and len(d) == 1)
+    i, d, s = classer({(3670, None): copie}, {})
+    exige("une transaction disparue -> sans transaction, un humain tranche (inchange)", not i and not d and len(s) == 1)
+    i, d, s = classer({(3670, 3669): [("entree", 1, "32", " christele gentes ", 50.0, " classeur_reconstitue ")]},
+                      {3669: [("entree", 1, 32, "CHRISTELE GENTES", 50, "classeur_reconstitue")]})
+    exige("les blancs et la casse ne font pas une autre origine ni un autre nom", len(i) == 1)
+    print("%s" % ("⭐ ESSAIS : tout est vert" if not ko else "⛔ ESSAIS : %d NON -- %s" % (len(ko), ko)))
+    return 1 if ko else 0
+
+
+def lire() -> int:
+    """LECTURE SEULE, aucun fichier ecrit : la classification de sa regle 6 (meme origine comprise) sur l'etat vivant."""
+    E = lire_etat()
+    identiques, differentes, sans_tx = classer(E["par"], E["arrivee"])
+    origines = defaultdict(int)
+    for rows in E["par"].values():
+        for r in rows:
+            origines[r[5]] += 1
+    for rows in E["arrivee"].values():
+        for r in rows:
+            origines["(en place) %s" % r[5]] += 1
+    print("ETAT VIVANT (lecture seule) : %d orphelines (la vue %d) sur %d dossiers disparus ; origines %s" % (
+        sum(len(r) for r in E["par"].values()), E["n_vue"], len(E["par"]), dict(origines)))
+    print("   IDENTIQUES, MEME ORIGINE COMPRISE -> se mettraient de cote : %d dossiers, %d parts : %s" % (
+        len(identiques), sum(len(r) for _a, _n, r in identiques), [a for a, _n, _r in identiques]))
+    print("   DIFFERENTES -> LUI REMONTENT : %d %s" % (len(differentes), [(a, n) for a, n, *_ in differentes]))
+    print("   SANS TRANSACTION : %d %s" % (len(sans_tx), [a for a, _r in sans_tx]))
+    return 0
 
 
 def fabriquer(etiquette: str) -> int:
     E = lire_etat()
-    identiques, differentes, sans_tx = [], [], []
-    for (a, n), rows in sorted(E["par"].items()):
-        if n is None:
-            sans_tx.append((a, rows))
-        elif sorted(map(cle, rows)) == sorted(map(cle, E["arrivee"].get(n, []))):
-            identiques.append((a, n, rows))
-        else:
-            differentes.append((a, n, rows, E["arrivee"].get(n, [])))
+    identiques, differentes, sans_tx = classer(E["par"], E["arrivee"])
     n_mis = sum(len(r) for _a, _n, r in identiques)
     print("ETAT VIVANT : %d orphelines (la vue en compte %d) sur %d dossiers disparus ; repartitions %d, empreinte %s ; "
           "table de garde absente : %s" % (sum(len(r) for r in E["par"].values()), E["n_vue"], len(E["par"]), E["n_rep"],
@@ -161,15 +234,16 @@ begin
      or not exists (select 1 from app_affaire_repartition r where r.app_chaine_id = v.ancien
                        and r.cote = v.cote and r.rang = v.rang and coalesce(r.origine, '') not like 'hektor%%');
   if ko <> 0 then raise exception '⛔ garde : %% part(s) ne sont plus orphelines ou leur dossier d''arrivee manque', ko; end if;
-  -- et chaque dossier disparu porte EXACTEMENT les memes parts que son dossier d'arrivee (la regle : identiques)
+  -- et chaque dossier disparu porte EXACTEMENT les memes parts que son dossier d'arrivee (la regle : identiques,
+  --   MEME ORIGINE comprise -- sa regle 6, completee le 23/11)
   select count(*) into ko from (select distinct ancien, nouveau from (values
 %(liste)s
   ) v(ancien, nouveau, cote, rang)) p
-  where (select string_agg(cote||':'||rang||':'||hektor_user_id||':'||upper(trim(coalesce(nom_au_moment,'')))||':'||pourcentage::numeric(9,3),
+  where (select string_agg(cote||':'||rang||':'||hektor_user_id||':'||upper(trim(coalesce(nom_au_moment,'')))||':'||pourcentage::numeric(9,3)||':'||trim(coalesce(origine,'')),
                            ',' order by cote, rang)
            from app_affaire_repartition where app_chaine_id = p.ancien and coalesce(origine, '') not like 'hektor%%')
         is distinct from
-        (select string_agg(cote||':'||rang||':'||hektor_user_id||':'||upper(trim(coalesce(nom_au_moment,'')))||':'||pourcentage::numeric(9,3),
+        (select string_agg(cote||':'||rang||':'||hektor_user_id||':'||upper(trim(coalesce(nom_au_moment,'')))||':'||pourcentage::numeric(9,3)||':'||trim(coalesce(origine,'')),
                            ',' order by cote, rang)
            from app_affaire_repartition where app_chaine_id = p.nouveau and coalesce(origine, '') not like 'hektor%%');
   if ko <> 0 then raise exception '⛔ garde : %% dossier(s) n''ont plus des parts IDENTIQUES -- ils lui remontent', ko; end if;
@@ -313,7 +387,13 @@ def blanc(etiquette: str) -> int:
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
-    ap.add_argument("etape", choices=["fabriquer", "blanc"])
-    ap.add_argument("--etiquette", required=True)
+    ap.add_argument("etape", choices=["fabriquer", "blanc", "lire", "essais"])
+    ap.add_argument("--etiquette")
     a = ap.parse_args()
+    if a.etape == "essais":
+        sys.exit(essais())
+    if a.etape == "lire":
+        sys.exit(lire())
+    if not a.etiquette:
+        ap.error("--etiquette est exige pour fabriquer et blanc")
     sys.exit(fabriquer(a.etiquette) if a.etape == "fabriquer" else blanc(a.etiquette))

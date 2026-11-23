@@ -4386,6 +4386,66 @@ remplies par le patch, pas par la fonction de nuit) -- il a corrigé le mot. Rap
   « meme origine » entre dans la regle 6 (aujourd'hui sans effet) ; le reste ATTEND le protocole, comme decide.
 ```
 
+### 20.21 Son mot du 23/11 (9) — « même origine » dans la règle 6, puis le protocole repris
+
+Son mot, dans la conversation : « TU AS RAISON SUR LES TROIS POINTS, j'ai refait mes mesures : 26 parts / 25 doublons / 1
+divergence, la fusion triple est D2023-0562, et le bien 53342 porte DEUX affaires dans un dossier -- la V3 les separe,
+donc aucun arbitrage. Et ma "regle neuve" etait ta regle 6, deja validee [...]. OUI, AJOUTE « meme origine » a la regle 6
+[...] c'est le seul angle mort -- une VRAIE saisie humaine face a une de nos copies serait mise de cote a la place de la
+copie. Puis reprends le protocole. » Rapport :
+`notice/PROTOCOLE_REPONSES_23_11_6_MEME_ORIGINE_ET_LE_PROTOCOLE_REPRIS_2026-11-23.md`.
+
+```
+1 LA REGLE 6, COMPLETEE : « identiques » = meme (cote, rang, negociateur, nom, pourcentage) ET LA MEME ORIGINE.
+  Ecrite : plan (LES CINQ REGLES, regle 6) ; memoire on-ne-supprime-pas-une-part ; temps13_orphelines_mises_de_cote
+  (cle() en Python ET la garde SQL du patch, string_agg + trim(coalesce(origine,'')) -- les DEUX endroits qui comparent) ;
+  ma mesure des 26 (meme cle). Modes neufs du patch : « lire » (lecture seule, aucun fichier) et « essais » (hors ligne).
+  ESSAIS 7/7 -- dont LE TEMOIN INVERSE DE L'ANGLE MORT : une vraie saisie (orpheline) face a notre copie (en place), memes
+  negociateur et pourcentage -> elle LUI REMONTE, elle n'est plus mise de cote ; et l'inverse (notre copie face a une
+  saisie) ; une seule part d'une autre origine fait remonter le dossier entier ; blancs et casse ne font pas une origine.
+  LIRE sur l'etat vivant : 26 orphelines / 13 dossiers ; 12 identiques (24 parts), 1 qui remonte (27135 -> 27133), 0 sans
+  transaction -- INCHANGE, c'est gratuit aujourd'hui (les 26 et leurs 26 vis-a-vis : tous classeur_reconstitue).
+  La garde SQL rejouee en LECTURE SEULE : 3670/3669 egales, 27135/27133 differentes (la sortie COUDERT / HERITIER).
+  ⛔ Les fichiers « essai_avant_v3 » du 22/11 ne sont pas refaits : ce patch-la ne se joue jamais (§ 19.5). Celui qui se
+  jouera sera refabrique APRES le protocole -- il portera la meme origine.
+
+2 LE PROTOCOLE REPRIS : LA MESURE DU MATIN, DANS SON ORDRE ECRIT (lecture seule ; image, mouvement, passage, avis, comparer)
+  IMAGE 2026-11-23_080234 (5 s) : Sheet 4 798 lignes, 4 798 ID distincts, 0 sans ID ; registre 31 368 pieces (190 copies,
+     31 178 vraies) ; gel 12 820 liens.
+  MOUVEMENT 2026-11-22_124200 -> 2026-11-23_080234, DIT D'ABORD : Sheet 0 . registre 0 piece nouvelle / disparue / changee
+     . gel 0 . biens 0. ⭐ TEMOIN POSITIF (le zero ne se croit pas sans lui) : une COPIE de l'image faussee dans le
+     bloc-notes -- une case « Mandat », un champ hektor_annonce_id, un lien du gel -- la mesure attrape les trois
+     (009c70c1 ; piece 1 ; 1 lien retire, 3 biens). L'image vraie n'est pas touchee.
+  PASSAGE 23 : 4 573 TRANCHEES + 225 EN ATTENTE = 4 798, le compte boucle ; motifs : verrou 69 . a part 29 . aucune preuve
+     28 . plusieurs biens 23 . copie seule 23 . bien sans piece 23 . sans bien 11 . deux lignes 10 . supprimee figee 6 .
+     a sa decision 3. R7b : 13 pieces, 13 gardent leur ancien numero ; figees n'est pas reglees : 3QZ4DAD1, 86da6949,
+     ARF57GC5. Il sort en code 1 parce qu'un temoin « crie » : ce sont LES MEMES 19 ECARTS qu'aux passages 20 et 22,
+     LIGNE A LIGNE (0 neuf, 0 tombe) -- coupes_132 2, coupes_29 14, V3 3, expliques depuis le passage 7 (§ 20.9 : les 3 de
+     la V3 = des offres refusees d'une autre chaine au jour exact, sans effet d'etiquette ; les 14 des 29 = les pieces
+     « nom seul / case vide » retirees, comme la V3).
+  COMPARER 22 -> 23 : 0 verdict change, dont 0 deja rendu.
+  AVIS (la sentinelle) : 2 588 lignes, 2 560 numerotees, empreinte a23f6956 (la meme) ; meme 2 543 . autre 10 . plusieurs 7 ;
+     depuis le passage 22 : 0 . 0 . 0. Les 63 qui collaient et que le protocole contredit : les memes (regle du plus ancien).
+  LES PORTES (protocole_portes.py ; rejeux A, B, E, puis les comptes) :
+     REJEU A = l'image, 31 368 pieces, 0 ailleurs (le temoin) ; C5 AUX PORTES : exactement ses 4 lignes (535, 3540, 2388,
+     4113) ; G2 compte en premier : RIEN 4 006 . REGLE_G2 206 . COUPE_DEJA_ECRITE 139 . COUPE_NEUVE 126 . RATTACHEMENT 86 .
+     MISE_DE_COTE 10 ; REJEU E : 4 573 / 4 573 JUSTES a l'arrivee, REJEU EXACT DE L'ETIQUETTE 4 573 / 4 573, 0 piece hors
+     des biens tranches, R7b 12 / 12 seuls a l'arrivee avec leur ancien numero ; dossiers 11 551 -> 11 612 ; 728 pieces
+     changent d'etiquette. ⭐ La porte de chaque ligne (CSV) : 0 ligne differente du passage 22 ; portes, G2, gel, dossiers,
+     etiquettes : les memes.
+     ⚠ MA FAUTE D'ORDRE, sans effet : j'ai lance E avant B (le mode d'emploi dit A, B, E, comptes). Sans effet sur le
+       brouillon (il ne lit que les portes du rejeu A), mais il a fallu refaire les comptes apres B. Et le controle des
+       lignes en attente voulait AUSSI le rejeu E du brouillon du passage 20 sur l'image du jour (pour reprendre les
+       numeros neufs du passage 20) : calcule (177 s), il manquait au cache -- pas un defaut du code.
+  LES LIGNES EN ATTENTE GARDENT LEUR NUMERO (protocole_en_attente_garde_son_numero.py, passage 23) : GARDE 153 . SANS_PIECE
+     69 . CHANGE 3 -- les MEMES trois qu'au passage 22 (3900, 3990, 4005 : la regle du plus ancien laisse l'ancien numero a
+     la voisine tranchee) ; case A vide 225 / 225 ; les 35 des 2 560 : GARDE 35 ; 40 / 105 / 311 gardent. CSV : 0 ligne
+     differente du passage 22. (Code 1 : c'est le « CHANGE 3 » deja tranche -- N'Y REVIENS PLUS, 21 ter.)
+  -> LE PROTOCOLE EST EXACTEMENT LA OU ON L'A LAISSE LE 22/11 : la nuit n'a rien deplace, le code n'a rien change.
+  LA SUITE ECRITE (§ 20.12) : LE RESTE A VIDER, 225 lignes, motif par motif, une regle par motif mesuree par variante.
+     ⛔ L'ORDRE DES MOTIFS EST A LUI (on ne decide pas un ordre seul).
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
