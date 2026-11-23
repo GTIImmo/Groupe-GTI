@@ -4984,6 +4984,52 @@ porte son temoin positif ET l'explication de ses 36 ratees, c'est un zero qui se
   626 / 662, et les 36 rangees en deux causes, chacune ecartee pour les lignes du zero).
 ```
 
+### 20.31 Les 1 205 offres dont la colonne `date` porte notre geste du 11/11 : le lecteur du protocole est déjà juste
+
+Son mot du 23/11 (18) (`C:\Hektor\mot_du_23_11_les_1205_dates_faussees_du_11_11.md`) : « parmi les 97 lignes qui restent,
+combien ont au moins UNE piece dont la colonne `date` tombe le 11 ou le 12/11/2026 ? si c'est ZERO -> le sujet est clos
+[...] sinon [...] lire la vraie date dans `propositions_json` [...] Temoin positif : 11206 [...] 11204 : AVEC LA FAMILLE DU
+VERROU, DE JOUR [...] FAIS LA MESURE DES DATES AVANT D'OUVRIR LE VERROU. »
+Mesure : phase2/checks/protocole_les_dates_du_11_11_2026-11-23.py (lecture seule, sur l'image du 23/11 08:02).
+
+```
+1 L'IMAGE DIT SON COMPTE : 1 166 offres au 11/11 + 39 au 12/11 = 1 205, sur 1 205 biens (1 183 refusees, 22 acceptees) --
+  le meme que sa mesure en production. 0 piece d'un autre genre. 1 199 ont une proposition dans propositions_json.
+
+2 ⭐⭐ LE LECTEUR DU PROTOCOLE LIT DEJA LA VRAIE DATE -- et son mot se trompait de fichier : protocole_classeur.py ne lit
+  aucune date lui-meme, il passe par coupe_preuve_interne.Donnees (D.REG), dont la ligne 123 dit depuis le 20/11 (commit
+  8e38cd8, ⑰) : « la date d'une offre = sa 1re proposition (la colonne date ment) ». Pour TOUTES les offres, pas
+  seulement les 1 205. Tous les lecteurs de date du protocole (preuve_nommee, R7c, la chaine, les criteres) lisent D.REG.
+  . TEMOIN POSITIF 11206 : colonne `date` 2026-11-11 18:40:50 ; 1re proposition 2019-12-02 ; LE PROTOCOLE LIT 2019-12-02.
+  . sur les 1 205 : 1 192 lues a leur proposition, 13 sans date, 0 lue au 11-12/11.
+  . LES 13 SANS DATE, NOMMEES : 7 dont la proposition porte « 0000-00-00 » chez Hektor (9557, 16255, 16330, 19050, 20169,
+    24256, 28724) et 6 qui n'ont QU'UN refus date du 12/11, aucune proposition (10712, 10750, 10802, 10810, 10816, 23139)
+    -- leur vraie date n'existe nulle part, aucun lecteur ne peut la rendre. Une seule est dans un gel : 19050, « a part
+    sans effet » chez f90b0418, tranchee par R9b sur son compromis 19049.
+  . ⭐ LE TEMOIN D'USAGE : 302 lignes TRANCHEES tiennent une de ces offres ; 299 sont PROUVEES PAR SA VRAIE DATE au jour
+    exact ; 3 autrement (EKDZCRI1 et FC41ET5P par R9b -- vraie date lue 2020-07-06 contre une case 06/07/2019, et
+    2021-01-05 contre 06/01/2021 ; bdb548a3 par sa chaine). 0 preuve ne cite le 11 ou le 12/11.
+  -> L'hypothese « R9 / R9b ont marche parce qu'elles contournent la date ecrasee » ne tient pas : la date n'etait pas
+     ecrasee pour le protocole ; R9b n'en a pris que 2, et pour un ecart entre la vraie date et la case du Sheet.
+
+3 LA MESURE DEMANDEE, AU MOT PRES : parmi les lignes qui restent, celles qui touchent une telle piece --
+  passage 47 (97 lignes) : 4 par leur gel, 9 par leur gel ou leur bien ; passage 51 (91) : 4 par leur gel, 10 par leur
+  gel ou leur bien (verrou 6, SES_PIECES_A_PART 3, COPIE_SEULE 1). CE N'EST PAS ZERO -- mais POUR LES 10 LE PROTOCOLE LIT
+  DEJA LA VRAIE DATE : 5QE9107L et ZW7MKTWH (20089 -> 2021-07-20), BQAVSRA1 (4192 -> 2024-03-01), KPDROR30 et SBT1INZT
+  (10017 -> 2023-09-15), L2B2WGCF et Z3DYDC4X (14112 -> 2021-03-25), RKWNRBV1 (17377 -> 2023-09-16), XBR8QD6L (25735 ->
+  2023-06-05), ZZ5WKMWM (11206 -> 2019-12-02). Ce qui les retient est deja nomme (§ 20.28 : offres refusees sous le prix
+  a 1, 2 et 81 j ; prix partage ; verrou) -- la date ecrasee n'en retient AUCUNE.
+  -> LE REMEDE QU'IL PROPOSE EST DEJA EN PLACE (le lecteur, pas la donnee) ; il n'y a rien a poser, donc aucune regle a
+     prouver. LE SUJET EST CLOS POUR LE PROTOCOLE. LE VERROU NE SE REDUIRA PAS PAR CETTE VOIE (6 de ses lignes touchent
+     une telle offre, toutes lues a leur vraie date).
+  ⚠ NON MESURE, une ligne : la 1re proposition est souvent ecrite « 22:00:00 » ou « 22:59:59 » ; si c'est de l'heure
+    UTC, la date locale serait le LENDEMAIN pour certaines (FC41ET5P : 1 jour d'ecart). Rien n'est conclu ; c'est une
+    piste pour les offres a 1 jour de leur case (BQAVSRA1), a mesurer avec le verrou.
+
+4 11204 : AVEC LA FAMILLE DU VERROU, DE JOUR (son mot) -- le cas GENERIQUE (pas de jumelle vivante), 55 autres lignes
+  attendent le meme arbitrage ; une regle d'abord, pas un cas.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
