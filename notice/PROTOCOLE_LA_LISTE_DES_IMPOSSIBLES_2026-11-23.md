@@ -133,3 +133,12 @@ s'appuie sur la même chaîne.
 ## Ce qui attend ta décision
 
 Cette liste.
+
+## Mise à jour du 23/11 au soir (v18, passage 75) : une ligne de plus, 54
+
+- **3THZJOOG** (bien 10129) : R19 lui avait donné le compromis annulé 4720, qui est sans date. Tu l'avais exclu de la règle E le 20/11 (« on met de côté, on ne tranche pas »). La nuit ne le voit pas : aucune porte ne peut le réunir à son offre 4722. Le rejeu exact du passage 73 l'a trouvée (le préalable P-a). Elle passe donc en attente, motif PIECE_SANS_DATE_INVISIBLE. C'est le seul verdict rendu qui bouge.
+
+Les 38 que tu as gardées ont été remesurées sur l'état d'aujourd'hui. Les mesures sont dans `notice/PROTOCOLE_REPONSES_23_11_19_LES_38_REMESUREES_ET_P_A_2026-11-23.md` :
+- les 26 restent, parce que leurs pièces déplacent encore une étiquette ;
+- les 5 affaires sur un autre bien et les deux paires ont leur preuve et ce qu'elles coûtent ;
+- le bien 39845 a sa vue.

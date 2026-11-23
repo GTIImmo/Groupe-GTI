@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v16 -- 23/11 : R25 validee (passage 72 : SYA8MH79, 0 verdict rendu) ; je tranche seul"
+VERSION = "v18 -- 23/11 soir : P-a, la piece SANS DATE invisible a la nuit (exclue de E) -> PIECE_SANS_DATE_INVISIBLE"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -138,6 +138,13 @@ MOTIFS = {
     "PIECE_SUPPRIMEE_FIGEE": ("E9", "son morceau tient une piece SUPPRIMEE CHEZ HEKTOR (le chainage la fige dans son "
                                     "ancien dossier) et ses pieces sont dans PLUSIEURS dossiers : aucune porte ne peut les "
                                     "reunir"),
+    # v18 (23/11 soir) -- trouve par le REJEU EXACT du passage 73 (le prealable P-a, « les signaux transaction
+    #   introuvable ») : une transaction SANS DATE que SA decision des 19 et 20/11 exclut de la regle E du chainage
+    #   (EXCLUES_DE_LA_REGLE_E de phase2/sync/affaire_ledger.py), seule dans sa chaine, n'entre jamais dans la liste des
+    #   dossiers du bien : le fichier des coupes la dit « introuvable » et ignore le morceau ENTIER
+    "PIECE_SANS_DATE_INVISIBLE": ("E9", "son morceau tient une piece SANS DATE que le chainage ne voit pas (exclue de la "
+                                        "regle E par sa decision des 19-20/11 : « on met de cote, on ne tranche pas ») et "
+                                        "ses pieces sont dans PLUSIEURS dossiers : aucune porte ne peut les reunir"),
 }
 # a part par SA decision (20/11 soir, B3) -- la meme liste que la V3
 # 14033 : sa B3 du 20/11 (« a part ») est REMPLACEE le 23/11 par son option B (a DONNADIEU) -- PIECE_DONNEE_PAR_DECISION
@@ -341,6 +348,19 @@ RIEN_A_ETIQUETER_PAR_DECISION = {
     "JZ9693S0": "sa decision du 23/11 : ni bien (mandat 92560 inconnu), ni nom ; ⚠ le fil FACTURE + AVOIR (GGTI00002792 / "
                 "AVR00000465) dit que l'affaire a existe en comptabilite ; « reglee » au commentaire contre « Annulee » a "
                 "l'etat : signale, pas tranche",
+}
+# SON MESSAGE DU 23/11 AU SOIR (point 2), verifie par lui DANS NOTRE COPIE DE HEKTOR (annonce relue a 04:23, mandat non
+#   cloture ; 0 offre, 0 compromis, 0 vente) : deux affaires VIVANTES du Sheet qui ne sont saisies ni chez Hektor ni dans
+#   l'app. « Mets-les de cote [...] la raison exacte -- AFFAIRE NON SAISIE, PAS AFFAIRE INTROUVABLE, la nuance compte -- et
+#   garde-les rejugees a chaque passage : quand la saisie sera faite, elles doivent rentrer seules. »
+#   ⛔ CE N'EST PAS UN VERDICT FIGE : le texte ne joue que dans la branche R8 (le bien nomme n'a AUCUNE piece) et seulement
+#   si la ligne est toujours sur CE bien. Une saisie faite (une piece sur le bien) la fait passer E2 : elle est alors jugee
+#   par les epreuves ordinaires, sans rien changer ici.
+AFFAIRE_NON_SAISIE = {
+    "130d81ac": ("62503", "18728", "mandat du 29/06/2026 au 28/09/2027 non cloture ; au Sheet « Compromis en attente », "
+                                   "compromis du 05/11/2026, 5 000 EUR de commission"),
+    "a8aaeb2b": ("61592", "18398", "mandat du 23/02/2026 au 23/02/2027 non cloture ; au Sheet « Vente fixee » au "
+                                   "10/12/2026, 1 000 EUR de commission"),
 }
 
 # LES SOURCES DES TEMOINS -- des decisions deja rendues, jamais recalculees ici
@@ -789,6 +809,12 @@ def juger_ligne(I: Image, i: str, v: dict) -> dict:
                 (bb, preuve), = autre.items()
                 return attente("AFFAIRE_SUR_UN_AUTRE_BIEN", "bien %s : aucune piece ; son affaire est sur le bien %s -- %s"
                                % (b, bb, preuve))
+            if i in AFFAIRE_NON_SAISIE and AFFAIRE_NON_SAISIE[i][0] == b:
+                _b, mandat_, quoi_ = AFFAIRE_NON_SAISIE[i]
+                return attente("RIEN_A_ETIQUETER", "AFFAIRE NON SAISIE (pas introuvable) -- mise de cote par sa decision du "
+                                                   "23/11 au soir : bien %s, mandat %s (%s) ; ni chez Hektor ni dans l'app "
+                                                   "(0 offre, 0 compromis, 0 vente) ; rejugee a chaque passage, elle rentre "
+                                                   "seule des que la saisie est faite" % (b, mandat_, quoi_))
             return attente("RIEN_A_ETIQUETER", "bien %s : aucune piece, et aucune piece d'un autre bien ne porte son "
                                                "affaire (%s)" % (b, "aucune" if not autre else "%d biens" % len(autre)))
         return attente("BIEN_SANS_PIECE", "bien %s : aucune piece" % b)
@@ -803,6 +829,35 @@ def supprimee_chez_hektor(p: dict) -> bool:
     Hektor -> la piece n'est plus recalculee, elle garde son dossier."""
     return bool(str(p.get("hektor_affaire_id") or "").strip()) and str(p.get("present_in_hektor")) in ("0", "false",
                                                                                                        "False")
+
+
+_EXCLUES_E: dict = {}
+
+
+def exclues_de_la_regle_e() -> dict:
+    """SES EXCLUSIONS DE LA REGLE E (19 et 20/11) -- lues dans le module de production SANS l'executer (le dictionnaire
+    EXCLUES_DE_LA_REGLE_E de phase2/sync/affaire_ledger.py, par son arbre de syntaxe)."""
+    if not _EXCLUES_E:
+        import ast
+        arbre = ast.parse((RACINE / "phase2" / "sync" / "affaire_ledger.py").read_text(encoding="utf-8"))
+        for n in arbre.body:
+            cible = n.target if isinstance(n, ast.AnnAssign) else (n.targets[0] if isinstance(n, ast.Assign) else None)
+            if isinstance(cible, ast.Name) and cible.id == "EXCLUES_DE_LA_REGLE_E":
+                _EXCLUES_E.update(ast.literal_eval(n.value))
+        if not _EXCLUES_E:
+            raise SystemExit("⛔ EXCLUES_DE_LA_REGLE_E introuvable dans phase2/sync/affaire_ledger.py")
+    return _EXCLUES_E
+
+
+def invisible_a_la_nuit(I: Image, a: int) -> bool:
+    """P-a (23/11 soir, le rejeu exact du passage 73) : une transaction SANS DATE, exclue de la regle E par SA decision,
+    SEULE dans sa chaine -- le chainage ne la met jamais dans la liste des dossiers du bien (affaire_ledger : « sans date
+    restee invisible ») : aucune coupe, aucun rattachement ne la trouve. Comme une piece supprimee chez Hektor, elle reste
+    figee dans son dossier."""
+    if I.D.REG[a]["date"] is not None or a not in exclues_de_la_regle_e():
+        return False
+    ch = I.pieces[a]["app_chaine_id"]
+    return all(q == a for q in I.D.par_bien.get(I.D.REG[a]["bien"], []) if I.pieces[q]["app_chaine_id"] == ch)
 
 
 def bien_par_p1(I: Image, i: str) -> str | None:
@@ -1471,6 +1526,14 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         if figees and len({S.get(a) for a in ids}) > 1:
             out.append(attente("PIECE_SUPPRIMEE_FIGEE", "supprimees chez Hektor : %s ; ses pieces sont dans %d dossiers "
                                "(%s)" % (figees, len({S.get(a) for a in ids}), sorted({S.get(a) for a in ids}))))
+            continue
+        invisibles = [a for a in ids if invisible_a_la_nuit(I, a)]
+        if invisibles and len({S.get(a) for a in ids}) > 1:
+            out.append(attente("PIECE_SANS_DATE_INVISIBLE", "sans date, exclues de la regle E (sa decision) : %s -- %s ; "
+                               "ses pieces sont dans %d dossiers (%s) : le fichier des coupes dirait le morceau "
+                               "« introuvable » chaque nuit" % (
+                                   invisibles, " ; ".join(exclues_de_la_regle_e()[a][:90] for a in invisibles),
+                                   len({S.get(a) for a in ids}), sorted({S.get(a) for a in ids}))))
             continue
         exc = exception_nommee(gl) if len(gl) > 1 else None
         jum = jumelle_annulee(I, gl, ids) if (len(gl) == 2 and not exc and joue("R13")) else None   # REGLE R13 (validee 23/11)

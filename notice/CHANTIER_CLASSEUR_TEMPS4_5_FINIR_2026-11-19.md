@@ -5231,6 +5231,89 @@ RESTE AVANT TOUTE ECRITURE, inchange : les prealables P-a a P-f (dont la reserve
   suivent : R20 aussi s'appuie sur la chaine). RIEN D'ECRIT ; rien tire ; rien pousse.
 ```
 
+### 20.35 Ses points du 23/11 au soir : R19-R25 acquittées, les deux affaires NON SAISIES, les 38 remesurées, P-a expliqué
+
+Son message du 23/11 au soir : « R19 a R25 : validees [...] 4 690 + 55 + 53 = 4 798 [...] Les deux affaires vivantes des
+55 : confirme, elles n'existent pas chez Hektor [...] Mets-les de cote [...] affaire non saisie, pas affaire introuvable,
+la nuance compte -- et garde-les rejugees a chaque passage [...] Les 38 : [...] refais les mesures qui les fondaient, avec
+l'etat d'aujourd'hui [...] Sur ma reserve app_chaine_id [...] Garde-la en prealable, pas en blocage. [...] Les deux signaux
+« transaction introuvable » d'abord : un rejeu avec deux lignes qu'on n'explique pas n'est pas un rejeu vert. »
+Notice : notice/PROTOCOLE_REPONSES_23_11_19_LES_38_REMESUREES_ET_P_A_2026-11-23.md. Outils (lecture seule) :
+protocole_les_38_remesurees_2026-11-23.py (sections 1-6) ; protocole_les_introuvables_du_rejeu_2026-11-23.py (le module de
+production + UNE ligne d'espion, compte rendu identique au rejeu E en cache).
+
+```
+1 LES DEUX AFFAIRES NON SAISIES (v17, passage 74) : 130d81ac (bien 62503, mandat 18728) et a8aaeb2b (bien 61592, mandat
+  18398). Motif RIEN_A_ETIQUETER inchange (hors du reste), texte « AFFAIRE NON SAISIE (pas introuvable) » ; le texte ne joue
+  QUE dans la branche R8 (bien sans aucune piece) -- AFFAIRE_NON_SAISIE dans protocole_classeur.py. TEMOIN « elle rentre
+  seule » : une piece pretee en memoire au bien 62503 -> la ligne passe E2, jugee par les epreuves ordinaires.
+  Passage 74 contre 73 : 0 verdict rendu, 0 motif, 2 textes.
+  ⚠ SA CORRECTION, NOTEE : il avait cru ces biens sortis de la lecture de nuit -- sa requete comparait un texte a un entier
+  et rendait 0 en silence (la memoire « jointure sans cast = 0 » a mordu chez lui). Aucun trou dans la lecture.
+
+2 SES 20 A PART, LA MESURE DU 21/11 REFAITE (« on ne paie cette dette que la ou elle est obligatoire : les 20 dont la place
+  deplace une etiquette ») -- la mesure d'alors (temps12_v3_fabriquer.etape_calcul) : K.neutre, son critere 2 ; ⚠ et une
+  piece SANS morceau possible etait comptee NON neutre PAR DEFAUT. Aujourd'hui : la meme fonction sur la coupe finale du
+  protocole + la pose de nuit simulee. TEMOIN (les 20 neutres du 22/11) : 17 neutres, 3 donnees depuis par des regles
+  validees (4544 R22, 23054 R9b, 27556 R9b), 0 divergence. TEMOIN DE L'OUTIL : 95 / 95 lignes rejugees = le passage 73.
+  15 DEPLACENT ENCORE une etiquette : 3741 4126 4327 4533 4542 4560 4621 4669 7710 14110 16382 20088 21520 26613 28116
+    (16382, 26613, 28116 deja mises de cote par R7c). Les 26 lignes sont retenues par 14 d'entre elles (22 au verrou par
+    11 pieces, 4 copies seules) -> leur place sur la liste est REFONDEE par la mesure d'aujourd'hui.
+  5 NON : 1059, 24600, 27512 (aucun morceau possible, ni le 21/11 ni aujourd'hui -- dans les 20 « par defaut ») ; 24124
+    (plus petite du morceau de 305KAY9W mais DEJA dans son dossier, R7a : la pose simulee ne bouge rien) ; 14033 (donnee a
+    DONNADIEU, sa decision B). Les sortir des 20 EN MEMOIRE : 0 verdict ne bouge sur leurs 4 biens -> plus de raison
+    d'etre a part, a l'ecriture traitees comme les 19 (elles attendent) ; la liste du code reste (elle sert de temoin).
+
+3 LES 5 AFFAIRES SUR UN AUTRE BIEN, LA PREUVE ET LE RATTACHEMENT SIMULE : 2U5QPKRC -> 37875 D2018-0271 (17769 17770) ;
+  EJN79TJ1 -> 53953 D2020-0110 (27712 27713 27714) ; MQ6H8TVQ -> 52460 D2017-0313 (26695 26696 26698) ; QXDW8EQA -> 2070
+  D2020-0014 (1027 1028 1029) ; 91IHSGNC -> 10229 D2019-0311 (4781 4783). Toutes : compromis au jour sur « Compromis »,
+  honoraires = Commission, vendeur parmi les mandants, vente au jour sur « Vente Fixee » ; le bien reel n'a AUCUNE ligne au
+  Sheet, aucune piece tenue. LES DEUX COLONNES : un numero EXISTANT, aucune dans les 2 560 ; RIEN ne bouge ailleurs (bien
+  reel et bien nomme rejuges), aucune piece prise. Reste SA decision de changer le bien (comme I3TFR2KG).
+
+4 LES DEUX PAIRES : ⚠ ORIGINE RETABLIE -- E9XL0N5B sortie par SON mot du 23/11 (« SORS E9XL0N5B ») ; IAYQ5OG2 par MA
+  verification que ce mot demandait. Chaque bien porte UNE seule affaire chez Hektor (une offre, un compromis, une vente),
+  dates au jour et honoraires a la ligne reglee ; l'annulee n'a aucune piece a elle (E9XL0N5B : commission 10 400, aucune
+  piece a 10 400, annulee le 20/07 avant « son » compromis du 30/07 ; IAYQ5OG2 : annulee le 01/02/2022 avant « son »
+  compromis du 24/02 que Hektor n'a pas). « Une affaire ou deux » ne change pas le verdict. SIMULE : DTZ227ER D2020-0274
+  (hors des 2 560), L597FO6M D2021-0711 (= son numero du 16/11), les deux annulees rien a etiqueter, rien d'autre ne bouge.
+  CE QU'IL FAUT : son exception nommee, une phrase par paire -- la regle qui les prendrait est celle qu'il a refusee.
+
+5 LE BIEN 39845, LA VUE : 19132 offre 87 000 acceptee 19/04/2023 (au jour : V3FO5NDA) ; 19131 compromis 80 000 08/12/2023,
+  honoraires 6 000 (au jour : 6FQO29C8 ; 6 000 = la commission de 6FQO29C8 ET de SOF45TS3) ; 19133 vente 80 000 04/06/2024
+  (au jour : 6FQO29C8). TROIS lignes (il en dit deux) : V3FO5NDA, 6FQO29C8, SOF45TS3 (Lien CRM seul, aucune date). Le gel
+  (app_classeur_lien local) : les 3 a V3FO5NDA, « a valider », etage « 9 sans mandat (acquereur + vendeur) » -- RANGEES PAR
+  LES NOMS ; chez Hektor les trois portent BAUDOIN ET PETIPAS (le contact recopie du premier acheteur).
+
+6 P-a, LES SIGNAUX « TRANSACTION INTROUVABLE » -- EXPLIQUES. Le rejeu exact du passage 73 : d'abord PLANTE (l'outil des portes
+  ne lisait pas la preuve de R21 -- corrige), puis PAS VERT : 3 signaux, 2 lignes pas justes (3THZJOOG, f1aedc01).
+  NOMMES PAR L'ESPION : 4496 (bien 9769), 4720 (10129), 26613 (52166) -- trois compromis annules SANS DATE, tous dans
+  EXCLUES_DE_LA_REGLE_E (ses decisions des 19-20/11 : « on met de cote, on ne tranche pas »). Seule dans sa chaine, une
+  telle piece n'entre jamais dans `toutes` : le fichier des coupes ne la trouve pas et ignore le morceau ENTIER.
+  Les 2 du passage 26 = 4496 et 26613 (les deux seules lignes du brouillon 26 qui les portent) -- mon hypothese du 22/11
+  (l'ordre des coupes, 52166) etait FAUSSE ; SA piste (« ce qui est LU AU DEPART ») etait la bonne.
+  4496, 26613 : mises de cote d'une piece seule, deja seule a son numero -> l'outil ne les ecrit plus (comme les supprimees).
+  4720 : donnee par R19 a 3THZJOOG (passage 59) -- IRREALISABLE, et une piece qu'il avait mise de cote le 20/11.
+  LA CORRECTION (v18, passage 75) : invisible_a_la_nuit() (sans date, exclue de E -- lue dans affaire_ledger.py par son
+  arbre, sans l'executer -- seule dans sa chaine) + l'epreuve E9 PIECE_SANS_DATE_INVISIBLE (le modele de
+  PIECE_SUPPRIMEE_FIGEE, v2 du 22/11). Passage 75 contre 74 : UN verdict rendu bouge, et un seul, NOMME : 3THZJOOG
+  (TRANCHEE -> PIECE_SANS_DATE_INVISIBLE ; hors des 2 560) ; SUVPN4BH garde D2021-0323 ; temoins 788 / 788 (les memes 19) ;
+  reste a vider 53 -> 54.
+  f1aedc01 N'AVAIT RIEN DE FAUX : son dossier D2026-0260 garde l'offre 28967 supprimee chez Hektor (78 500, le meme jour,
+  deux minutes apres 28966) -- la trace R14, figee dans son ANCIEN dossier, qui est ici celui de la ligne. L'outil des
+  portes ne lisait pas R14 -> traces_r14() : une telle trace compte neutre.
+  LE REJEU EXACT DU PASSAGE 75 : VERT -- 0 « introuvable » (decide a la main 436, deja obtenu
+    169) ; JUSTES 4 689 / 4 689 ; ETIQUETTE EXACTE 4 689 / 4 689 ; R7b 19 / 19 seuls et a leur numero (6 deja figes par le
+    chainage, dont 4496 et 26613) ; 0 piece hors des biens. NOMMEES : 2 lignes EN ATTENTE dont le dossier bouge, RGCEC677 et
+    Z3DYDC4X (verrou, ses 4542 et 14110 ; la coupe leur retire leurs voisines tranchees Z0BDVNBZ, AYIHPHF5) -- les memes au 73
+    (4 au passage 26).
+
+7 SA RESERVE app_chaine_id : un prealable, plus un blocage (sa mesure du 22/11 10:44 -> 23/11 08:02 : 0 chaine, 0 etiquette,
+  0 numero, 0 dossier sur 31 368 pieces, temoin positif 31 157 lignes sur la seule heure de lecture) ; reste une nuit agitee.
+LES PREALABLES : P-a explique et corrige ; P-e VERT au passage 75 (a refaire sur l'etat exact de la 1re vague) ; P-b a faire ; P-c + les deux paires ; P-d a l'ecriture ; P-f allegee.
+A LUI : les 5 rattachements (une par une) ; les deux exceptions nommees ; 39845. RIEN D'ECRIT ; rien tire ; rien pousse.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

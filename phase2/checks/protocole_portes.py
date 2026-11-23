@@ -206,6 +206,25 @@ def neutres_de(preuves: list) -> set:
     return out
 
 
+def traces_r14(I, M: set, U: set) -> set:
+    """R14 (validee le 23/11) : la trace SUPPRIMEE chez Hektor d'une saisie refaite reste FIGEE dans son ancien dossier,
+    avec son numero (on ne supprime pas une part). Quand ce dossier est celui de la ligne, elle y reste : aucune porte ne
+    la bouge, et la ligne est juste avec elle (trouve le 23/11 soir par le rejeu exact du passage 73 : f1aedc01 et sa
+    trace 28967). Le critere est celui de R14 dans protocole_classeur.juger_bien : meme genre, meme date, meme montant (ou
+    montant inconnu) qu'une piece VIVANTE de la ligne."""
+    D = I.D
+    out = set()
+    for q in U - M:
+        if q not in D.REG or not P.supprimee_chez_hektor(I.pieces[q]):
+            continue
+        rq = D.REG[q]
+        if any(v in D.REG and not P.supprimee_chez_hektor(I.pieces[v]) and D.REG[v]["genre"] == rq["genre"]
+               and D.REG[v]["date"] and D.REG[v]["date"] == rq["date"]
+               and (rq["montant"] is None or D.REG[v]["montant"] == rq["montant"]) for v in M):
+            out.add(q)
+    return out
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -264,10 +283,13 @@ def main() -> int:
         gel_p[int(p_)].add(i)
     porte, detail = {}, {}
     nature_extra = Counter()
+    TRACES = {}
     for i, x in sorted(T.items()):
         M, N = x["pieces"], neutres_de(x["preuves"])
         Cs = {chA[p_] for p_ in M}
         U = set().union(*(mA[c] for c in Cs))
+        TRACES[i] = traces_r14(I, M, U)
+        N = N | TRACES[i]
         extras = U - M - N
         kinds = Counter(I.pieces[p_]["kind"] for p_ in M if I.nature[p_] == PC.VRAIE)
         doublon = sorted(k for k, n in kinds.items() if n > 1)
@@ -306,7 +328,11 @@ def main() -> int:
     mdc_de_ligne = defaultdict(set)
     for i, x in T.items():
         for pr in x["preuves"]:
-            if pr.startswith("a part MISE DE COTE"):
+            if pr.startswith("a part MISE DE COTE PAR LA"):
+                # R21 (et la variante R18), 23/11 : « ... pose simulee : 11204 GARDE D2019-0415 (dossier fige : 11204
+                #   11207), ... » -- la phrase ne finit pas par la liste des pieces (le lecteur d'avant tombait dessus)
+                mdc_de_ligne[i] |= {int(n) for n in re.findall(r"(?:simulee : |, )(\d+) (?:GARDE|⛔ PERD)", pr)}
+            elif pr.startswith("a part MISE DE COTE"):
                 mdc_de_ligne[i] |= {int(n) for n in pr.split(":")[-1].split()}
     for i in mdc_de_ligne:
         if porte[i] == "RIEN":
@@ -322,7 +348,7 @@ def main() -> int:
         if porte[i] not in ("RIEN", "MISE_DE_COTE"):
             continue
         Mv = {q for q in x["pieces"] if q in ch0}
-        Nv = {q for q in neutres_de(x["preuves"]) if q in ch0}
+        Nv = {q for q in neutres_de(x["preuves"]) | TRACES.get(i, set()) if q in ch0}
         Cs0 = {ch0[q] for q in Mv}
         if Mv and len(Cs0) == 1 and not (m0[next(iter(Cs0))] - Mv - Nv):
             continue
@@ -344,6 +370,8 @@ def main() -> int:
         for pr in x["preuves"]:
             if pr.startswith("a part deja dans son dossier"):
                 r7a_de_ligne[i] |= {int(n) for n in pr.split(":")[-1].split()}
+    dire("   R14 : %d ligne(s) gardent dans leur dossier la trace supprimee d'une saisie refaite (figee, aucune porte) : %s"
+         % (sum(1 for v in TRACES.values() if v), " ".join("%s (%s)" % (i, " ".join(map(str, sorted(v)))) for i, v in sorted(TRACES.items()) if v)))
     dire("   R7b : %d piece(s) mise(s) de cote, en %d dossier(s) figes tels quels, pour %d ligne(s)"
          % (len(MDC), len(groupes_mdc), len(mdc_de_ligne)))
     cpt = Counter(porte.values())
@@ -365,7 +393,7 @@ def main() -> int:
     mB = membres(chB) if chB else {}
 
     def juste(i: str, ch: dict, mm: dict) -> bool:
-        M, N = T[i]["pieces"], neutres_de(T[i]["preuves"])
+        M, N = T[i]["pieces"], neutres_de(T[i]["preuves"]) | TRACES.get(i, set())
         Cs = {ch[p_] for p_ in M}
         return len(Cs) == 1 and not (mm[next(iter(Cs))] - M - N)
     # ⚠ les lignes « C5 aux portes » ne se jugent pas sur B : B porte encore les copies, qui les tiennent justes
@@ -417,10 +445,12 @@ def main() -> int:
         if g_ in vus:
             continue
         vus.add(g_)
-        f_ = [q for q in g_ if P.supprimee_chez_hektor(I.pieces[q])]
+        f_ = [q for q in g_ if P.supprimee_chez_hektor(I.pieces[q]) or P.invisible_a_la_nuit(I, q)]
         if f_ and len(f_) == len(g_):
             # SUPPRIMEE CHEZ HEKTOR : le chainage la fige deja dans son dossier (« la trace garde son dossier ») -- elle ne
-            #   peut rejoindre aucun dossier, et le fichier la dirait « introuvable » chaque nuit : pas de ligne a ecrire
+            #   peut rejoindre aucun dossier, et le fichier la dirait « introuvable » chaque nuit : pas de ligne a ecrire.
+            # ⭐ 23/11 soir (P-a, le rejeu exact du passage 73) : de meme une piece SANS DATE exclue de la regle E par sa
+            #   decision et seule dans sa chaine (4496, 26613) -- le chainage ne la voit pas, elle est deja seule a son numero
             mdc_figees.append(sorted(g_))
             continue
         if f_:
@@ -454,7 +484,7 @@ def main() -> int:
             mdc_faux.append((sorted(g_), seul, garde))
     dire("   ⭐ R7b, SA REGLE : %d dossier(s) mis de cote sur %d sont seuls a l'arrivee ET gardent leur ancien numero%s"
          % (len(groupes_mdc) - len(mdc_faux), len(groupes_mdc), (" -- ⛔ %s" % mdc_faux) if mdc_faux else ""))
-    dire("      dont %d deja figes par le chainage (supprimes chez Hektor : aucune ligne dans le fichier) : %s"
+    dire("      dont %d deja figes par le chainage (supprimes chez Hektor, ou sans date exclus de E : aucune ligne dans le fichier) : %s"
          % (len(mdc_figees), mdc_figees))
     # hors des biens du protocole, rien ne doit bouger
     biens_t = {T[i]["biens"][0] for i in T}
