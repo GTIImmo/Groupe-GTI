@@ -53,6 +53,10 @@ v3.1 (22/11 soir, son mot « reponses 21 bis ») : AUCUNE REGLE NE CHANGE. Le te
   (« figees ne veut pas dire reglees »). Voisins : protocole_les_numeros_neufs.py (ancien -> neuf, en clair),
   protocole_r7b_reversible.py (defaire R7b), sauvegarde_datee_classeur.py (la sauvegarde qui se relit).
 
+v3.2 (23/11, son mot (12) : « trancher les 44 », pas desserrer le verrou) : la VARIANTE R7c proposee (VARIANTES ; jamais
+  appliquee sans son mot) -- passage 24 sans elle = passage 23 (0 change) ; passage 25 avec elle : 10 pieces mises de
+  cote, 12 lignes quittent le verrou, 0 deja rendu ne change, memes 19 ecarts de temoins.
+
 LES EPREUVES (le plan du 22/11, notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md). Version 0 de ce
 22/11 : E1 et E2 sont codees ; une ligne qui les passe recoit le motif declare `E3_A_CODER` -- le compte boucle des la
 version 0, et chaque epreuve codee ensuite remplace ce motif par un verdict ou par un motif plus precis.
@@ -154,6 +158,13 @@ REGLES_VALIDEES = {
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
+    # R7c (23/11, son mot (12) : « TRANCHER LES 44 », pas desserrer le verrou ; le temoin inverse : « une piece qu'une
+    #   preuve POURRAIT encore rattacher doit CONTINUER a bloquer ») -- PROPOSEE, jamais appliquee sans son mot.
+    "R7c": "une piece a part, plus petite, possible pour PLUSIEURS lignes, qu'AUCUNE preuve ne peut donner a aucune "
+           "d'elles -- ni une date au jour exact sur une de leurs cases, ni le prix + honoraires d'une ligne du bien, ni "
+           "une case de date VIDE de son genre qu'on pourrait remplir de sa date -- et qui n'est dans le dossier "
+           "d'AUCUNE de ces lignes, est TRANCHEE : MISE DE COTE comme R7b (isolee AVEC son dossier d'aujourd'hui, elle "
+           "garde son ancien numero) -- elle ne retient plus aucune ligne",
 }
 # R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
 VARIANTES_ACTIVES: set = set()
@@ -594,7 +605,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if hk_ and len(ch_m) == 1:
                 deja[gl] = sorted(a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_)
                                   and gl in r["possibles"][a] and len(r["possibles"][a]) == 1 and S.get(a) in ch_m)
-    isoles = set()
+    isoles, isoles_r7c = set(), set()
     if joue("R7b"):
         for gl, ids in r["morceaux"].items():
             hk_ = [a for a in ids if I.nature[a] == PC.VRAIE]
@@ -602,6 +613,25 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             if hk_:
                 isoles |= {a for a in r["apart"] if I.nature[a] == PC.VRAIE and a < min(hk_) and gl in r["possibles"][a]
                            and len(r["possibles"][a]) == 1 and S.get(a) not in ch_m and a not in deja.get(gl, [])}
+    if joue("R7c"):
+        # VARIANTE R7c (proposee le 23/11, jamais appliquee sans son mot) -- voir VARIANTES
+        for a in sorted(r["apart"]):
+            poss = r["possibles"].get(a, [])
+            if I.nature[a] != PC.VRAIE or a in isoles or len(poss) < 2:
+                continue                              # une seule ligne possible : c'est R7a ou R7b, deja juges
+            lignes_poss = set().union(*poss)
+            reg = D.REG[a]
+            cols = K.COLS_DATE.get(reg["genre"], [])
+            date_exacte = bool(reg["date"]) and any(K.d_sheet(D.case(i, c)) == reg["date"] for i in lignes_poss
+                                                    for c in cols)
+            prix_hon = any(D.touche_ph(a, i) for i in lignes_b)
+            case_vide = bool(reg["date"]) and any(all(not D.case(i, c).strip() for c in cols) for i in lignes_poss)
+            dans_un_dossier = any(S.get(q) == S.get(a) for gl in poss for q in r["morceaux"].get(gl, []))
+            retient = any(a < min([q for q in r["morceaux"].get(gl, []) if I.nature[q] == PC.VRAIE] or [0])
+                          for gl in poss)
+            if retient and not (date_exacte or prix_hon or case_vide or dans_un_dossier):
+                isoles.add(a)
+                isoles_r7c.add(a)
     # E9 : la pose de nuit simulee sur le decoupage (chaque morceau devient un dossier ; le reste garde sa chaine)
     ch_new = {}
     for gl, ids in r["morceaux"].items():
@@ -629,6 +659,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         MISES_DE_COTE[a] = {"bien": b, "ancien_uuid": ancien, "ancien_numero": I.pieces[a]["app_dossier_numero"],
                             "ancienne_chaine": S.get(a), "etiquette_simulee": lab1[a],
                             "garde_son_numero": lab1[a] == ancien, "mise_de_cote_avec": [q for q in g_ if q != a],
+                            "regle": "R7c" if a in isoles_r7c else "R7b",
                             "pieces_du_dossier_prises_par_un_morceau": hors,
                             "etiquettes_du_groupe": sorted({str(lab1[q]) for q in g_}),
                             "groupe": g_, "lignes_du_gel": {str(q): sorted(I.gel_par_piece.get(q, [])) for q in g_}}
@@ -682,6 +713,10 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             preuves.append("a part sans effet sur l'etiquette (son critere 2) : %s" % " ".join(map(str, neutres)))
         mis_de_cote = sorted(a for a in isoles if a < m and gl in r["possibles"][a])
         if mis_de_cote:
+            if any(a in isoles_r7c for a in mis_de_cote):
+                preuves.append("a part TRANCHEE PAR LA VARIANTE R7c (proposee, NON VALIDEE) -- aucune preuve ne peut la donner a "
+                               "aucune de ses lignes possibles, hors de leurs dossiers : %s" % " ".join(
+                                   "%d" % a for a in mis_de_cote if a in isoles_r7c))
             preuves.append("a part MISE DE COTE avec son dossier d'aujourd'hui, possible pour elle seule, hors de son "
                            "dossier (REGLE R7b, validee le 22/11 ; elle garde son ancien numero : %s) : %s" % (", ".join(
                                "%d -> %s (dossier fige : %s)" % (a, I.pieces[a]["app_dossier_numero"] or "aucun",

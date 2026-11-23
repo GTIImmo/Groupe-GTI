@@ -4446,6 +4446,71 @@ copie. Puis reprends le protocole. » Rapport :
      ⛔ L'ORDRE DES MOTIFS EST A LUI (on ne decide pas un ordre seul).
 ```
 
+### 20.22 Son mot du 23/11 (12) — les 34 sans pièce ou sans bien, puis les 44 pièces du verrou
+
+Son mot : `C:\Hektor\mot_du_23_11_ton_motif_oui_et_les_69_apres.md` (venu par SON message : « OUI pour ton motif [...]
+Lis »). Rapport : `notice/PROTOCOLE_REPONSES_23_11_7_LES_34_ET_LES_44_2026-11-23.md`. Rien d'ecrit nulle part.
+
+```
+1 LES 34 (protocole_les_34_sans_piece_ou_sans_bien_2026-11-23.py, lecture seule ; CSV notice/PROTOCOLE_LES_34_...) :
+  SA MESURE D'ABORD -- le bien est-il dans l'index des vendus / clos ou des archives au lieu de app_dossier_current ?
+  . BIEN_SANS_PIECE 23 : le bien EST nomme -- 21 dans les ARCHIVES, 2 dans CURRENT, 0 nulle part. ⛔ MAIS « PAS DANS
+    CURRENT » N'EXPLIQUE PAS « PAS DE PIECE » : le registre a des pieces pour 1 670 biens archives et 8 859 vendus / clos
+    (sur 10 702) ; le protocole ne lit JAMAIS app_dossier_current (0 occurrence dans protocole_classeur, coupe_preuve_
+    interne, protocole_portes) ; le registre des mandats couvre 17 375 biens archives. Ces 22 biens (23 lignes) n'ont
+    AUCUNE transaction : 0 en production, et 0 offre / 0 compromis / 0 vente dans le miroir local de Hektor
+    (data/hektor.sqlite, d'ou le registre est construit). Etat Actuel du Sheet : Annulee 18 . Vente reglee 3 (QXDW8EQA
+    24464, 2U5QPKRC 51585, MQ6H8TVQ 45938 -- archives) . Vente fixee 1 (a8aaeb2b 61592, CURRENT, Actif) . Compromis en
+    attente 1 (130d81ac 62503, archive mais statut Actif). Ces 5-la disent une affaire vivante ou reglee SANS une piece
+    chez nous : un trou d'import possible -- NON MESURE (il faudrait lire Hektor : a son accord).
+  . SANS_BIEN 11 : 7 portent un VIEUX numero de mandat (3423 a 4182) que les index donnent a 2 ou 3 biens (de 2011-2014
+    et de 2019-2021 : Hektor numerote par agence et recycle) ; 4 n'ont aucun bien, meme dans les index : « NON TROUVE »
+    (I3TFR2KG, vente reglee, compromis 19/11/2019 signe), 17081 (un mandat au registre SANS bien), 92560 (aucun mandat de
+    ce numero), 18993 (54376c72, offre d'achat du 11/11/2026, mandat dans aucun index).
+  ⭐ LA PISTE « PERIODE DU MANDAT » (le mandat dont la periode contient la 1re date de la ligne), MESUREE PUIS REFUSEE
+    PAR SON TEMOIN : sur les lignes TRANCHEES dont le Mandat nomme plusieurs biens, elle garde le bien du protocole seul
+    477 fois, avec d'autres 921, un AUTRE bien 47 fois, aucun 43. 47 faux : refusee. (Elle aurait isole 0BLBDVV8 ->
+    46642 et UL12H3AQ -> 48315 ; 5 resteraient doubles.) ⚠ Ma faute, attrapee par le temoin : le 1er tour lisait mal les
+    cases de date (« aucun 1 488 ») -- un zero qui ne se croyait pas.
+  . LE FRONT (sa consigne : « cherche aussi dans apps/*/src ») : 13 mentions de app_dossier_current ; la recherche par
+    numero d'annonce passe deja par les TROIS index (api.ts:3340, localiserAnnonceParNumeroHektor) ; les deux appelants
+    de loadDossierByHektorAnnonceId retombent sur l'historique et les archives (App.tsx:9927) ou sur la liste etendue
+    « horsCatalogue » (App.tsx:16601) ; les 3 autres sont voulus (ecritures de diffusion, « le bien est-il vivant ? »).
+    Aucune morsure neuve.
+  ⛔ A LUI : R8 PROPOSEE -- « une ligne dont le bien n'a AUCUNE piece chez nous n'a pas de dossier a nommer : rien a
+    ecrire dans sa case A ; elle sort du reste a vider (verdict a part, rejuge a chaque passage : une piece qui arrive
+    la fait rentrer) ». Et la lecture chez Hektor des 5 biens « vivants ou regles sans piece » (son accord).
+
+2 LES 44 (protocole_les_44_pieces_du_verrou_2026-11-23.py ; CSV notice/PROTOCOLE_LES_44_...) -- SA MESURE CONFIRMEE A
+  L'UNITE : 69 lignes, 44 pieces, PLUSIEURS 25 . AUCUNE_LIGNE 9 . HON_INCONNUS 9 . AUTRE 1 (14033 = sa decision B3).
+  ⭐ R7a ET R7b PRENNENT DEJA « possible pour UNE seule ligne » : les 44 sont TOUTES possibles pour plusieurs lignes.
+  . PLUSIEURS (25) : 25 compromis annules ; TOUS ont le prix + honoraires d'une ligne -- UNE PREUVE EXISTE, elle designe
+    plusieurs lignes -> ils CONTINUENT A BLOQUER (son temoin inverse) ; 18 sont deja dans le dossier d'une ligne possible.
+  . AUCUNE_LIGNE (9) : 9 compromis annules sans date ; 6 hors du dossier de toute ligne possible, 3 dedans.
+  . HON_INCONNUS (9) : 7 offres refusees (datees, la date sur aucune case ; chaque ligne possible a DEJA la date de SON
+    offre -- 0 case vide a remplir) + 2 compromis annules ; 4 hors dossier, 5 dedans.
+  LA REGLE R7c (VARIANTE, jamais appliquee sans son mot ; protocole_classeur.py) : « une piece a part, plus petite,
+    possible pour PLUSIEURS lignes, qu'AUCUNE preuve ne peut donner a aucune -- ni date au jour exact, ni prix +
+    honoraires d'une ligne, ni case de date VIDE qu'on pourrait remplir de sa date -- et qui n'est dans le dossier
+    d'AUCUNE de ces lignes, est TRANCHEE : mise de cote comme R7b, avec son dossier, elle garde son ancien numero ».
+  MESURE : passage 24 (sans elle) = 23 : 0 change (le code a recu R7c eteinte). Passage 25 (« VARIANTE NON VALIDEE ») :
+    10 pieces tranchees (258, 4496, 6363, 7067, 7499, 16382, 25710, 26613, 26851, 28116), 10 / 10 gardent leur ancien
+    numero dans la pose simulee ; 12 LIGNES QUITTENT LE VERROU -> TRANCHEES (4 573 + 225 -> 4 585 + 213) ; 0 deja rendu
+    change ; les MEMES 19 ecarts de temoins ligne a ligne ; DEBARD attend toujours (20088 est dans le dossier de ses deux
+    lignes : la regle ne la touche pas -- c'est son temoin) ; ses lignes 40 et 105 gardent D2025-0107 et D2025-0039, et
+    bf277762 / 9a09e537 leurs numeros des 2 560 ; une seule etiquette NEUVE (WW88Z2AC, 26615 seul, case A vide, hors des
+    2 560). ⭐ 6 des 10 sont tenues par le GEL d'une ligne COPIE_SEULE (LTJYTEVC, MIO9L8C9, SYA8MH79, af8d7986, SHN6RKDI,
+    C0HXVVCW) : c'est l'affaire annulee de cette ligne -- R7c lui donne son propre dossier, avec son ancien numero ; ces
+    lignes restent en attente (copie seule) jusqu'a la mise de cote des copies.
+  ⚠ Le rejeu EXACT sur le vrai chainage n'est pas fait : protocole_portes refuse de compter une variante (voulu). Il se
+    fera si R7c est validee (elle passe dans REGLES_VALIDEES, nouveau passage, rejeux).
+  CE QUI RESTE AU VERROU (57 lignes, 34 pieces) : les 25 « plusieurs acheteurs » (une preuve designe plusieurs lignes :
+    SA MAIN, piece par piece -- le CSV porte, pour chacune, ses lignes possibles et celles dont elle a le prix +
+    honoraires) ; 8 sans preuve mais DANS le dossier d'une de leurs lignes (dont 20088, DEBARD) ; 14033 (sa B3).
+⛔ A LUI : R8 (les 23) ; R7c (les 10) ; les 25 a sa main (un rattachement a la main par piece, ou les laisser) ; 14033 --
+  sa B3 voulait-elle dire « a part pour toujours » ?
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
