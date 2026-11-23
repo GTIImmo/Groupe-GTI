@@ -4870,6 +4870,74 @@ ne justifie de le lui donner. Mesure-le comme ca, pas en bloc. »
   une jumelle vivante ? » -- le critere de R14) ; les prealables a l'ecriture (§ 20.26).
 ```
 
+### 20.29 La règle de méthode de R15 ; les 7 mandats recyclés par leurs pièces ; l'hypothèse des avoirs mesurée
+
+Son message du 23/11 : « R15 : TU AS BIEN FAIT DE LA REFUSER [...] Un temoin parfait ne rachete pas un effet de bord sur
+du deja-rendu. Note-le au carnet comme regle de methode. OUI, ENCHAINE SUR LES 7 MANDATS RECYCLES. Mais pas par le
+mandat [...] le montant, la date, le vendeur -- en IGNORANT le numero du Sheet [...] Cherche le bien de leurs PIECES, pas
+le bien de leur mandat. ET RAPPROCHE DEUX LIGNES [...] BR8ZTN5F (-3 000 €) [...] JZ9693S0 (GGTI00002792 / AVR00000465)
+[...] ⛔ Hypothese, pas conclusion : mesure-la. »
+
+```
+0 ⛔ REGLE DE METHODE (sa phrase, 23/11) : « UN TEMOIN PARFAIT NE RACHETE PAS UN EFFET DE BORD SUR DU DEJA-RENDU. »
+  R15 avait un temoin a 4 243 / 0, et elle faisait retomber 2 lignes deja tranchees (G8ND5KJ7, ZFLFAQ0T) : ecartee.
+  La hierarchie : (1) aucun verdict deja rendu ne change, (2) le temoin a zero, ecarts nommes, (3) ce que la regle
+  tranche. Le (2) ne compense jamais le (1). Le temoin mesure la regle SUR CE QU'ELLE DECIDE ; l'effet de bord se mesure
+  au PASSAGE ENTIER (le voisin qui fait jouer son autre piece), et il ne se voit que la.
+
+1 LES 7 MANDATS RECYCLES (SANS_BIEN, toutes « Annulee », offres 2019-2021, aucune facture) -- par leurs PIECES, numero
+  du Sheet ignore (protocole_les_7_mandats_recycles_2026-11-23.py) :
+  a. LA RECHERCHE STRICTE (pieces vraies a 7 j de la case, vendeur dans les mandants + montant = Prix ou honoraires =
+     Commission) : 0 sur 7. Relachee (vendeur seul ; honoraires seuls ; montant + honoraires) : 0 sur 7.
+  b. ⭐ LE TEMOIN POSITIF DU ZERO : « les biens dont les mandants portent le vendeur (TOUS les biens, registre + pieces),
+     une offre ou un compromis a 7 j » retrouve LA piece de 626 des 662 lignes tranchees « Annulee » qui tiennent une
+     offre vraie (94,6 %). Les 36 ratees, une par une, ont DEUX causes : le nom du vendeur du Sheet n'est pas dans les
+     mandants (31, date exacte) ; la date a plus de 7 j (5 : 1e6c6b41 9 j, 754bacf3 10 j, 2b924f5f 31 j, 4cbc128d 32 j,
+     EKDZCRI1 366 j). ⭐ POUR LES 6 SANS PIECE, LES DEUX CAUSES SONT ECARTEES : le vendeur EST trouve (sur un bien de meme
+     ville ou de meme prix), et la fenetre portee a 365 j ne donne aucune piece libre.
+  c. ⭐ ZZ5WKMWM : SES PIECES EXISTENT, LIBRES -- bien 23562 (Chatelguyon, mandants THEVENOT) : offre 11206 du 02/12/2019
+     (case 29/11/2019, +3 j, refusee, 280 000) et compromis 11205 (annule, SANS DATE, 280 000, honoraires 15 800 =
+     sa Commission). Personne ne les tient. Le Prix du Sheet (« 63 ») est une faute de frappe.
+     Pourquoi la 1re recherche l'a ratee : le compromis n'a pas de date, et une OFFRE ne porte pas de mandants (le vendeur
+     se lit sur le bien). Le bien porte une 2e affaire SANS ligne : offre 11207 (04/09/2019, 265 000) + compromis 11204
+     (annule, 265 000, honoraires 15 000).
+     ⛔ PAS DE REGLE : « bien du vendeur + offre a 7 j + compromis du meme montant, honoraires = Commission » a un temoin
+     de 3 849 justes, 43 ambigus et 9 « un autre bien seulement » (0268440f, 0XSPQD4E, 17S58J78, 1OW8IQ2M, 1XJOMDP2,
+     2c2566d7, 3S9846F1, ...) -- pas a zero, pas nommes -> ZZ5WKMWM va A FREDERIC, comme les 4 « affaire sur un autre
+     bien » (meme famille de preuve, date a +3 j au lieu d'exacte).
+  d. LES 6 SANS AUCUNE PIECE DANS HEKTOR (leur offre n'y a jamais ete saisie, ou n'y est plus) :
+     87RH87SM -> bien 9948 (Le Brugeron, 39 000, GOUTTEBROZE) : ses seules pieces sont la vente de 2022 (34 000), tenue
+       par U64U6LSO ;
+     QMIXZW44 -> bien 9778 (Auzelles, 87 000, DUFILS ; le Sheet dit Cunlhat) : aucune piece ;
+     NEFHS7JI -> bien 55001 (Neronde-sur-Dore, terrain 25 000, GIM) : aucune piece ; les lots voisins ont leurs lignes ;
+     0BLBDVV8 -> bien 46642 (Saint-Pal-de-Mons, 180 000, BOBILLON) : aucune piece ;
+     UL12H3AQ -> bien 48315 (La Chaise-Dieu, LACMAL, le seul bien a ce nom) : la seule offre (27/07/2020) et le compromis
+       sont tenus par 7N8A20H5, dont la case dit 27/07/2020 ; l'offre du 20/07 (commission 4 000) n'est pas chez Hektor ;
+     IJF2BRQJ -> deux biens possibles (12753 Issoire, 37212 Le Chambon) : aucune piece libre sur l'un ni l'autre.
+     ⭐ Le bien se lit au registre (vendeur + ville ou prix), pas au numero -- et il tombe a chaque fois sur un des biens
+     du numero : le « recyclage » est surtout UN mandat pour plusieurs biens du MEME vendeur (+ un vieux bien 2009-2012).
+  e. ➡ R16 PROPOSEE (pas posee) : « une ligne « Annulee » sans bien, dont les biens de son vendeur n'ont AUCUNE piece
+     libre a un an de sa case, n'a rien a etiqueter ». Elle suit sa decision sur JZ9693S0 et 9O6NKRIJ. Elle ne donne
+     AUCUNE piece, donc ne peut pas faire jouer un voisin (la lecon de R15) ; le passage le prouvera apres son accord.
+     Effet mesure : les 6 -> RIEN_A_ETIQUETER, reste a vider 97 -> 91.
+
+2 L'HYPOTHESE DES AVOIRS -- REFUTEE PAR LA MESURE (protocole_hypothese_des_avoirs_2026-11-23.py) :
+  . BR8ZTN5F n'a NI facture NI avoir. Son « -3 000 » n'est pas un avoir : ce sont les honoraires CALCULES de son
+    compromis 7176 (bien 14674, annule, montant 100 000 < net vendeur 103 000). Dans tout le registre, 2 pieces seulement
+    ont des honoraires negatifs : 7176, et 16806 (bien 35538, compromis actif 175 000, net vendeur 1 650 000 -> -1 475 000,
+    un zero de trop chez Hektor), tenue par 75EZY5GJ, TRANCHEE par la date : son verdict n'en depend pas.
+  . 254 lignes portent un avoir numerote AVR000... : 251 « facture, avoir, REFACTURE » -- toutes « Vente reglee » (249
+    tranchees, DTZ227ER, EJN79TJ1) : une facture corrigee puis refaite, PAS un motif. 3 « facture puis avoir, sans
+    refacture » : XZ4E5MS6 et NP575E1L (« Vente reglee », avoir partiel, montant note), et JZ9693S0 (« Annulee »).
+  . ⭐ SES SOEURS DEJA TRANCHEES : 4 lignes « Annulee » portent « facture / AVR_NN » (une 2e numerotation) : 0FSCB6XY,
+    TAG8IVT5, afd672fa, 057f78c7 -- TOUTES tranchees, chacune avec SON compromis annule. Une vente facturee puis annulee
+    a donc normalement sa piece chez Hektor : l'avoir ne bloque rien.
+  . CE QUI BLOQUE JZ9693S0, C'EST SA LIGNE VIDE : vendeur « nan nan », ni prix, ni commission, ni date d'offre ou de
+    compromis, Mandat 92560 (un des numeros qui ne menent nulle part). Sa facture se date par ses voisines a l'ete 2022
+    (GGTI00002791 : compromis 05/08/2022 ; 2794 : 25/08/2022) -- mais sans vendeur ni montant, rien a chercher. Sa
+    decision « rien a etiqueter » tient.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
