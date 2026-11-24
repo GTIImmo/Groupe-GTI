@@ -923,11 +923,40 @@ L'ordre :
     tables qu'avant. Le schéma n'est pas exposé à l'API.
 
 **R4 — La montée et la descente** *(accord pour le premier envoi)*
-- [ ] R4.1 `recrutement/descendre.py` : liste noire, effacements, corrections ; arrêt si la base ne
-      répond pas
-- [ ] R4.2 `recrutement/pousser.py` : par lots, reprise, interrupteur `RECRUTEMENT_MONTEE`
-- [ ] R4.3 Contrôle des deux côtés : comptes, 0 coordonnée iad, opposition, liste noire, effacement témoin
-- [ ] R4.4 Le premier envoi — délégué (§15), par le robot dont les droits s'arrêtent au schéma `recrutement`
+- [x] R4.0 La connexion du robot, `recrutement/robot.py`.
+  - Elle passe par le pooler, avec l'utilisateur `recrutement_robot.<projet>`.
+  - Elle lit **seulement** `recrutement_donnees\robot.env`, **jamais** le `.env` du projet.
+  - Interprète : le **Python système**, qui a psycopg2 2.9.12 ; le `.venv` ne l'a pas. Le lanceur le
+    sait (`$pyBase`, avec une erreur claire s'il manque).
+- [ ] R4.0 bis ⏸ **Frédéric donne son mot de passe au robot** :
+      `recrutement/poser_mot_de_passe_robot.ps1`.
+  - Le script fabrique un mot de passe aléatoire et l'écrit dans `robot.env`.
+  - Il ne copie dans le presse-papiers que son **empreinte SCRAM-SHA-256** : le mot de passe ne
+    quitte jamais le serveur et Claude ne le voit jamais.
+  - ⭐ Calcul de l'empreinte vérifié : PowerShell et Python donnent la même sur 2 essais, dont le
+    vecteur « pencil » de la RFC 7677.
+- [x] R4.1 `recrutement/descendre.py`.
+  - Elle rapporte la liste noire et l'APPLIQUE en local : fiche, observations, événements, adresse
+    de page, et entreprise si plus personne ne la cite.
+  - Le carnet des corrections remplace le carnet local.
+  - Si la base ne répond pas : sortie 1, et le lanceur s'arrête.
+  - **Essai hors ligne `recrutement/test_descente.py` : tout vert.** L'essai à blanc ne touche à
+    rien. Les 3 personnes de la liste sortent, par téléphone, SIREN et nom. Un autre réseau ne
+    peut plus les remettre. Témoin inverse : une personne neuve hors liste entre.
+- [x] R4.2 `recrutement/pousser.py`.
+  - Des « insert … on conflict do update », en une seule transaction ; jamais de suppression.
+  - Le carnet et la liste noire ne sont jamais touchés.
+  - Chaque ligne est vérifiée contre les règles du schéma AVANT tout envoi.
+  - `--preparer`, sans réseau, sur la vraie base locale : **2 116 fiches, 1 487 entreprises,
+    1 collecte, 25 états de source, 0 faute**.
+- [x] R4.3 Les contrôles sont codés dans la montée, AVANT la validation ; un rouge ANNULE tout :
+  - comptes des deux côtés ;
+  - 0 coordonnée iad ;
+  - 0 donnée de registre pour une personne en opposition ;
+  - 0 personne de la liste noire.
+  - Le témoin « effacement » est éprouvé par `test_descente.py`.
+- [ ] R4.4 Le premier envoi — délégué (§15), par le robot. D'abord `--essai` (tout ANNULÉ), puis le
+      vrai, dès que le robot a son mot de passe.
 
 **R5 — La tâche, la surveillance, la sauvegarde**
 - [x] R5.1 Les 3 ajouts de `check_gti_health.py` (délégué, §15), recopiés du geste du 18/11 :

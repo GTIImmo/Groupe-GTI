@@ -57,6 +57,9 @@ $ErrorActionPreference = "Continue"
 $root = "C:\Hektor\Projet"
 $donnees = if ($env:RECRUTEMENT_DONNEES) { $env:RECRUTEMENT_DONNEES } else { "C:\Hektor\recrutement_donnees" }
 $py = Join-Path $root ".venv\Scripts\python.exe"
+# La descente et la montee parlent a la base par le ROBOT (psycopg2) : le Python SYSTEME l'a, le .venv non
+# (verifie le 24/11). Elles ne lisent jamais le .env du projet, seulement recrutement_donnees\robot.env.
+$pyBase = if ($env:RECRUTEMENT_PYTHON_BASE) { $env:RECRUTEMENT_PYTHON_BASE } else { "C:\Python314\python.exe" }
 $collecteur = Join-Path $root "recrutement\collecte_annuaires.py"
 $logDir = Join-Path $root "logs\scheduled"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
@@ -155,7 +158,9 @@ try {
             Send-Battement "descente" "running"
             $script = Join-Path $root "recrutement\descendre.py"
             if (-not (Test-Path -LiteralPath $script)) { throw "descente allumee mais recrutement\descendre.py absent" }
-            & $py -X utf8 $script *>> $detail
+            if (-not (Test-Path -LiteralPath $pyBase)) { throw "descente allumee mais le Python systeme est absent : $pyBase" }
+            # elle n'ecrit que des COMPTES : sa sortie va au journal de la tache
+            & $pyBase -X utf8 $script 2>&1 | ForEach-Object { Write-Output "[descente] $_" }
             if ($LASTEXITCODE -ne 0) {
                 Send-Battement "descente" "error" "code $LASTEXITCODE"
                 throw "la descente a echoue (code $LASTEXITCODE) : ON NE COLLECTE PAS sans la liste « ne plus contacter »"
@@ -235,7 +240,9 @@ try {
             Send-Battement "montee" "running"
             $script = Join-Path $root "recrutement\pousser.py"
             if (-not (Test-Path -LiteralPath $script)) { throw "montee allumee mais recrutement\pousser.py absent" }
-            & $py -X utf8 $script *>> $detail
+            if (-not (Test-Path -LiteralPath $pyBase)) { throw "montee allumee mais le Python systeme est absent : $pyBase" }
+            # elle n'ecrit que des COMPTES : sa sortie va au journal de la tache
+            & $pyBase -X utf8 $script 2>&1 | ForEach-Object { Write-Output "[montee] $_" }
             if ($LASTEXITCODE -ne 0) { $runFailed = $true; Send-Battement "montee" "error" "code $LASTEXITCODE" }
             else { Send-Battement "montee" "success" }
             Write-Output "[montee] code $LASTEXITCODE"
