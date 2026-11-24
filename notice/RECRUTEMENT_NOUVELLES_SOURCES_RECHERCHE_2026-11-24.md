@@ -73,3 +73,19 @@ Mon @gence) ; plusieurs sites derrière un défi AWS (fournisseur commun probabl
   est une décision commerciale, et certaines équipes mêlent gestion, syndic, accueil (à filtrer sur la transaction).
 - Les sources « **noms seulement** » (sans contact en clair) ont peu d'intérêt pour un premier contact par e-mail.
 - Chaque site retenu : **relire ses mentions légales** (cas Domia) et son robots.txt au moment du lecteur.
+
+## ✅ Choix de Frédéric (24/11) et ce qui est fait
+
+**Choisis : La Boîte Immo et Netty/Modelo.** Deux lecteurs dans `recrutement/collecte_annuaires.py` (`lbi`, `netty`),
+une liste de sites chacun (`SITES_LBI`, `SITES_NETTY` : ajouter une agence = une ligne), branchés dans le run.
+- Règles tenues : robots.txt et délais du lecteur poli ; un refus n'arrête que CE site ; coordonnées en clair seulement
+  (Netty : téléphone des données structurées, jamais l'e-mail derrière un bouton) ; numéro ou e-mail d'AGENCE écarté
+  (le même pour 3 membres, ou boîte générique) ; métiers hors transaction écartés (assistanat, accueil, secrétariat,
+  gestion locative, syndic, comptabilité, marketing, courtier en prêt — filtre relu sur les intitulés réels) ;
+  personne hors des 4 départements ou non située : pas gardée.
+- **Essai sur les vrais sites, sur une COPIE de la base, hors collecte (24/11 ~16:55)** : **Netty 26 personnes** (Fontana 9,
+  STB 7, KB 2, TeamFi 8 ; Teatime 0 dans la région), **La Boîte Immo 17** (Vos Agents 10, 42bis 4, Roche 2, Chauvel 1),
+  presque toutes avec un téléphone en clair. 3 gabarits La Boîte Immo reconnus.
+- ⚠ Encore à 0 : Henri Pardon, Brioude Immobilier, Bel Ange (autres gabarits) ; Cantard (1 personne, agence non située).
+- Écran : ces fiches s'affichent « Agence locale » avec le nom de l'agence (après un envoi sur GitHub).
+- ⏳ La preuve : la collecte d'essai complète, lancée par Frédéric (tâche « GTI Recrutement », à la main).

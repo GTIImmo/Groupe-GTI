@@ -114,7 +114,11 @@ export const NOMS_RESEAUX: Record<string, string> = {
   '3g': '3G Immo', lfimmo: 'LF immo', sextant: 'Sextant', cotepart: 'Côté Particuliers', exp: 'eXp France',
   groupement: 'Groupement Immobilier', immodiffusion: 'Immo-Diffusion', lucarne: 'La Lucarne de l’immobilier',
   liberkeys: 'Liberkeys', maxihome: 'Maxihome', saisie: 'Ajouté à la main',
+  // 24/11 : les agences locales lues par le fournisseur de leur site ; le nom de l'agence est dans `agence`
+  lbi: 'Agence locale', netty: 'Agence locale',
 }
+/** Les sources « agence locale » : la ligne montre le nom de l'agence (lu dans `agence`). */
+export const SOURCES_AGENCE = new Set(['lbi', 'netty'])
 export const nomReseau = (cle: string) => NOMS_RESEAUX[cle] ?? cle
 
 // Ce que dit la source quand une coordonnée manque (repris du collecteur, POURQUOI_SANS_CONTACT).
@@ -123,6 +127,7 @@ const SANS_CONTACT: Record<string, string> = {
   laforet: 'aucun contact personnel publié', c21: 'aucun contact personnel publié', '42avenue': 'e-mail par formulaire',
   orpi: 'e-mail par formulaire', megagence: 'e-mail par formulaire', sextant: 'e-mail par formulaire',
   '3g': 'e-mail non affiché', immodiffusion: 'pas d’e-mail publié', lucarne: 'pas d’e-mail publié',
+  netty: 'e-mail derrière un bouton',
 }
 export function pourquoiSansContact(c: Pick<Candidat, 'reseau' | 'telephone' | 'email'>): string {
   if (c.telephone && c.email) return ''

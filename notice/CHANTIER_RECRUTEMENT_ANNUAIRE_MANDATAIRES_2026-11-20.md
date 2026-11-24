@@ -1154,7 +1154,10 @@ L'ordre :
       (24/11, 16:05) : on attend le 06/12** — d'ici là, l'écran garde le bandeau « 3 sources n'ont pas pu être relues ».
       ↩ **Changé par Frédéric à ~16:10 : il veut REFAIRE une collecte d'essai, et en profiter pour AJOUTER des sites** :
       « les réseaux de mandataires présents dans les 4 départements, ou des agences locales avec un annuaire de
-      collaborateurs ». Recherche lancée (lecture seule) ; la liste lui sera soumise avant tout lecteur. La collecte
+      collaborateurs ». Recherche lancée (lecture seule) ; la liste lui sera soumise avant tout lecteur.
+      ✅ **Recherche faite** (`notice/RECRUTEMENT_NOUVELLES_SOURCES_RECHERCHE_2026-11-24.md`) ; **choix : La Boîte Immo et Netty** ;
+      les deux lecteurs sont écrits et éprouvés sur une copie (43 personnes de plus) et branchés dans le run.
+      ⏸ Frédéric lance à la main la collecte d'essai (tâche « GTI Recrutement », 2 à 3 h : relecture complète). La collecte
       n° 2 reste fermée telle quelle : ses 3 sources malades n'ont fait partir personne.
   - ✅ Le correctif Dr House (`separer_nom` retire le HTML d'un nom, toutes sources) est POSÉ après le passage
     (`98b008c`) : éprouvé sur copie puis sur le vrai fichier, `test_mise_a_jour` et `test_descente` verts.

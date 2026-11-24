@@ -51,6 +51,7 @@ import sqlite3
 import sys
 import time
 import unicodedata
+from collections import Counter
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -1913,6 +1914,141 @@ def _diffusible(v):
 
 
 # --------------------------------------------------------------------------------------------
+# 24/11 -- LES AGENCES LOCALES, par le FOURNISSEUR de leur site (recherche du 24/11, choix de Frederic : La Boite Immo
+#   et Netty/Modelo -- notice/RECRUTEMENT_NOUVELLES_SOURCES_RECHERCHE_2026-11-24.md). Un lecteur par fournisseur, une
+#   liste de sites ; ajouter une agence = une ligne dans la liste.
+#   ⛔ Les memes regles que partout : robots.txt, delai, arret net ; un refus n'arrete QUE ce site (un autre hote).
+#   ⛔ Coordonnees affichees EN CLAIR seulement : lien tel:/mailto: de la page equipe, ou telephone des donnees
+#      structurees. Jamais un e-mail derriere un bouton. Le numero ou l'e-mail de l'AGENCE (le meme pour 3 membres ou plus,
+#      ou une boite generique contact@, accueil@...) n'est pas celui d'une personne : ecarte.
+#   ⛔ Minimisation : les metiers hors transaction (accueil, assistanat, gestion locative, syndic, comptabilite) ne sont
+#      pas gardes ; une personne qu'on ne peut pas situer dans nos 4 departements non plus.
+# --------------------------------------------------------------------------------------------
+#   (relu le 24/11 sur les intitulés réels : « secrétaire », « Marketing », « Courtier en prêt » passaient ; corrigé)
+HORS_TRANSACTION = re.compile(r"(?i)assistant|accueil|secr[eé]tai|comptab|gestion locative|gestionnaire|syndic|copropri"
+                              r"|locati|r[eé]ception|marketing|communication|courtier")
+BOITE_GENERIQUE = re.compile(r"(?i)^(contact|accueil|agence|info|infos|bonjour|transaction|transactions|gestion|location"
+                             r"|syndic|direction|secretariat|immobilier)[@.]")
+
+# La Boite Immo : (cle, nom de l'agence, page equipe, code postal et commune de l'agence si ses donnees ne les donnent pas)
+SITES_LBI = (
+    ("vosagents", "Vos Agents", "https://www.vosagents.fr/equipe/", "63000", "Clermont-Ferrand"),
+    ("42bis", "42bis Immo", "https://www.42bis-immo.com/equipe/", "42300", "Roanne"),
+    ("henripardon", "Henri Pardon Immobilier", "https://www.henri-pardon-immobilier.fr/equipe/", "42000", "Saint-Étienne"),
+    ("chauvel", "Cabinet Chauvel Transactions", "https://www.chauvel-immobilier.com/equipe/", "63100", "Clermont-Ferrand"),
+    ("cantard", "Agence Cantard", "https://www.agence-cantard.fr/equipe/", None, None),
+    ("roche", "Roche Immobilier", "https://www.agencerocheimmo.com/equipe/", "43100", "Brioude"),
+    ("brioudeimmo", "Brioude Immobilier", "https://brioude-immobilier.fr/l-equipe", "43100", "Brioude"),
+    ("belange", "Bel Ange Immobilier", "https://bel-ange-immo.com/notre-equipe", "07120", "Ruoms"),
+)
+# Netty / Modelo : la page /conseillers, une personne = un bloc JSON-LD « Person » (nom, fonction, telephone, lieu)
+SITES_NETTY = (
+    ("fontana", "Fontana Immobilier", "https://www.fontanaimmobilier.fr/conseillers", "63140", "Châtel-Guyon"),
+    ("stb", "STB Immobilier", "https://www.stbimmo.com/fr/conseillers", "07250", "Le Pouzin"),
+    ("kb", "KB Immobilier", "https://www.kb-immobilier.fr/conseillers", "07000", "Privas"),
+    ("teamfi", "TeamFi", "https://www.teamfi.fr/conseillers", None, None),        # reseau : le lieu de CHAQUE personne
+    ("teatime", "Teatime Immo", "https://www.teatime-immo.fr/fr/conseillers", None, None),
+)
+
+
+def membres_lbi(texte: str) -> list[dict]:
+    """Les membres d'une page equipe La Boite Immo. Gabarits vus le 24/11 : « team-listing-v1/v2__item » (nom en
+    spans « infos__name ») et « team-listing-v1__item member-1 » (nom en « title__content », fonction en « title__subtitle »)."""
+    # 3e gabarit, vu en réel le 24/11 (Vos Agents, 42bis, Henri Pardon, Brioude) : « team-list-v1__item », nom en
+    #   « item__block-name », fonction en « title-v1__part1 ».
+    out = []
+    for bloc in re.split(r'<article class="team-listing-v\d__item|<div class="team-list-v\d__item', texte)[1:]:
+        bloc = bloc.split("</article>")[0]
+        noms = [texte_de(x) for x in re.findall(r'class="infos__name"[^>]*>([\s\S]*?)</span>', bloc)]
+        if not noms:
+            m = re.search(r'class="title__content"[^>]*>([\s\S]*?)</h2>', bloc) or \
+                re.search(r'class="item__block-name[^"]*"[^>]*>([\s\S]*?)</div>', bloc)
+            noms = [texte_de(m.group(1))] if m else []
+        nom = " ".join(x for x in noms if x).strip()
+        if not nom:
+            continue
+        mf = re.search(r'class="[^"]*(?:infos__position|infos__job|infos__function|infos__fonction|title__subtitle|infos__subtitle'
+                       r'|title-v1__part1)[^"]*"'
+                       r'[^>]*>([\s\S]*?)</', bloc)
+        tel = re.search(r'href="tel:([^"]+)"', bloc)
+        mail = re.search(r'href="mailto:([^"?]+)', bloc)
+        out.append({"nom": nom, "fonction": (texte_de(mf.group(1)) or None) if mf else None,
+                    "tel": telephone_lisible(tel.group(1)) if tel else None,
+                    "mail": email_lisible(mail.group(1)) if mail else None, "url": None, "cp": None, "commune": None})
+    return out
+
+
+def membres_netty(texte: str) -> list[dict]:
+    """Les conseillers d'une page /conseillers Netty : les blocs JSON-LD « Person »."""
+    out = []
+    for b in json_ld(texte):
+        if not (isinstance(b, dict) and b.get("@type") == "Person" and b.get("name")):
+            continue
+        lieu = b.get("workLocation") if isinstance(b.get("workLocation"), dict) else {}
+        adr = lieu.get("address") if isinstance(lieu.get("address"), dict) else {}
+        out.append({"nom": str(b["name"]), "fonction": b.get("jobTitle") or None, "tel": telephone_lisible(b.get("telephone")),
+                    "mail": None,  # chez Netty, l'e-mail est derriere un bouton : jamais pris
+                    "url": b.get("url"), "cp": str(adr.get("postalCode") or "").strip() or None,
+                    "commune": adr.get("addressLocality")})
+    return out
+
+
+def enregistrer_membres(con, reseau: str, cle_site: str, nom_agence: str, page: str, membres: list[dict],
+                        cp_agence, commune_agence) -> tuple[int, int]:
+    """Ecrit les membres d'UNE agence ; rend (gardes, hors transaction)."""
+    tels = Counter(m["tel"] for m in membres if m["tel"])
+    mails = Counter(m["mail"] for m in membres if m["mail"])
+    gardes = hors = 0
+    for m in membres:
+        if m.get("fonction") and HORS_TRANSACTION.search(m["fonction"]):
+            hors += 1
+            continue
+        cp = m.get("cp") or cp_agence
+        dep = dans_la_region(cp)
+        if not dep:
+            continue
+        pos = position_commune(con, m.get("commune") or commune_agence, cp, dep)
+        tel = m["tel"] if m["tel"] and tels[m["tel"]] < 3 else None
+        mail = m["mail"] if m["mail"] and mails[m["mail"]] < 3 and not BOITE_GENERIQUE.match(m["mail"]) else None
+        prenom, nom = separer_nom(m["nom"])
+        suffixe = m["url"].rstrip("/").rsplit("/", 1)[-1] if m.get("url") else cle_personne(m["nom"])
+        enregistrer_fiche(con, reseau, f"{cle_site}/{suffixe}", url=m.get("url") or page, prenom=prenom, nom=nom,
+                          fonction=m.get("fonction"), agence=nom_agence,
+                          commune=(pos["nom"] if pos else (m.get("commune") or commune_agence)), code_postal=cp, departement=dep,
+                          lat=pos["lat"] if pos else None, lon=pos["lon"] if pos else None, fiche_lue=1,
+                          telephone=tel, email=mail, source_contact=sources_contact(f"page equipe {nom_agence}", tel, mail))
+        gardes += 1
+    return gardes, hors
+
+
+def _lire_agences(con, lecteur, args, reseau: str, sites, extraire) -> int:
+    for n, (cle, nom, page, cp, commune) in enumerate(sites, 1):
+        if args.limite and n > args.limite:
+            break
+        try:
+            t = lire(lecteur, page, reseau)
+        except (PermissionError, ArretNet) as e:   # robots.txt ou refus : CE site s'arrete, pas les autres
+            journal(reseau, f"⛔ {nom} : {e}")
+            continue
+        if not t:
+            continue
+        ag = ld_agence(t)
+        membres = extraire(t)
+        gardes, hors = enregistrer_membres(con, reseau, cle, nom, page, membres, ag.get("cp") or cp, ag.get("commune") or commune)
+        journal(reseau, f"{nom} : {len(membres)} sur la page, {gardes} gardes, {hors} hors transaction"
+                + ("" if membres else " -- ⚠ gabarit inconnu ou page vide"))
+    return compter_fin(reseau, con)
+
+
+def cmd_lbi(con, lecteur, args) -> int:
+    return _lire_agences(con, lecteur, args, "lbi", SITES_LBI, membres_lbi)
+
+
+def cmd_netty(con, lecteur, args) -> int:
+    return _lire_agences(con, lecteur, args, "netty", SITES_NETTY, membres_netty)
+
+
+# --------------------------------------------------------------------------------------------
 # R2 -- LA MISE A JOUR : qui arrive, qui part, qui revient, qui change de reseau (note §13, R2)
 # --------------------------------------------------------------------------------------------
 SEUIL_SOURCE = 0.70          # une source qui rend moins de 70 % de ses fiches de la fois d'avant est MALADE
@@ -2091,7 +2227,8 @@ NOMS_RESEAUX = {"iad": "iad", "safti": "SAFTI", "kw": "Keller Williams", "regist
                 "bsk": "BSK Immobilier", "megagence": "Megagence", "expertimo": "Expertimo", "drhouse": "Dr House Immo",
                 "3g": "3G Immo", "lfimmo": "LF immo (ex-Lafourmi)", "sextant": "Sextant", "cotepart": "Côté Particuliers",
                 "exp": "eXp France", "groupement": "Groupement Immobilier", "immodiffusion": "Immo-Diffusion",
-                "lucarne": "A La Lucarne de l'immobilier", "liberkeys": "Liberkeys", "maxihome": "Maxihome"}
+                "lucarne": "A La Lucarne de l'immobilier", "liberkeys": "Liberkeys", "maxihome": "Maxihome",
+                "lbi": "agence locale (site La Boite Immo)", "netty": "agence ou reseau (site Netty)"}
 COLONNES_CSV = ("reseau", "prenom", "nom", "fonction", "agence", "commune", "code_postal", "departement",
                 "agence_gti_la_plus_proche", "distance_km", "telephone", "email", "source_contact",
                 "pourquoi_sans_contact", "nb_annonces", "nb_avis", "note_avis", "distinction", "siren", "rsac_ville",
@@ -2111,6 +2248,7 @@ POURQUOI_SANS_CONTACT = {  # ce que dit la source quand la case reste vide
     "3g": "3G Immo : e-mail non affiche (champ cache, non lu)",
     "immodiffusion": "Immo-Diffusion : pas d'e-mail publie",
     "lucarne": "Lucarne : pas d'e-mail publie",
+    "netty": "Netty : e-mail derriere un bouton (non pris)",
 }
 # le carnet : seuls ces champs se corrigent dans l'app (le reste vient des annuaires ou du registre)
 CHAMPS_CORRIGEABLES = ("prenom", "nom", "telephone", "email", "commune", "code_postal", "fonction", "agence")
@@ -2313,6 +2451,8 @@ COMMANDES = {
     # R1, 20/11 au soir
     ("groupement", None): cmd_groupement, ("immodiffusion", None): cmd_immodiffusion,
     ("lucarne", None): cmd_lucarne, ("liberkeys", None): cmd_liberkeys, ("maxihome", None): cmd_maxihome,
+    # 24/11 : les agences locales, par le fournisseur de leur site (choix de Frederic)
+    ("lbi", None): cmd_lbi, ("netty", None): cmd_netty,
     # R2, la mise a jour
     ("collecte", "initiale"): cmd_collecte_initiale, ("collecte", "ouvrir"): cmd_collecte_ouvrir,
     ("maj", None): cmd_maj,

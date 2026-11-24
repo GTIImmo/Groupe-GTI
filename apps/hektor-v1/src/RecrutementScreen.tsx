@@ -16,7 +16,7 @@ import {
 } from './lib/recrutementEmail'
 import { emailsDuJour } from './lib/recrutement'
 import {
-  ETAPES, ajouterCandidat, chercherCommunes, chercherDoublons, corriger, distanceKm, lireCandidat, lireVivier, majSuivi,
+  ETAPES, SOURCES_AGENCE, ajouterCandidat, chercherCommunes, chercherDoublons, corriger, distanceKm, lireCandidat, lireVivier, majSuivi,
   marquerEtape, nomComplet, nomReseau, noter, pourquoiSansContact, prochaineRelecture, retirerCandidat,
   type AgenceGti, type Candidat, type ChampCorrigeable, type Commune, type Detail, type Doublons, type Evenement,
   type NiveauRetrait, type Vivier,
@@ -455,6 +455,7 @@ export default function RecrutementScreen({ monId }: { monId: string | null }) {
                           <button className="rc-nom" type="button" onClick={() => setOuvert({ reseau: c.reseau, identifiant: c.identifiant })}>{nomComplet(c)}</button>
                           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 4 }}>
                             <span className="rc-res">{nomReseau(c.reseau)}</span>
+                            {SOURCES_AGENCE.has(c.reseau) && c.agence ? <span style={{ fontSize: 12, fontWeight: 600 }}>{c.agence}</span> : null}
                             {c.fonction && c.reseau !== 'registre' ? <span className="rc-mute" style={{ fontSize: 12 }}>{c.fonction}</span> : null}
                           </div>
                         </td>

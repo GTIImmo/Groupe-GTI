@@ -101,7 +101,9 @@ $SOURCES = @(
     @("orpi"), @("laforet"), @("c21"), @("42avenue"), @("manufacture"),
     @("capifrance"), @("optimhome"), @("bsk"), @("megagence"), @("expertimo"),
     @("drhouse"), @("3g"), @("lfimmo"), @("sextant"), @("cotepart"), @("exp"),
-    @("groupement"), @("immodiffusion"), @("lucarne"), @("liberkeys"), @("maxihome")
+    @("groupement"), @("immodiffusion"), @("lucarne"), @("liberkeys"), @("maxihome"),
+    # 24/11 : les agences locales, par le fournisseur de leur site (choix de Frederic ; un lecteur = une liste de sites)
+    @("lbi"), @("netty")
 )
 
 function Read-Interrupteurs {
