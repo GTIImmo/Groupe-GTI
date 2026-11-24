@@ -54,6 +54,9 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
+# la sortie des scripts Python est en UTF-8 : sans cette ligne, PowerShell la lit dans l'ancien encodage de
+# la console et « » devient « ┬½ » dans le journal (vu le 24/11)
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 $root = "C:\Hektor\Projet"
 $donnees = if ($env:RECRUTEMENT_DONNEES) { $env:RECRUTEMENT_DONNEES } else { "C:\Hektor\recrutement_donnees" }
 $py = Join-Path $root ".venv\Scripts\python.exe"

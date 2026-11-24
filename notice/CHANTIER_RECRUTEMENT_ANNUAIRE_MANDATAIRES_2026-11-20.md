@@ -928,8 +928,11 @@ L'ordre :
   - Elle lit **seulement** `recrutement_donnees\robot.env`, **jamais** le `.env` du projet.
   - Interprète : le **Python système**, qui a psycopg2 2.9.12 ; le `.venv` ne l'a pas. Le lanceur le
     sait (`$pyBase`, avec une erreur claire s'il manque).
-- [ ] R4.0 bis ⏸ **Frédéric donne son mot de passe au robot** :
-      `recrutement/poser_mot_de_passe_robot.ps1`.
+- [x] R4.0 bis **Frédéric a donné son mot de passe au robot le 24/11** avec
+      `recrutement/poser_mot_de_passe_robot.ps1`. Vérifié sans jamais l'afficher :
+  - `robot.env` complet : hôte du pooler, port 5432, utilisateur, mot de passe de 32 caractères ;
+  - en base : `rolcanlogin` vrai, ni BYPASSRLS ni superutilisateur, secret rangé en `SCRAM-SHA-256$` ;
+  - le robot se connecte par le pooler : un rôle sur mesure y est accepté.
   - Le script fabrique un mot de passe aléatoire et l'écrit dans `robot.env`.
   - Il ne copie dans le presse-papiers que son **empreinte SCRAM-SHA-256** : le mot de passe ne
     quitte jamais le serveur et Claude ne le voit jamais.
@@ -955,8 +958,23 @@ L'ordre :
   - 0 donnée de registre pour une personne en opposition ;
   - 0 personne de la liste noire.
   - Le témoin « effacement » est éprouvé par `test_descente.py`.
-- [ ] R4.4 Le premier envoi — délégué (§15), par le robot. D'abord `--essai` (tout ANNULÉ), puis le
-      vrai, dès que le robot a son mot de passe.
+- [x] R4.4 **Le premier envoi est fait le 24/11 à 11:30**, sous délégation (§15), par le robot.
+  - **D'abord `--essai`** : tout est passé, les contrôles étaient à 0, puis tout a été annulé.
+    Témoin : la base a été relue à 0 partout après l'annulation.
+  - **Puis le vrai** : 2 116 fiches, 1 487 entreprises, 1 collecte, 25 états de source. Contrôles :
+    manquantes 0, en trop 0, iad 0, opposition 0, liste noire 0. Validé.
+  - **Recontrôlé à part**, base contre local : les 25 réseaux, les 4 départements (07 346 · 42 891 ·
+    43 183 · 63 696) et les 642 joignables sont identiques.
+  - Côté base seulement : 2 106 fiches ont une agence GTI la plus proche, et 298 entreprises en
+    opposition n'ont aucune donnée du registre.
+  - **La descente**, en essai puis en vrai : 0 empreinte, 0 fiche retirée, 0 correction. La liste
+    est vide, comme attendu.
+  - **Les interrupteurs sont ALLUMÉS** (`interrupteurs.env` : descente, montée, battements à 1).
+  - **Cycle éprouvé** `-StartAtLabel controle` : contrôle VERT, export, montée validée, sauvegarde
+    relue, compte rendu, sortie 0. Les battements de 4 étapes sont arrivés en « success » dans
+    `app_worker_registry`. Les 3 autres parleront au 1er run complet.
+  - Défaut d'affichage trouvé et corrigé : les « » de Python étaient déformés dans le journal
+    (`[Console]::OutputEncoding` en UTF-8).
 
 **R5 — La tâche, la surveillance, la sauvegarde**
 - [x] R5.1 Les 3 ajouts de `check_gti_health.py` (délégué, §15), recopiés du geste du 18/11 :
@@ -1164,3 +1182,11 @@ L'ordre :
 - **24/11/2026, après-midi** — **R3 posé en base** par Claude, sur l'accord écrit de Frédéric.
   Répétition 11/11 ; le témoin administrateur / non-administrateur est refait à part. Détail en
   R3.3. Prochaine étape : R4, la montée et la descente par le robot.
+- **24/11/2026, 11:30** — **R4 fini**.
+  - Frédéric a posé le mot de passe du robot : seule l'empreinte est sortie du serveur.
+  - Premier envoi : essai annulé, puis le vrai, avec les contrôles à 0 et le recontrôle base contre
+    local identique.
+  - La descente est verte. Les interrupteurs sont allumés, et le cycle est éprouvé avec ses
+    battements.
+  - Le run du 06/12 fera donc tout seul : descente, collecte, mise à jour, contrôle, montée,
+    sauvegarde.
