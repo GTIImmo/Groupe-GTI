@@ -877,10 +877,40 @@ L'ordre :
     laisse la marge.
 
 **R3 — La base** *(accord obligatoire)*
-- [ ] R3.1 Le patch : schéma `recrutement`, fonctions `public.rec_*` (admin), droits, 7 lignes
-      `app_worker_registry`
-- [ ] R3.2 La répétition (admin lit, négociateur refusé, descente aveugle, 7 clés extraites du patch)
-      et l'inverse (rien ne reste)
+- [x] R3.1 Le patch `supabase/patch_recrutement_schema_2026-11-24.sql` (24/11) :
+  - le schéma `recrutement` et 6 tables : `fiche`, `entreprise`, `collecte`, `source_etat`,
+    `correction`, `liste_noire`. RLS partout, aucun droit pour `public`, `anon` ni `authenticated` ;
+  - des **contraintes qui tiennent les règles dans la base** :
+    - une fiche collectée est dans les 4 départements. ⚠ Il faut un `coalesce` : un CHECK laisse
+      passer un NULL ;
+    - une coordonnée porte sa source ;
+    - une entreprise en opposition ne garde aucune donnée du registre ;
+  - le **robot `recrutement_robot`**, né NOLOGIN : il lit, ajoute et met à jour les 4 tables
+    montées, jamais de suppression ; il ne fait que lire le carnet et la liste noire ; il n'a aucun
+    droit ailleurs ;
+  - `public.rec_etat_collecte()`, le bandeau, réservé aux administrateurs ;
+  - les 7 lignes de battement, en `bimonthly`.
+  - ⚠ **Le suivi et le fil d'échanges sont reportés au patch de l'écran (R6)** : leurs étapes se
+    décideront avec l'écran.
+  - Mesuré avant d'écrire, en lecture seule :
+    - Supabase ne pose aucun droit par défaut sur un schéma neuf ;
+    - l'administrateur se reconnaît à `app_user_profile.role = 'admin'` et à un compte actif ;
+    - `app_worker_registry` a 6 contraintes, toutes respectées ;
+    - Postgres 17.6 ; l'éditeur peut prendre les rôles `anon` et `authenticated` et créer un rôle.
+- [x] R3.2 La répétition et l'inverse.
+  - **La répétition** joue d'abord une transaction ANNULÉE, dans la peau de l'app : un
+    administrateur lit ; un non-administrateur reçoit « Réservé aux administrateurs » ; la clé
+    publique est refusée ; personne ne lit une fiche en direct. Tout écart arrête le script, et
+    les personnes sont choisies par la requête, sans identité écrite. Elle montre ensuite un
+    tableau de 11 contrôles, dont le témoin inverse : le robot n'a aucun droit sur les tables de
+    l'app.
+  - **L'inverse** refuse de tourner si l'app a déjà écrit des corrections ou des demandes « ne plus
+    contacter ». Il vérifie ensuite qu'il ne reste rien, et que `app_worker_registry` et
+    `is_app_admin` sont intacts.
+  - **Contrôles hors ligne** : les 7 clés, extraites du patch, sont celles qu'envoie le lanceur ;
+    les parenthèses, chaînes et `$$` sont équilibrés.
+  - ⭐ **Un vrai défaut trouvé avant le collage** : `app_user_profile.role` est un ENUM, et
+    `coalesce(role, '')` aurait fait échouer la répétition → `role::text`.
 - [ ] R3.3 ⏸ Frédéric colle le patch, puis la répétition
 
 **R4 — La montée et la descente** *(accord pour le premier envoi)*
