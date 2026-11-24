@@ -203,6 +203,10 @@ TASK_CRITICALITY: dict[str, str] = {
     #   Il sort en 1 quand une source est en echec ou MALADE, ou que le controle est rouge.
     #   DECLAREE ICI AVANT d etre enregistree dans Windows (meme regle que ses soeurs).
     "GTI Recrutement": "warning",
+    # 2026-11-24 : sa petite soeur QUOTIDIENNE (R6.8 du chantier recrutement) -- copie datee de ce que l'app
+    #   ecrit au recrutement (suivi, fil, retraits...) + la descente. "warning" pour la meme raison : un jour
+    #   rate se rattrape le lendemain, rien n'est perdu (la base reste la source). DECLAREE AVANT.
+    "GTI Recrutement Sauvegarde": "warning",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -3700,7 +3704,7 @@ def build_parser() -> argparse.ArgumentParser:
                  "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
                  "GTI Entretien Documents,GTI Entretien Photos,"
                  "GTI Balayage Photos Masquees,GTI Menage Temporaires,"
-                 "GTI Recrutement"),
+                 "GTI Recrutement,GTI Recrutement Sauvegarde"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
