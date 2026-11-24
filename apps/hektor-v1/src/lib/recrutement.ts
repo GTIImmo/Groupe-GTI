@@ -133,8 +133,13 @@ export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: numbe
   return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
+// ⚠ Vu en réel le 24/11 : 3 fiches Dr House portent du HTML brut dans le nom (« <p>… <strong>…</strong> »). React
+//   l'échappe (aucun danger), mais c'est illisible : on retire les balises À L'AFFICHAGE. La vraie correction est
+//   dans le collecteur.
+const sansBalises = (s: string) =>
+  s.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/\s+/g, ' ').trim()
 export const nomComplet = (c: { prenom: string | null; nom: string | null }) =>
-  [c.prenom, c.nom].map((x) => (x ?? '').trim()).filter(Boolean).join(' ') || 'Sans nom'
+  [c.prenom, c.nom].map((x) => sansBalises(x ?? '')).filter(Boolean).join(' ') || 'Sans nom'
 
 // Le prochain passage de la tâche « GTI Recrutement » : le 1er dimanche de décembre, février, avril, juin, août, octobre.
 export function prochaineRelecture(depuis = new Date()): Date {
