@@ -164,6 +164,22 @@ https://claude.ai/artifact/EBmocyoc2sRduq9cEg18vP — 4 planches, données ficti
   La fenêtre peut donc ouvrir la messagerie avec un texte complet (une fois « [CE QUE GTI PROPOSE] » rempli).
   `recrutement_envoi_email` (l'envoi direct par Gmail) reste ÉTEINT : à allumer seulement sur sa demande.
 
+## 4 ter. ✅ E2 CODÉ le 24/11 (écrire à plusieurs + l'envoi un par un — planches 2 et 3)
+
+- Liste : une **barre d'action** dès qu'un candidat est coché (« Écrire à N candidats », « Tout décocher »).
+- Fenêtre : recevront / écartés et POURQUOI (pas d'e-mail ; opposé au registre, d'office ; déjà écrit il y a moins de
+  30 jours, avec « Lui écrire quand même ») ; modèle et texte communs, cases remplies pour chacun ; aperçu ‹ i / N › ;
+  « Retoucher ce message seulement » ; plafond de 40 par jour (compte du jour lu en base) ; au-delà : « à refaire demain ».
+- Envoi : un toutes les 5 s, statut par personne, « Arrêter l'envoi » ; un refus ne bloque pas les autres ; chaque envoi
+  noté dans le fil, étape « Contactée », « informée ». ⚠ L'envoi tourne DANS la fenêtre (elle doit rester ouverte) :
+  la maquette disait « vous pouvez fermer », ce qui demanderait une file côté serveur, non faite.
+- Base : `supabase/patch_recrutement_envoi_groupe_2026-11-24*.sql` (rec_candidats + 3 clés, rec_emails_du_jour),
+  répétition 7/7 verte, **PAS posé** (accord). Sans lui, la fenêtre bloque l'envoi (« compte du jour illisible »).
+- Il faut aussi l'envoi direct allumé (`recrutement_envoi_email`) : plusieurs e-mails personnalisés ne passent pas par
+  une messagerie.
+- Éprouvé en local : 5 cochés → 3 recevront / 2 écartés ; envoi simulé de 3 à 5 s d'écart ; « déjà écrit
+  aujourd'hui » + « Lui écrire quand même » ; sélection vidée après ; étape « Contacté » ; build vert.
+
 ## 5. ⏸ Ce que Frédéric décide
 
 1. **L'adresse d'envoi** : la boîte de l'administrateur connecté, ou une adresse « recrutement@ » à créer.

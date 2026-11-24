@@ -55,8 +55,26 @@ export function trous(texte: string): string[] {
 
 export type Reglages = { envoi: boolean; adressePostale: string | null; contactDonnees: string | null }
 
+// Ce que le montage lit d'une personne : une fiche ouverte (Detail) le fournit, une ligne de la liste aussi (E2).
+export type Contexte = {
+  fiche: Pick<Detail['fiche'], 'origine' | 'reseau' | 'url' | 'source_contact' | 'prenom'>
+  suivi: { info_donnee_le: string | null } | null
+  carnet: Array<{ champ: string; valeur: string | null }>
+}
+/** E2 : le contexte d'une ligne de la liste (le prénom y est déjà corrigé par le carnet). */
+export function contexteDe(c: Candidat): Contexte {
+  return {
+    fiche: { origine: c.origine, reseau: c.reseau, url: c.url, source_contact: c.source_contact ?? null, prenom: c.prenom },
+    suivi: { info_donnee_le: c.info_donnee_le ?? null },
+    carnet: [],
+  }
+}
+export const PLAFOND_JOUR = 40
+export const DELAI_ENVOI_MS = 5000
+export const JOURS_ENTRE_DEUX = 30
+
 /** D'où vient sa coordonnée, en clair ; null = elle nous l'a donnée elle-même (pas de bloc « source »). */
-export function sourceDe(d: Detail): string | null {
+export function sourceDe(d: Contexte): string | null {
   const f = d.fiche
   if (f.origine === 'collecte') {
     return f.reseau === 'registre' ? 'l\'annuaire public des entreprises (registre national)' : `l'annuaire public des conseillers ${nomReseau(f.reseau)}`
@@ -65,11 +83,11 @@ export function sourceDe(d: Detail): string | null {
 }
 
 /** Le bloc complet est dû au premier contact d'une personne trouvée dans un annuaire, tant qu'elle n'est pas informée. */
-export function blocDu(d: Detail): boolean {
+export function blocDu(d: Contexte): boolean {
   return sourceDe(d) != null && !d.suivi?.info_donnee_le
 }
 
-export function blocTexte(d: Detail, r: Reglages): string {
+export function blocTexte(d: Contexte, r: Reglages): string {
   const source = sourceDe(d)
   const lien = d.fiche.origine === 'collecte' && d.fiche.url ? ` (${d.fiche.url})` : ''
   if (!blocDu(d)) return 'Vous préférez que nous ne vous écrivions plus ? Répondez simplement « Ne plus me contacter ».'
@@ -167,7 +185,7 @@ export async function envoyer(p: {
 }
 
 /** Les valeurs des cases {…} pour un candidat. */
-export function valeursPour(d: Detail, candidat: Candidat | null, de: Expediteur | null): Record<string, string> {
+export function valeursPour(d: Contexte, candidat: Candidat | null, de: Expediteur | null): Record<string, string> {
   const prenom = (d.carnet.find((c) => c.champ === 'prenom')?.valeur ?? d.fiche.prenom ?? '').trim()
   return {
     prenom: prenom || '{prenom}',

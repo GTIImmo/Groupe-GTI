@@ -47,6 +47,10 @@ export type Candidat = {
   suivi_par: string | null
   archive: boolean
   corrige: boolean
+  // E2 (24/11) : rendues par rec_candidats une fois patch_recrutement_envoi_groupe posé (absentes avant : undefined)
+  source_contact?: string | null
+  info_donnee_le?: string | null
+  dernier_email?: string | null
 }
 
 export type AgenceGti = { nom: string; departement: string; lat: number; lon: number }
@@ -184,7 +188,17 @@ export async function lireCandidat(reseau: string, identifiant: string): Promise
   return { ...d, carnet: d.carnet ?? [], fil: d.fil ?? [], autres: d.autres ?? [] }
 }
 
-export type Doublons = { sur_liste_noire: boolean; fiches: Array<{ reseau: string; identifiant: string; prenom: string | null; nom: string | null; commune: string | null }> }
+/** E2 : combien d'e-mails l'administrateur connecté a notés aujourd'hui (le plafond par jour). null = inconnu (patch E2 absent). */
+export async function emailsDuJour(): Promise<number | null> {
+  if (enLocal()) return 22
+  try {
+    return Number(await appeler<number>('rec_emails_du_jour'))
+  } catch {
+    return null
+  }
+}
+
+export type Doublons ={ sur_liste_noire: boolean; fiches: Array<{ reseau: string; identifiant: string; prenom: string | null; nom: string | null; commune: string | null }> }
 export async function chercherDoublons(p: { prenom: string; nom: string; telephone: string; email: string; siren: string; departement: string }): Promise<Doublons> {
   if (enLocal()) {
     const cle = `${p.prenom} ${p.nom}`.trim().toLowerCase()

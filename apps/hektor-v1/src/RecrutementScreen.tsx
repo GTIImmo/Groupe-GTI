@@ -10,9 +10,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { deposerPieceEmail, gmailPieceTailleMax, loadAppUsers, retirerPieceEmail, type GmailPieceOrdinateur } from './lib/api'
 import {
-  MODELES, blocDu, blocTexte, envoyer as envoyerEmail, html as htmlEmail, lireExpediteur, lireReglages, remplir, sourceDe,
-  texteComplet, trous, valeursPour, type Expediteur, type ModeleCle, type Reglages,
+  DELAI_ENVOI_MS, JOURS_ENTRE_DEUX, MODELES, PLAFOND_JOUR, blocDu, blocTexte, contexteDe, envoyer as envoyerEmail,
+  html as htmlEmail, lireExpediteur, lireReglages, remplir, sourceDe, texteComplet, trous, valeursPour,
+  type Expediteur, type ModeleCle, type Reglages,
 } from './lib/recrutementEmail'
+import { emailsDuJour } from './lib/recrutement'
 import {
   ETAPES, ajouterCandidat, chercherCommunes, chercherDoublons, corriger, distanceKm, lireCandidat, lireVivier, majSuivi,
   marquerEtape, nomComplet, nomReseau, noter, pourquoiSansContact, prochaineRelecture, retirerCandidat,
@@ -150,6 +152,7 @@ export default function RecrutementScreen({ monId }: { monId: string | null }) {
   const [choisis, setChoisis] = useState<Set<string>>(new Set())
   const [ouvert, setOuvert] = useState<{ reseau: string; identifiant: string } | null>(null)
   const [ajout, setAjout] = useState(false)
+  const [groupe, setGroupe] = useState(false)   // E2 : écrire aux candidats cochés
   const [admins, setAdmins] = useState<UserProfile[]>([])
   const listeRef = useRef<HTMLElement | null>(null)
 
@@ -480,6 +483,14 @@ export default function RecrutementScreen({ monId }: { monId: string | null }) {
               </table>
             </div>
           ) : <p className="rc-vide">Aucun candidat ne répond à ces critères.</p>}
+          {choisis.size ? (
+            // E2 (planche 2) : la barre d'action des candidats cochés
+            <div className="rc-barre-action" role="region" aria-label="Candidats choisis">
+              <span><strong>{choisis.size}</strong> choisi{choisis.size > 1 ? 's' : ''}</span>
+              <button className="rc-lien" type="button" style={{ color: '#f6b6d5' }} onClick={() => setChoisis(new Set())}>Tout décocher</button>
+              <button className="rc-btn rc-btn-main" type="button" style={{ marginLeft: 'auto', minHeight: 40 }} onClick={() => setGroupe(true)}>{Ico.mail}Écrire à {choisis.size} candidat{choisis.size > 1 ? 's' : ''}</button>
+            </div>
+          ) : null}
           <div className="rc-pied">
             <span className="rc-num">{filtrees.length ? `${entier.format(page * PAR_PAGE + 1)} à ${entier.format(page * PAR_PAGE + pageLignes.length)} sur ${entier.format(filtrees.length)} candidats` : ''}{choisis.size ? ` · ${choisis.size} choisi${choisis.size > 1 ? 's' : ''}` : ''}</span>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -490,6 +501,14 @@ export default function RecrutementScreen({ monId }: { monId: string | null }) {
         </section>
       ) : null}
 
+      {groupe ? (
+        <ModaleGroupe
+          candidats={candidats.filter((c) => choisis.has(cle(c)))}
+          onFermer={() => setGroupe(false)}
+          onPatch={(k, patch) => patcher(k, patch)}
+          onFini={() => { setGroupe(false); setChoisis(new Set()) }}
+        />
+      ) : null}
       {ajout ? (
         <ModaleAjouter
           agences={agences}
@@ -1460,7 +1479,7 @@ function ModaleEcrire({ detail, candidat, a, nom, onFermer, onEnvoye }: {
   // ce qui suit un envoi : le fil, l'étape, « informée »
   const noterEnvoi = async () => {
     await noter(f.reseau, f.identifiant, 'email', `Objet : ${objet.trim()}\n\n${texteComplet(corps, bloc)}`)
-    const patch: Partial<Candidat> = {}
+    const patch: Partial<Candidat> = { dernier_email: new Date().toISOString(), ...(blocComplet ? { info_donnee_le: new Date().toISOString() } : {}) }
     const avancer = (detail.suivi?.etape ?? 1) < 2
     if (avancer) { await marquerEtape(f.reseau, f.identifiant, 2); patch.etape = 2 }
     if (blocComplet) await majSuivi(f.reseau, f.identifiant, { info_donnee: true })
@@ -1600,6 +1619,246 @@ function ModaleEcrire({ detail, candidat, a, nom, onFermer, onEnvoye }: {
             {/* sans aucun script (pas d'allow-scripts) : le HTML est le nôtre, texte échappé ; « same-origin » pour qu'il s'affiche partout */}
             <iframe title="Aperçu de l’e-mail" sandbox="allow-same-origin" srcDoc={apercu} />
           </div>
+        </div>
+      </div>
+    </Fenetre>
+  )
+}
+
+// ─── E2 (24/11/2026) : écrire à PLUSIEURS candidats — maquette, planches 2 (écrire) et 3 (l'envoi, un par un) ───
+// UN e-mail PAR personne (jamais une liste de destinataires), à son prénom, avec SA source et son bloc RGPD.
+// Écartés avant d'envoyer, et l'écran dit pourquoi : pas d'e-mail ; opposé au registre (d'office) ; déjà écrit il y a moins
+// de 30 jours (« lui écrire quand même »). Envoi doux : un toutes les 5 s, 40 par jour et par expéditeur (rec_emails_du_jour).
+// ⚠ L'envoi tourne DANS CETTE FENÊTRE : elle doit rester ouverte (la maquette disait « vous pouvez fermer » : il faudrait une
+//   file côté serveur, pas faite ici). « Arrêter l'envoi » s'arrête après le message en cours.
+type EtatEnvoi = { etat: 'attente' | 'encours' | 'envoye' | 'refuse'; heure?: string; erreur?: string }
+
+function ModaleGroupe({ candidats, onFermer, onPatch, onFini }: {
+  candidats: Candidat[]; onFermer: () => void; onPatch: (cle: string, patch: Partial<Candidat>) => void; onFini: () => void
+}) {
+  const [de, setDe] = useState<Expediteur | null>(null)
+  const [reglages, setReglages] = useState<Reglages | null>(null)
+  const [dejaAujourdhui, setDejaAujourdhui] = useState<number | null | undefined>(undefined)
+  const [modele, setModele] = useState<ModeleCle>('premier')
+  const [objet, setObjet] = useState(MODELES[0].objet)
+  const [corps, setCorps] = useState(MODELES[0].texte)
+  const [surcharges, setSurcharges] = useState<Record<string, string>>({})
+  const [retouche, setRetouche] = useState(false)
+  const [inclure, setInclure] = useState<Set<string>>(new Set())
+  const [i, setI] = useState(0)
+  const [phase, setPhase] = useState<'ecrire' | 'envoi' | 'fini'>('ecrire')
+  const [etats, setEtats] = useState<Record<string, EtatEnvoi>>({})
+  const [ordre, setOrdre] = useState<Array<{ k: string; nom: string; detail: string }>>([])
+  const arret = useRef(false)
+
+  useEffect(() => {
+    let annule = false
+    void Promise.all([lireExpediteur(), lireReglages(), emailsDuJour()]).then(([e, r, n]) => {
+      if (!annule) { setDe(e); setReglages(r); setDejaAujourdhui(n) }
+    })
+    return () => { annule = true }
+  }, [])
+  // un autre modèle : le texte commun repart du modèle, les retouches par personne aussi
+  useEffect(() => {
+    const m = MODELES.find((x) => x.cle === modele) ?? MODELES[0]
+    setObjet(m.objet)
+    setCorps(m.texte)
+    setSurcharges({})
+    setRetouche(false)
+  }, [modele])
+
+  // qui reçoit, qui est écarté, et pourquoi
+  const ecartes: Array<{ c: Candidat; raison: string }> = []
+  const recents: Array<{ c: Candidat; raison: string }> = []
+  const recevront: Candidat[] = []
+  for (const c of candidats) {
+    const jours = c.dernier_email ? Math.floor((Date.now() - new Date(c.dernier_email).getTime()) / 86400000) : null
+    if (!c.email) ecartes.push({ c, raison: 'pas d’e-mail public' })
+    else if (c.opposition) ecartes.push({ c, raison: 'opposé à la prospection au registre : écarté d’office' })
+    else if (jours != null && jours < JOURS_ENTRE_DEUX) {
+      recents.push({ c, raison: jours === 0 ? 'déjà écrit aujourd’hui' : `déjà écrit le ${date(c.dernier_email)}, il y a ${jours} jour${jours > 1 ? 's' : ''}` })
+      if (inclure.has(cle(c))) recevront.push(c)
+    } else recevront.push(c)
+  }
+  const nbEcartes = ecartes.length + recents.filter((r) => !inclure.has(cle(r.c))).length
+  const restant = dejaAujourdhui == null ? 0 : Math.max(0, PLAFOND_JOUR - dejaAujourdhui)
+  const partent = recevront.slice(0, restant)
+  const demain = recevront.length - partent.length
+
+  const pour = (c: Candidat) => {
+    const ctx = contexteDe(c)
+    const v = valeursPour(ctx, c, de)
+    const k = cle(c)
+    return {
+      k, c, objet: remplir(objet, v), corps: surcharges[k] ?? remplir(corps, v),
+      bloc: reglages ? blocTexte(ctx, reglages) : '', blocComplet: blocDu(ctx),
+    }
+  }
+  const index = Math.min(i, Math.max(0, partent.length - 1))
+  const courant = partent.length ? pour(partent[index]) : null
+  const aCompleter = [...new Set(partent.flatMap((c) => { const p = pour(c); return [...trous(p.objet), ...trous(p.corps)] }))]
+  const reglagesManquants = partent.some((c) => trous(pour(c).bloc).length > 0)
+  const envoiApp = reglages?.envoi === true
+  const pret = phase === 'ecrire' && Boolean(de && reglages) && envoiApp && dejaAujourdhui != null && partent.length > 0
+    && !aCompleter.length && !reglagesManquants && Boolean(objet.trim())
+  const apercu = useMemo(() => (courant ? htmlEmail(courant.corps, courant.bloc || ' ') : ''), [courant?.corps, courant?.bloc])
+
+  const message = !reglages || dejaAujourdhui === undefined ? 'Lecture de votre boîte et du compte du jour…'
+    : !envoiApp ? 'L’envoi à plusieurs part de votre boîte Gmail, depuis l’app : l’envoi direct n’est pas encore allumé.'
+      : dejaAujourdhui === null ? 'Le compte des e-mails du jour n’est pas lisible (le patch de l’envoi groupé n’est pas posé) : envoi bloqué.'
+        : restant === 0 ? `Plafond du jour atteint (${PLAFOND_JOUR} e-mails) : reprenez demain.`
+          : aCompleter.length ? `À compléter avant d’envoyer : ${aCompleter.join(', ')}.`
+            : reglagesManquants ? 'Le bloc d’information attend l’adresse postale et l’adresse de contact pour les données.'
+              : demain > 0 ? `${partent.length} partiront aujourd’hui ; ${demain} au-delà du plafond de ${PLAFOND_JOUR} : à refaire demain.` : ''
+
+  const envoyerTout = async () => {
+    if (!pret || !de) return
+    arret.current = false
+    const liste = partent.map(pour) // figé au clic : une retouche pendant l'envoi ne change rien
+    setOrdre(liste.map((p) => ({ k: p.k, nom: nomComplet(p.c), detail: `${nomReseau(p.c.reseau)} · ${p.c.commune ?? ''}` })))
+    setEtats(Object.fromEntries(liste.map((p) => [p.k, { etat: 'attente' } as EtatEnvoi])))
+    setPhase('envoi')
+    for (let n = 0; n < liste.length; n += 1) {
+      if (arret.current) break
+      const p = liste[n]
+      setEtats((e) => ({ ...e, [p.k]: { etat: 'encours' } }))
+      let parti = false
+      try {
+        await envoyerEmail({ de, a: p.c.email!, objet: p.objet, corps: p.corps, bloc: p.bloc, pieces: [], reseau: p.c.reseau, identifiant: p.c.identifiant })
+        parti = true
+      } catch (err) {
+        setEtats((e) => ({ ...e, [p.k]: { etat: 'refuse', erreur: err instanceof Error ? err.message : String(err) } }))
+      }
+      if (parti) {
+        const heure = new Date().toLocaleTimeString('fr-FR')
+        setEtats((e) => ({ ...e, [p.k]: { etat: 'envoye', heure } }))
+        try {
+          await noter(p.c.reseau, p.c.identifiant, 'email', `Objet : ${p.objet.trim()}\n\n${texteComplet(p.corps, p.bloc)}`)
+          const patch: Partial<Candidat> = { dernier_email: new Date().toISOString() }
+          if (p.c.etape < 2) { await marquerEtape(p.c.reseau, p.c.identifiant, 2); patch.etape = 2 }
+          if (p.blocComplet) { await majSuivi(p.c.reseau, p.c.identifiant, { info_donnee: true }); patch.info_donnee_le = new Date().toISOString() }
+          onPatch(p.k, patch)
+        } catch {
+          setEtats((e) => ({ ...e, [p.k]: { etat: 'envoye', heure, erreur: 'parti, mais le fil n’a pas pu être mis à jour' } }))
+        }
+      }
+      if (n < liste.length - 1 && !arret.current) await new Promise((r) => window.setTimeout(r, DELAI_ENVOI_MS))
+    }
+    setPhase('fini')
+  }
+
+  if (phase !== 'ecrire') {
+    const valeurs = Object.values(etats)
+    const envoyes = valeurs.filter((x) => x.etat === 'envoye').length
+    const refuses = valeurs.filter((x) => x.etat === 'refuse').length
+    const faits = envoyes + refuses
+    return (
+      <Fenetre largeur={760}
+        titre={phase === 'envoi' ? `Envoi en cours : ${faits} sur ${ordre.length}` : `Envoi terminé : ${envoyes} envoyé${envoyes > 1 ? 's' : ''}${refuses ? `, ${refuses} refusé${refuses > 1 ? 's' : ''}` : ''}`}
+        sousTitre={phase === 'envoi' ? `Un e-mail toutes les ${DELAI_ENVOI_MS / 1000} secondes. Gardez cette fenêtre ouverte pendant l’envoi.` : 'Chaque envoi est noté dans le fil de la personne.'}
+        onFermer={phase === 'envoi' ? () => { arret.current = true } : onFini}
+        pied={phase === 'envoi'
+          ? <button className="rc-btn rc-btn-quiet" type="button" onClick={() => { arret.current = true }}>Arrêter l’envoi</button>
+          : <button className="rc-btn rc-btn-main" type="button" onClick={onFini}>Fermer</button>}>
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="rc-progres" role="progressbar" aria-valuemin={0} aria-valuemax={ordre.length} aria-valuenow={faits} aria-label="Avancement de l’envoi">
+            <span style={{ width: `${ordre.length ? (faits / ordre.length) * 100 : 0}%` }} />
+          </div>
+          {dejaAujourdhui != null ? <p className="rc-mute" style={{ margin: 0, fontSize: 12.5 }}>Aujourd’hui depuis votre boîte : {dejaAujourdhui + envoyes} sur {PLAFOND_JOUR}.</p> : null}
+          <ul className="rc-liste-envoi">
+            {ordre.map((o) => {
+              const e = etats[o.k] ?? { etat: 'attente' }
+              const style = e.etat === 'envoye' ? 'rc-p-club' : e.etat === 'refuse' ? 'rc-p-oppose' : e.etat === 'encours' ? 'rc-p-rdv' : 'rc-p-afaire'
+              const libelle = e.etat === 'envoye' ? 'Envoyé' : e.etat === 'refuse' ? 'Refusé par Gmail' : e.etat === 'encours' ? 'En cours…' : 'En attente'
+              return (
+                <li key={o.k}>
+                  <span><strong>{o.nom}</strong><span className="rc-sub" style={{ display: 'block' }}>{e.erreur ?? o.detail}</span></span>
+                  <span className={`rc-pill ${style}`}>{libelle}</span>
+                  <span className="rc-mute" style={{ fontSize: 12, textAlign: 'right' }}>{e.heure ?? ''}</span>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="rc-info">Un refus de Gmail (adresse qui n’existe plus) ne bloque pas les autres{phase === 'fini' && demain > 0 ? ` ; ${demain} personne${demain > 1 ? 's' : ''} au-delà du plafond, à reprendre demain` : ''}.</p>
+        </div>
+      </Fenetre>
+    )
+  }
+
+  return (
+    <Fenetre titre={`Écrire à ${candidats.length} candidat${candidats.length > 1 ? 's' : ''}`} largeur={1180} onFermer={onFermer}
+      sousTitre="Un e-mail par personne, à son prénom, avec sa source et son lien de désinscription. Personne ne voit les autres."
+      pied={<>
+        <span className="rc-mute" style={{ marginRight: 'auto', fontSize: 13 }}>{message}</span>
+        <button className="rc-btn rc-btn-quiet" type="button" onClick={onFermer}>Annuler</button>
+        <button className="rc-btn rc-btn-main" type="button" disabled={!pret} onClick={() => void envoyerTout()}>Envoyer {partent.length} e-mail{partent.length > 1 ? 's' : ''}</button>
+      </>}>
+      <div className="rc-ecrire">
+        <div className="rc-ecrire-saisie">
+          <div className="rc-compteurs">
+            <div className="is-vert"><strong>{recevront.length}</strong><span>recevront l’e-mail</span></div>
+            <div className="is-ambre"><strong>{nbEcartes}</strong><span>{nbEcartes ? 'écartés, voici pourquoi' : 'écarté'}</span></div>
+          </div>
+          {ecartes.length || recents.length ? (
+            <ul className="rc-ecartes">
+              {ecartes.map(({ c, raison }) => <li key={cle(c)}><strong>{nomComplet(c)}</strong> — {raison}</li>)}
+              {recents.map(({ c, raison }) => (
+                <li key={cle(c)} className="is-recent"><strong>{nomComplet(c)}</strong> — {raison}
+                  <label className="rc-case" style={{ marginTop: 6, fontSize: 12.5 }}>
+                    <input type="checkbox" checked={inclure.has(cle(c))} onChange={(e) => { const n = new Set(inclure); if (e.target.checked) n.add(cle(c)); else n.delete(cle(c)); setInclure(n) }} />
+                    Lui écrire quand même
+                  </label>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="rc-champ">Modèle
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {MODELES.map((m) => (
+                <button key={m.cle} type="button" className={`rc-chip${modele === m.cle ? ' is-on' : ''}`} aria-pressed={modele === m.cle} onClick={() => setModele(m.cle)}>{m.nom}</button>
+              ))}
+            </div>
+          </div>
+          <label className="rc-champ">Objet (le même pour tous)<input type="text" value={objet} onChange={(e) => setObjet(e.target.value)} /></label>
+          <label className="rc-champ">Message (commun){Object.keys(surcharges).length ? <span className="rc-opt">{Object.keys(surcharges).length} retouché(s) à part</span> : null}
+            <textarea className="rc-ecrire-texte" value={corps} onChange={(e) => setCorps(e.target.value)} />
+          </label>
+          <p className="rc-mute" style={{ margin: 0, fontSize: 12.5 }}>{'{prenom}'}, {'{agence_proche}'} et {'{expediteur}'} se remplissent pour chacun.</p>
+          {aCompleter.length ? <p className="rc-trous">À compléter : {aCompleter.join(', ')}.</p> : null}
+          <div className="rc-info">
+            <strong>Envoi doux</strong> : un e-mail toutes les {DELAI_ENVOI_MS / 1000} secondes, {PLAFOND_JOUR} au plus par jour et par expéditeur
+            {dejaAujourdhui != null ? ` (aujourd’hui : ${dejaAujourdhui} envoyés)` : ''}.
+          </div>
+        </div>
+        <div className="rc-ecrire-apercu">
+          {courant ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button className="rc-nav" type="button" aria-label="Destinataire précédent" onClick={() => { setRetouche(false); setI((index + partent.length - 1) % partent.length) }}>{Ico.retour}</button>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }} aria-live="polite">{index + 1} / {partent.length} — {nomComplet(courant.c)}</p>
+                  <button className="rc-nav" type="button" aria-label="Destinataire suivant" onClick={() => { setRetouche(false); setI((index + 1) % partent.length) }} style={{ transform: 'scaleX(-1)' }}>{Ico.retour}</button>
+                </div>
+                <button className="rc-btn rc-btn-quiet rc-btn-petit" type="button" onClick={() => {
+                  if (!retouche && surcharges[courant.k] == null) setSurcharges({ ...surcharges, [courant.k]: courant.corps })
+                  setRetouche(!retouche)
+                }}>{retouche ? 'Fermer la retouche' : 'Retoucher ce message seulement'}</button>
+              </div>
+              {retouche ? (
+                <label className="rc-champ">Le message pour {nomComplet(courant.c)} seulement
+                  <textarea className="rc-ecrire-texte" value={surcharges[courant.k] ?? courant.corps} onChange={(e) => setSurcharges({ ...surcharges, [courant.k]: e.target.value })} />
+                  <button className="rc-lien" type="button" onClick={() => { const n = { ...surcharges }; delete n[courant.k]; setSurcharges(n); setRetouche(false) }}>Revenir au message commun</button>
+                </label>
+              ) : null}
+              <div className="rc-ecrire-cadre">
+                <div className="rc-ecrire-tetes">
+                  <div><strong>À :</strong> {courant.c.email}</div>
+                  <div><strong>Objet :</strong> {courant.objet || '—'}</div>
+                </div>
+                <iframe title={`Aperçu de l’e-mail à ${nomComplet(courant.c)}`} sandbox="allow-same-origin" srcDoc={apercu} />
+              </div>
+            </>
+          ) : <p className="rc-vide">Personne ne recevra d’e-mail avec ces choix.</p>}
         </div>
       </div>
     </Fenetre>
