@@ -179,7 +179,8 @@ Ce sont **les 5 mêmes ventes que le temps 1** :
 **La cause est la vague, pas le remède** : pour ces 5 lignes, la « coupe neuve » du protocole emporte l'offre et le
 compromis de la ligne dans un dossier neuf et **laisse la vente derrière** (preuve : le brouillon des coupes du passage 79,
 lignes `protocole_coupe_neuve` de ces 5 lignes). Le protocole ne prouve pas la vente parce que **la date Hektor de la vente
-a une faute de saisie** (l'année ou le mois) : 2019-06-20 contre 20/03/2019, 2020-05-22 contre 18/05/2020,
+a une faute de saisie** (l'année ou le mois) — ⚠ **CORRIGÉ le 24/11 au soir : vrai pour 4 sur 5 ; pour 12182 l'écart n'est
+que de 4 jours** (voir `notice/PROTOCOLE_R26_VENTE_EMPORTEE_ET_LES_19_A_BLANC_2026-11-24.md`) : 2019-06-20 contre 20/03/2019, 2020-05-22 contre 18/05/2020,
 2024-01-28 contre 28/01/2025, 2024-03-13 contre 13/03/2025, 2025-06-10 contre 10/03/2025 — chaque fois réglée quelques jours
 après la « Vente Fixée » du Sheet. On ne corrige pas une date.
 

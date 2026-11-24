@@ -56,6 +56,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 ap = argparse.ArgumentParser()
 ap.add_argument("--passage", type=int, required=True)
 ap.add_argument("--csv", action="store_true")
+ap.add_argument("--r26", action="store_true", help="l'etat d'arrivee avec R26 a blanc")
 arg = ap.parse_args()
 
 
@@ -82,8 +83,13 @@ TIENT = defaultdict(set)
 for i in T:
     for a in V[i]["pieces"]:
         TIENT[a].add(i)
-brouillon = P.DOSSIER / ("brouillon_detachements_protocole_passage_%d.csv" % arg.passage)
+# --r26 : l'etat d'arrivee AVEC R26 a blanc (protocole_r26_vente_emportee_a_blanc : son brouillon et son rejeu E, dans
+#   le dossier a part protocole_a_blanc_r26) -- sinon le rejeu E du passage tel qu'il est
+_DOS_E = (P.DOSSIER.parent / "protocole_a_blanc_r26") if arg.r26 else P.DOSSIER
+brouillon = _DOS_E / ("brouillon_detachements_protocole_passage_%d.csv" % arg.passage)
+_d0, P.DOSSIER = P.DOSSIER, _DOS_E
 chE, _ = PO.rejeu_en_cache("E", image, brouillon, {"APP_CHAINAGE_GARDE_G2": "0", "APP_CHAINAGE_DETACHEMENTS": "1"}, False)
+P.DOSSIER = _d0
 BIEN_L = defaultdict(set)       # le bien -> les lignes qui y ont une piece (gel ou protocole)
 for i in D.LIG:
     for a in GEL_L.get(i, set()) | V.get(i, {}).get("pieces", set()):
@@ -466,6 +472,15 @@ def juger(fam, cle, val, etat):
     if b is not None and (fam, b) in INTERDITES:
         b, pq = None, "sa cible %d est visee par DEUX ecritures du meme geste" % b
         e["cible"] = None
+    if b is None and tenants and fam == "date_annulation_app":
+        # ⭐ SA REGLE (24/11, 3e mot, ②) : « Pour chacune, dis-moi d'abord si LA BONNE PIECE EXISTE chez nous. si oui -> tu
+        #   la DEPLACES vers elle [...] ; si non -> tu la METS DE COTE avec son ancienne place (regle 6), tu ne la supprimes
+        #   pas. ⛔ Je ne veux pas qu'une date d'annulation reste affichee sur le compromis d'une autre affaire : a l'ecran,
+        #   ca ment. »
+        e["decision"], e["raison"] = "METTRE DE COTE", (
+            "sa regle du 24/11 : la bonne piece n'existe pas (%s) -- mise de cote avec son ancienne place ; elle ne reste "
+            "pas sur le compromis de %s" % (pq, "+".join(sorted(tenants))))
+        return e
     if b is None:
         e["decision"], e["raison"] = "REMONTE", pq + " -- proposition : la METTRE DE COTE" if tenants else pq
         return e
@@ -575,7 +590,7 @@ for _tour in range(8):       # le point fixe : une cible occupee par une ecritur
     #                          cible visee par deux ecritures est INTERDITE aux deux (aucune ne part)
     _d = Counter((e["famille"], e["cible"]) for e in E0 if mal_placee(e) and e["decision"] == "DEPLACER")
     _i = INTERDITES | {k for k, n in _d.items() if n > 1}
-    _v = {(e["famille"], e["piece"]) for e in E0 if mal_placee(e) and e["decision"] in ("DEPLACER", "DOUBLON")
+    _v = {(e["famille"], e["piece"]) for e in E0 if mal_placee(e) and e["decision"] in ("DEPLACER", "DOUBLON", "METTRE DE COTE")
           and (e["famille"], e.get("cible")) not in _i}
     if _tour == 0:
         _v |= {(e["famille"], e["piece"]) for e in E0 if mal_placee(e) and e["decision"] == "REMONTE"
@@ -765,12 +780,12 @@ S1 = copy.deepcopy(S0)
 JOURNAL = []
 # LES GESTES SONT SIMULTANES (un echange, comme la paire croisee, libere sa cible en meme temps qu'il la prend) : on
 #   retire d'abord toutes les ecritures qui partent, puis on pose ; deux ecritures vers la meme cible -> aucune ne part
-GESTES = [e for e in E0 if e["decision"] in ("DEPLACER", "DOUBLON") and mal_placee(e)]
+GESTES = [e for e in E0 if e["decision"] in ("DEPLACER", "DOUBLON", "METTRE DE COTE") and mal_placee(e)]
 vers_ = Counter((e["famille"], e["cible"]) for e in GESTES if e["decision"] == "DEPLACER")
 for e in GESTES:
     if e["decision"] == "DEPLACER" and vers_[(e["famille"], e["cible"])] > 1:
         e["decision"], e["raison"] = "REMONTE", "%d visee par DEUX ecritures du meme geste" % e["cible"]
-GESTES = [e for e in GESTES if e["decision"] in ("DEPLACER", "DOUBLON")]
+GESTES = [e for e in GESTES if e["decision"] in ("DEPLACER", "DOUBLON", "METTRE DE COTE")]
 
 
 def cle_de(e, vers=False):
@@ -791,7 +806,7 @@ for e in GESTES:
         S1["_src"][(fam, cle_de(e, True))] = src_
         JOURNAL.append((fam, cle_de(e), cle_de(e, True), (val, src_), "DEPLACER"))
     else:
-        JOURNAL.append((fam, cle_de(e), None, (val, src_), "DOUBLON"))
+        JOURNAL.append((fam, cle_de(e), None, (val, src_), e["decision"]))
 dire("   %d ecritures touchees : %s ; l'ancienne place de chacune est MISE DE COTE au journal (regle 6)" % (
     len(JOURNAL), " . ".join("%s %d" % kv for kv in Counter("%s %s" % (j[4], j[0]) for j in JOURNAL).most_common())))
 # L'INVERSE : rejoue le journal sur l'etat d'arrivee -- il retire d'abord tout ce que le geste a pose, puis remet chaque
@@ -817,7 +832,8 @@ VACANTES, INTERDITES = set(), set()
 E1 = controle(S1)
 m0 = [e for e in E0 if mal_placee(e)]
 m1 = [e for e in E1 if mal_placee(e)]
-nommees = {(e["famille"], str(e["cle"])) for e in E0 if mal_placee(e) and e["decision"] not in ("DEPLACER", "DOUBLON")}
+nommees = {(e["famille"], str(e["cle"])) for e in E0 if mal_placee(e)
+           and e["decision"] not in ("DEPLACER", "DOUBLON", "METTRE DE COTE")}
 hors = [e for e in m1 if (e["famille"], str(e["cle"])) not in nommees]
 dire("   SANS le geste (l'inverse) : %d ecritures mal placees" % len(m0))
 dire("   APRES le geste            : %d mal placees, dont %d NOMMEES (laissees ou remontees, decision proposee) et "
@@ -844,7 +860,7 @@ if arg.csv:
         if isinstance(v, tuple):
             v = " | ".join(str(x) for x in v[1:]) if e["famille"] != "charge" else v[0]
         return masque(str(v))[:100]
-    f1 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LES_ANOMALIES_PASSAGE_%d_2026-11-24.csv" % arg.passage)
+    f1 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LES_ANOMALIES_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     with f1.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.writer(fh, delimiter=";")
         w.writerow(["colonne", "cle (piece / ligne / mandat)", "valeur au registre", "ligne d'ou elle vient (lot)", "lot",
@@ -856,14 +872,14 @@ if arg.csv:
             w.writerow([NOMS[e["famille"]], e["cle"], val_txt(e), e.get("source") or "-", e["lot"], e.get("contenu", "-"),
                         e["gel"], e.get("protocole", "-"), e["contenu_d_une_autre_ligne"], e["classe"], e["decision"],
                         e["raison"], e.get("cible") or ""])
-    f2 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LES_TROUS_PASSAGE_%d_2026-11-24.csv" % arg.passage)
+    f2 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LES_TROUS_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     with f2.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["colonne", "id_unique", "ligne_du_sheet", "sheet", "cause", "ses_pieces"],
                            delimiter=";")
         w.writeheader()
         for t in sorted(TROUS, key=lambda t: (t["colonne"], t["cause"], t["ligne_du_sheet"] or 0)):
             w.writerow(t)
-    f3 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LE_GESTE_A_BLANC_PASSAGE_%d_2026-11-24.csv" % arg.passage)
+    f3 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LE_GESTE_A_BLANC_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     with f3.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.writer(fh, delimiter=";")
         w.writerow(["colonne", "de (ancienne place, mise de cote au journal)", "vers", "geste", "valeur",

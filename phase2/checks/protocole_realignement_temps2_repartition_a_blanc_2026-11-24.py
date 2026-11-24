@@ -39,6 +39,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 ap = argparse.ArgumentParser()
 ap.add_argument("--passage", type=int, required=True)
 ap.add_argument("--csv", action="store_true")
+ap.add_argument("--r26", action="store_true", help="l'etat d'arrivee avec R26 a blanc")
 arg = ap.parse_args()
 
 
@@ -57,8 +58,13 @@ I = P.Image(P.IMAGES / image)
 D, PI = I.D, I.pieces
 ch_img = {a: int(PI[a]["app_chaine_id"]) for a in PI if PI[a]["app_chaine_id"] is not None}
 chA, _ = PO.rejeu_en_cache("A", image, PO.FICHIER_DET_PROD, PO.ETEINTS, False)
-brouillon = P.DOSSIER / ("brouillon_detachements_protocole_passage_%d.csv" % arg.passage)
+# --r26 : l'etat d'arrivee AVEC R26 a blanc (protocole_r26_vente_emportee_a_blanc : son brouillon et son rejeu E, dans
+#   le dossier a part protocole_a_blanc_r26) -- sinon le rejeu E du passage tel qu'il est
+_DOS_E = (P.DOSSIER.parent / "protocole_a_blanc_r26") if arg.r26 else P.DOSSIER
+brouillon = _DOS_E / ("brouillon_detachements_protocole_passage_%d.csv" % arg.passage)
+_d0, P.DOSSIER = P.DOSSIER, _DOS_E
 chE, _ = PO.rejeu_en_cache("E", image, brouillon, {"APP_CHAINAGE_GARDE_G2": "0", "APP_CHAINAGE_DETACHEMENTS": "1"}, False)
+P.DOSSIER = _d0
 mA, mE = PO.membres(chA), PO.membres(chE)
 gel_l = defaultdict(list)
 for i, a, ro, *_r in I.gel:
@@ -444,7 +450,7 @@ dire("   le remede rend juste %d lignes ; ⛔ il en rend FAUSSES %d %s" % (len(g
                                                                      " ".join(sorted(perdu)[:20])))
 
 if arg.csv:
-    f1 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_REPARTITION_A_L_ARRIVEE_PASSAGE_%d_2026-11-24.csv" % arg.passage)
+    f1 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_REPARTITION_A_L_ARRIVEE_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     sa_ = {e["id_unique"]: e["verdict"] for e in SANS}
     with f1.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["verdict", "id_unique", "ligne_du_sheet", "sheet", "chaine_d_arrivee", "registre",
@@ -453,13 +459,13 @@ if arg.csv:
         w.writeheader()
         for e in sorted(nok_ap, key=lambda e: (e["verdict"], e["ligne_du_sheet"] or 0)):
             w.writerow(dict(e, sans_le_remede=sa_.get(e["id_unique"], "-")))
-    f2 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_LA_GARDE_VENTES_REGLEES_PASSAGE_%d_2026-11-24.csv" % arg.passage)
+    f2 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_LA_GARDE_VENTES_REGLEES_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     with f2.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(garde[0].keys()) if garde else ["vide"], delimiter=";")
         w.writeheader()
         for g in garde:
             w.writerow(g)
-    f3 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_PARTS_SANS_LIGNE_A_L_ARRIVEE_PASSAGE_%d_2026-11-24.csv" % arg.passage)
+    f3 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_PARTS_SANS_LIGNE_A_L_ARRIVEE_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     with f3.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.writer(fh, delimiter=";")
         w.writerow(["chaine_d_arrivee", "parts", "origines", "lignes dont c'est la chaine d'aujourd'hui (le gel)",

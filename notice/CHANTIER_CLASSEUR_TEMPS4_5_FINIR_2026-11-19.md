@@ -5494,6 +5494,37 @@ DURABLE : colonne de transaction (+ id_unique pour les parts du classeur) ; 17 8
 A LUI : les 42 ; les 5 dates ; R26 ; V3FO5NDA ; les 6 + 49 ; la colonne de transaction. RIEN D'ECRIT.
 ```
 
+### 20.40 R26 a blanc (la coupe emporte la vente de sa ligne), les 19 expliques, les 42 revises (24/11, son 3e mot)
+
+Notice : notice/PROTOCOLE_R26_VENTE_EMPORTEE_ET_LES_19_A_BLANC_2026-11-24.md. Outil : protocole_r26_vente_emportee_a_blanc_2026-11-24.py
+(copie en memoire de protocole_portes + 4 ancres ; dossier a part protocole_a_blanc_r26 ; le vrai passage 79 ne bouge pas).
+
+```
+⭐ SA REGLE (24/11) : CHAQUE ECRITURE DEPLACEE GARDE SA LIGNE D'ORIGINE -- « une ecriture qui ne sait plus d'ou elle vient
+  ne peut plus etre controlee » (sans elle, mon temoin de fin passait a zero pour de faux).
+R26 : pour une ligne tranchee sans vraie vente prouvee, dont le dossier d'aujourd'hui porte UNE SEULE vraie vente hors
+  d'elle, a elle seule au gel, tenue par aucune ligne -> son morceau de coupe l'EMPORTE. Ne change aucun verdict, piece ni
+  etiquette du protocole. Designe 49 lignes : 44 RIEN (sans effet), 5 COUPE_NEUVE = LES 5.
+  TEMOIN POSITIF 5/5 (D2024-0086, D2019-0128, D2023-0481, NEUF, D2024-0023). TEMOIN INVERSE : 17 pieces changent de
+  compagnie, dont 5 ventes = les 5 ; 0 autre vente, 0 piece d'une autre ligne, 0 en attente, 0 hors des biens.
+  REJEU EXACT : 4 725 / 4 725 justes, 4 725 / 4 725 etiquettes, 0 numero d'arrivee change, R7b 0 faux ; dossiers 11 605 -> 11 603.
+  1 etiquette de piece deja rendue nommee : 21662 quitte D2017-0367 (qui reste sur 21658, compromis annule a personne)
+  pour suivre sa ligne, deja NEUVE sans R26 ; pour les 4 autres, R26 EVITE un numero neuf.
+  ⭐ GARDE DU TEMPS 2 AVEC R26 : 0 (sans : 5).
+⚠ CORRECTION : 12182 n'est PAS une faute de date (4 jours apres la Vente Fixee) ; 21662 et 16019 le mois, 28147 et 7126
+  l'annee ; toutes reglees 1 a 7 jours apres la Vente Fixee.
+LES 19 : 10 realignes par R26 (reglement + facture des 5 ventes) ; 5 dates sur le compromis d'une autre tentative -> SA
+  REGLE : la bonne piece n'existe pas -> MISES DE COTE ; restent 4 nommes : 21551 (note de 53ZS73KW, sans gel -> mise de cote,
+  a lui), 11138 et 4496 (dates sur leur compromis SANS DATE, a personne : laissees ; 4496 = exclusion de E), 3701 (facture
+  sur une vente SUPPRIMEE chez Hektor : remonte).
+LES 42 REVISES = 37 deplacements (31 notes, 4 motifs, 16377 -> 16378, 28568 -> 28569) + 5 mises de cote ; inverse
+  0038d306 -> 6d0b8e81 -> 0038d306 IDENTIQUE ; temoin de fin 46 -> 4 nommes, 0 hors ; conservation 38 721 = 38 716 + 5.
+SES DECISIONS : les 42 apres R26 (son vas-y attend) ; V3FO5NDA AUCUNE copie (une annulee ne porte aucune part -- la copie
+  du remede A2 v2 ne va jamais a une annulee) ; 49 annulees laissees ; les 6 supposees portent toutes un negociateur au
+  classeur -> le classeur fait foi (dans A2) ; colonne de transaction validee en principe, chantier a part apres la vague.
+A LUI : R26. RIEN D'ECRIT.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
