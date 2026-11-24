@@ -87,9 +87,14 @@ désinscription, l'agenda). Le neuf se limite à l'écran, aux modèles du recru
   la route `/gmail/contact-messages` qui sert déjà aux contacts). Rien de ces réponses n'est recopié en base :
   Gmail reste l'archive (minimisation) ;
 - et bien sûr dans Gmail lui-même : « Envoyés » de l'expéditeur, et la réponse arrive dans sa boîte de réception.
-- ⏸ **À décider** : la clé permet à un administrateur de lire la boîte d'un autre (règle actuelle : admin et manager
-  peuvent lire toute boîte du domaine). Proposé : la fiche montre les échanges de la boîte qui a écrit (celle de
-  « qui la suit »), aux administrateurs seulement.
+- ✅ **DÉCIDÉ par Frédéric le 24/11 : TOUTES LES BOÎTES.** La fiche cherche l'adresse du candidat dans toutes les
+  boîtes Gmail de l'équipe (les comptes actifs de l'app, du domaine), pour ne rien manquer si quelqu'un d'autre a
+  échangé avec lui. Visible des administrateurs seuls (la rubrique l'est). Ce que ça demande, à tenir au code :
+  - **une recherche par boîte** : faite en arrière-plan à l'ouverture de la fiche, gardée quelques minutes en mémoire
+    (pas une salve d'appels Google à chaque clic), et chaque message dit **de quelle boîte** il vient ;
+  - **seulement les messages échangés avec CETTE adresse** (`from:/to:/cc:`), jamais le reste d'une boîte ;
+  - **l'équipe doit en être informée** : la lecture d'une boîte professionnelle par l'employeur se limite au
+    professionnel et se dit (règle de la CNIL) — une ligne dans la charte ou une note à l'équipe, à faire par Frédéric.
 
 **D. Le rendez-vous** : « Planifier un rendez-vous » crée l'événement dans l'agenda Google de l'administrateur,
 avec la personne invitée (elle reçoit l'invitation), lié à sa fiche ; le fil le note ; option « proposer 3
