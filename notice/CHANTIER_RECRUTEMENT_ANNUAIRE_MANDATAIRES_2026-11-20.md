@@ -1003,7 +1003,10 @@ L'ordre :
     « Ready », S4U, PT8H, IgnoreNew, les 12 mois, 1er passage le 06/12 à 10:00.*
   - ⏸ et avant cela, il commite à nouveau `check_gti_health.py`, qui porte le nouveau nom et la
     fréquence `bimonthly`.
-- [ ] R5.6 Le premier run réel, puis son contrôle
+- [x] R5.6 Le premier run réel, puis son contrôle — **24/11, 13:34 → 14:47** (tâche lancée par Frédéric) : il est
+      allé au bout (montée validée, sauvegarde relue) et a trouvé un vrai défaut (3 sources malades : les marques
+      « déjà lu » non remises à zéro) — corrigé et prouvé hors ligne (`e71c791`) ; détail sous R6.0 bis. La preuve
+      en réel de la correction sera le passage du 06/12.
 - [x] R5.7 L'agent OVH (Veeam) couvre `Backups\recrutement` et `recrutement_donnees`. Mesuré le
       24/11 :
   - c'est une **image complète du serveur** (note de sauvegarde du 18/08, « Périmètre »), gardée
@@ -1265,7 +1268,10 @@ L'ordre :
     dossier que voit l'app Claude.
 
 **R7 — Les fonctions, une par une après décision**
-- [ ] R7.1 Le modèle d'e-mail de premier contact
+- [ ] R7.1 Le modèle d'e-mail de premier contact — **brouillon écrit le 24/11** :
+      `notice/RECRUTEMENT_MODELE_EMAIL_PREMIER_CONTACT_2026-11-24.md` (le message, le bloc d'information art. 14,
+      la version orale du premier appel, le cas « ajoutée à la main », 5 décisions à prendre). ⏸ Relecture de
+      Frédéric. ⚠ Il promet l'effacement à 3 ans : R5.3 devient un engagement (avant novembre 2029).
 - [ ] R7.2 Le rangement du CV
 - [ ] R7.3 Le contrat d'agent commercial et sa signature (chantier à part)
 - [ ] R7.4 « Créer son accès à bienvu »
@@ -1277,7 +1283,7 @@ L'ordre :
 - [x] D2 La gravité `warning`
 - [x] D3 Rubrique réservée aux administrateurs
 - [x] D4 La carte dessinée (celle de la maquette, aucune dépendance neuve)
-- [ ] D5 Le texte de l'e-mail de premier contact : j'écris un **brouillon**, ⏸ Frédéric le relit
+- [ ] D5 Le texte de l'e-mail de premier contact : j'écris un **brouillon** (✅ écrit le 24/11, voir R7.1), ⏸ Frédéric le relit
       avant le premier envoi
 - [x] D6 L'opposition au registre : la règle d'aujourd'hui
 - [x] D7 L'e-mail caché de 3G : non pris
