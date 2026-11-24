@@ -1156,7 +1156,8 @@ L'ordre :
       « les réseaux de mandataires présents dans les 4 départements, ou des agences locales avec un annuaire de
       collaborateurs ». Recherche lancée (lecture seule) ; la liste lui sera soumise avant tout lecteur.
       ✅ **Recherche faite** (`notice/RECRUTEMENT_NOUVELLES_SOURCES_RECHERCHE_2026-11-24.md`) ; **choix : La Boîte Immo et Netty** ;
-      les deux lecteurs sont écrits et éprouvés sur une copie (43 personnes de plus) et branchés dans le run.
+      les deux lecteurs sont écrits et éprouvés sur une copie et branchés dans le run : **47 personnes de plus** (Netty 26,
+      La Boîte Immo 21 après l'ajout de Henri Pardon et Cantard le 25/11 ; essai `recrutement/test_lecteurs_agences.py`).
       ⏸ Frédéric lance à la main la collecte d'essai (tâche « GTI Recrutement », 2 à 3 h : relecture complète). La collecte
       n° 2 reste fermée telle quelle : ses 3 sources malades n'ont fait partir personne.
   - ✅ Le correctif Dr House (`separer_nom` retire le HTML d'un nom, toutes sources) est POSÉ après le passage

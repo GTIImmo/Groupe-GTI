@@ -1936,11 +1936,11 @@ SITES_LBI = (
     ("42bis", "42bis Immo", "https://www.42bis-immo.com/equipe/", "42300", "Roanne"),
     ("henripardon", "Henri Pardon Immobilier", "https://www.henri-pardon-immobilier.fr/equipe/", "42000", "Saint-Étienne"),
     ("chauvel", "Cabinet Chauvel Transactions", "https://www.chauvel-immobilier.com/equipe/", "63100", "Clermont-Ferrand"),
-    ("cantard", "Agence Cantard", "https://www.agence-cantard.fr/equipe/", None, None),
+    ("cantard", "Agence Cantard", "https://www.agence-cantard.fr/equipe/", "63140", "Châtel-Guyon"),  # adresse de sa page
     ("roche", "Roche Immobilier", "https://www.agencerocheimmo.com/equipe/", "43100", "Brioude"),
-    ("brioudeimmo", "Brioude Immobilier", "https://brioude-immobilier.fr/l-equipe", "43100", "Brioude"),
-    ("belange", "Bel Ange Immobilier", "https://bel-ange-immo.com/notre-equipe", "07120", "Ruoms"),
 )
+# Retires le 25/11 apres sonde (rien a lire, pas un gabarit a ecrire) : Brioude Immobilier (l'equipe n'est pas dans la
+#   page) ; Bel Ange (un texte de presentation, ni liste ni coordonnees par personne).
 # Netty / Modelo : la page /conseillers, une personne = un bloc JSON-LD « Person » (nom, fonction, telephone, lieu)
 SITES_NETTY = (
     ("fontana", "Fontana Immobilier", "https://www.fontanaimmobilier.fr/conseillers", "63140", "Châtel-Guyon"),
@@ -1956,19 +1956,23 @@ def membres_lbi(texte: str) -> list[dict]:
     spans « infos__name ») et « team-listing-v1__item member-1 » (nom en « title__content », fonction en « title__subtitle »)."""
     # 3e gabarit, vu en réel le 24/11 (Vos Agents, 42bis, Henri Pardon, Brioude) : « team-list-v1__item », nom en
     #   « item__block-name », fonction en « title-v1__part1 ».
+    # 4e forme, vue le 25/11 (Henri Pardon) : l'element n'est pas un <article>, et le titre porte le nom ET la fonction
+    #   (« title__content-1 » / « title__content-2 », dans un <h1>). La classe se lit comme un MOT entier : sinon le
+    #   conteneur « team-listing-v1__items » serait pris pour une personne.
     out = []
-    for bloc in re.split(r'<article class="team-listing-v\d__item|<div class="team-list-v\d__item', texte)[1:]:
+    for bloc in re.split(r'<(?:article|div|li) class="team-list(?:ing)?-v\d__item(?=[\s"])', texte)[1:]:
         bloc = bloc.split("</article>")[0]
         noms = [texte_de(x) for x in re.findall(r'class="infos__name"[^>]*>([\s\S]*?)</span>', bloc)]
         if not noms:
-            m = re.search(r'class="title__content"[^>]*>([\s\S]*?)</h2>', bloc) or \
+            m = re.search(r'class="title__content-1"[^>]*>([\s\S]*?)</span>', bloc) or \
+                re.search(r'class="title__content"[^>]*>([\s\S]*?)</h\d>', bloc) or \
                 re.search(r'class="item__block-name[^"]*"[^>]*>([\s\S]*?)</div>', bloc)
             noms = [texte_de(m.group(1))] if m else []
         nom = " ".join(x for x in noms if x).strip()
         if not nom:
             continue
         mf = re.search(r'class="[^"]*(?:infos__position|infos__job|infos__function|infos__fonction|title__subtitle|infos__subtitle'
-                       r'|title-v1__part1)[^"]*"'
+                       r'|title-v1__part1|title__content-2)[^"]*"'
                        r'[^>]*>([\s\S]*?)</', bloc)
         tel = re.search(r'href="tel:([^"]+)"', bloc)
         mail = re.search(r'href="mailto:([^"?]+)', bloc)
@@ -1976,6 +1980,13 @@ def membres_lbi(texte: str) -> list[dict]:
                     "tel": telephone_lisible(tel.group(1)) if tel else None,
                     "mail": email_lisible(mail.group(1)) if mail else None, "url": None, "cp": None, "commune": None})
     return out
+
+
+def adresse_page(texte: str) -> dict:
+    """L'adresse de l'agence ecrite sur une page La Boite Immo (« coords-address__zipcity ») quand la page n'a pas de
+    JSON-LD (vu le 25/11 sur Cantard : sans elle, la personne n'etait pas situee et n'etait pas gardee). La premiere."""
+    m = re.search(r'class="coords-address__zipcity"[^>]*>\s*(\d{5})\s*<span class="coords-address__city"[^>]*>([^<]+)<', texte)
+    return {"cp": m.group(1), "commune": texte_de(m.group(2))} if m else {}
 
 
 def membres_netty(texte: str) -> list[dict]:
@@ -2032,9 +2043,11 @@ def _lire_agences(con, lecteur, args, reseau: str, sites, extraire) -> int:
             continue
         if not t:
             continue
-        ag = ld_agence(t)
+        # le lieu de l'agence : les donnees structurees d'abord, l'adresse ecrite sur la page ensuite, la liste en dernier ;
+        #   code postal et commune pris ENSEMBLE a la meme source
+        ag = next((x for x in (ld_agence(t), adresse_page(t)) if x.get("cp")), {"cp": cp, "commune": commune})
         membres = extraire(t)
-        gardes, hors = enregistrer_membres(con, reseau, cle, nom, page, membres, ag.get("cp") or cp, ag.get("commune") or commune)
+        gardes, hors = enregistrer_membres(con, reseau, cle, nom, page, membres, ag.get("cp"), ag.get("commune") or commune)
         journal(reseau, f"{nom} : {len(membres)} sur la page, {gardes} gardes, {hors} hors transaction"
                 + ("" if membres else " -- ⚠ gabarit inconnu ou page vide"))
     return compter_fin(reseau, con)

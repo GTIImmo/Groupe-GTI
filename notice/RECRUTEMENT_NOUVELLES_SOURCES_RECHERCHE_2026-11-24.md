@@ -86,6 +86,9 @@ une liste de sites chacun (`SITES_LBI`, `SITES_NETTY` : ajouter une agence = une
 - **Essai sur les vrais sites, sur une COPIE de la base, hors collecte (24/11 ~16:55)** : **Netty 26 personnes** (Fontana 9,
   STB 7, KB 2, TeamFi 8 ; Teatime 0 dans la région), **La Boîte Immo 17** (Vos Agents 10, 42bis 4, Roche 2, Chauvel 1),
   presque toutes avec un téléphone en clair. 3 gabarits La Boîte Immo reconnus.
-- ⚠ Encore à 0 : Henri Pardon, Brioude Immobilier, Bel Ange (autres gabarits) ; Cantard (1 personne, agence non située).
+- ✅ **25/11** : Henri Pardon (3 personnes, une 4e forme de page) et Cantard (1, l'adresse de l'agence lue sur la page)
+  ajoutés → **La Boîte Immo 21** (20 avec une coordonnée), essai sur copie ; Netty inchangé (26). Retirés après sonde,
+  rien à lire : Brioude Immobilier (l'équipe n'est pas dans la page), Bel Ange (un texte de présentation, sans liste).
+  Essai hors ligne `recrutement/test_lecteurs_agences.py` : tout vert ; contre l'ancien collecteur, 5 rouges (attendus).
 - Écran : ces fiches s'affichent « Agence locale » avec le nom de l'agence (après un envoi sur GitHub).
 - ⏳ La preuve : la collecte d'essai complète, lancée par Frédéric (tâche « GTI Recrutement », à la main).
