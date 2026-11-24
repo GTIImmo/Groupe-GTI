@@ -131,3 +131,42 @@ Ta cause est juste : le compromis 6171 porte « 0000-00-00 » ; une pièce sans 
 - T2GZOY5O tient l'offre 20075, qui est refusée et n'a donc pas de date d'annulation. Je ne pose pas son 21/11/2021 : il
   est nommé en réserve, avec sa valeur.
 - ⚠ Noté : l'acquéreur « PAOLONE » n'est pas résolu en contact. Les deux copies créées le 16/11 le portent seulement en note.
+
+---
+
+## JOUÉS LE 24/11 SUR SON ACCORD (7e mot : « ACCORD SUR LES TROIS, TELS QUE TU LES AS DÉCRITS »)
+
+Dans son ordre : ① puis ④ puis ⑤. Pour chacun :
+- le fichier du patch, tel quel, avec ses gardes, sa sauvegarde datée et ses deux empreintes exigées : **passé et validé** ;
+- sa **répétition**, en lecture seule : **verte** ;
+- son **inverse joué à blanc** (le corps de l'inverse, sans validation, et une erreur voulue à la fin) : **vert, l'empreinte
+  d'avant revient**.
+
+**Les trois empreintes d'après :**
+- **①** (les 18 mandats) : **b58ba6cb9a5cd6c6e20dc01f99bcc266**. Répétition : 20 lignes au journal, dont 2 nommées ; 18
+  charges au carnet ; 18 reflets ; 18 lignes sauvegardées. Inverse à blanc : 95015873 revient.
+- **④** (les 6 chaînes) : **91a61e04b6d5507cd49c95b4af7d5f89**. Répétition : 12 lignes au journal, 12 parts mises de côté
+  entières, 12 parts du classeur, **0 supposition restante** sur ces chaînes. Inverse à blanc : 1c741e0f revient.
+- **⑤** (27195, 27196) : **adb3c8f86656a03da199a56ca9af6d15**. Répétition : 2 lignes au journal, 2 parts mises de côté.
+  27195 porte COUDERT à l'entrée et HERITIER à la sortie ; 27196 porte HERITIER aux deux. JRE23R1G (27133) est intacte.
+  Inverse à blanc : e6fc6ff4 revient.
+
+Le journal compte **80 lignes** (46 + 20 + 12 + 2). La table de mise de côté de la règle 6 est née avec ④ ; elle porte 14
+parts.
+
+**Son point ②, noté :** ce n'est pas la règle 6 qui oblige à remplacer les deux moitiés, c'est **la garde**. Une part
+« hektor_partage_suppose » n'est pas protégée, et le run la réécrit chaque nuit. L'origine est le **verrou** : remplacer
+seulement l'entrée aurait laissé le run de 05:00 reposer la supposition sur la sortie.
+
+**⏰ Le témoin de demain matin**, en lecture seule après le run de 05:00 : les 6 chaînes de ④ portent toujours 12 parts
+« classeur_reconstitue » et 0 supposition. C'est le verrou éprouvé par la nuit.
+
+**Son point ③ : les deux dates antérieures sont ÉCARTÉES, comme les 106 de C3 le 16/11.** Ce n'est pas une règle neuve :
+- **S3HOG6UL**, valeur **21/10/2021** : annulée 13 jours avant la signature de son compromis 17387 (03/11/2021) ;
+- **6U5DQQ4J**, valeur **21/10/2021** : annulée 7 jours avant la signature de son compromis 24450 (28/10/2021).
+
+Le patch des 6 dates **n'a pas son accord**. Il n'est pas joué.
+
+**Sans son accord, rien n'est touché :** A2, la vague, les 6 dates. L'interrupteur des coupes reste éteint. Rien n'est
+écrit dans le Sheet ni chez Hektor.
+

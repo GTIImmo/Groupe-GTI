@@ -5616,6 +5616,24 @@ JUMELLES : O6R10ZQA = la bonne (20073, deja posee) ; T2GZOY5O en reserve (offre 
 RIEN D'ECRIT. Verifie apres les 4 essais : journal 46, 0 table de mise de cote, 0 sauvegarde, 0 colonne, suppositions intactes.
 ```
 
+### 20.44 ①, ④, ⑤ JOUES sur son accord (24/11, son 7e mot)
+
+```
+SON ACCORD : « ACCORD SUR LES TROIS, TELS QUE TU LES AS DECRITS : ①, ④ et ⑤ [...] Dans cet ordre » ; « ⛔ A2, la vague et les 6
+  dates N'ONT PAS mon accord ».
+① patch_charge_2026-11-24 : PASSE (95015873 -> b58ba6cb9a5cd6c6e20dc01f99bcc266) ; repetition 20 au journal (2 nommees), 18 au
+  carnet, 18 reflets ; inverse a blanc : 95015873 revient.
+④ patch_suppositions_2026-11-24 : PASSE (1c741e0f -> 91a61e04b6d5507cd49c95b4af7d5f89) ; repetition 12 / 12 mises de cote / 0
+  supposition restante ; inverse a blanc : 1c741e0f revient. La table app_affaire_repartition_mise_de_cote est NEE (22/11).
+⑤ patch_corrections_2026-11-24 : PASSE (e6fc6ff4 -> adb3c8f86656a03da199a56ca9af6d15) ; repetition 2 / 2 ; JRE23R1G intacte ;
+  inverse a blanc : e6fc6ff4 revient.
+JOURNAL : 80 lignes (46 + 20 + 12 + 2). MISE DE COTE : 14 parts.
+SON ② : l'origine n'est pas une etiquette, c'est le VERROU -- « hektor_partage_suppose » n'est pas protegee, le run la reecrit
+  chaque nuit (app_repartition_absorber) : remplacer les DEUX moities. ⏰ TEMOIN DEMAIN apres 05:00 : 12 parts classeur, 0 supposition.
+SON ③ : S3HOG6UL et 6U5DQQ4J (21/10/2021) ECARTEES comme les 106 de C3 ; le patch des 6 dates N'EST PAS joue.
+PAS TOUCHES : A2, la vague, les 6 dates, l'interrupteur ; rien dans le Sheet ni chez Hektor.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
