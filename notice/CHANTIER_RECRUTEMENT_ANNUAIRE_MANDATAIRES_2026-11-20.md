@@ -1195,7 +1195,29 @@ L'ordre :
     branch -d recrutement-r6-seul`) et la coquille vide `C:\Hektor\envoi-recrutement-r6` (tenue par un processus).
   - ⚠ Le jour où le `main` local sera réconcilié avec GitHub, R6 y sera deux fois (`971ba5c` et `9a20116`) avec
     des ajouts identiques : ils doivent se fondre sans conflit, à vérifier ce jour-là.
-- [ ] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant
+- [ ] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant — **ÉCRITE le 24/11
+      (`c41d35d`), RIEN de posé ni d'enregistré.**
+  - Pourquoi une pièce à part : « GTI Sauvegarde » ne copie que le schéma `public`, et le robot ne LISAIT pas le
+    suivi, le fil ni les retraits (voulu en R6). Rien de ce que l'app écrit n'avait donc de copie hors de Supabase.
+  - `supabase/patch_recrutement_sauvegarde_2026-11-24*.sql` : le robot peut LIRE `suivi`, `evenement`, `retrait`
+    (toujours rien écrire ; l'API n'y a toujours pas accès) + la ligne de battement `recrutement.sauvegarde_quotidienne`
+    (fréquence `scheduled_or_manual` = 28 h, déjà connue de la surveillance). **Répétition 8/8 verte**, annulée
+    par construction (elle lève une exception à la fin), puis vérifié que rien n'est resté.
+  - `recrutement/sauvegarder_app.py` : 7 tables lues au même instant (lecture seule, REPEATABLE READ), copie
+    SQLite datée `Backups\recrutement\quotidien\app_<date>.sqlite`, RELUE, 90 gardées. **Témoin négatif** : sans
+    le patch, refus net (« permission denied for table suivi » + le nom du patch), sortie 1.
+  - `scheduled/run_recrutement_sauvegarde.ps1` : rien tant que `RECRUTEMENT_SAUVEGARDE_QUOTIDIENNE=0` ; rien
+    pendant le run de deux mois (verrou) ; sinon sauvegarde PUIS descente (un « ne plus contacter » appliqué en
+    local le jour même), battement. Analyse PowerShell : 0 erreur.
+  - `scheduled/installer_tache_recrutement_sauvegarde.ps1` : chaque jour 09:30, réglages de « GTI Menage
+    Temporaires » (déjà quotidienne), contrôle réglage par réglage ; `-Essai` vert.
+  - `monitoring/check_gti_health.py` : « GTI Recrutement Sauvegarde » = `warning`, ajoutée à la liste — **modifié,
+    PAS commité** (l'outil de confidentialité refuse que je le lise ou l'ajoute : à Frédéric).
+  - ⏸ À faire, dans l'ordre : poser le patch (accord) → Frédéric commite `check_gti_health.py` → Frédéric lance
+    l'installeur (administrateur) → j'allume l'interrupteur et je fais le premier passage à la main.
+  - ⚠ Vu en chemin : mon terminal ne peut pas LIRE `python_paquets\psycopg2` (installé depuis une PowerShell
+    administrateur) ; la tâche, elle, le lit (descente du 13:34). Mes essais prennent les mêmes versions dans le
+    dossier que voit l'app Claude.
 
 **R7 — Les fonctions, une par une après décision**
 - [ ] R7.1 Le modèle d'e-mail de premier contact
