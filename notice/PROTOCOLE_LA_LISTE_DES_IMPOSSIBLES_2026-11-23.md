@@ -188,3 +188,20 @@ Chacune garde la phrase donnée plus haut.
 - R7NU9NPM et 4G2UHO35 : 19814.
 
 Le détail : `notice/PROTOCOLE_REPONSES_24_11_LES_64_DU_VERROU_A1_A2_CONTROLE_P_B_2026-11-24.md`.
+
+
+## Mise à jour du 24/11 (v21, passage 79) : tes quatre réponses, il en reste 15
+
+- **R7NU9NPM et 4G2UHO35 sont tranchées.** 19814 va à 4G2UHO35 par ta preuve de date (acte prévu le 17/05/2020, annulation le 20/05/2020), et 4G2UHO35 prend D2020-0091. R7NU9NPM reçoit un numéro neuf. 19815 n'est pas invisible à la nuit : elle n'est pas exclue de la règle E, et elle n'est pas seule dans sa chaîne.
+- **P252U1JH et d2108609** : le retrait de 4126 et 21520 des exclusions est mesuré à blanc. Il les débloque, mais il ne peut se poser **qu'avec la vague**. Sans elle, la nuit déplace aussi FOZ6HZLK, et 1c7b38f9 perd D2025-0263. Elles restent donc dans la liste, en attendant A2.
+
+**Les 15** :
+- HUY49KEC, C0HXVVCW, SHN6RKDI et BR8ZTN5F : seulement des copies.
+- XBR8QD6L, PPIM4947 et 3QZ4DAD1 : leurs pièces sont à part.
+- PEE1XTR8 et 9B7U8221 : deux lignes, un seul dossier (bien 50307).
+- 9Q0FHAKK : aucune pièce ne lui est prouvée.
+- 3THZJOOG (sa pièce 4720, toujours exclue), P252U1JH et d2108609 : une pièce sans date que la nuit ne voit pas.
+- 6684bcf1 : une pièce supprimée chez Hektor la fige.
+- M2G1Z1K8 : deux biens.
+
+Le détail : `notice/PROTOCOLE_REPONSES_24_11_SES_QUATRE_REPONSES_2026-11-24.md`.

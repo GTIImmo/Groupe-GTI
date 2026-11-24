@@ -143,6 +143,17 @@ def signature_rows(rows, cote=None):
             if cote is None or r["cote"] == cote}
 
 
+# ⭐ SON ⑤ DU 24/11 (ses quatre reponses) : « avant de me rendre un nombre d'ecarts, VERIFIE COMBIEN DE LIGNES PORTE LA
+#   COLONNE QUE TU LIS, DES DEUX COTES [...] et regarde si un chantier precedent a deja juge ce champ ». La charge ne vit
+#   PAS sur la transaction (charge_commission_app : 7 pieces sur 31 372 -- mon 953 du 24/11 etait un TROU DE LECTURE) :
+#   elle vit sur LE MANDAT -- le carnet app_mandat_champ_app (champ charge_commission ; origine « classeur » = les 853 du
+#   lot C1 du 14/11, origine « hektor » = la charge que Hektor rend), reflete sur
+#   app_mandat_register_current.mandat_charge_honoraires_app. Jugee le 03/11 (JUGE_CHARGE_CLASSEUR_HEKTOR : classeur <->
+#   Hektor 368 / 380). ⛔ LA CLE : le bien et le numero de mandat DES PIECES de la ligne (jamais le mandat du Sheet, perime)
+CHARGE_MANDAT = {}
+for an_, nm_, v_, o_ in loc.execute("select hektor_annonce_id, numero_mandat, valeur_app, origine from app_mandat_champ_app__sb "
+                                    "where champ = 'charge_commission'"):
+    CHARGE_MANDAT[(str(an_), str(nm_))] = (v_, o_)
 NOTES = defaultdict(list)
 for a_, o_, t_ in loc.execute("select app_affaire_id, origine, texte from app_affaire_note"):
     NOTES[int(a_)].append((o_, t_ or ""))
@@ -150,6 +161,12 @@ for a_, o_, t_ in loc.execute("select app_affaire_id, origine, texte from app_af
 
 def norm(s):
     return re.sub(r"[^0-9a-zà-ÿ]", "", (s or "").lower())
+
+
+def sans_accent(s):
+    """« Acquéreur » (le Sheet) = « acquereur » (le carnet) -- trouve a la 1re mesure du 24/11 : 37 faux ecarts."""
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", norm(s)) if unicodedata.category(c) != "Mn")
 
 
 def textes_note(a):
@@ -163,6 +180,7 @@ def textes_note(a):
 
 ECARTS = []
 ACCORD = Counter()
+LUES = Counter()
 COMPAREES = Counter()
 CAUSES = defaultdict(Counter)
 GRAVITE = {"repartition entree": 1, "repartition sortie": 1, "repartition": 1, "commission (honoraires du compromis)": 2,
@@ -313,16 +331,27 @@ for i in sorted(T):
                       " ; ".join("%d : %g HT (%g TTC)" % (a, c, c * 1.2) for a, c in cas.items()), " ".join(map(str, cas)),
                       "la commission_agence de la vente differe (ni HT x 1,2, ni TTC)")
     chg = D.case(i, "Charge Commission").strip()
-    regc = {a: PI[a]["charge_commission_app"] for a in V[i]["pieces"] if a in PI and PI[a]["charge_commission_app"]}
-    if chg or regc:
+    mandats = {(str(PI[a]["hektor_annonce_id"]), str(PI[a]["numero_mandat"])) for a in V[i]["pieces"]
+               if a in PI and str(PI[a].get("numero_mandat") or "").strip()}
+    regc = {m_: CHARGE_MANDAT[m_] for m_ in mandats if m_ in CHARGE_MANDAT}
+    LUES["charge : lignes tranchees, Sheet rempli"] += bool(chg)
+    LUES["charge : lignes tranchees, carnet du mandat rempli"] += bool(regc)
+    if chg:
         COMPAREES[("charge commission", i in A_PART_237)] += 1
-        if chg and regc and all(norm(x) == norm(chg) for x in regc.values()):
+        if not mandats:
+            ecart(i, "charge commission", chg, "-", "-", "ses pieces ne portent aucun numero de mandat")
+        elif not regc:
+            ecart(i, "charge commission", chg, "-", " ".join("%s/%s" % m_ for m_ in sorted(mandats)),
+                  "le carnet du mandat ne porte AUCUNE charge pour ce mandat")
+        elif all(sans_accent(v_) == sans_accent(chg) for v_, _o in regc.values()):
             accord(i, "charge commission")
-        elif chg and not regc:
-            ecart(i, "charge commission", chg, "-", "-", "jamais rapatriee : la colonne n'a ete rapatriee que sur 7 pieces")
+            LUES["charge : accord, origine %s" % "+".join(sorted({o_ for _v, o_ in regc.values()}))] += 1
         else:
-            ecart(i, "charge commission", chg or "-", " ; ".join("%d : %s" % kv for kv in regc.items()),
-                  " ".join(map(str, regc)), "differe" if chg else "le registre porte une charge, le Sheet est vide")
+            ecart(i, "charge commission", chg, " ; ".join("%s/%s : %s (%s)" % (m_[0], m_[1], v_, o_)
+                                                          for m_, (v_, o_) in sorted(regc.items())),
+                  " ".join("%s/%s" % m_ for m_ in sorted(regc)),
+                  "⛔ le carnet du mandat porte une AUTRE charge (origine %s)" % "+".join(sorted({o_ for _v, o_ in
+                                                                                                  regc.values()})))
     # ── 3 LA FACTURE ──
     fac_s = set(re.findall(r"[A-Z]{3}\d{5,}", D.case(i, "Numéro de facture").upper()))
     fac_r = {a: str(PI[a]["numero_facture_app"]).strip().upper() for a in pieces_de(i, "vente")
@@ -439,6 +468,15 @@ for col in sorted(GRAVITE, key=lambda c: (GRAVITE[c], c)):
         dire("        %5d  %s" % (n, k[:110]))
 dire("   cases F / G des lignes tranchees HORS du rapport de C4 (declarees, pas comparees) : %s" % (
     " . ".join("%s %d" % kv for kv in hors_c4.most_common())))
+# ⭐ SON ⑤ (24/11) : LA COLONNE LUE, DES DEUX COTES -- avant tout nombre d'ecarts
+_vides_tx = sum(1 for a in PI if not str(PI[a].get("charge_commission_app") or "").strip())
+dire("   ⭐ LA CHARGE, LUE DES DEUX COTES : Sheet %d lignes remplies sur %d ; transaction (charge_commission_app) %d pieces "
+     "remplies sur %d -- ⛔ PRESQUE VIDE, ce n'est pas la ou elle vit ; carnet du mandat (app_mandat_champ_app) %d mandats "
+     "(%s) ; sur les lignes tranchees : %s" % (
+         sum(1 for i in D.LIG if D.case(i, "Charge Commission").strip()), len(D.LIG), len(PI) - _vides_tx, len(PI),
+         len(CHARGE_MANDAT), " . ".join("%s %d" % kv for kv in Counter("%s %s" % (o_, v_) for v_, o_ in
+                                                                     CHARGE_MANDAT.values()).most_common()),
+         " . ".join("%s %d" % kv for kv in sorted(LUES.items()))))
 dire()
 dire("LES LIGNES EN ATTENTE (%d) -- DECLAREES, JAMAIS COMPAREES (pas de pieces sures) ; leurs cases remplies : %s" % (
     len(ATT), " . ".join("%s %d" % kv for kv in att_rempli.most_common())))

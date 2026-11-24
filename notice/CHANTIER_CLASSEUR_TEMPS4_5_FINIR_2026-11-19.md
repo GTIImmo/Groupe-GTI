@@ -5423,6 +5423,42 @@ A LUI : 19814 ; retirer 4126 et 21520 de E ; A2 l'ancienne repartition ; la comm
   biens. RIEN D'ECRIT ; rien tire ; rien pousse.
 ```
 
+### 20.38 Ses quatre reponses du 24/11 : 19814, le retrait de E a blanc, A1-A2-A3, la commission, le § 7 refait (v21, passage 79)
+
+Son mot : C:\Hektor\MOT_DU_24_11_MES_QUATRE_REPONSES.md. Notice : notice/PROTOCOLE_REPONSES_24_11_SES_QUATRE_REPONSES_2026-11-24.md.
+Outils (lecture seule) : protocole_retrait_exclusions_e_a_blanc_2026-11-24.py, protocole_a1_a2_a3_le_remede_a_blanc_2026-11-24.py,
+protocole_commission_agence_ce_qu_elle_porte_2026-11-24.py ; protocole_controle_sheet_contre_registre_2026-11-24.py refait.
+
+```
+① v21 : 19814 -> 4G2UHO35 (PIECE_DONNEE_PAR_DECISION, sa preuve de DATE : acte prevu 17/05/2020, 4G2UHO35 annulee 20/05/2020) ;
+  EN_SUSPENS vide. PASSAGE 79 contre 78 : 2 verdicts (R7NU9NPM, 4G2UHO35 -> TRANCHEE), 0 deja rendu ; 4 725 + 73 ; RESTE 17 -> 15.
+  4G2UHO35 prend D2020-0091 (19814, sa plus petite piece) ; R7NU9NPM NEUF ; D2020-0043 sans ligne. REJEU EXACT 79 VERT (451 / 179,
+  4 725 / 4 725, etiquettes 4 725, R7b 21 / 21, 0 hors, 0 attente). 19815 VISIBLE : hors EXCLUES_DE_LA_REGLE_E ET pas seule (chaine
+  19814 avec 19814 19816 19817 19821) ; temoin positif : son morceau trouve, R7NU9NPM juste.
+② A BLANC (copie du module + copie du socle, passage a blanc 80) : protocole 2 lignes (P252U1JH D2020-0592, d2108609 D2025-0427) ;
+  vague 0 autre ligne (4 727 / 4 727) MAIS 4 morceaux au brouillon ; ⛔ LA NUIT COUPES ETEINTES : 4 LIGNES -- FOZ6HZLK recoit 4126
+  (garde D2022-0233), ⛔ 1c7b38f9 recoit 21520 et PERD D2025-0263 (-> D2025-0427). CE N'EST PAS 2 : ARRETE. Le retrait ne se pose
+  qu'AVEC la vague (meme nuit), jamais avant ; l'interrupteur reste eteint tant qu'A2 n'est pas corrige -> ② attend A2.
+③ A1 : 10 / 81 sans remede / 107 changes / CONTROLE 0. A2 : sa regle de lecture verifiee SANS filtre de signature (un nom 100 % ->
+  une personne 3 959 / 3 971, 12 nommees ; inverse deux noms -> deux personnes 624 / 635, 11 nommees). Remede en deux passes (etat
+  vivant prevu de la cible) : 452 parts RECOPIEES (222 chaines), 151 MISES DE COTE avec leur ancien numero (75) ; CONTROLE 4 087
+  justes, 2 conflits nommes (U0GQ3KTO, NRZVKH85), 0 faux non nomme ; temoin sans remede 212 ; conservation 17 907 BOUCLE. Les 26
+  ORPHELINES DU MONITEUR (13 chaines) : la vague recree chaque chaine et sa ligne d'arrivee y porte EXACTEMENT ces parts. A3 (notes,
+  cle = la transaction) : 161 reflets faux aujourd'hui (lui 155, 6 non expliques), 269 apres la nuit, 0 recalcule.
+④ COMMISSION (⚠ j'avais lu la memoire de l'autre session de 06:33 AVANT de mesurer : dit dans la notice). Source : commissionAgence
+  de l'API (classe C). Epoques : avant 2015 le QUART 98 % ; 2015-16 vide 77 % ; 2017-24 le TOUT 77 % ; 2025 MOITIE 42 % (bascule
+  mai-juin 2025) ; 2026 VIDE 86 % (fevrier-mars 2026). Le formulaire de Hektor (console) ne porte PAS le partage (1 personne dans
+  7 957 / 7 968) et contredit son champ. 2017-24, LE NOM : deux noms -> jamais le tout (3 / 485), la part d'une personne 479 / 485 ;
+  inverse un nom -> le tout 2 567 / 2 594. 2025-26 un nom -> moitie 112 / 244 et 24 / 27 : aucun signe (Charge 99 / 92, colonne
+  recente), seule la DATE. MES 453 : 313 par le partage au nom, 139 inexpliquees (136 en 2025-26), 1 hors. 162 inexpliquees
+  nommees au fichier. Rien ecrit.
+⑤ § 7 REFAIT : CHARGE lue des deux cotes (Sheet 980, transaction 7 / 31 368 = TROU DE LECTURE, le carnet des mandats 23 491 ;
+  jugee le 03/11) -> 953 comparees, 914 accord, 39 ecarts nommes (37 faux ecarts d'accent corriges). NOTES par la TRANSACTION :
+  son 56 TIENT (meme ensemble 78 / 79, 38 lignes). Ecarts 3 963 -> 3 051.
+RESTE 15 ; 13 avec le ②.
+A LUI : ② avec la vague ; les 2 conflits A2 ; sa mesure de la commission ; les 6 d'A3 ; le « vas-y » du code A1-A2-A3. RIEN D'ECRIT.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

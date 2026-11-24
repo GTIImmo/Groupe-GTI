@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v20 -- 24/11 : ses 64 decisions du verrou -- 14 pieces donnees, 2 mises de cote, 19814 en suspens (son doute)"
+VERSION = "v21 -- 24/11 : ses quatre reponses -- 19814 a 4G2UHO35 (sa preuve de date)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -172,12 +172,11 @@ MISE_DE_COTE_PAR_DECISION = {
 #   (« financement pas sur relance 13/5 ») -- un indice vers 4G2UHO35, contre la date de son offre. NON FORCE : elle reste a
 #   part, et le verrou tient les DEUX lignes dont l'etiquette dependrait d'elle (19814 est la plus petite piece de sa
 #   chaine, celle qui porte D2020-0091 : la ligne qui la recevra prendra ce numero).
-EN_SUSPENS_PAR_SON_DOUTE = {
-    19814: (("R7NU9NPM", "4G2UHO35"),
-            "SON DOUTE du 24/11 (§ 6), mesure et NON FORCE : compromis annule du 17/02/2020, 69 000, honoraires 5 980 "
-            "(la commission de R7NU9NPM ET de 4G2UHO35) -- 16 j apres l'annulation de R7NU9NPM (01/02/2020), 7 j avant "
-            "l'offre de 4G2UHO35 (24/02/2020) ; son acte prevu le 17/05/2020, 4G2UHO35 annulee le 20/05/2020 : a lui"),
-}
+#   ⭐ SA REPONSE (24/11, « MOT_DU_24_11_MES_QUATRE_REPONSES », ①) : « TON INDICE EST LE MEILLEUR ARGUMENT DU DOSSIER :
+#   son acte etait prevu le 17/05/2020, et 4G2UHO35 a ete annulee le 20/05/2020. C'est une preuve de DATE -- ni un nom,
+#   ni un mandat. Elle est conforme a P1 et a P2. 19814 va a 4G2UHO35 (avec 19819 et 19820) ; 19815 reste a R7NU9NPM
+#   (avec 19818). » -> 19814 sort du suspens : PIECE_DONNEE_PAR_DECISION. Le mecanisme reste (vide), pour le prochain doute.
+EN_SUSPENS_PAR_SON_DOUTE: dict = {}
 for _a, _t in MISE_DE_COTE_PAR_DECISION.items():
     A_PART_PAR_DECISION[_a] = _t
 for _a, (_ls, _t) in EN_SUSPENS_PAR_SON_DOUTE.items():
@@ -474,6 +473,11 @@ PIECE_DONNEE_PAR_DECISION = {
                         "4G2UHO35 ; « sans cette correction, 4G2UHO35 ne recevait RIEN »"),
     19815: ("R7NU9NPM", SON_MOT_DU_24_11 + " : compromis annule sans date, 69 000, honoraires 5 980 (la commission de "
                         "R7NU9NPM ET de 4G2UHO35)"),
+    19814: ("4G2UHO35", SON_MOT_DU_24_11 + ", SA REPONSE A SON DOUTE (§ 6 -> ses quatre reponses, ①) : compromis annule du "
+                        "17/02/2020, 69 000, honoraires 5 980 (la commission des deux lignes) ; son acte prevu le 17/05/2020 "
+                        "et 4G2UHO35 annulee le 20/05/2020 -- « une preuve de DATE, ni un nom, ni un mandat, conforme a P1 "
+                        "et a P2 » ; contre : 7 j avant l'offre de 4G2UHO35 (24/02/2020), 16 j apres l'annulation de R7NU9NPM "
+                        "(01/02/2020)"),
 }
 RIEN_A_ETIQUETER_PAR_DECISION = {
     "SOF45TS3": "sa decision du 23/11 au soir (bien 39845) : « SOF45TS3 (mandat 15920) : rien a etiqueter -- sa tentative, "
@@ -534,8 +538,8 @@ SES_DECISIONS = {
     "ses 64 decisions du verrou (24/11)": {
         "source": "son mot du 24/11 (MOT_DU_24_11_LES_64_TRANCHEES_LES_REGLES_ET_LE_CONTROLE.md) et le detail "
                   "SES_64_DECISIONS_DU_VERROU_23_11.md : « J'ai tranche les 64 transactions libres des 14 biens du verrou, "
-                  "une par une » -- les vraies pieces de chaque ligne, telles que son fichier les ecrit (19814 : son "
-                  "doute, en suspens -- R7NU9NPM et 4G2UHO35 attendent)",
+                  "une par une » -- les vraies pieces de chaque ligne, telles que son fichier les ecrit ; 19814 : SA "
+                  "REPONSE du 24/11 (ses quatre reponses, ①) la donne a 4G2UHO35 -- son fichier l'ecrivait a R7NU9NPM",
         "remplace": "VERROU_PIECE_PLUS_PETITE (28 lignes), COPIE_SEULE (d2108609) ; sa B3 du 21/11 pour onze de ses 20 a "
                     "part ; la paire DEBARD des jumelles (§ 18.9, ma mesure du 10/11) : il en fait DEUX affaires",
         "lignes": {'FOZ6HZLK': [4125, 4127, 4129], 'P252U1JH': [4126, 4128], 'ACB4D8WI': [4328, 4332, 4333],
@@ -546,8 +550,8 @@ SES_DECISIONS = {
                    'ZMQZSE9Q': [4670, 4671, 4673], 'GYGF5F1X': [4669, 4672], 'SWDW99J5': [7711, 7713, 7714],
                    '9DK01H85': [7710, 7712], 'AYIHPHF5': [14109, 14112, 14115], 'Z3DYDC4X': [14111, 14113],
                    'L2B2WGCF': [14114], 'OBBBCH0X': [17202, 17204, 17207], 'ODF1PWJ0': [17205],
-                   'LNWLBVKG': [17203, 17206], 'MYILWKZQ': [19816, 19817, 19821], '4G2UHO35': [19819, 19820],
-                   'R7NU9NPM': [19814, 19815, 19818], 'ZW7MKTWH': [20089], '5QE9107L': [20088, 20090],
+                   'LNWLBVKG': [17203, 17206], 'MYILWKZQ': [19816, 19817, 19821], '4G2UHO35': [19814, 19819, 19820],
+                   'R7NU9NPM': [19815, 19818], 'ZW7MKTWH': [20089], '5QE9107L': [20088, 20090],
                    'd2108609': [21520], '1c7b38f9': [21521, 21522, 21523], 'UM4ZU2SX': [27607, 27608, 27611],
                    'OAUI9CKR': [27610]}},
     "39845 (bien 39845)": {
