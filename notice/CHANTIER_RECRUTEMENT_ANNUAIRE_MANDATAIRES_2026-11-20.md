@@ -1272,6 +1272,9 @@ L'ordre :
       `notice/RECRUTEMENT_MODELE_EMAIL_PREMIER_CONTACT_2026-11-24.md` (le message, le bloc d'information art. 14,
       la version orale du premier appel, le cas « ajoutée à la main », 5 décisions à prendre). ⏸ Relecture de
       Frédéric. ⚠ Il promet l'effacement à 3 ans : R5.3 devient un engagement (avant novembre 2029).
+      ✅ **Le FOND est validé par Frédéric le 24/11** (« Oui, sur le fond »). Restent : ses 4 cases (expéditeur,
+      « ce que GTI propose », adresse postale, adresse de contact pour les données) et les décisions 3 à 5 du
+      brouillon (refus par réponse ou lien, avis de son conseil, moyen d'envoi).
 - [ ] R7.2 Le rangement du CV
 - [ ] R7.3 Le contrat d'agent commercial et sa signature (chantier à part)
 - [ ] R7.4 « Créer son accès à bienvu »

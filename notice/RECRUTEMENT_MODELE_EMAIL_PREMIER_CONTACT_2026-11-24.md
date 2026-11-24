@@ -3,7 +3,7 @@
 > **R7.1 du chantier** (`notice/CHANTIER_RECRUTEMENT_ANNUAIRE_MANDATAIRES_2026-11-20.md`, §14).
 > **Décision D5** : j'écris un brouillon ; ⏸ **Frédéric le relit avant le premier envoi**. Rien n'est branché :
 > aujourd'hui, « Écrire un e-mail » ouvre la messagerie de l'administrateur, vide, et l'envoi se note dans le fil.
-> Écrit le 24/11/2026.
+> Écrit le 24/11/2026. ✅ **Le fond est validé par Frédéric le 24/11.** Restent ses cases et les décisions 3 à 5.
 
 ## Ce que ce texte doit tenir (règles déjà écrites dans la note du chantier)
 
