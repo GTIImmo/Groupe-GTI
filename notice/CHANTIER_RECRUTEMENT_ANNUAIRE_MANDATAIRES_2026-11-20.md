@@ -1167,7 +1167,7 @@ L'ordre :
   de menu, 2 rendus) — la délégation disait « 6 points » : **c'est plus, je le signale** ; `layouts/MobileLayout.tsx`
   (3 points : type, entrée admin, picto) ; `lib/api.ts` (1 mot : la clé ajoutée à la liste du mode maquette, qui ne
   joue que SANS base).
-- [ ] R6.7 ⏸ Le déploiement — **R6 SEUL, à part (choix de Frédéric le 24/11)**.
+- [x] R6.7 Le déploiement — **R6 SEUL, à part (choix de Frédéric le 24/11)**.
   - Pourquoi à part : le `main` local a 120 commits d'avance ET 74 de retard sur GitHub (dernier push depuis ici
     vers le 18/11 ; GitHub a reçu `etape4-chap6-lot0` le 20/11). Réconcilier = déployer le travail des autres
     sessions : pas à moi de le décider.
@@ -1179,6 +1179,20 @@ L'ordre :
     `insert … on conflict do nothing`, relue). Retour arrière : `delete from public.app_setting where key =
     'recrutement_ecran'`. Sans effet sur la version en ligne tant que R6 n'est pas déployé.
   - ⏸ Frédéric pousse : `git -C C:\Hektor\envoi-recrutement-r6 push origin recrutement-r6-seul:main`.
+  - ✅ **POUSSÉ par Frédéric le 24/11 (~14:20)** : GitHub `main` = `9a20116`, sans branche annexe sur GitHub (il ne
+    voulait pas de branche à part : la branche n'était qu'un transport local). **En ligne chez Vercel à 14:23**
+    (le code de l'écran est trouvé dans la version servie).
+  - ✅ **ESSAI EN RÉEL, en lecture seule (24/11, 14:25, dans le Chrome de Frédéric, aucun geste cliqué)** : 2 116
+    candidats, 642 joignables, « relue le 20/11, prochaine relecture le 06/12 », 50 lignes par page, une fiche
+    réelle ouverte (Orpi, parcours, fil, blocs) sans erreur. La carte est vide (« 0 agence ») : attendu, les
+    17 agences montent avec le passage en cours.
+  - ⚠ **Deux défauts vus en réel, corrigés en local (`87d2e94`), PAS encore en ligne** : les chiffres du bloc
+    de la zone se chevauchaient (« 2 116 » contre « 642 ») ; **3 fiches Dr House portent du HTML brut dans le
+    nom** (`<p>… <strong>…</strong>`, deux personnes dans une carte) — React l'échappe, aucun danger, mais
+    illisible : retiré à l'affichage. ⏳ La vraie correction est au collecteur (lecteur Dr House), APRÈS le
+    passage en cours (il relance le collecteur à chaque tranche : on ne le modifie pas pendant).
+  - ⏳ Il reste à retirer la branche locale `recrutement-r6-seul` (ma garde refuse : `git -C C:\Hektor\Projet
+    branch -d recrutement-r6-seul`) et la coquille vide `C:\Hektor\envoi-recrutement-r6` (tenue par un processus).
   - ⚠ Le jour où le `main` local sera réconcilié avec GitHub, R6 y sera deux fois (`971ba5c` et `9a20116`) avec
     des ajouts identiques : ils doivent se fondre sans conflit, à vérifier ce jour-là.
 - [ ] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant
