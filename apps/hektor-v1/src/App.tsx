@@ -292,6 +292,8 @@ import SanteSystemeScreen from './SanteSystemeScreen'
 import RegistreTransactionsScreen, { type GesteDuRegistre } from './RegistreTransactionsScreen'
 import { cleNom } from './lib/pilotage'
 import PilotageScreen from './PilotageScreen'
+// Recrutement R6 (24/11/2026) : admins seuls, derrière l'interrupteur `recrutement_ecran` (note du chantier §14).
+import RecrutementScreen from './RecrutementScreen'
 import RegistreUtilisateurs, { type RuPreRemplissage } from './RegistreUtilisateurs'
 import { BranchesAccueil, citerDansAssistant, demanderAssistant, ouvrirConversation, useAccueilAssistant, useConversationsRail } from './RailAssistant'
 import AccueilAssistant, { type ChiffresAccueil } from './AccueilAssistant'
@@ -429,7 +431,7 @@ const heavyListingFilterKeys = new Set<keyof AppFilters>([
   'offreStatus',
   'compromisStatus',
 ])
-type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions' | 'pilotage'
+type Screen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante' | 'transactions' | 'pilotage' | 'recrutement'
 type BusinessRequestType = 'demande_diffusion' | 'demande_baisse_prix' | 'demande_annulation_mandat'
 type SuiviRequestFilter = 'pending_or_in_progress' | 'accepted_history' | 'refused' | 'waiting_correction' | 'anomalies' | 'price_alert' | 'portfolio'
 type LightweightDetailTarget = Dossier | MandatRecord
@@ -14548,10 +14550,12 @@ const ADRESSE_MEMO_CONNEXION = 'gti_adresse_avant_connexion'
 const ECRAN_VERS_ADRESSE: Record<Screen, string> = {
   accueil: 'accueil', annonces: 'annonces', mandats: 'annonces', estimations: 'estimations',
   registre: 'mandats', contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions', pilotage: 'pilotage',
+  recrutement: 'recrutement',
 }
 const ADRESSE_VERS_ECRAN: Record<string, Screen> = {
   accueil: 'accueil', annonces: 'mandats', estimations: 'estimations', mandats: 'registre',
   contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante', transactions: 'transactions', pilotage: 'pilotage',
+  recrutement: 'recrutement',
 }
 // PARTENAIRES 3.5 (05/11/2026) : `vue=metiers` = le côté « Partenaires » de l'annuaire (le catalogue des métiers) ; une fiche
 //   rouverte par l'adresse y garde sa fiche métier.
@@ -22724,6 +22728,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (screen === 'pilotage') {
       return { title: 'Pilotage', copy: '' }
     }
+    if (screen === 'recrutement') {
+      return { title: 'Recrutement', copy: '' }
+    }
     if (screen === 'contacts') {
       return { title: bvs('Contacts Hektor'), copy: '' }
     }
@@ -23121,6 +23128,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }, [session])
   const registreTransactionsVisible =
     registreTransactionsCran === 'admin' ? isAdmin : ['on', 'true', '1', 'yes'].includes(registreTransactionsCran ?? '')
+  // Recrutement R6 (24/11/2026) : l'écran dort derrière `recrutement_ecran`. ADMINS SEULS quel que soit le cran
+  // (décision D3 : 'admin' et 'on' ouvrent aux admins, la base refuse de toute façon les autres) ; absent = caché.
+  const [recrutementCran, setRecrutementCran] = useState<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (hasSupabaseEnv && !session) {
+      setRecrutementCran(undefined)
+      return
+    }
+    let annule = false
+    void loadAppSettingValeur('recrutement_ecran').then((valeur) => {
+      if (!annule) setRecrutementCran(valeur)
+    })
+    return () => {
+      annule = true
+    }
+  }, [session])
+  const recrutementVisible = isAdmin && ['admin', 'on', 'true', '1', 'yes'].includes(recrutementCran ?? '')
   // Étape 4 de l'assistant, lot 1 (17/11/2026) : le rail de l'assistant, derrière l'interrupteur `accueil_assistant`
   //   (RailAssistant.tsx ; maquette validée, planches 20-22). Éteint = le rail d'aujourd'hui, à l'identique.
   const railAssistant = useAccueilAssistant(Boolean(session), sessionEmail, isAdmin) && MENU_NET && APP_BIENVU_ENABLED
@@ -23147,7 +23171,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // Pilotage (02/11/2026) : admins seuls (décision de Frédéric), comme Santé.
     if (screen === 'pilotage' && profile && !isAdmin) setScreen('mandats')
     if (screen === 'transactions' && profile && registreTransactionsCran !== undefined && !registreTransactionsVisible) setScreen('mandats')
-  }, [screen, isAdmin, isManagerOrAdmin, profile, registreTransactionsCran, registreTransactionsVisible])
+    if (screen === 'recrutement' && profile && recrutementCran !== undefined && !recrutementVisible) setScreen('mandats')
+  }, [screen, isAdmin, isManagerOrAdmin, profile, registreTransactionsCran, registreTransactionsVisible, recrutementCran, recrutementVisible])
   const images = useMemo(() => {
     // G.15-d (27/09/2026) -- QUAND NOTRE GALERIE EXISTE, ELLE SERT SEULE.
     //
@@ -27026,7 +27051,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         date: event.event_at,
         message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
       }))
-    const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage'
+    const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' && screen !== 'recrutement'
       && !vueMetiersApp // PARTENAIRES 3.6 : côté Partenaires, le catalogue porte sa recherche et son « + »
 
     return (
@@ -27046,7 +27071,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         onSignOut={session ? handleSignOut : undefined}
         onOpenSearch={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
         activite={SUIVI_DANS_LA_FICHE && !SUIVI_PASTILLE && mesTravauxListe.length ? { enCours: mesTravauxEnCours, echecs: mesTravauxEchecs, liste: <ListeMesTravaux /> } : undefined}
-        masquer={registreTransactionsVisible ? undefined : ['transactions']}
+        masquer={[...(registreTransactionsVisible ? [] : ['transactions' as const]), ...(recrutementVisible ? [] : ['recrutement' as const])]}
       >
         {showMobileCommandCard ? (
         <section className="mobile-command-card">
@@ -27383,6 +27408,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
         ) : screen === 'pilotage' && isAdmin ? (
           <PilotageScreen />
+        ) : screen === 'recrutement' && recrutementVisible ? (
+          <RecrutementScreen monId={session?.user?.id ?? null} />
         ) : screen === 'transactions' ? (
           <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} chaineDepart={assistantTransaction} />
         ) : screen === 'registre' ? (
@@ -27583,11 +27610,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             <>
               {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
               {isAdmin ? <button className={`nav-button ${screen === 'pilotage' ? 'is-active' : ''}`} type="button" title="Pilotage" onClick={() => openScreen('pilotage')}>Pilotage</button> : null}
+              {recrutementVisible ? <button className={`nav-button ${screen === 'recrutement' ? 'is-active' : ''}`} type="button" title="Recrutement" onClick={() => openScreen('recrutement')}>Recrutement</button> : null}
             </>
           ) : (
             <>
               {MENU_NET && APP_BIENVU_ENABLED && isManagerOrAdmin ? <span className="rn-label">Pilotage</span> : null}
               {isAdmin ? <button className={`nav-button ${screen === 'pilotage' ? 'is-active' : ''}`} type="button" title="Pilotage" onClick={() => openScreen('pilotage')}>Pilotage</button> : null}
+              {recrutementVisible ? <button className={`nav-button ${screen === 'recrutement' ? 'is-active' : ''}`} type="button" title="Recrutement" onClick={() => openScreen('recrutement')}>Recrutement</button> : null}
               {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
               {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
             </>
@@ -27671,7 +27700,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       <div className="workspace-shell">
         <main className="content">
         {/* HARMONISATION (06/11) : la barre commune est AUSSI celle du côté Partenaires (avant : cachée, le catalogue avait la sienne). */}
-        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' ? (
+        {screen !== 'suivi' && screen !== 'accueil' && screen !== 'agenda' && screen !== 'transactions' && screen !== 'pilotage' && screen !== 'recrutement' ? (
         <section className={`hero ${screen === 'estimations' ? 'estim-toolbar' : ''}`.trim()}>
           <div className="hero-stack">
               <div className="hero-top-row">
@@ -28551,6 +28580,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
         ) : screen === 'pilotage' && isAdmin ? (
           <PilotageScreen />
+        ) : screen === 'recrutement' && recrutementVisible ? (
+          <RecrutementScreen monId={session?.user?.id ?? null} />
         ) : screen === 'transactions' ? (
           <RegistreTransactionsScreen isAdmin={isAdmin} libelleTypeBien={propertyTypeLabel} onOuvrirBien={(ligne) => void ouvrirBienDuRegistre(ligne)} onGeste={isManagerOrAdmin ? (ligne, geste) => void ouvrirGesteDuRegistre(ligne, geste) : undefined} fenetreOuverte={statusChangeTarget != null} onOuvrirContact={openContactDirectory} chaineDepart={assistantTransaction} />
         ) : (
