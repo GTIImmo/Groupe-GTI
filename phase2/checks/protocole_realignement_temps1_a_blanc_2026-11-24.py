@@ -57,6 +57,9 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--passage", type=int, required=True)
 ap.add_argument("--csv", action="store_true")
 ap.add_argument("--r26", action="store_true", help="l'etat d'arrivee avec R26 a blanc")
+ap.add_argument("--supabase", action="store_true",
+                help="l'etat du registre (S0) lu CHEZ SUPABASE, en lecture seule (le pooler en `read only`), et non dans "
+                     "la copie locale : le temoin du geste reel (avant / apres / l'inverse), sans attendre la descente")
 arg = ap.parse_args()
 
 
@@ -138,19 +141,37 @@ def codes(s):
 COLS = ("vente_reglee_app", "numero_facture_app", "date_annulation_app", "motif_annulation_app", "honoraires_entree_app")
 S0 = {c: {} for c in COLS}
 S0["note"], S0["condition"], S0["avis"], S0["charge"] = {}, {}, {}, {}
-for r in loc.execute("select app_affaire_id, %s from app_affaire_ledger" % ", ".join(COLS)):
+if arg.supabase:
+    # ⭐ LE TEMOIN SUR LA BASE REELLE (24/11, son GO) : les memes cinq lectures, chez Supabase, en lecture seule -- le
+    #   carnet des mandats y porte son vrai nom (app_mandat_champ_app ; __sb est sa copie descendue)
+    _cn, _cu = P.pooler()
+
+    def _lire(sql):
+        _cu.execute(sql)
+        _cols = [d[0] for d in _cu.description]
+        return [dict(zip(_cols, r_)) for r_ in _cu.fetchall()]
+    _CARNET = "app_mandat_champ_app"
+    dire("   ⭐ S0 LU CHEZ SUPABASE (lecture seule), pas dans la copie locale")
+else:
+    def _lire(sql):
+        return loc.execute(sql)
+    _CARNET = "app_mandat_champ_app__sb"
+for r in _lire("select app_affaire_id, %s from app_affaire_ledger" % ", ".join(COLS)):
     for c in COLS:
         if str(r[c] or "").strip():
             S0[c][int(r["app_affaire_id"])] = str(r[c]).strip()
-for r in loc.execute("select app_affaire_id, origine, texte from app_affaire_note"):
+for r in _lire("select app_affaire_id, origine, texte from app_affaire_note"):
     S0["note"][int(r["app_affaire_id"])] = (r["origine"], r["texte"] or "")
-for r in loc.execute("select app_affaire_id, rang, libelle, note, origine from app_affaire_condition"):
+for r in _lire("select app_affaire_id, rang, libelle, note, origine from app_affaire_condition"):
     S0["condition"][(int(r["app_affaire_id"]), int(r["rang"]))] = (r["origine"], r["libelle"] or "", r["note"] or "")
-for r in loc.execute("select id_unique, avis_a_envoyer, commentaire_avis, avis_envoye, origine from app_classeur_avis"):
+for r in _lire("select id_unique, avis_a_envoyer, commentaire_avis, avis_envoye, origine from app_classeur_avis"):
     S0["avis"][r["id_unique"]] = (r["origine"], r["avis_a_envoyer"] or "", r["commentaire_avis"] or "", r["avis_envoye"] or "")
-for r in loc.execute("select hektor_annonce_id, numero_mandat, valeur_app, origine from app_mandat_champ_app__sb "
-                     "where champ = 'charge_commission'"):
+for r in _lire("select hektor_annonce_id, numero_mandat, valeur_app, origine from %s "
+               "where champ = 'charge_commission'" % _CARNET):
     S0["charge"][(str(r["hektor_annonce_id"]), str(r["numero_mandat"]))] = (r["valeur_app"] or "", r["origine"])
+dire("   S0 par famille (compte, empreinte) : %s" % " . ".join("%s %d %s" % (
+    f_, len(S0[f_]), hashlib.md5(json.dumps(sorted((str(k_), v_) for k_, v_ in S0[f_].items()), ensure_ascii=False)
+                                 .encode()).hexdigest()[:8]) for f_ in COLS + ("note", "condition", "avis", "charge")))
 HON = {a: K.nombre(PI[a]["honoraires_entree"]) for a in PI}      # la valeur de HEKTOR (classe C), pour le temoin
 S0["_src"] = {}     # (famille, cle) -> (la ligne d'ou elle vient, la valeur du rapport, le lot) : rempli plus bas, et
 #                     ⭐ il SUIT l'ecriture quand le geste la deplace (sinon le temoin de fin perdrait sa ligne)
@@ -882,11 +903,33 @@ if arg.csv:
     f3 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS1_LE_GESTE_A_BLANC_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
     with f3.open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.writer(fh, delimiter=";")
+        # ⭐ SA RESERVE DU 24/11 (4e mot) : « ta regle "chaque ecriture garde SA LIGNE D'ORIGINE" n'est pas portee par ton
+        #   fichier des 42 : il donne l'ancienne PLACE (la transaction), pas la LIGNE du classeur. Au geste reel je veux LES
+        #   DEUX ecrites. » -> la ligne d'origine (id_unique, son numero au Sheet, le lot) est ecrite a cote de la place
         w.writerow(["colonne", "de (ancienne place, mise de cote au journal)", "vers", "geste", "valeur",
-                    "l'inverse : remet", "a"])
+                    "ligne d'origine (id_unique)", "ligne d'origine (n° au Sheet)", "lot", "l'inverse : remet", "a"])
         for fam, de, vers, val, geste in JOURNAL:
+            L_, _vr, lot_ = val[1]
             w.writerow([NOMS[fam], de, vers if vers is not None else "- (mise de cote)", geste,
-                        masque(str(val[0] if not isinstance(val[0], tuple) else val[0][1]))[:100], "la valeur", de])
+                        masque(str(val[0] if not isinstance(val[0], tuple) else val[0][1]))[:100], L_ or "-",
+                        V.get(L_, {}).get("num", "-") if L_ else "-", lot_, "la valeur", de])
+        # ⭐ LE JOURNAL COMPLET, pour le patch (valeurs ENTIERES : il ne sort pas du dossier de travail, jamais en notice) --
+        #   les gestes ET les 4 nommees (elles restent nommees au journal, son mot du 24/11)
+        _j = {"passage": arg.passage, "r26": bool(arg.r26), "empreintes": [e0, e1, e2], "gestes": [], "nommees": []}
+        for fam, de, vers, val, geste in JOURNAL:
+            L_, _vr, lot_ = val[1]
+            _j["gestes"].append({"famille": fam, "de": de, "vers": vers, "geste": geste, "valeur": val[0],
+                                 "ligne": L_, "num": V.get(L_, {}).get("num") if L_ else None, "lot": lot_})
+        for e in E0:
+            if mal_placee(e) and e["decision"] not in ("DEPLACER", "DOUBLON", "METTRE DE COTE"):
+                _j["nommees"].append({"famille": e["famille"], "de": e["piece"], "valeur": e["valeur"],
+                                      "ligne": e["source"], "num": V.get(e["source"], {}).get("num"), "lot": e["lot"],
+                                      "classe": e["classe"], "decision": e["decision"], "raison": e["raison"],
+                                      "cible": e.get("cible")})
+        f4 = P.DOSSIER / ("realignement_temps1_journal_passage_%d%s_2026-11-24.json" % (arg.passage,
+                                                                                          "_avec_r26" if arg.r26 else ""))
+        f4.write_text(json.dumps(_j, ensure_ascii=False, indent=1, default=list), encoding="utf-8")
+        dire("-> %s (le journal complet, hors notice)" % f4)
     dire()
     dire("-> %s" % f1)
     dire("-> %s" % f2)

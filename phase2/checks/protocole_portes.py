@@ -370,6 +370,27 @@ def main() -> int:
         for pr in x["preuves"]:
             if pr.startswith("a part deja dans son dossier"):
                 r7a_de_ligne[i] |= {int(n) for n in pr.split(":")[-1].split()}
+
+    # ⭐ R26 (posee le 24/11, son GO du 24/11 : « GO SUR R26 -- je l'ai controle par mes propres mesures et ca tient »)
+    #   LA COUPE EMPORTE AVEC LA LIGNE LA VENTE QUI N'APPARTIENT QU'A ELLE. Pour une ligne tranchee : ses pieces ne portent
+    #   aucune vraie vente ; le dossier d'aujourd'hui de ses pieces (rejeu A) porte UNE SEULE vraie vente hors d'elles ; a
+    #   elle seule au gel, tenue par aucune ligne -> son morceau l'emporte. Le protocole ne reconnait une vente que si sa
+    #   date est EXACTEMENT la Vente Fixee : 4 jours suffisent a la rendre invisible (12182). Ne change AUCUN verdict, piece
+    #   ni etiquette du protocole : seulement le morceau de la coupe. Mesuree a blanc le 24/11
+    #   (protocole_r26_vente_emportee_a_blanc_2026-11-24.py) : 49 lignes, 44 sans effet, 5 COUPE_NEUVE = les 5 ventes
+    #   reglees (7126, 12182, 16019, 21662, 28147) ; 0 autre vente ; rejeu exact ; garde du temps 2 a 0.
+    r26_de_ligne = defaultdict(set)
+    for i, x in T.items():
+        M_ = x["pieces"]
+        if any(I.pieces[q]["kind"] == "vente" and I.nature.get(q) == PC.VRAIE for q in M_):
+            continue
+        U_ = set().union(*(mA[chA[q]] for q in M_))
+        vs_ = [q for q in U_ - M_ if I.pieces[q]["kind"] == "vente" and I.nature.get(q) == PC.VRAIE]
+        if len(vs_) == 1 and gel_p.get(vs_[0], set()) == {i} and not tenue_par.get(vs_[0]):
+            r26_de_ligne[i].add(vs_[0])
+    dire("   R26 : %d ligne(s) dont la vente non prouvee n'appartient qu'a elle : %s" % (
+        len(r26_de_ligne), " ".join("%s:%s(%s)" % (i, "+".join(map(str, sorted(v))), porte[i])
+                                    for i, v in sorted(r26_de_ligne.items()))))
     dire("   R14 : %d ligne(s) gardent dans leur dossier la trace supprimee d'une saisie refaite (figee, aucune porte) : %s"
          % (sum(1 for v in TRACES.values() if v), " ".join("%s (%s)" % (i, " ".join(map(str, sorted(v)))) for i, v in sorted(TRACES.items()) if v)))
     dire("   R7b : %d piece(s) mise(s) de cote, en %d dossier(s) figes tels quels, pour %d ligne(s)"
@@ -393,7 +414,7 @@ def main() -> int:
     mB = membres(chB) if chB else {}
 
     def juste(i: str, ch: dict, mm: dict) -> bool:
-        M, N = T[i]["pieces"], neutres_de(T[i]["preuves"]) | TRACES.get(i, set())
+        M, N = T[i]["pieces"], neutres_de(T[i]["preuves"]) | TRACES.get(i, set()) | r26_de_ligne.get(i, set())
         Cs = {ch[p_] for p_ in M}
         return len(Cs) == 1 and not (mm[next(iter(Cs))] - M - N)
     # ⚠ les lignes « C5 aux portes » ne se jugent pas sur B : B porte encore les copies, qui les tiennent justes
@@ -429,7 +450,7 @@ def main() -> int:
                 "transactions;bien;geste;pourquoi"]
     vus, figes, mdc_figees = set(), [], []
     for i in sorted(T):
-        k_ = frozenset(T[i]["pieces"]) | frozenset(r7a_de_ligne.get(i, set()))
+        k_ = frozenset(T[i]["pieces"]) | frozenset(r7a_de_ligne.get(i, set())) | frozenset(r26_de_ligne.get(i, set()))
         if any(P.supprimee_chez_hektor(I.pieces[q]) for q in k_) and porte_a[i] not in ("RIEN", "MISE_DE_COTE"):
             figes.append(i)                    # le chainage ne la trouverait pas (« transaction introuvable »)
             continue
@@ -603,7 +624,7 @@ def main() -> int:
            "etiquettes": {"pieces": lab_ch, "lignes": dict(cat), "changent_de_ligne": changent, "perdent": perdent},
            "attente_qui_bouge": att_bouge, "detail": detail, "mises_de_cote": {
                "pieces": len(MDC), "dossiers": len(groupes_mdc), "lignes": sorted(mdc_de_ligne), "faux": mdc_faux,
-               "figes_par_le_chainage": mdc_figees}, "r7a": {i: sorted(v) for i, v in r7a_de_ligne.items()},
+               "figes_par_le_chainage": mdc_figees}, "r7a": {i: sorted(v) for i, v in r7a_de_ligne.items()}, "r26": {i: sorted(v) for i, v in r26_de_ligne.items()},
            "numero_a_l_arrivee": {i: numero(lab_ligne_E[i]) for i in T}, "etiquette_a_l_arrivee": lab_ligne_E}
     (P.DOSSIER / ("portes_passage_%d.json" % pid)).write_text(json.dumps(res, ensure_ascii=False, indent=1),
                                                              encoding="utf-8")

@@ -5525,6 +5525,43 @@ SES DECISIONS : les 42 apres R26 (son vas-y attend) ; V3FO5NDA AUCUNE copie (une
 A LUI : R26. RIEN D'ECRIT.
 ```
 
+### 20.41 R26 posee, les 42 ECRITS chez Supabase (les deux cles), la ventilation des 3 051 (24/11, son 4e mot)
+
+Notice : notice/PROTOCOLE_R26_POSEE_LES_42_ECRITS_ET_LA_VENTILATION_DES_3051_2026-11-24.md. Outils :
+realignement_42_generer_patch_2026-11-24.py, protocole_ventilation_des_3051_2026-11-24.py, temps 1 + option --supabase.
+
+```
+SON GO : « GO SUR R26 [...] LE GO PORTE SUR R26 ET LES 42 REVISES, dans TON ordre : R26 -> les 42 -> A2 -> le retrait des
+  exclusions de E dans la MEME nuit que la vague » ; « au geste reel je veux LES DEUX ecrites » ; les 4 restent NOMMEES.
+R26 POSEE (protocole_portes.py, 4 ancres) : passage 79 relance = la mesure a blanc OCTET POUR OCTET (brouillon 86a6668e,
+  portes, porte de chaque ligne) ; faux 0, etiquettes 0, hors 0, R7b 0. Sauvegardes *_avant_r26_20261124 au dossier.
+LES 42 ECRITS (supabase/patch_realignement_42_ecritures_2026-11-24*.sql, execute_sql) :
+  avant : temps 1 LU CHEZ SUPABASE = 0038d306 (= la copie locale) ; empreinte SQL des 65 pieces 37add335 ;
+  A_BLANC vert (apres 072b3cb3, rien reste) -> GESTE REEL (exige 37add335 / 072b3cb3) -> REPETITION 11/11 ->
+  INVERSE A BLANC : chaque piece revient a sa sauvegarde, 37add335 REVIENT (l'inverse est pret, non joue).
+  Sauvegardes app_affaire_ledger_avant_realignement_20261124 / app_affaire_note_avant_realignement_20261124 (65 pieces).
+  JOURNAL PERMANENT app_classeur_realignement_journal : 46 lignes (37 DEPLACER, 5 METTRE DE COTE, 4 NOMMEES), chacune
+  avec SES DEUX CLES (ancienne place : transaction, chaine, dossier ; ligne d'origine : id_unique, n° au Sheet, lot).
+  TEMOIN DE FIN SUR LA BASE REELLE : 46 -> 4 (les 4 nommees), 0 hors ; conservation 38 716 = 38 721 - 5 ; les donnees =
+  l'etat prevu a blanc famille par famille (dates 445, motifs 169, commissions 66, notes 4 524) ; ⚠ l'empreinte globale
+  du temps 1 (avec la table des sources) ne vaut pas 6d0b8e81 en reel : la source y est retrouvee par la piece -- dit.
+LA VENTILATION DES 3 051 : 1 307 LECTURE (997 commission_agence, 126 commission relue par honoraires_entree/_app,
+  141 pieces neutres, 26 factures texte, 16 charges sans mandat, 1 reglement illisible) + 1 595 HORS PERIMETRE (686
+  dates lot 3 09/11, 384 C3 16/11, 310 commissions C2 17/11 + « les vides » 09/11, 96 C8 16/11, 119 repartition : 59
+  annulees 24/11, 60 regles du 13/11, 1 conflit 24/11) + 149 A TRAITER (52 traitees aujourd'hui = 37 geste + 15 R26 ;
+  3 nommees ; 30 A2 ; 22 offres/compromis en attente sans part ; 23 charges ; 12 nouveautes du Sheet ; 6 dates a
+  poser [2 anterieures] ; 1 paire de jumelles T2GZOY5O/O6R10ZQA) = 3 051.
+REPARTITION 172 / 89 : 172 ecarts = 102 lignes (entree et sortie separees) ; LES 89 DU TEMPS 2 SONT TOUTES DANS LES 102,
+  meme ecart ; 13 au controle seul, justes a l'arrivee ; 0 au temps 2 seul. Le controle = aujourd'hui, le temps 2 = l'arrivee.
+AVIS : mon temps 1 jugeait le CONTENU (ses 4 = cases changees), pas le REFLET ; SES 10 = mes 10 « decolles » du 23/11, et
+  ils sont dans A1 (107) ; Supabase 24/11 : 2 543 justes, 10 faux des deux cotes, 7 poses a cheval, 28 vides (18 a cheval,
+  7 a une etiquette, 3 sans lien). Table fermee, 0 lecteur -> PAR LA VAGUE (A1, meme nuit) : 8 des 10 changent encore.
+NOTAIRE : DECISION du 09/11 (« le notaire on ne recupere rien », deux notaires contre un) ; Sheet 2 586 lignes, 503
+  tranchees sans aucun notaire chez nous.
+A LUI : A2 (a blanc d'abord) ; les 11 en attente sans part ; 23 charges ; 12 nouveautes ; 6 dates ; la paire ; les 4.
+ECRIT : le code de R26 et les 42 (Supabase). RIEN dans le Sheet, RIEN chez Hektor, pas de push. Interrupteur eteint.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
