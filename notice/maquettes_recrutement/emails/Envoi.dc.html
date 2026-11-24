@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>L'envoi, un par un</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#c5005f}a:hover{color:#8c0044}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid transparent}
+.btn-quiet{background:#fff;color:#222323;border-color:#cfd3d4}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; background: rgba(34,35,35,0.52); display: flex; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #222323;">
+  <div role="dialog" aria-labelledby="titre-envoi" style="width: 760px; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(34,35,35,.35); display: flex; flex-direction: column; overflow: hidden;">
+    <div style="background: #222323; color: #ffffff; padding: 18px 24px;">
+      <h2 id="titre-envoi" style="margin: 0; font-size: 20px; font-weight: 800;">Envoi en cours : 6 sur 9</h2>
+      <p style="margin: 4px 0 0; font-size: 13px; color: #c9cdcf;">Un e-mail toutes les 5 secondes. Vous pouvez fermer cette fenêtre : l'envoi continue, et chaque fil est mis à jour.</p>
+    </div>
+    <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <div style="position: relative; height: 10px; border-radius: 99px; background: #eef0f1; overflow: hidden;" role="progressbar" aria-valuemin="0" aria-valuemax="9" aria-valuenow="6" aria-label="Avancement de l'envoi">
+          <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 66.7%; background: #c5005f; border-radius: 99px;"></span>
+        </div>
+        <p style="margin: 8px 0 0; font-size: 12.5px; color: #5c6163;">Aujourd'hui depuis votre boîte : 28 sur 40. Encore 3, environ 15 secondes.</p>
+      </div>
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid #e2e5e6; border-radius: 14px; overflow: hidden;">
+        <sc-for list="{{lignes}}" as="l" hint-placeholder-count="9">
+          <li style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 70px; gap: 12px; align-items: center; padding: 10px 14px; border-top: 1px solid #eef0f1; font-size: 13.5px;">
+            <span><strong>{{l.nom}}</strong><span style="display: block; font-size: 12px; color: #5c6163;">{{l.detail}}</span></span>
+            <span class="pill" style="{{l.style}}">{{l.etat}}</span>
+            <span style="font-size: 12px; color: #7c8082; text-align: right;">{{l.heure}}</span>
+          </li>
+        </sc-for>
+      </ul>
+      <p style="margin: 0; font-size: 12.5px; color: #3f4446; line-height: 1.5; background: #f6f7f8; border-radius: 12px; padding: 10px 12px;">Un refus de Gmail (adresse qui n'existe plus) ne bloque pas les autres : la fiche le dit, et l'adresse est marquée « à vérifier ».</p>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 24px; border-top: 1px solid #e2e5e6; background: #fbfbfc;">
+      <button class="btn btn-quiet" type="button">Arrêter l'envoi</button>
+      <button class="btn btn-quiet" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ok = 'background:#e8f5ee;color:#245f44';
+    const file = 'background:#f1f2f3;color:#3f4446';
+    const ko = 'background:#fdeceb;color:#8f3432';
+    const encours = 'background:#fdf0f6;color:#8c0044';
+    const lignes = [
+      { nom: 'Camille Roux', detail: 'SAFTI · Saint-Étienne', etat: 'Envoyé', style: ok, heure: '15:42:05' },
+      { nom: 'Thomas Giraud', detail: 'Capifrance · La Talaudière', etat: 'Envoyé', style: ok, heure: '15:42:10' },
+      { nom: 'Inès Morel', detail: 'Dr House Immo · Saint-Genest-Lerpt', etat: 'Envoyé', style: ok, heure: '15:42:15' },
+      { nom: 'Hugo Delmas', detail: 'Optimhome · Issoire', etat: 'Refusé par Gmail', style: ko, heure: '15:42:20' },
+      { nom: 'Anaïs Roche', detail: 'BSK Immobilier · Le Puy-en-Velay', etat: 'Envoyé', style: ok, heure: '15:42:25' },
+      { nom: 'Patrick Vial', detail: 'SAFTI · Unieux', etat: 'Envoyé', style: ok, heure: '15:42:30' },
+      { nom: 'Lucie Faure', detail: '42ème Avenue · Saint-Étienne', etat: 'En cours…', style: encours, heure: '' },
+      { nom: 'Élodie Brun', detail: 'Orpi · Saint-Just-Saint-Rambert', etat: 'En attente', style: file, heure: '' },
+      { nom: 'Sophie Marcoux', detail: 'Orpi · Saint-Étienne', etat: 'En attente', style: file, heure: '' }
+    ];
+    return { lignes: lignes };
+  }
+}
+</script>
+</body>
+</html>

@@ -1279,6 +1279,9 @@ L'ordre :
       ✅ **Le FOND est validé par Frédéric le 24/11** (« Oui, sur le fond »). Restent : ses 4 cases (expéditeur,
       « ce que GTI propose », adresse postale, adresse de contact pour les données) et les décisions 3 à 5 du
       brouillon (refus par réponse ou lien, avis de son conseil, moyen d'envoi).
+      📐 **24/11 : audit des accès Google de l'app et PROPOSITION de l'envoi dans l'app** (un candidat, plusieurs
+      candidats, aperçu, envoi doux, désinscription, réponses, agenda) : `notice/RECRUTEMENT_EMAILS_AUDIT_ET_PROPOSITION_2026-11-24.md`
+      + maquette https://claude.ai/artifact/EBmocyoc2sRduq9cEg18vP. Rien de codé ; ⏸ validation de la maquette et 3 décisions.
 - [ ] R7.2 Le rangement du CV
 - [ ] R7.3 Le contrat d'agent commercial et sa signature (chantier à part)
 - [ ] R7.4 « Créer son accès à bienvu »
