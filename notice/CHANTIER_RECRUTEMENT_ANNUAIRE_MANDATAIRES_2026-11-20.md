@@ -1244,6 +1244,16 @@ L'ordre :
     PAS commité** (l'outil de confidentialité refuse que je le lise ou l'ajoute : à Frédéric).
   - ⏸ À faire, dans l'ordre : poser le patch (accord) → Frédéric commite `check_gti_health.py` → Frédéric lance
     l'installeur (administrateur) → j'allume l'interrupteur et je fais le premier passage à la main.
+  - ✅ **PATCH POSÉ le 24/11 à ~14:57** (accord « Oui, pose-le »), puis relu de l'extérieur : le robot lit suivi,
+    fil et retraits ; il n'y écrit pas ; l'API n'y a pas accès ; 3 règles ; battement `scheduled_or_manual / medium`.
+  - ✅ **1re COPIE par le robot, à la main (14:58)** : `Backups\recrutement\quotidien\app_2026-11-24_145800.sqlite`,
+    RELUE — suivi 3, fil 11, retraits 0, corrections 0, liste 0, ajouts 0, **agences 17** (la montée du passage
+    les a envoyées : la carte de l'écran a ses données).
+  - ⭐ **Les gestes de l'écran sont éprouvés EN RÉEL, par l'usage** : entre 14:26 et 14:41, deux personnes ont
+    noté 8 étapes, 2 e-mails et 1 rendez-vous (lu en comptes et en heures seulement). Ils sont dans la 1re copie.
+  - ✅ Interrupteur `RECRUTEMENT_SAUVEGARDE_QUOTIDIENNE=1` (copie d'avant du fichier dans le brouillon de la session).
+  - ⏸ Reste à Frédéric : commiter `check_gti_health.py`, PUIS lancer l'installeur (administrateur). Le premier
+    passage de la tâche sera le lendemain à 09:30.
   - ⚠ Vu en chemin : mon terminal ne peut pas LIRE `python_paquets\psycopg2` (installé depuis une PowerShell
     administrateur) ; la tâche, elle, le lit (descente du 13:34). Mes essais prennent les mêmes versions dans le
     dossier que voit l'app Claude.
