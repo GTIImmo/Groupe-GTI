@@ -179,3 +179,160 @@ locale de la répartition et des notes a été rafraîchie à 18:2x (deux tables
 - la commande `vague_du_soir` et son essai à blanc, étapes 0 à 4 ;
 - refaire les pièces 2 à 4 le matin du jour J, sur l'état du jour.
 
+
+---
+
+## Le 24/11 au soir : les trois pièces (son 10e mot)
+
+> Son mot : « ⭐ C VALIDÉ. [...] MAIS ON NE GARDE PAS 20:30 [...] ON LANCE DÈS QUE LA PRÉPARATION EST VERTE ET QUE J'AI
+> ACCORDÉ LES QUATRE PIÈCES. ⛔ GARDE CES DEUX VERROUS, ILS NE DÉPENDENT PAS DE L'HEURE [...] ⭐ VAS-Y DÈS CE SOIR SUR LES
+> TROIS PIÈCES QUI RESTENT. »
+
+**Rien n'a été écrit.** Ni en base (seulement des lectures et des transactions annulées), ni dans le Sheet, ni chez Hektor.
+Aucun fichier de la nuit n'a été touché : le fichier des coupes, le module de nuit et `.env` sont ceux du dépôt. Rien n'a été poussé.
+
+**Une correction.** Le run commence à **04:00**, pas à 05:00 (tâche « GTI Quotidien », journal du 24/11).
+
+### Pièce 1 — le patch A2 par pièces, et son essai à blanc sur l'arrivée simulée
+
+**Le générateur.** `phase2/checks/a2_vague_generer_patch_2026-11-24.py`.
+- **Son entrée** est l'export d'A2 v3 du script du temps 2. L'option nouvelle `--export-a2` l'écrit.
+- **Les deux options ajoutées au temps 2 :**
+  - `--export-a2` écrit l'export ;
+  - `--retrait-e` mesure l'arrivée de la vague entière, R26 et retrait de E compris.
+- **« Par pièces ».** Les parts à déplacer vivent sous l'ancien numéro de chaîne. Leur cible est « la chaîne où arrive la
+  pièce P », lue au moment du geste. Le numéro d'une chaîne est le plus petit de ses membres, et la garde des membres le
+  rend exact.
+- **Les fichiers :** `supabase/patch_a2_vague_2026-11-24.sql`, `_A_BLANC_SIMULE`, `_PREGARDE`, `_INVERSE`, `_REPETITION`.
+
+**Les gardes.** Une seule qui refuse, et rien n'est écrit.
+- **G0 :** le patch ne se rejoue pas.
+- **G1, les pièces :** les 231 chaînes touchées portent exactement les 480 membres prévus (empreinte 1212c9d9).
+- **G2, les parts de départ :** les 272 parts sont celles lues à la fabrication (empreinte e09a38b9), et les 97 cibles sont
+  vides.
+- **G3 :** à l'arrivée et avant A2, exactement 93 chaînes à vente réglée sans part, nommées une à une.
+
+**Le geste.**
+- Une sauvegarde datée de toute la répartition.
+- Le journal (lot `a2_vague_<jour>`) : chaque part avec sa ligne d'origine, sa place de départ et d'arrivée, et l'ancienne
+  valeur.
+- 199 recopies, faites depuis les parts vivantes que G2 vient de prouver.
+- 143 parts mises de côté, entières, avec leur ancien numéro, puis retirées de leurs chaînes.
+- La complétée de NRZVKH85.
+
+**Chaque mise de côté porte son motif, nommé** (70 chaînes) :
+- 34 sont **recopiées** sur la chaîne de leur ligne ;
+- 24 voient leur ligne **arriver sur une annulée**, donc aucune part n'y est recopiée (son 3e mot). U0GQ3KTO est nommée
+  **en réserve** ;
+- 11 **disparaissent à la vague**, et les mêmes parts vivent déjà sur la chaîne d'arrivée ; la preuve est faite part par
+  part ;
+- 1 est **NRZVKH85**, complétée sur 22979.
+
+⚠ **42 de ces chaînes existent encore à l'arrivée, mais sans aucune ligne.** Elles n'ont plus de part après A2 : 32
+recopiées, 9 annulées et NRZVKH85. Aucune ne porte une vente réglée : le contrôle « 0 vente réglée sans part » le prouve.
+
+**L'essai à blanc simulé, joué chez Supabase. Il est VERT.** Dans une transaction annulée :
+- les 796 pièces qui changent de chaîne reçoivent la chaîne du rejeu (aucun déclencheur sur cette colonne) ;
+- les gardes passent, puis le geste, les contrôles et l'inverse ;
+- tout est revenu, puis l'annulation est voulue.
+
+Les chiffres :
+- **avant :** 17 907 parts (b531b578), 14 mises de côté, 80 lignes au journal ;
+- **après A2 :** 17 964 parts. **Plus aucune vente réglée sans part.** 157 mises de côté, 423 lignes au journal, et
+  l'empreinte d'après est **c6978c4ff65ba1be81edfcb0ae11b499** ;
+- **après l'inverse :** exactement l'état d'avant ;
+- **relu ensuite :** rien n'est resté (17 907 parts, b531b578, 14, 80, aucune sauvegarde, chaînes d'origine).
+
+Le premier essai s'était arrêté sur **mon** contrôle « somme à 100 par côté ». La convention est 100 pour la chaîne
+(entrée 50 + sortie 50, comme dans ④). Le contrôle a été corrigé, et rien n'était resté.
+
+**Deux mesures réconciliées.** La simulation SQL trouve **93 chaînes** à vente réglée sans part avant A2. Le script du
+temps 2 dit « 94 » en **lignes** et « 93 » en **chaînes** : une chaîne porte deux lignes réglées. Deux calculs
+indépendants, en Python et en SQL, donnent les mêmes 93, et toutes sont des cibles d'A2.
+
+**⚠ Un trou de ma préparation, trouvé et fermé.** L'export du passage 80 était mesuré **sans** le retrait de E. Or la vague
+le pose dans la même nuit. Sur la vague entière (passage 81 à blanc, `--retrait-e`), le résultat est le même :
+- seules deux offres changent de chaîne en plus : 4128 rejoint 4126, et 1001495 rejoint 21520 ;
+- aucune des quatre chaînes en jeu ne fait partie des 231 d'A2, et aucune vente réglée n'est concernée ;
+- A2 v3 est identique (199, 143, 1, garde 0, 99 rendues justes, 0 fausse) ;
+- **le patch réel refabriqué est identique**, à l'étiquette « passage 81 » près.
+
+L'essai joué ce soir est celui du passage 80. Celui de la vague entière diffère de deux couples dans la simulation ; il se
+rejoue demain sur l'état du jour.
+
+**Le brouillon de la vague** est donc celui du passage 81 à blanc : 636 lignes, md5 a6d58791. Il compte quatre morceaux de
+plus que celui du passage 80 : les coupes de 43050 et de 9232.
+
+### Pièce 2 — la commande du soir : `phase2/checks/vague_du_soir.py`
+
+**À blanc par défaut.** Le geste exige `--geste --accord <md5 du manifeste accordé>`. Les pièces du jour sont dans un
+**manifeste** (chemins et empreintes). La répétition de ce soir est `vague_du_soir/manifeste_repetition_2026-11-24.json`.
+
+Les étapes : 0 gardes · 1 sauvegardes · 2 pose · 3 doublure · **4 point de non-retour** · 5 chaînage et poussée · 6 contrôle
+· 7 A2 · 8 répartition · 9 arrêt.
+
+Avant l'étape 5, un refus **remet tout comme avant** (fichier, code, `.env`). La commande écrit son compte rendu au fil dans
+le dossier de sa scène.
+
+**Le verrou 1, la garde de départ.** Elle vérifie :
+- les pièces du jour et leurs empreintes ;
+- GTI Quotidien et GTI Descente ;
+- **les processus** du run, cherchés par leur ligne de commande (pas par `ps`) ;
+- **toutes les tâches GTI** : aucune ne tourne, aucune ne démarre dans les 20 minutes ;
+- le fichier des coupes en place, l'interrupteur, les deux exclusions encore au code, `git diff` vide ;
+- le registre local = celui de l'image du matin ;
+- **aucune pièce née dans l'app** depuis la préparation (lecture Supabase) ;
+- la **pré-garde d'A2** : les parts n'ont pas bougé depuis la fabrication. Sinon A2 refuserait après le chaînage, et on
+  s'arrête donc avant.
+
+**⭐ Ce soir, elle a mordu pour de vrai.** Elle refuse 21:31, parce que « GTI Relances Email » démarre à 22:00 et que
+« GTI Entretien Documents » tourne. C'est le témoin positif de la garde horaire. Toutes ses autres gardes sont vertes.
+
+**Le verrou 2, le point de non-retour.**
+- La **vraie fonction** est rejouée : `recalculer_les_chaines` du module **posé**, avec le fichier **posé** et les
+  interrupteurs **posés**.
+- Elle tourne sur une copie **en mémoire** du registre local, puis est comparée **pièce par pièce** au rejeu exact du matin.
+- **Ce soir :** 31 372 pièces, **0 écart**, en 164 à 193 s.
+- **⭐ Le témoin inverse :** contre le rejeu **sans** le retrait de E, l'étape trouve exactement les **2** pièces attendues
+  (4128 → 4126, 1001495 → 21520) et **REFUSE**.
+
+**Les interrupteurs arrivent au chaînage comme au run.** Les deux passent par `chainage_v2_actif()`, qui charge `.env`
+avant de les lire. Le run ne pose aucune autre variable pour ces trois étapes.
+
+### Les deux durées (pour information)
+
+**La commande entière, étapes 0 à 8 : environ 8 minutes.**
+- **Mesuré à blanc ce soir :** gardes 3 s, sauvegardes locales 1 s, pose < 1 s, point de non-retour 164 à 193 s.
+- **Mesuré au journal du run du 24/11 :** doublure 95 s, chaînage et poussée 139 s, répartition 4 s.
+- **Non mesuré :** les sauvegardes Supabase et A2 seul (quelques secondes chacun ; l'essai complet à blanc est revenu en
+  quelques dizaines de secondes).
+
+**La fenêtre 5 → 7 : environ 2 min 30 s.** Le chaînage et sa poussée prennent 2 min 19 s au run. S'y ajoutent le contrôle
+(une lecture de 31 372 lignes, quelques secondes) et A2.
+⚠ Ce soir-là, la poussée porte environ 795 étiquettes qui changent, dont 612 neuves : elle peut être un peu plus longue
+qu'une nuit ordinaire.
+
+**Le créneau.** Il n'y a plus d'heure fixe. La garde exige 20 minutes sans aucune tâche GTI :
+- **« Relances Email »** démarre à chaque heure pile ;
+- **« Health Monitor »** démarre aux heures paires à :48 ;
+- le créneau sûr va donc de **hh:02 à hh:25**, et la garde le vérifie au lancement.
+
+### Ce qui reste, et l'ordre de demain
+
+1. **⏰ Le témoin de la nuit**, avant tout autre geste : `temoin_de_la_nuit_2026-11-24.py comparer`.
+2. **La préparation sur l'état du jour :**
+   - une image et un passage ;
+   - les rejeux et les portes ;
+   - le retrait à blanc (son passage et son brouillon) ;
+   - l'export A2 (`--retrait-e`), le générateur, l'essai à blanc simulé (il rend G3 et l'empreinte d'après), puis le patch
+     refabriqué avec ses deux empreintes ;
+   - le manifeste du jour.
+3. **Son accord sur les quatre pièces :**
+   - le brouillon (md5) ;
+   - le retrait de E (le diff du code, que l'étape 2 pose par l'arbre de syntaxe et prouve) ;
+   - le patch A2 ;
+   - la commande avec son manifeste (md5).
+4. **Le geste :** `vague_du_soir.py --manifeste ... --geste --accord <md5>`, dans un créneau libre.
+
+⚠ **A1 et A3 ne sont pas encore fabriqués en patch.** Ce sont les reflets des avis, des notes et des conditions : des
+reflets, pas de l'argent. La commande les joue à l'étape 7 s'ils sont au manifeste.

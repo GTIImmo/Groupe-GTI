@@ -5663,6 +5663,41 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   decolle ; A3 276 -> 0. RESTE (apres C accorde) : A2/A1/A3 par pieces + a blanc sur l'arrivee simulee, vague_du_soir.
 ```
 
+### 20.46 C valide ; les trois pieces de la vague du soir, fabriquees et eprouvees a blanc (24/11, son 10e mot)
+
+- **Son mot.** « C VALIDE ». Plus d'heure fixe : on lance des que la preparation est verte et qu'il a accorde les quatre
+  pieces. Deux verrous ne dependent pas de l'heure :
+  - la garde de depart, avec les taches planifiees ;
+  - le point de non-retour compare piece par piece.
+
+  « VAS-Y DES CE SOIR » sur les trois pieces. Il veut aussi les deux durees, et le temoin de la nuit en premier demain.
+  ⛔ Rien ne bouge cette nuit. **Rien n'a ete ecrit.**
+- **Correction.** Le run commence a 04:00, pas a 05:00.
+- **A2 par pieces.** Le generateur est `a2_vague_generer_patch_2026-11-24.py`. Le temps 2 gagne `--export-a2` et
+  `--retrait-e`.
+  - **Les gardes :** G1 (231 chaines, 480 membres, 1212c9d9), G2 (272 parts, e09a38b9, cibles vides), G3 (93 ventes
+    reglees sans part, nommees).
+  - **Le geste :** 199 recopies, 143 mises de cote (70 chaines, chacune avec son motif), 1 completee.
+  - **L'essai a blanc simule chez Supabase est VERT :** 17 907 -> 17 964 parts, 0 vente reglee sans part, journal
+    80 -> 423, mise de cote 14 -> 157, empreinte d'apres c6978c4f. L'inverse rend tout, et rien n'est reste.
+  - 42 chaines vivent encore a l'arrivee sans ligne ni part ; aucune ne porte de vente reglee.
+  - 93 chaines = 94 lignes : deux calculs independants, en SQL et en Python, donnent le meme compte.
+- **Le trou ferme.** L'export du passage 80 etait mesure sans le retrait de E. Avec lui (passage 81 a blanc) :
+  - seules deux offres changent de chaine en plus (4128 -> 4126, 1001495 -> 21520) ;
+  - aucune n'est dans A2 ;
+  - le patch refabrique est identique, et le brouillon de la vague est celui du passage 81 (636 lignes, a6d58791).
+- **La commande** `vague_du_soir.py`, a blanc par defaut. Le geste exige `--geste --accord <md5 du manifeste>`.
+  - **Etape 0 :** elle a mordu (Relances Email a 22:00, Entretien Documents tourne) ; tout le reste est vert.
+  - **Etape 4 :** la vraie fonction sur le module, le fichier et les interrupteurs poses -> 0 ecart sur 31 372 pieces
+    (164 a 193 s).
+  - **Le temoin inverse** (le rejeu sans le retrait) -> 2 ecarts exacts -> REFUS.
+- **Les durees.** La commande entiere prend environ 8 min ; la fenetre 5 -> 7 environ 2 min 30 s. Le creneau sur va de
+  hh:02 a hh:25.
+- **Restent.**
+  - Demain, le temoin de la nuit d'abord.
+  - Puis la preparation du jour et son accord sur les quatre pieces.
+  - A1 et A3 ne sont pas encore fabriques en patch.
+- **Le detail :** notice/PROCEDURE_LA_VAGUE_DU_SOIR_2026-11-24.md, section « Le 24/11 au soir : les trois pieces ».
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

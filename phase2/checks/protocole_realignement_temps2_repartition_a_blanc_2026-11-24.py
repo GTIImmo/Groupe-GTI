@@ -22,6 +22,7 @@ USAGE : python -u -X utf8 phase2/checks/protocole_realignement_temps2_repartitio
 import argparse
 import csv
 import json
+from pathlib import Path
 import re
 import sqlite3
 import sys
@@ -40,7 +41,19 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--passage", type=int, required=True)
 ap.add_argument("--csv", action="store_true")
 ap.add_argument("--r26", action="store_true", help="l'etat d'arrivee avec R26 a blanc")
+ap.add_argument("--export-a2", default="", help="ecrit A2 v3 en JSON (pour le patch par pieces de la vague du soir)")
+ap.add_argument("--retrait-e", action="store_true",
+                help="l'etat d'arrivee de LA VAGUE ENTIERE : R26 + le retrait de 4126 et 21520 (le dossier a blanc du "
+                     "retrait : sa copie du socle, son module retouche, son brouillon et ses rejeux)")
 arg = ap.parse_args()
+if arg.retrait_e:
+    # ⭐ 24/11 au soir : la vague pose le retrait de E DANS LA MEME NUIT (son mot) -- A2 se mesure donc sur l'arrivee avec
+    #   le retrait. Le dossier a blanc du retrait porte tout : la copie du socle (passage a blanc), le module de nuit sans
+    #   les deux exclusions, le brouillon, et les rejeux A et E faits avec ce module.
+    _AB = P.DOSSIER.parent / "protocole_a_blanc_retrait_e"
+    P.SOCLE = _AB / "socle.sqlite"
+    P.DOSSIER = _AB
+    PO.MODULE = _AB / "affaire_ledger_sans_4126_21520.py"
 
 
 def dire(s=""):
@@ -465,6 +478,33 @@ gagne = {e["id_unique"] for e in APRES if e["verdict"] == "JUSTE"} - {e["id_uniq
 perdu = {e["id_unique"] for e in SANS if e["verdict"] == "JUSTE"} - {e["id_unique"] for e in APRES if e["verdict"] == "JUSTE"}
 dire("   le remede rend juste %d lignes ; ⛔ il en rend FAUSSES %d %s" % (len(gagne), len(perdu),
                                                                      " ".join(sorted(perdu)[:20])))
+
+if arg.export_a2:
+    # ⭐ LA VAGUE DU SOIR (C, valide le 24/11) : A2 v3 exporte pour le patch PAR PIECES -- ses cibles sont des chaines
+    #   d'ARRIVEE (elles n'existent qu'apres le chainage) : le patch exigera que chaque chaine touchee porte EXACTEMENT les
+    #   membres que le rejeu prevoit, sinon il refuse tout
+    _ch = sorted({x["ancienne_chaine"] for x in recopies + mises} | {x["chaine_cible"] for x in recopies}
+                 | {x["app_chaine_id"] for x in completees})
+    _vr_sql = sorted(t for t, membres_ in mE.items()
+                     if any(a in VR and a in PI and PI[a]["kind"] == "vente" for a in membres_) and not prevu.get(t))
+    _out = {"passage": arg.passage, "image": image,
+            "recopies": [{k: x.get(k) for k in ("ancienne_chaine", "chaine_cible", "cote", "rang", "hektor_user_id",
+                                                 "nom_au_moment", "pourcentage", "origine", "lignes", "geste")}
+                         for x in recopies],
+            "mises": [{k: x.get(k) for k in ("ancienne_chaine", "cote", "rang", "hektor_user_id", "nom_au_moment",
+                                              "pourcentage", "origine", "lignes")} for x in mises],
+            "completees": [{k: x.get(k) for k in ("app_chaine_id", "cote", "rang", "hektor_user_id", "nom_au_moment",
+                                                   "pourcentage", "origine", "lignes")} for x in completees],
+            "refus_annulee": [list(x) for x in R3["refus_annulee"]],
+            "decisions": R3["decisions"],
+            "membres_a_l_arrivee": {str(c): sorted(mE.get(c, [])) for c in _ch},
+            "simulation_chaines": {str(a): c for a, c in chE.items() if c != ch_img.get(a)},
+            "garde_vente_reglee_sql_attendue": _vr_sql,
+            "parts_avant": n_rows}
+    Path(arg.export_a2).write_text(json.dumps(_out, ensure_ascii=False, indent=1), encoding="utf-8")
+    dire("-> %s : %d recopies, %d mises, %d completee(s), %d chaines touchees, %d pieces qui changent de chaine, garde SQL "
+         "attendue %d" % (arg.export_a2, len(recopies), len(mises), len(completees), len(_ch),
+                          len(_out["simulation_chaines"]), len(_vr_sql)))
 
 if arg.csv:
     f1 = P.NOTICE / ("PROTOCOLE_REALIGNEMENT_TEMPS2_REPARTITION_A_L_ARRIVEE_PASSAGE_%d%s_2026-11-24.csv" % (arg.passage, "_AVEC_R26" if arg.r26 else ""))
