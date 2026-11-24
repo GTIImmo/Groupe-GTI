@@ -1,0 +1,21 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-20T12:45:00Z"},
+  "title": "Recrutement — maquettes",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 1240, "title": "1. Listing « Recrutement »", "expand": "fill", "is_interactive": true},
+    "Candidat.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 1240, "title": "2. Fiche candidat", "expand": "fill", "is_interactive": true},
+    "Ajouter.dc.html": {"x": 0, "y": 1660, "w": 1100, "h": 980, "title": "3. Ajouter un candidat", "is_interactive": true},
+    "Modifier.dc.html": {"x": 1180, "y": 1660, "w": 1100, "h": 980, "title": "4. Modifier une fiche", "is_interactive": true},
+    "Supprimer.dc.html": {"x": 2360, "y": 1660, "w": 1100, "h": 980, "title": "5. Retirer ou effacer un candidat", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Candidat.dc.html", "Ajouter.dc.html", "Modifier.dc.html", "Supprimer.dc.html"],
+  "notes": {
+    "titre1": {"x": 0, "y": -300, "text": "Recrutement : la liste et la fiche candidat", "kind": "title1", "maxW": 2960},
+    "titre2": {"x": 0, "y": 1360, "text": "Ajouter, modifier, retirer une fiche", "kind": "title1", "maxW": 3460},
+    "avertissement": {"x": 3040, "y": 0, "w": 380, "text": "Volumes réels de la collecte du 20/11 (1 920 candidats, 629 joignables, 17 agences).\n\nLes noms, numéros et e-mails des lignes d'exemple sont FICTIFS (numéros de la plage réservée à la fiction 06 39 98).", "fill": "orange", "size": "m"}
+  },
+  "designSystems": []
+}

@@ -130,7 +130,11 @@ def preparer(con) -> dict:
                   "etat": c["etat"], "note": c["note"]}
                  for c in con.execute("select * from collecte where etat in ('en_cours', 'finie')")]
     sources = [dict(s) for s in con.execute("select collecte, reseau, vus, precedent, sante, raison from source_etat")]
-    return {"fiches": fiches, "entreprises": entreprises, "collectes": collectes, "sources": sources, "fautes": fautes}
+    # les 17 agences et leur position (la carte « Où recruter » de l'écran) -- R6, 24/11
+    dep_agence = dict(ca.AGENCES_GTI)
+    agences_gti = [{"nom": nom, "departement": dep_agence.get(nom), "lat": lat, "lon": lon} for nom, lat, lon in agences]
+    return {"fiches": fiches, "entreprises": entreprises, "collectes": collectes, "sources": sources,
+            "agences": agences_gti, "fautes": fautes}
 
 
 def _upsert(cur, table, colonnes, cle, lignes):
@@ -139,7 +143,7 @@ def _upsert(cur, table, colonnes, cle, lignes):
         return 0
     maj = ", ".join(f"{c} = excluded.{c}" for c in colonnes if c not in cle)
     sql = (f"insert into recrutement.{table} ({', '.join(colonnes)}) values %s "
-           f"on conflict ({', '.join(cle)}) do update set {maj}, monte_le = now()") if table in ("fiche", "entreprise", "collecte") else (
+           f"on conflict ({', '.join(cle)}) do update set {maj}, monte_le = now()") if table in ("fiche", "entreprise", "collecte", "agence_gti") else (
            f"insert into recrutement.{table} ({', '.join(colonnes)}) values %s "
            f"on conflict ({', '.join(cle)}) do update set {maj}")
     execute_values(cur, sql, [tuple(l[c] for c in colonnes) for l in lignes], page_size=500)
@@ -158,7 +162,11 @@ def envoyer(paquet: dict, essai: bool) -> int:
         n_e = _upsert(cur, "entreprise", ("siren", "trouve", "date_creation", "etat", "naf", "siege_cp", "siege_commune",
                                           "opposition", "lu_le"), ("siren",), paquet["entreprises"])
         n_f = _upsert(cur, "fiche", COLONNES_FICHE, ("reseau", "identifiant"), paquet["fiches"])
-        print(f"envoye : {n_f} fiches, {n_e} entreprises, {n_c} collectes, {n_s} etats de source")
+        # la table des agences n'existe qu'une fois le patch de l'ecran pose (R6) : sans elle, on passe
+        cur.execute("select to_regclass('recrutement.agence_gti') is not null")
+        n_a = (_upsert(cur, "agence_gti", ("nom", "departement", "lat", "lon"), ("nom",), paquet["agences"])
+               if cur.fetchone()[0] else 0)
+        print(f"envoye : {n_f} fiches, {n_e} entreprises, {n_c} collectes, {n_s} etats de source, {n_a} agences")
 
         # LES CONTROLES, AVANT DE VALIDER (un rouge annule tout)
         locales = {(l["reseau"], l["identifiant"]) for l in paquet["fiches"]}

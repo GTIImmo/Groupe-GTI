@@ -1004,10 +1004,78 @@ L'ordre :
   - ⏸ et avant cela, il commite à nouveau `check_gti_health.py`, qui porte le nouveau nom et la
     fréquence `bimonthly`.
 - [ ] R5.6 Le premier run réel, puis son contrôle
-- [ ] R5.7 Vérifier si l'agent OVH (Veeam) couvre `Backups\recrutement` et `recrutement_donnees`
+- [x] R5.7 L'agent OVH (Veeam) couvre `Backups\recrutement` et `recrutement_donnees`. Mesuré le
+      24/11 :
+  - c'est une **image complète du serveur** (note de sauvegarde du 18/08, « Périmètre »), gardée
+    14 jours chez OVH ;
+  - les services `VeeamEndpointBackupSvc` et `VeeamManagementAgentSvc` tournent ;
+  - le dernier travail date du 23/11 à 22:19 : **« Session result: Success »**.
+  - ⚠ L'image garde donc l'état d'une personne effacée **14 jours** de plus. C'est à écrire dans la
+    mention d'information, avec l'année des sauvegardes datées.
 
 **R6 — L'écran** *(« vas-y » pour `App.tsx`, accord pour déployer)*
-- [ ] R6.1 L'interrupteur `recrutement_visible`
+
+> ⭐ **CONCEPTION DE R6, écrite le 24/11 avant de coder** (d'après les 5 maquettes validées, rangées dans
+> `notice/maquettes_recrutement/` : noms et numéros fictifs seulement).
+>
+> **Le patch de l'écran** (`supabase/patch_recrutement_ecran_<date>.sql`) :
+> - `recrutement.agence_gti` : nom, département, position. Envoyée par la montée : les adresses
+>   de `app_registre_agence` sont vides, la position vient de la commune ;
+> - `recrutement.suivi`, une ligne par fiche suivie :
+>   - **étape** 0 à 6 : Repérée, Contactée, Rendez-vous, Proposition, Contrat signé, Accès ouvert ;
+>   - **statut** facultatif : pas intéressée (avec une date de reprise), à vérifier, à trancher ;
+>   - **info_donnee_le** : la case « je l'ai informée » de l'encadré RGPD ;
+>   - **prochaine action** et sa date ; **qui suit** ; **agence envisagée** ; **retirée de ma
+>     liste** (archive) ;
+> - `recrutement.evenement`, le fil : appel (avec son résultat : messagerie, pas disponible,
+>   intéressée, pas intéressée), note, e-mail, rendez-vous, étape, correction, ajout, retrait ;
+> - `recrutement.retrait` : ce qui RESTE d'une personne qui ne veut plus être contactée (son nom,
+>   son SIREN, la date et qui le demande). Une personne EFFACÉE ne garde qu'une empreinte ;
+> - des **fonctions `public.rec_*`**, administrateurs seulement, en `security definer` :
+>   - `rec_candidats()` : toute la liste en un appel, ~2 100 lignes. Le filtre et le tri se font dans
+>     le navigateur ; les valeurs du carnet y sont déjà appliquées ;
+>   - `rec_candidat()` : la fiche, son entreprise, son suivi, son fil, ses corrections, et ses autres
+>     fiches (même SIREN) ;
+>   - `rec_noter()`, `rec_etape()`, `rec_suivi_maj()`, `rec_corriger()`, `rec_ajouter()`,
+>     `rec_doublons()`, `rec_retirer()` (3 niveaux : de ma liste, ne plus contacter, effacer).
+>
+> **L'écran** (`RecrutementScreen.tsx` + `recrutement.css`, branché comme Pilotage, derrière
+> `recrutement_visible`) :
+> - le listing (en-tête, « Où recruter », liste filtrable) et la fiche (parcours, fil, blocs) ;
+> - les fenêtres Ajouter, Modifier, Retirer, exactement comme les planches ;
+> - les distances aux 17 agences sont calculées dans le navigateur ; « à 15 km » = de CETTE agence,
+>   pas seulement de la plus proche.
+>
+> **Ce qui attend une décision et reste désactivé** : l'envoi d'e-mail par Workspace (D5, le modèle
+> à relire) ; le CV et le contrat (R7) ; « créer son accès » (R7). En attendant, « Écrire un e-mail »
+> ouvre la messagerie (`mailto:`) et l'envoi se note dans le fil. Le rendez-vous se note dans le fil,
+> sans toucher au backend.
+
+- [x] R6.0 Le patch de l'écran est ÉCRIT (24/11) : `supabase/patch_recrutement_ecran_2026-11-24*.sql`
+      (patch, répétition, inverse). Rien n'est posé.
+  - La clé de nom et les empreintes en SQL ont été **vérifiées identiques à Python, avant d'écrire** :
+    12 noms pièges (Œ, ø, ß, apostrophes, chiffres, mots dans le désordre) et les 4 natures
+    d'empreinte, au caractère près.
+  - **La répétition** joue, dans une transaction annulée et sur des fiches témoins fictives :
+    - les empreintes comparées à des valeurs calculées en Python ;
+    - le refus du non-administrateur ;
+    - liste, note, étape, suivi et correction ; le carnet gagne dans la liste sans toucher la fiche ;
+    - les doublons ;
+    - « ne plus contacter » : ses 2 fiches partent, dont celle trouvée par le seul nom ; le numéro
+      corrigé est aussi mis sur la liste ; elle ne peut plus être rajoutée ;
+    - un ajout neuf ; « effacer » ne laisse rien de lisible ; « archiver » garde la fiche.
+  - L'inverse refuse de tourner si l'app a déjà écrit, et laisse le socle R3 intact.
+  - **La montée envoie les 17 agences**, mais seulement si leur table existe : sans le patch, elle
+    passe (essai du 24/11 : 0 agence, tout le reste vert).
+  - Les 5 maquettes sont rangées dans `notice/maquettes_recrutement/`, avec leurs données fictives.
+  - Audit de l'app fait par un agent, en lecture seule :
+    - Pilotage n'a PAS d'interrupteur, seulement `isAdmin` ;
+    - le patron de l'interrupteur est celui de Transactions (`loadAppSettingValeur`, cran `admin`) ;
+    - il y a ~13 points de branchement : 10 dans `App.tsx`, 3 dans `MobileLayout.tsx` ;
+    - `ContactWorkflowModal` n'est pas exportée : les fenêtres seront dans le fichier de l'écran ;
+    - en local sans base, une clé neuve rend `null` (liste en dur `api.ts:9553`).
+- [ ] R6.0 bis ⏸ Poser le patch de l'écran (production), puis sa répétition.
+- [ ] R6.1 L'interrupteur : clé `recrutement_ecran`, crans `admin` / `on`, comme Transactions
 - [ ] R6.2 Le listing, son bandeau de la dernière collecte, « Où recruter »
 - [ ] R6.3 La fiche candidat et son parcours
 - [ ] R6.4 Les fenêtres Ajouter, Modifier, Retirer

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Recrutement — retirer ou effacer un candidat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#222323;-webkit-font-smoothing:antialiased}
+a{color:#c5005f}a:hover{color:#8c0044}
+button,input,select{font-family:inherit}
+.choix{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;align-items:start;width:100%;text-align:left;padding:16px;border-radius:16px;cursor:pointer;background:#fff;color:#222323}
+.choix:focus-visible{outline:3px solid rgba(197,0,95,.45);outline-offset:2px}
+.choix .t{display:block;margin:0;font-size:15px;font-weight:700}
+.choix .d{display:block;margin:4px 0 0;font-size:13px;line-height:1.5;color:#3f4446}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn-quiet{background:#fff;color:#222323;border-color:#cfd3d4}
+.btn:focus-visible{outline:3px solid rgba(197,0,95,.45);outline-offset:2px}
+.champ{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#3f4446}
+.champ input,.champ select{min-height:42px;padding:0 12px;border:1px solid #cfd3d4;border-radius:11px;font-size:14px;color:#222323;background:#fff;box-sizing:border-box;width:100%}
+</style>
+</helmet>
+<div style="width: 1100px; height: 980px; box-sizing: border-box; background: rgba(34,35,35,0.52); display: flex; align-items: flex-start; justify-content: center; padding: 34px 0;">
+  <div role="dialog" aria-modal="true" aria-labelledby="titre-retrait" style="width: 680px; max-height: 912px; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(34,35,35,.35); display: flex; flex-direction: column; overflow: hidden;">
+    <div style="background: #222323; color: #ffffff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+      <div style="display: flex; gap: 14px; align-items: flex-start;">
+        <span aria-hidden="true" style="flex: 0 0 40px; height: 40px; border-radius: 12px; background: #b94a48; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></span>
+        <div>
+          <h2 id="titre-retrait" style="margin: 0; font-size: 20px; font-weight: 800;">Retirer Camille Roux</h2>
+          <p style="margin: 4px 0 0; font-size: 13px; color: #c9cdcf;">Choisis ce qui doit rester d'elle.</p>
+        </div>
+      </div>
+      <a href="Candidat.dc.html" aria-label="Fermer" style="display: flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 10px; color: #ffffff; background: #2f3131;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+    </div>
+
+    <div style="padding: 20px 24px; overflow-y: auto; flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px;">
+      <div role="radiogroup" aria-label="Que faire de cette fiche ?" style="display: flex; flex-direction: column; gap: 10px;">
+        <sc-for list="{{choix}}" as="c" hint-placeholder-count="3">
+          <button class="choix" type="button" role="radio" aria-checked="{{c.coche}}" onClick="{{c.choisir}}" style="{{c.cadre}}">
+            <span aria-hidden="true" style="{{c.rond}}"><span style="{{c.point}}"></span></span>
+            <span>
+              <span class="t">{{c.titre}}</span>
+              <span class="d">{{c.texte}}</span>
+              <span style="{{c.styleReste}}">{{c.reste}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 6px;">
+        <label class="champ">Qui le demande ?<select><option>Elle-même</option><option>Notre décision</option></select></label>
+        <label class="champ">Le<input type="text" value="22/11/2026"></label>
+      </div>
+
+      <sc-if value="{{definitif}}" hint-placeholder-val="{{false}}">
+        <div style="background: #fdeceb; border: 1px solid #f0c2c1; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <p style="margin: 0; font-size: 13.5px; color: #7d2f2d; line-height: 1.5;"><strong>Définitif.</strong> Son fil d'échanges, ses notes, ses documents et ses rendez-vous liés disparaissent. On ne pourra pas revenir en arrière.</p>
+          <label class="champ" style="color: #7d2f2d;">Tape EFFACER pour confirmer<input type="text" value="{{saisie}}" onInput="{{taper}}" aria-label="Tape EFFACER pour confirmer" style="border-color: #e3a3a1;"></label>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e5e6; background: #fbfbfc;">
+      <a class="btn btn-quiet" href="Candidat.dc.html">Annuler</a>
+      <button class="btn" type="button" disabled="{{bloque}}" style="{{styleAction}}">{{libelleAction}}</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":980}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { choix: 'jamais', saisie: '' }; }
+  renderVals() {
+    const C = [
+      { k: 'archiver', titre: 'La retirer de ma liste', texte: 'Elle sort du vivier et ne revient pas à la relecture du jeudi. Sa fiche reste dans les archives, tu peux la remettre en un clic.', reste: 'Reste : toute sa fiche, en archives.', action: 'Retirer de ma liste', danger: false },
+      { k: 'jamais', titre: 'Ne plus jamais la contacter', texte: 'À choisir quand elle le demande. Son téléphone, son e-mail, ses notes et documents sont effacés.', reste: 'Reste : son nom, son SIREN et la date de sa demande, pour que la collecte ne la remette jamais dans la liste.', action: 'Ne plus la contacter', danger: false },
+      { k: 'effacer', titre: 'Effacer toutes ses données', texte: 'Quand elle demande que tout soit effacé. Rien ne reste lisible.', reste: 'Reste : une empreinte illisible, sans nom, qui empêche seulement de la réimporter.', action: 'Effacer définitivement', danger: true }
+    ];
+    const sel = this.state.choix;
+    const choix = C.map((c) => {
+      const on = c.k === sel;
+      const coul = c.danger ? '#b94a48' : '#c5005f';
+      return { ...c, coche: on ? 'true' : 'false',
+        cadre: on ? 'border:2px solid ' + coul + ';background:' + (c.danger ? '#fdf6f6' : '#fdf0f6') + ';padding:15px' : 'border:1px solid #e2e5e6',
+        rond: 'width:22px;height:22px;border-radius:99px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin-top:1px;border:2px solid ' + (on ? coul : '#9aa0a2'),
+        point: on ? 'width:10px;height:10px;border-radius:99px;background:' + coul : 'display:none',
+        styleReste: 'display:block;margin:8px 0 0;font-size:12.5px;font-weight:600;color:' + (c.danger ? '#7d2f2d' : '#5c6163'),
+        choisir: () => this.setState({ choix: c.k, saisie: '' }) };
+    });
+    const c = C.find((x) => x.k === sel);
+    const definitif = sel === 'effacer';
+    const bloque = definitif && this.state.saisie.trim().toUpperCase() !== 'EFFACER';
+    return {
+      choix: choix, definitif: definitif, saisie: this.state.saisie,
+      taper: (ev) => this.setState({ saisie: ev.target.value }),
+      bloque: bloque, libelleAction: c.action,
+      styleAction: (c.danger ? 'background:#b94a48;color:#fff;' : 'background:#c5005f;color:#fff;') + (bloque ? 'opacity:.45;cursor:not-allowed' : '')
+    };
+  }
+}
+</script>
+</body>
+</html>

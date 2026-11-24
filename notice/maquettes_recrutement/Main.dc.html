@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Recrutement — le vivier</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f7f8;color:#222323;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#c5005f}a:hover{color:#8c0044}
+button{font-family:inherit}
+.num{font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn-main{background:#c5005f;color:#fff}.btn-main:hover{background:#8c0044;color:#fff}
+.btn-quiet{background:#fff;color:#222323;border-color:#cfd3d4}.btn-quiet:hover{border-color:#222323;color:#222323}
+.btn:focus-visible,.rang:focus-visible,.chip:focus-visible,.ligne:focus-visible{outline:3px solid rgba(197,0,95,.45);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #cfd3d4;background:#fff;font-size:13px;font-weight:600;color:#222323;cursor:pointer}
+.chip-on{background:#fdf0f6;border-color:#f6b6d5;color:#8c0044}
+.rang{display:grid;grid-template-columns:150px minmax(0,1fr) 44px 44px;align-items:center;gap:10px;width:100%;min-height:30px;padding:3px 8px;border:0;border-radius:8px;background:transparent;text-align:left;cursor:pointer;color:#222323;font-size:13px}
+.rang:hover{background:#f6f7f8}
+.rang-on{background:#fdf0f6}
+.rang-on:hover{background:#fdf0f6}
+table{border-collapse:collapse;width:100%;min-width:1080px}
+th{font-size:12px;font-weight:600;color:#5c6163;text-align:left;padding:10px 12px;border-bottom:1px solid #e2e5e6;white-space:nowrap}
+td{padding:12px;border-bottom:1px solid #eef0f1;font-size:13px;vertical-align:top}
+tr.lg:hover td{background:#fbfbfc}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.res{display:inline-block;padding:1px 8px;border-radius:6px;background:#f1f2f3;color:#3f4446;font-size:11.5px;font-weight:700}
+.ico{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid #e2e5e6;background:#fff;color:#222323}
+.ico-off{color:#b4b8ba;background:#f6f7f8;border-color:#eef0f1}
+.mute{color:#5c6163}
+.sub{color:#5c6163;font-size:12px;margin-top:3px}
+</style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch;">
+
+  <nav aria-label="Menu principal" style="flex: 0 0 76px; background: #222323; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0;">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true" style="margin-bottom: 18px;"><path d="M5 16 L17 6 L29 16" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M11 20 L15.5 24.5 L24 15" fill="none" stroke="#c5005f" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <a href="#" aria-label="Accueil" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;color:#9aa0a2;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg></a>
+    <a href="#" aria-label="Annonces" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;color:#9aa0a2;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg></a>
+    <a href="#" aria-label="Contacts" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;color:#9aa0a2;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.6c2 .7 3.2 2.5 3.6 5.4"></path></svg></a>
+    <a href="#" aria-label="Agenda" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;color:#9aa0a2;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></a>
+    <a href="#" aria-label="Pilotage" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;color:#9aa0a2;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg></a>
+    <a href="#" aria-label="Recrutement" aria-current="page" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;color:#ffffff;background:#c5005f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.2"></path><path d="M19 13v7M15.5 16.5h7"></path></svg></a>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 28px 36px 40px; display: flex; flex-direction: column; gap: 22px;">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;">
+      <div style="min-width: 0;">
+        <h1 style="margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Recrutement</h1>
+        <p style="margin: 6px 0 0; font-size: 14px; color: #5c6163; max-width: 64ch;">1 920 candidats dans nos quatre départements, dont 629 joignables. Liste relue le 20 novembre ; prochaine relecture le 27.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <button class="btn btn-quiet" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>Exporter</button>
+        <a class="btn btn-main" href="Ajouter.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Ajouter un candidat</a>
+      </div>
+    </header>
+
+    <section aria-labelledby="ou-recruter" style="background: #ffffff; border: 1px solid #e2e5e6; border-radius: 22px; padding: 22px 24px; display: flex; flex-wrap: wrap; gap: 28px;">
+      <div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+        <h2 id="ou-recruter" style="margin: 0; font-size: 17px; font-weight: 700;">Où recruter</h2>
+        <p style="margin: 0; font-size: 13px; color: #5c6163;">Chaque disque est le vivier à 15 km d'une agence ; le cœur plein, ceux qu'on peut joindre.</p>
+        <svg viewBox="0 0 470 340" role="img" aria-label="Carte des 17 agences GTI et de leur vivier de candidats" style="width: 100%; max-width: 560px; height: auto; margin-top: 4px;">
+          <text x="34" y="36" font-size="11" fill="#9aa0a2" font-family="Plus Jakarta Sans">Puy-de-Dôme</text>
+          <text x="262" y="34" font-size="11" fill="#9aa0a2" font-family="Plus Jakarta Sans">Loire</text>
+          <text x="118" y="268" font-size="11" fill="#9aa0a2" font-family="Plus Jakarta Sans">Haute-Loire</text>
+          <text x="400" y="300" font-size="11" fill="#9aa0a2" font-family="Plus Jakarta Sans">Ardèche</text>
+          <sc-for list="{{agences}}" as="a" hint-placeholder-count="17">
+            <circle cx="{{a.x}}" cy="{{a.y}}" r="{{a.r}}" fill="{{a.fondDisque}}" stroke="{{a.trait}}" stroke-width="1.2"></circle>
+            <circle cx="{{a.x}}" cy="{{a.y}}" r="{{a.rj}}" fill="{{a.coeur}}"></circle>
+            <text x="{{a.lx}}" y="{{a.ly}}" text-anchor="{{a.ancre}}" font-size="11.5" font-weight="{{a.graisse}}" fill="#222323" font-family="Plus Jakarta Sans">{{a.court}}</text>
+          </sc-for>
+        </svg>
+      </div>
+
+      <div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 8px 6px;">
+          <h3 style="margin: 0; font-size: 14px; font-weight: 700;">Nos 17 agences</h3>
+          <button class="chip" type="button" onClick="{{toutes}}">Toutes les agences</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 44px 44px; gap: 10px; padding: 0 8px; font-size: 11.5px; color: #5c6163;">
+          <span>Agence</span><span></span><span style="text-align: right;">à 15 km</span><span style="text-align: right;">joign.</span>
+        </div>
+        <sc-for list="{{classement}}" as="c" hint-placeholder-count="17">
+          <button class="{{c.classe}}" type="button" onClick="{{c.choisir}}" aria-pressed="{{c.presse}}">
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600;">{{c.n}}</span>
+            <span style="position: relative; height: 8px; border-radius: 99px; background: #eef0f1; overflow: hidden;">
+              <span style="{{c.barreTotal}}"></span>
+              <span style="{{c.barreJoign}}"></span>
+            </span>
+            <span class="num" style="text-align: right;">{{c.t}}</span>
+            <span class="num" style="text-align: right; color: #8c0044; font-weight: 700;">{{c.j}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <aside aria-live="polite" style="flex: 1 1 260px; min-width: 0; background: #222323; color: #ffffff; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <p style="margin: 0; font-size: 13px; color: #c9cdcf;">{{titreZone}}</p>
+          <p style="margin: 2px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">{{nomZone}}</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+          <div><p class="num" style="margin: 0; font-size: 30px; font-weight: 800;">{{zoneTotal}}</p><p style="margin: 0; font-size: 12px; color: #c9cdcf;">candidats</p></div>
+          <div><p class="num" style="margin: 0; font-size: 30px; font-weight: 800; color: #f6b6d5;">{{zoneJoign}}</p><p style="margin: 0; font-size: 12px; color: #c9cdcf;">joignables</p></div>
+          <div><p class="num" style="margin: 0; font-size: 30px; font-weight: 800;">{{zoneReseau}}</p><p style="margin: 0; font-size: 12px; color: #c9cdcf;">dans un réseau</p></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <p style="margin: 0; font-size: 13px; font-weight: 600;">D'où ils viennent</p>
+          <sc-for list="{{zoneSources}}" as="s" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 12.5px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span>{{s.nom}}</span>
+                <span style="display: block; height: 4px; border-radius: 99px; background: #3a3c3c;"><span style="{{s.barre}}"></span></span>
+              </div>
+              <span class="num" style="text-align: right; font-weight: 700;">{{s.n}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <a href="#liste" class="btn" style="background: #ffffff; color: #222323; justify-content: center; margin-top: auto;">Voir ces {{zoneTotal}} candidats</a>
+      </aside>
+    </section>
+
+    <section id="liste" aria-labelledby="titre-liste" style="background: #ffffff; border: 1px solid #e2e5e6; border-radius: 22px; padding: 18px 0 8px; display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px;">
+        <h2 id="titre-liste" style="margin: 0; font-size: 17px; font-weight: 700;">Les candidats</h2>
+        <div role="group" aria-label="Vue" style="display: inline-flex; background: #f1f2f3; border-radius: 12px; padding: 4px; gap: 4px;">
+          <button type="button" style="border: 0; border-radius: 9px; padding: 8px 14px; font-size: 13px; font-weight: 700; background: #ffffff; color: #222323; box-shadow: 0 1px 2px rgba(34,35,35,.12);">Tous</button>
+          <button type="button" style="border: 0; border-radius: 9px; padding: 8px 14px; font-size: 13px; font-weight: 600; background: transparent; color: #5c6163;">Joignables</button>
+          <button type="button" style="border: 0; border-radius: 9px; padding: 8px 14px; font-size: 13px; font-weight: 600; background: transparent; color: #5c6163;">Mes relances</button>
+          <button type="button" style="border: 0; border-radius: 9px; padding: 8px 14px; font-size: 13px; font-weight: 600; background: transparent; color: #5c6163;">En cours de recrutement</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 20px;">
+        <label style="flex: 1 1 260px; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid #cfd3d4; border-radius: 12px; background: #fff;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c6163" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          <input type="search" placeholder="Nom, commune, SIREN" aria-label="Chercher un candidat" style="border: 0; outline: 0; font: inherit; font-size: 14px; width: 100%; background: transparent;">
+        </label>
+        <sc-if value="{{aZone}}" hint-placeholder-val="{{true}}">
+          <button class="chip chip-on" type="button" onClick="{{toutes}}">À 15 km de {{nomZone}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-label="retirer ce filtre"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </sc-if>
+        <button class="chip" type="button">Réseau</button>
+        <button class="chip" type="button">Activité</button>
+        <button class="chip" type="button">Ancienneté</button>
+        <button class="chip" type="button">Suivi</button>
+        <button class="chip" type="button">À savoir</button>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 34px; padding-left: 20px;"><input type="checkbox" aria-label="Tout choisir"></th>
+              <th>Candidat</th>
+              <th>Où</th>
+              <th>Activité</th>
+              <th>Entreprise</th>
+              <th>À savoir</th>
+              <th>Joindre</th>
+              <th style="padding-right: 20px;">Suivi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{lignes}}" as="l" hint-placeholder-count="8">
+              <tr class="lg">
+                <td style="padding-left: 20px;"><input type="checkbox" aria-label="Choisir {{l.nom}}"></td>
+                <td style="min-width: 220px;">
+                  <a href="Candidat.dc.html" style="color: #222323; font-weight: 700; font-size: 14px; text-decoration: none;">{{l.nom}}</a>
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px;">
+                    <span class="res">{{l.reseau}}</span>
+                    <span class="mute" style="font-size: 12px;">{{l.fonction}}</span>
+                  </div>
+                </td>
+                <td style="min-width: 170px;">{{l.commune}}<div class="sub num">{{l.distance}}</div></td>
+                <td style="min-width: 120px;"><span class="num">{{l.annonces}}</span><div class="sub num">{{l.avis}}</div></td>
+                <td style="min-width: 110px;"><span class="num">{{l.anciennete}}</span><div class="sub">{{l.entreprise}}</div></td>
+                <td style="min-width: 150px;">
+                  <sc-if value="{{l.aSignal}}" hint-placeholder-val="{{false}}"><span class="pill" style="{{l.signalStyle}}">{{l.signal}}</span></sc-if>
+                </td>
+                <td style="min-width: 120px;">
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span class="{{l.classeTel}}" title="{{l.titreTel}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></span>
+                    <span class="{{l.classeMail}}" title="{{l.titreMail}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3.5 6.5l8.5 6.5 8.5-6.5"></path></svg></span>
+                  </div>
+                  <div class="sub">{{l.noteContact}}</div>
+                </td>
+                <td style="min-width: 170px; padding-right: 20px;"><span class="pill" style="{{l.suiviStyle}}">{{l.suivi}}</span><div class="sub">{{l.prochaine}}</div></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 20px 8px; font-size: 13px; color: #5c6163;">
+        <span class="num">{{piedListe}}</span>
+        <div style="display: flex; gap: 8px;"><button class="btn btn-quiet" type="button" style="min-height: 36px;">Précédents</button><button class="btn btn-quiet" type="button" style="min-height: 36px;">Suivants</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'Saint-Étienne' }; }
+  renderVals() {
+    const AG = [
+      { n: 'Saint-Étienne', court: 'Saint-Étienne', x: 328, y: 162, t: 292, j: 81, reseau: 147, lx: 364, ly: 160, ancre: 'start', src: [['Indépendants (registre)', 145], ['iad', 44], ['42ème Avenue', 23], ['La Manufacture de l’Immo', 15], ['Orpi', 13]] },
+      { n: 'Saint-Just-Saint-Rambert', court: 'St-Just-St-Rambert', x: 297, y: 138, t: 111, j: 29, reseau: 66, lx: 292, ly: 108, ancre: 'middle', src: [['Indépendants (registre)', 45], ['iad', 35], ['Orpi', 11], ['Capifrance', 5], ['42ème Avenue', 3]] },
+      { n: 'Issoire', court: 'Issoire', x: 44, y: 119, t: 69, j: 29, reseau: 48, lx: 66, ly: 123, ancre: 'start', src: [['Indépendants (registre)', 21], ['Laforêt', 10], ['Optimhome', 9], ['iad', 7], ['SAFTI', 7]] },
+      { n: 'Montbrison', court: 'Montbrison', x: 253, y: 99, t: 63, j: 13, reseau: 26, lx: 274, ly: 96, ancre: 'start', src: [['Indépendants (registre)', 37], ['iad', 8], ['Laforêt', 5], ['Dr House Immo', 4], ['SAFTI', 4]] },
+      { n: 'Annonay', court: 'Annonay', x: 397, y: 227, t: 59, j: 8, reseau: 40, lx: 397, ly: 260, ancre: 'middle', src: [['iad', 20], ['Indépendants (registre)', 19], ['Century 21', 12], ['SAFTI', 5], ['BSK Immobilier', 2]] },
+      { n: 'Le Puy-en-Velay', court: 'Le Puy-en-Velay', x: 209, y: 305, t: 56, j: 15, reseau: 41, lx: 230, ly: 309, ancre: 'start', src: [['Indépendants (registre)', 15], ['iad', 12], ['Dr House Immo', 8], ['Century 21', 8], ['Laforêt', 6]] },
+      { n: 'Firminy', court: 'Firminy', x: 308, y: 177, t: 45, j: 17, reseau: 22, lx: 270, ly: 188, ancre: 'end', src: [['Indépendants (registre)', 23], ['Dr House Immo', 5], ['iad', 5], ['SAFTI', 4], ['3G Immo', 3]] },
+      { n: 'Courpière', court: 'Courpière', x: 119, y: 42, t: 36, j: 14, reseau: 17, lx: 137, ly: 46, ancre: 'start', src: [['Indépendants (registre)', 19], ['Optimhome', 5], ['Capifrance', 4], ['iad', 3], ['Dr House Immo', 2]] },
+      { n: 'Brioude', court: 'Brioude', x: 79, y: 208, t: 25, j: 2, reseau: 14, lx: 96, ly: 212, ancre: 'start', src: [['Indépendants (registre)', 11], ['iad', 4], ['Century 21', 4], ['Laforêt', 4], ['SAFTI', 1]] },
+      { n: 'Monistrol-sur-Loire', court: 'Monistrol', x: 282, y: 212, t: 23, j: 5, reseau: 10, lx: 266, ly: 226, ancre: 'end', src: [['Indépendants (registre)', 13], ['iad', 5], ['Optimhome', 2], ['SAFTI', 1], ['Dr House Immo', 1]] },
+      { n: 'Ambert', court: 'Ambert', x: 173, y: 117, t: 13, j: 5, reseau: 9, lx: 186, ly: 121, ancre: 'start', src: [['iad', 4], ['Indépendants (registre)', 4], ['SAFTI', 3], ['Capifrance', 1], ['3G Immo', 1]] },
+      { n: 'Yssingeaux', court: 'Yssingeaux', x: 267, y: 267, t: 12, j: 2, reseau: 7, lx: 254, ly: 271, ancre: 'end', src: [['Century 21', 5], ['Indépendants (registre)', 5], ['SAFTI', 2]] },
+      { n: 'Tence', court: 'Tence', x: 312, y: 273, t: 9, j: 2, reseau: 2, lx: 326, ly: 277, ancre: 'start', src: [['Indépendants (registre)', 7], ['Capifrance', 1], ['SAFTI', 1]] },
+      { n: 'Saint-Bonnet-le-Château', court: 'St-Bonnet', x: 251, y: 162, t: 8, j: 1, reseau: 4, lx: 238, ly: 158, ancre: 'end', src: [['Indépendants (registre)', 4], ['iad', 3], ['3G Immo', 1]] },
+      { n: 'Craponne-sur-Arzon', court: 'Craponne', x: 199, y: 195, t: 8, j: 2, reseau: 2, lx: 212, ly: 199, ancre: 'start', src: [['Indépendants (registre)', 6], ['SAFTI', 1], ['Optimhome', 1]] },
+      { n: 'Saint-Didier-en-Velay', court: 'St-Didier', x: 307, y: 205, t: 7, j: 1, reseau: 3, lx: 320, ly: 214, ancre: 'start', src: [['Indépendants (registre)', 4], ['iad', 2], ['Optimhome', 1]] },
+      { n: 'Dunières', court: 'Dunières', x: 322, y: 237, t: 3, j: 0, reseau: 0, lx: 334, ly: 243, ancre: 'start', src: [['Indépendants (registre)', 3]] }
+    ];
+    const sel = this.state.sel;
+    const max = 292;
+    const agences = AG.map((a) => {
+      const r = 5 + Math.sqrt(a.t) * 1.5;
+      const on = a.n === sel;
+      return { ...a, r: r, rj: a.t ? r * Math.sqrt(a.j / a.t) : 0,
+        fondDisque: on ? 'rgba(197,0,95,0.16)' : 'rgba(34,35,35,0.06)',
+        trait: on ? '#c5005f' : 'rgba(34,35,35,0.28)',
+        coeur: on ? '#c5005f' : 'rgba(34,35,35,0.55)',
+        graisse: on ? '800' : '500' };
+    }).sort((p, q) => q.t - p.t);
+    const classement = AG.map((a) => ({ ...a,
+      classe: a.n === sel ? 'rang rang-on' : 'rang', presse: a.n === sel ? 'true' : 'false',
+      barreTotal: 'position:absolute;left:0;top:0;bottom:0;width:' + (a.t / max * 100).toFixed(1) + '%;background:#cfd3d4;border-radius:99px',
+      barreJoign: 'position:absolute;left:0;top:0;bottom:0;width:' + (a.j / max * 100).toFixed(1) + '%;background:#c5005f;border-radius:99px',
+      choisir: () => this.setState({ sel: a.n }) }));
+    const z = AG.find((a) => a.n === sel);
+    const zoneSources = z ? z.src.map(([nom, n]) => ({ nom: nom, n: n, barre: 'display:block;height:4px;border-radius:99px;background:#f6b6d5;width:' + (n / z.t * 100).toFixed(0) + '%' })) : [
+      { nom: 'Indépendants (registre)', n: 792, barre: 'display:block;height:4px;border-radius:99px;background:#f6b6d5;width:41%' },
+      { nom: 'iad', n: 321, barre: 'display:block;height:4px;border-radius:99px;background:#f6b6d5;width:17%' },
+      { nom: 'Orpi', n: 144, barre: 'display:block;height:4px;border-radius:99px;background:#f6b6d5;width:8%' },
+      { nom: 'SAFTI', n: 106, barre: 'display:block;height:4px;border-radius:99px;background:#f6b6d5;width:6%' },
+      { nom: 'Century 21', n: 82, barre: 'display:block;height:4px;border-radius:99px;background:#f6b6d5;width:4%' }];
+
+    const neutre = 'background:#f1f2f3;color:#3f4446';
+    const S = {
+      afaire: 'background:#f1f2f3;color:#3f4446', contacte: 'background:#e9ecef;color:#222323',
+      rdv: 'background:#fdf0f6;color:#8c0044', non: 'background:#f6f7f8;color:#7c8082',
+      cesse: 'background:#fff3df;color:#8a4f0f', oppose: 'background:#fdeceb;color:#8f3432', club: 'background:#e8f5ee;color:#245f44' };
+    const L = [
+      { ag: 'Saint-Étienne', nom: 'Camille Roux', reseau: 'SAFTI', fonction: '', commune: 'Saint-Étienne', distance: '3,5 km de Saint-Étienne', annonces: '17 annonces', avis: '4,6 sur 5, 28 avis', anciennete: '10 ans', entreprise: 'active', signal: 'Club Excellence', signalStyle: S.club, tel: true, mail: true, noteContact: '', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Saint-Étienne', nom: 'Julien Perret', reseau: 'iad', fonction: '', commune: 'Saint-Priest-en-Jarez', distance: '4,1 km de Saint-Étienne', annonces: '12 annonces', avis: '4,9 sur 5, 64 avis', anciennete: '6 ans', entreprise: 'active', signal: '', tel: false, mail: false, noteContact: 'numéro derrière un clic', suivi: 'Contacté', suiviStyle: S.contacte, prochaine: 'rappeler le 26/11' },
+      { ag: 'Saint-Étienne', nom: 'Sophie Marcoux', reseau: 'Orpi', fonction: 'conseillère en transaction', commune: 'Saint-Étienne', distance: '0,8 km de Saint-Étienne', annonces: '—', avis: '', anciennete: '—', entreprise: 'salariée d’agence', signal: '', tel: true, mail: false, noteContact: '', suivi: 'Rendez-vous', suiviStyle: S.rdv, prochaine: 'jeudi 26/11 à 10 h' },
+      { ag: 'Saint-Étienne', nom: 'Nadia Belkacem', reseau: 'Indépendante', fonction: 'registre public', commune: 'Villars', distance: '5,2 km de Saint-Étienne', annonces: '—', avis: '', anciennete: '3 ans', entreprise: 'active', signal: '', tel: false, mail: false, noteContact: 'aucune coordonnée publique', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Saint-Étienne', nom: 'Thomas Giraud', reseau: 'Capifrance', fonction: '', commune: 'La Talaudière', distance: '6,3 km de Saint-Étienne', annonces: '—', avis: '4,8 sur 5, 12 avis', anciennete: '2 ans', entreprise: 'active', signal: '', tel: true, mail: true, noteContact: '', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Saint-Étienne', nom: 'Lucie Faure', reseau: '42ème Avenue', fonction: 'agent commercial', commune: 'Saint-Étienne', distance: '1,2 km de Saint-Étienne', annonces: '—', avis: '', anciennete: '4 ans', entreprise: 'active', signal: '', tel: true, mail: false, noteContact: '', suivi: 'Pas intéressée', suiviStyle: S.non, prochaine: 'reprendre en mai 2027' },
+      { ag: 'Saint-Étienne', nom: 'Marc Chapuis', reseau: 'iad', fonction: '', commune: 'Sorbiers', distance: '7,9 km de Saint-Étienne', annonces: '3 annonces', avis: 'aucun avis', anciennete: '12 ans', entreprise: 'active', signal: 'Opposé à la prospection', signalStyle: S.oppose, tel: false, mail: false, noteContact: 'numéro derrière un clic', suivi: 'À trancher', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Saint-Étienne', nom: 'Inès Morel', reseau: 'Dr House Immo', fonction: '', commune: 'Saint-Genest-Lerpt', distance: '8,4 km de Saint-Étienne', annonces: '—', avis: '5 sur 5, 9 avis', anciennete: '1 an', entreprise: 'active', signal: '', tel: true, mail: true, noteContact: '', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Firminy', nom: 'Patrick Vial', reseau: 'SAFTI', fonction: '', commune: 'Unieux', distance: '2,9 km de Firminy', annonces: '8 annonces', avis: '', anciennete: '15 ans', entreprise: 'CESSÉE au registre', signal: 'Entreprise cessée', signalStyle: S.cesse, tel: true, mail: true, noteContact: '', suivi: 'À vérifier', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Saint-Just-Saint-Rambert', nom: 'Élodie Brun', reseau: 'Orpi', fonction: 'conseillère en transaction', commune: 'Saint-Just-Saint-Rambert', distance: '0,4 km de St-Just', annonces: '—', avis: '', anciennete: '—', entreprise: 'salariée d’agence', signal: '', tel: true, mail: false, noteContact: '', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Issoire', nom: 'Hugo Delmas', reseau: 'Optimhome', fonction: '', commune: 'Issoire', distance: '1,1 km d’Issoire', annonces: '—', avis: '4,7 sur 5, 21 avis', anciennete: '7 ans', entreprise: 'active', signal: '', tel: true, mail: true, noteContact: '', suivi: 'Contacté', suiviStyle: S.contacte, prochaine: 'envoyer la plaquette' },
+      { ag: 'Montbrison', nom: 'Claire Bonnefoy', reseau: 'Laforêt', fonction: 'conseillère immobilier vente', commune: 'Savigneux', distance: '2,2 km de Montbrison', annonces: '—', avis: '', anciennete: '—', entreprise: 'salariée d’agence', signal: '', tel: false, mail: false, noteContact: 'aucun contact personnel publié', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' },
+      { ag: 'Le Puy-en-Velay', nom: 'Anaïs Roche', reseau: 'BSK Immobilier', fonction: '', commune: 'Le Puy-en-Velay', distance: '2,0 km du Puy', annonces: '6 annonces', avis: '4,9 sur 5, 31 avis', anciennete: '5 ans', entreprise: 'active', signal: '', tel: true, mail: true, noteContact: '', suivi: 'À contacter', suiviStyle: S.afaire, prochaine: '' }
+    ];
+    const lignes = L.filter((l) => !sel || l.ag === sel).map((l) => ({ ...l,
+      aSignal: !!l.signal,
+      classeTel: l.tel ? 'ico' : 'ico ico-off', classeMail: l.mail ? 'ico' : 'ico ico-off',
+      titreTel: l.tel ? 'Téléphone affiché par le réseau' : 'Pas de téléphone public',
+      titreMail: l.mail ? 'E-mail affiché par le réseau' : 'Pas d’e-mail public' }));
+    const total = z ? z.t : 1920;
+    return {
+      agences: agences, classement: classement, lignes: lignes,
+      aZone: !!z, nomZone: z ? z.n : 'la région', titreZone: z ? 'Autour de' : 'Dans nos quatre départements',
+      zoneTotal: z ? z.t : '1 920', zoneJoign: z ? z.j : 629, zoneReseau: z ? z.reseau : '1 128',
+      zoneSources: zoneSources,
+      piedListe: 'Exemples ' + lignes.length + ' sur ' + (z ? z.t : '1 920') + ' candidats',
+      toutes: () => this.setState({ sel: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

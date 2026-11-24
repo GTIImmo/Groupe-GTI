@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Recrutement — ajouter un candidat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#222323;-webkit-font-smoothing:antialiased}
+a{color:#c5005f}a:hover{color:#8c0044}
+button,input,select,textarea{font-family:inherit}
+.champ{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#3f4446;min-width:0}
+.champ input,.champ select,.champ textarea{min-height:42px;padding:0 12px;border:1px solid #cfd3d4;border-radius:11px;font-size:14px;color:#222323;background:#fff;box-sizing:border-box;width:100%}
+.champ textarea{padding:10px 12px;min-height:72px;resize:vertical}
+.champ input:focus,.champ select:focus,.champ textarea:focus{outline:0;border-color:#c5005f;box-shadow:0 0 0 3px rgba(197,0,95,.25)}
+.opt{font-weight:500;color:#7c8082}
+.groupe{display:flex;flex-direction:column;gap:12px;padding:18px 0;border-top:1px solid #eef0f1}
+.groupe h3{margin:0;font-size:14px;font-weight:700;color:#222323}
+.seg{border:0;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn-main{background:#c5005f;color:#fff}.btn-main:hover{background:#8c0044;color:#fff}
+.btn-quiet{background:#fff;color:#222323;border-color:#cfd3d4}
+.btn:focus-visible,.seg:focus-visible{outline:3px solid rgba(197,0,95,.45);outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1100px; height: 980px; box-sizing: border-box; background: rgba(34,35,35,0.52); display: flex; align-items: flex-start; justify-content: center; padding: 34px 0;">
+  <div role="dialog" aria-modal="true" aria-labelledby="titre-ajout" style="width: 720px; max-height: 912px; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(34,35,35,.35); display: flex; flex-direction: column; overflow: hidden;">
+
+    <div style="background: #222323; color: #ffffff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+      <div>
+        <h2 id="titre-ajout" style="margin: 0; font-size: 20px; font-weight: 800;">Ajouter un candidat</h2>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #c9cdcf; max-width: 52ch;">Quelqu'un qu'on t'a recommandé, une candidature, une rencontre. Les annuaires, eux, arrivent seuls chaque jeudi.</p>
+      </div>
+      <a href="Main.dc.html" aria-label="Fermer" style="display: flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 10px; color: #ffffff; background: #2f3131;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+    </div>
+
+    <div style="padding: 4px 24px 8px; overflow-y: auto; flex: 1 1 auto;">
+      <div class="groupe" style="border-top: 0;">
+        <h3>Qui</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <label class="champ">Prénom<input type="text" value="Camille"></label>
+          <label class="champ">Nom<input type="text" value="Roux"></label>
+        </div>
+        <sc-if value="{{doublonVisible}}" hint-placeholder-val="{{true}}">
+          <div role="status" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: #fff3df; border: 1px solid #f1d3a6; border-radius: 14px; padding: 12px 14px;">
+            <p style="margin: 0; font-size: 13.5px; color: #6b3d0b;"><strong>Une Camille Roux est déjà dans le vivier</strong> : conseillère SAFTI à Saint-Étienne.</p>
+            <div style="display: flex; gap: 8px;">
+              <a class="btn btn-quiet" href="Candidat.dc.html" style="min-height: 36px;">Ouvrir sa fiche</a>
+              <button class="btn btn-quiet" type="button" style="min-height: 36px;" onClick="{{ignorerDoublon}}">C'est quelqu'un d'autre</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div class="groupe">
+        <h3>Où</h3>
+        <label class="champ">Commune<input type="text" value="Firminy (42700)"></label>
+        <p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #3f4446;"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-9" fill="none" stroke="#c5005f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>À 0,6 km de notre agence de Firminy.</p>
+      </div>
+
+      <div class="groupe">
+        <h3>Sa situation aujourd'hui</h3>
+        <div role="radiogroup" aria-label="Situation" style="display: inline-flex; flex-wrap: wrap; background: #f1f2f3; border-radius: 12px; padding: 4px; gap: 4px; width: max-content; max-width: 100%;">
+          <sc-for list="{{situations}}" as="s" hint-placeholder-count="4">
+            <button class="seg" type="button" role="radio" aria-checked="{{s.choisi}}" onClick="{{s.choisir}}" style="{{s.style}}">{{s.nom}}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{enReseau}}" hint-placeholder-val="{{true}}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+            <label class="champ">Réseau<select><option>SAFTI</option><option>iad</option><option>Capifrance</option><option>Optimhome</option><option>BSK Immobilier</option><option>Keller Williams</option><option>Dr House Immo</option><option>3G Immo</option><option>eXp France</option><option>Megagence</option><option>Expertimo</option><option>Autre réseau</option></select></label>
+            <label class="champ"><span>SIREN <span class="opt">facultatif</span></span><input type="text" inputmode="numeric" placeholder="9 chiffres, sur sa fiche (RSAC)"></label>
+          </div>
+        </sc-if>
+        <sc-if value="{{enAgence}}" hint-placeholder-val="{{false}}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+            <label class="champ">Agence<input type="text" placeholder="Enseigne et ville, ex. Orpi Saint-Étienne"></label>
+            <label class="champ">Son poste<input type="text" placeholder="ex. conseillère en transaction"></label>
+          </div>
+        </sc-if>
+        <sc-if value="{{independant}}" hint-placeholder-val="{{false}}">
+          <label class="champ"><span>SIREN</span><input type="text" inputmode="numeric" placeholder="9 chiffres"></label>
+        </sc-if>
+        <sc-if value="{{aSiren}}" hint-placeholder-val="{{true}}">
+          <button class="btn btn-quiet" type="button" style="min-height: 38px; width: max-content;">Compléter depuis le registre public</button>
+        </sc-if>
+      </div>
+
+      <div class="groupe">
+        <h3>La joindre</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <label class="champ">Téléphone<input type="tel" placeholder="06 00 00 00 00"></label>
+          <label class="champ">E-mail<input type="email" placeholder="prenom.nom@exemple.fr"></label>
+        </div>
+        <label class="champ">D'où vient ce contact ?
+          <select onChange="{{changerSource}}">
+            <option value="coopt">Recommandée par un de nos agents</option>
+            <option value="candid">Candidature reçue</option>
+            <option value="rencontre">Rencontrée (salon, réseau, visite)</option>
+            <option value="annuaire">Trouvée dans un annuaire public</option>
+          </select>
+        </label>
+        <p style="{{styleRgpd}}">{{texteRgpd}}</p>
+      </div>
+
+      <div class="groupe">
+        <h3>Le suivi</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <label class="champ">Où en est-on ?<select><option>Repérée</option><option>Contactée</option><option>Rendez-vous</option></select></label>
+          <label class="champ">Qui la suit<select><option>Moi</option><option>Un autre administrateur</option></select></label>
+        </div>
+        <label class="champ"><span>Note <span class="opt">facultatif</span></span><textarea placeholder="Ce qu'on t'a dit d'elle, ce qu'elle cherche"></textarea></label>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e5e6; background: #fbfbfc;">
+      <a class="btn btn-quiet" href="Main.dc.html">Annuler</a>
+      <a class="btn btn-quiet" href="Candidat.dc.html">Ajouter et ouvrir sa fiche</a>
+      <a class="btn btn-main" href="Main.dc.html">Ajouter au vivier</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":980}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { situation: 'reseau', source: 'coopt', doublon: true }; }
+  renderVals() {
+    const S = [['reseau', 'Dans un réseau'], ['independant', 'Indépendant'], ['agence', 'Salarié d’agence'], ['hors', 'Hors immobilier']];
+    const situations = S.map(([k, nom]) => ({ nom: nom, choisi: k === this.state.situation ? 'true' : 'false',
+      style: k === this.state.situation ? 'background:#ffffff;color:#222323;box-shadow:0 1px 2px rgba(34,35,35,.14)' : 'background:transparent;color:#5c6163',
+      choisir: () => this.setState({ situation: k }) }));
+    const annuaire = this.state.source === 'annuaire';
+    const sit = this.state.situation;
+    return {
+      situations: situations,
+      enReseau: sit === 'reseau', enAgence: sit === 'agence', independant: sit === 'independant',
+      aSiren: sit === 'reseau' || sit === 'independant',
+      doublonVisible: this.state.doublon, ignorerDoublon: () => this.setState({ doublon: false }),
+      changerSource: (ev) => this.setState({ source: ev.target.value }),
+      texteRgpd: annuaire ? 'Coordonnées trouvées dans un annuaire : au premier contact, dis-lui d’où elles viennent et qu’elle peut refuser d’être recontactée.' : 'Elle nous a donné ses coordonnées elle-même, ou par quelqu’un qu’elle connaît : rien de plus à lui dire.',
+      styleRgpd: 'margin:0;font-size:13px;line-height:1.5;border-radius:12px;padding:10px 12px;' + (annuaire ? 'background:#fdf0f6;color:#8c0044' : 'background:#f1f2f3;color:#3f4446')
+    };
+  }
+}
+</script>
+</body>
+</html>
