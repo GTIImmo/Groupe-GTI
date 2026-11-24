@@ -1122,6 +1122,24 @@ L'ordre :
   Le journal dit « psycopg2 et requests trouves (…\python_paquets\psycopg2\__init__.py) », puis « descente faite »,
   puis la collecte source par source (KW fiches : 1 159 s, en tranches de 9 min). La suite (mise à jour, contrôle,
   montée, sauvegarde, battements) est à relire à la fin du passage.
+- ⭐⭐ **24/11, 13:34 → 14:47 — LE PREMIER PASSAGE COMPLET DE LA TÂCHE (collecte n° 2) : il a trouvé un VRAI
+  DÉFAUT, avant le 06/12.** Sortie 1 (« quelque chose à voir »), et c'est juste.
+  - Fait et vert : descente, collecte des 25 sources (1 h 12), placement par le registre, mise à jour, contrôle,
+    export, **montée validée**, sauvegarde relue (2 118 fiches), compte rendu. États : 2 115 présents, 2 nouveaux,
+    1 absent (iad, 320 contre 321).
+  - ⛔ **3 sources MALADES** : SAFTI (« aucune fiche lue », 106 avant), 3G (aucune, 39 avant), KW (« témoins revus :
+    0 sur 3 »). **Le garde-fou a joué** : une source malade ne fait partir personne.
+  - **LA CAUSE (lue dans le code)** : `collecte ouvrir` ouvre la collecte n° 2 SANS remettre à zéro les marques
+    « déjà lu » de la n° 1 (`grille_safti.lue`, `fiche.fiche_lue`…). SAFTI : « pages à lire : 0, fiches à lire : 0 »
+    — il n'a rien relu. KW : il n'a lu que les 194 fiches jamais lues (hors région), pas les 10 de la région, donc
+    pas ses témoins. 3G : 39 personnes trouvées, aucune comptée comme vue. ⚠ `test_mise_a_jour.py` ne l'a pas vu :
+    il simule les observations, pas les lecteurs. Le 06/12 aurait eu le même défaut.
+  - eXp « 802 fiches (avant : 3) » n'est PAS un défaut : il lit la France entière, puis `siren` en retire 799 hors
+    région (il en reste 3). Seul le compte de la mise à jour, pris AVANT ce retrait, trompe.
+  - ⏸ La correction (remise à zéro à l'ouverture d'une collecte + un essai qui la prouve) attend le « vas-y » de
+    Frédéric (délégation §15 : arrêt sur un contrôle rouge).
+  - ✅ Le correctif Dr House (`separer_nom` retire le HTML d'un nom, toutes sources) est POSÉ après le passage
+    (`98b008c`) : éprouvé sur copie puis sur le vrai fichier, `test_mise_a_jour` et `test_descente` verts.
 - [x] R6.1 L'interrupteur : clé `recrutement_ecran` (24/11). **Admins seuls quel que soit le cran** (D3) : `admin`
       et `on` ouvrent aux admins ; absente = écran caché, bouton du menu caché, adresse `?ecran=recrutement`
       renvoyée vers Annonces. ⏸ La clé N'EXISTE PAS en base : l'écran est donc ÉTEINT en production après le
