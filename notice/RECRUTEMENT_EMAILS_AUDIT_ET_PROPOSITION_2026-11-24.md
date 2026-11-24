@@ -78,6 +78,19 @@ désinscription, l'agenda). Le neuf se limite à l'écran, aux modèles du recru
   répondu le … » et le fil Gmail, comme pour un contact. **Pas de pixel d'ouverture** pour le recrutement
   (prospection : prudence CNIL ; la réponse est le seul vrai signal).
 
+**C bis. Où se voient les échanges** (question de Frédéric, 24/11) — **dans la fiche du candidat**, bloc « Le fil des
+échanges » (planche 4) :
+- **ce qui est envoyé DEPUIS l'app** est gardé en base (objet, texte tel qu'envoyé, pièces, date, expéditeur) : « voir
+  l'e-mail tel qu'envoyé », visible de tous les administrateurs, quel que soit celui qui a écrit ;
+- **les réponses, et tout échange fait directement dans Gmail**, sont LUES EN DIRECT à l'ouverture de la fiche : le
+  serveur cherche dans la boîte qui a écrit `from:/to:/cc:` l'adresse du candidat (les 20 à 25 derniers messages,
+  la route `/gmail/contact-messages` qui sert déjà aux contacts). Rien de ces réponses n'est recopié en base :
+  Gmail reste l'archive (minimisation) ;
+- et bien sûr dans Gmail lui-même : « Envoyés » de l'expéditeur, et la réponse arrive dans sa boîte de réception.
+- ⏸ **À décider** : la clé permet à un administrateur de lire la boîte d'un autre (règle actuelle : admin et manager
+  peuvent lire toute boîte du domaine). Proposé : la fiche montre les échanges de la boîte qui a écrit (celle de
+  « qui la suit »), aux administrateurs seulement.
+
 **D. Le rendez-vous** : « Planifier un rendez-vous » crée l'événement dans l'agenda Google de l'administrateur,
 avec la personne invitée (elle reçoit l'invitation), lié à sa fiche ; le fil le note ; option « proposer 3
 créneaux libres » (lecture des disponibilités, déjà là).
