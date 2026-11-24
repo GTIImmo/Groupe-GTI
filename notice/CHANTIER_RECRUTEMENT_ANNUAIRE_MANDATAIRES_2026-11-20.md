@@ -1257,7 +1257,7 @@ L'ordre :
   - ✅ **FAIT par Frédéric le 24/11** : `check_gti_health.py` commité (`2fc01a6`, déclarée AVANT), puis la tâche
     enregistrée — relue : Ready, S4U / Limited, quotidienne 09:30, limite PT1H, IgnoreNew, bon script. **Premier
     passage : 25/11 à 09:30** (jamais tournée : 267011). La branche de transport `recrutement-r6-seul` est retirée.
-  - ⏳ À relire le 25/11 après 09:30 : le journal `logs\scheduledecrutement_sauvegarde_<date>.log` (« tout vert »),
+  - ⏳ À relire le 25/11 après 09:30 : le journal `logs\scheduled\recrutement_sauvegarde_<date>.log` (« tout vert »),
     une 2e copie dans `quotidien\`, le battement `recrutement.sauvegarde_quotidienne`. C'est la seule preuve qui
     compte : mon terminal ne lit pas `python_paquets\psycopg2` (installé en administrateur), la tâche si.
   - ⚠ Vu en chemin : mon terminal ne peut pas LIRE `python_paquets\psycopg2` (installé depuis une PowerShell
