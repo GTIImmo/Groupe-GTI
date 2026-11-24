@@ -43,6 +43,10 @@ WORKER_STALE_POLICY: dict[str, int | None] = {
     "daemon_or_scheduled": 6 * 60,
     "service": 3 * 60,
     "watcher": 6 * 60,
+    # 2026-11-20 : le run MENSUEL du recrutement (« GTI Recrutement Mensuel », 1er dimanche du mois).
+    #   Il peut y avoir 5 semaines entre deux premiers dimanches : 36 jours. Sans cette ligne, une
+    #   frequence inconnue retombe sur le seuil par defaut et l'etape crierait « en retard » des le 2e jour.
+    "monthly": 36 * 24 * 60,
     "console_follow_up": None,
     "backend_or_manual": None,
     "manual": None,
@@ -187,6 +191,16 @@ TASK_CRITICALITY: dict[str, str] = {
     #   attendent un jour de plus, rien ne se perd). Visible a l ecran Sante, sans e-mail.
     #   DECLAREE ICI AVANT d etre enregistree dans Windows (meme regle que ses soeurs).
     "GTI Menage Temporaires": "warning",
+    # 2026-11-20 : « GTI Recrutement Mensuel » (1er dimanche du mois, 10:00) -- le run du chantier
+    #   recrutement (scheduled/run_recrutement_mensuel.ps1) : il relit les annuaires publics des
+    #   mandataires de la region, calcule qui arrive et qui part, controle, sauvegarde. Il ne parle
+    #   jamais a Hektor. Note : notice/CHANTIER_RECRUTEMENT_ANNUAIRE_MANDATAIRES_2026-11-20.md §13.
+    # ⚠ "warning" ET PAS "critical" (decision du 20/11, meme raisonnement que « GTI Entretien
+    #   Photos ») : un mois rate se rejoue a la main sans rien perdre. Un e-mail d'alerte pour un
+    #   defaut qui attend un mois, c'est du bruit. Visible a l ecran Sante et dans l e-mail du matin.
+    #   Il sort en 1 quand une source est en echec ou MALADE, ou que le controle est rouge.
+    #   DECLAREE ICI AVANT d etre enregistree dans Windows (meme regle que ses soeurs).
+    "GTI Recrutement Mensuel": "warning",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -3677,11 +3691,13 @@ def build_parser() -> argparse.ArgumentParser:
         #   DECLAREE AVANT d'etre enregistree. Elle est "critical" -- raison au-dessus
         #   de TASK_CRITICALITY. 11 noms surveilles.
         #   18/11 : ajout de « GTI Menage Temporaires » (13:00), "warning", DECLAREE AVANT. 12 noms.
+        #   20/11 : ajout de « GTI Recrutement Mensuel » (1er dimanche, 10:00), "warning", DECLAREE AVANT. 13 noms.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
                  "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
                  "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
                  "GTI Entretien Documents,GTI Entretien Photos,"
-                 "GTI Balayage Photos Masquees,GTI Menage Temporaires"),
+                 "GTI Balayage Photos Masquees,GTI Menage Temporaires,"
+                 "GTI Recrutement Mensuel"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
