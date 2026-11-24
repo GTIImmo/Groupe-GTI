@@ -5459,6 +5459,41 @@ RESTE 15 ; 13 avec le ②.
 A LUI : ② avec la vague ; les 2 conflits A2 ; sa mesure de la commission ; les 6 d'A3 ; le « vas-y » du code A1-A2-A3. RIEN D'ECRIT.
 ```
 
+### 20.39 Le realignement des ecritures rapatriees, temps 1 et temps 2, a blanc (24/11, son 2e mot)
+
+Notice : notice/PROTOCOLE_REALIGNEMENT_TEMPS1_TEMPS2_A_BLANC_2026-11-24.md. Outils (lecture seule) :
+protocole_realignement_temps1_a_blanc_2026-11-24.py, protocole_realignement_temps2_repartition_a_blanc_2026-11-24.py,
+protocole_a1_a2_a3_le_remede_a_blanc_2026-11-24.py (+ A3 bis, les conditions).
+
+```
+SES REPONSES : ② dans la nuit de la vague seulement ; U0GQ3KTO laissee en reserve ; NRZVKH85 completee (sortie FERNANDEZ 50) ;
+  commission_agence SORTIE du controle (la Commission TTC se lit par honoraires_entree : 38 colonnes l. 120, choix P, lot C2) ;
+  son 155 d'A3 datait d'avant le run.
+TEMPS 1 (38 721 ecritures, la LIGNE D'ORIGINE lue dans le rapport de chaque lot, trois cles : gel, protocole, origine) :
+  SES 8 RETROUVES + 2 (la note de 27195, le motif de 16378). Par la TRANSACTION : 61 MAL PLACEES. « Piece neutre » (a sa ligne
+  au gel, seule, dans son dossier, non prouvee par sa date) : 143 ecritures, a leur place. Les 190 notes C5 : sur la piece
+  creee pour leur ligne. SES 266 = 190 C5 + 38 cases allongees + 51 cases changees (279), pas des erreurs.
+  DECISIONS : DEPLACER 42 (36 notes, 4 motifs, 16377 -> 16378, 28568 -> 28569 ; dont l'echange 27195 <-> 27196) ;
+  REMONTE 19 nommees (les 5 ventes reglees que la vague detache x2, 5 dates d'annulation sur le compromis d'une autre
+  tentative -> mettre de cote ?, 11138, 4496, 3701, la note de 53ZS73KW sur 21551).
+  GESTE A BLANC SIMULTANE, ancienne place au journal ; INVERSE : empreinte 0038d306 -> 65191702 -> 0038d306 IDENTIQUE.
+  TEMOIN DE FIN : sans le geste 61, apres 19 toutes nommees, 0 hors des nommees ; temoin inverse COMMENTAIRES 4 030 -> 4 054.
+  ⛔ trouve en mesurant : une ecriture deplacee doit PORTER SA LIGNE D'ORIGINE, sinon le temoin de fin passe pour de faux.
+TEMPS 2 (rejeu E + remede A2 + ses deux decisions, par PERSONNE) :
+  ⛔ LE REMEDE v1 VIDAIT 19131 ET 19814 alors que la ligne qui y arrive reconnait les parts -> v2 : jamais vider une chaine
+  qu'une ligne d'arrivee reconnait (13 gardees, copie pour celle qui part) + echange 739a0db1 <-> TR42PT5H + 3 lignes dont
+  les parts sont sur une autre de leurs chaines. v2 : 503 recopiees, 147 mises de cote, 1 completee, conservation BOUCLE.
+  AUDIT : 4 636 / 4 725 justes (sans remede 4 388) ; +248, 0 rendue fausse ; 89 nommees (60 sans part : 49 annulees, 9 offres,
+  2 compromis en attente, 0 vente reglee ; 22 apporteurs en quarantaine du 13/11 ; 6 suppositions Hektor ; 1 conflit).
+  ⛔ LA GARDE = 5, PAS 1 : 19131 gardee par v2 ; les 5 = les ventes reglees que la COUPE NEUVE laisse derriere sa ligne
+  (21662, 12182, 28147, 7126, 16019 : date Hektor fausse d'un an ou d'un mois). Cause = la vague, pas le remede.
+  -> R26 PROPOSEE (la coupe neuve emporte la vente neutre de sa ligne), non mesuree. A2 NE S'ECRIT PAS.
+  A3 bis : 28 conditions du classeur, 0 reflet faux aujourd'hui et apres la nuit (les 5 faux = saisies d'essai du 23/10).
+DURABLE : colonne de transaction (+ id_unique pour les parts du classeur) ; 17 851 parts / 17 907 ont une tete unique,
+  56 a decider. Lecteurs et ecrivains nommes dans la notice.
+A LUI : les 42 ; les 5 dates ; R26 ; V3FO5NDA ; les 6 + 49 ; la colonne de transaction. RIEN D'ECRIT.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

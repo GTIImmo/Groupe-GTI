@@ -364,6 +364,30 @@ dire("   " + " . ".join("%s %d" % kv for kv in c3.items()))
 dire("   ⭐ CONTROLE : le reflet recalcule = chE[app_affaire_id] par construction -> 0 ; la transaction ne bouge pas : "
      "aucune note n'est deplacee, seul son reflet change (%d)" % len(journal_a3))
 
+# ═════════════════════════════════════════════ A3 bis (son mot du 24/11, 2e) ═════════════════════════════════════════
+# « UNE QUATRIEME TABLE DU MEME MOTIF : app_affaire_condition [...] Cle = la transaction, donc rien ne se perd, mais son
+#   reflet de chaine peut mentir comme celui des notes. AJOUTE-LA A A1/A2/A3. »
+dire()
+dire("A3 bis -- LE REFLET DES CONDITIONS (app_affaire_condition : app_affaire_id = la transaction ; app_chaine_id et "
+     "app_dossier_id = des reflets)")
+CO = [dict(r) for r in loc.execute("select app_affaire_id, rang, app_chaine_id, app_dossier_id, origine from app_affaire_condition")]
+c3b = Counter()
+journal_a3b = []
+DOS_IMG = {a: PI[a]["app_dossier_id"] for a in PI}
+for x in CO:
+    a = int(x["app_affaire_id"])
+    refl = int(x["app_chaine_id"]) if x["app_chaine_id"] is not None else None
+    c3b["conditions (%s)" % x["origine"]] += 1
+    c3b["aujourd'hui : reflet de chaine faux (image)"] += (refl != ch_img.get(a))
+    c3b["aujourd'hui : reflet de dossier faux (image)"] += (str(x["app_dossier_id"]) != str(DOS_IMG.get(a)))
+    c3b["apres la nuit SANS remede : reflet de chaine faux"] += (refl != chE.get(a))
+    if refl != chE.get(a):
+        journal_a3b.append((a, x["rang"], x["origine"], refl, chE.get(a)))
+c3b["⭐ APRES LE REMEDE (recalcule depuis la transaction) : reflet faux"] = 0
+dire("   " + " . ".join("%s %d" % kv for kv in c3b.items()))
+for j_ in journal_a3b:
+    dire("      condition %s rang %s (%s) : reflet %s -> %s apres la nuit" % j_)
+
 if arg.csv:
     for nom, lignes, entete in (
             ("A2_PARTS_RECOPIEES", recopies, None), ("A2_PARTS_MISES_DE_COTE", mises, None)):
