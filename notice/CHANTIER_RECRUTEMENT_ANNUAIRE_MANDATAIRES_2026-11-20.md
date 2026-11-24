@@ -882,7 +882,11 @@ L'ordre :
   - ⚠ Le module de confidentialité refuse de lancer ce fichier, parce qu'il contient l'e-mail
     des alertes.
   - Vérifié donc par relecture du diff (17 lignes ajoutées, 1 retirée), puis par le passage de
-    « GTI Health Monitor » (voir journal).
+    « GTI Health Monitor » de 18:48 : **code 0**, et son journal porte « Tache planifiee GTI
+    Recrutement Mensuel : tache introuvable ». C'est l'avertissement voulu tant que la tâche
+    n'est pas enregistrée.
+  - Le module refuse aussi un `git add` qui nomme ce fichier : **Frédéric l'a commité lui-même le
+    24/11 (`98f29f2`)**.
 - [x] R5.2 `recrutement/sauvegarder.py` : API de SQLite, copie relue (intégrité + nombre de fiches),
       12 gardées, CSV du mois à côté. **1ʳᵉ copie réelle le 20/11 à 18:41** :
       `C:\Hektor\Backups\recrutement\recrutement_2026-11-20_184149.sqlite`, 2 116 fiches, intégrité « ok ».
@@ -892,7 +896,12 @@ L'ordre :
     dans le XML. PowerShell ne sait pas créer un déclencheur mensuel.
   - Il compare ensuite 17 réglages, un par un.
   - Mode `-Essai` vert : le déclencheur est fabriqué et le XML transformé se relit.
-- [ ] R5.5 ⏸ Frédéric enregistre la tâche, en PowerShell administrateur
+- [x] R5.5 Frédéric a enregistré la tâche le 24/11, en PowerShell administrateur. Relue par moi :
+  - état « Ready », S4U, limite PT8H, IgnoreNew ;
+  - déclencheur calendrier : 1ʳᵉ semaine, dimanche, les 12 mois, départ 2026-12-01 à 10:00 ;
+  - action `run_recrutement_mensuel.ps1` ;
+  - **prochain passage le dimanche 06/12/2026 à 10:00** ; dernier résultat 267011 (« jamais
+    lancée », accepté par la surveillance).
 - [ ] R5.6 Le premier run réel, puis son contrôle
 - [ ] R5.7 Vérifier si l'agent OVH (Veeam) couvre `Backups\recrutement` et `recrutement_donnees`
 
@@ -1047,3 +1056,14 @@ L'ordre :
   - **R5** : la tâche est déclarée à la surveillance ; installeur `-Essai` vert ; 1ʳᵉ sauvegarde
     réelle.
   - Rien en base, rien chez Hektor, aucune tâche enregistrée.
+  - **Commit `5e68fbd`** (7 fichiers, ajoutés un par un ; l'index relu avant). `check_gti_health.py`
+    reste à commiter par Frédéric.
+  - Les noms réels laissés en exemple dans trois commentaires ont été remplacés avant le commit.
+- **24/11/2026** — Frédéric a fait ses deux gestes :
+  - le commit de la surveillance, `98f29f2` ;
+  - l'enregistrement de « GTI Recrutement Mensuel », relu réglage par réglage, avec un 1er
+    passage le **06/12 à 10:00**.
+  - La garde de session est re-prouvée après la reprise de la conversation : un faux push est
+    refusé.
+  - Le 1er run fera une collecte **locale** seulement (interrupteurs à 0) et mesurera la durée
+    d'une collecte complète (RUN.3).
