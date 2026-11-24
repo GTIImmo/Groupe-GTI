@@ -1118,12 +1118,55 @@ L'ordre :
     psycopg2-binary==2.9.12 requests==2.34.2 urllib3==2.7.0 idna==3.18 charset_normalizer==3.4.7
     certifi==2026.6.17`. Ce sont les versions exactes éprouvées depuis le 24/11 matin.
   - ⏳ Puis il relance la tâche pour l'essai complet.
-- [ ] R6.1 L'interrupteur : clé `recrutement_ecran`, crans `admin` / `on`, comme Transactions
-- [ ] R6.2 Le listing, son bandeau de la dernière collecte, « Où recruter »
-- [ ] R6.3 La fiche candidat et son parcours
-- [ ] R6.4 Les fenêtres Ajouter, Modifier, Retirer
-- [ ] R6.5 Les gestes : appeler, e-mail, RDV (+ le filtre `related_entity_id` au backend)
-- [ ] R6.6 Contrôle : capture contre maquette, téléphone, négociateur refusé
+- ⭐ **24/11, 13:34 — 3e LANCEMENT DE LA TÂCHE, après l'installation du dossier par Frédéric : il PASSE le départ.**
+  Le journal dit « psycopg2 et requests trouves (…\python_paquets\psycopg2\__init__.py) », puis « descente faite »,
+  puis la collecte source par source (KW fiches : 1 159 s, en tranches de 9 min). La suite (mise à jour, contrôle,
+  montée, sauvegarde, battements) est à relire à la fin du passage.
+- [x] R6.1 L'interrupteur : clé `recrutement_ecran` (24/11). **Admins seuls quel que soit le cran** (D3) : `admin`
+      et `on` ouvrent aux admins ; absente = écran caché, bouton du menu caché, adresse `?ecran=recrutement`
+      renvoyée vers Annonces. ⏸ La clé N'EXISTE PAS en base : l'écran est donc ÉTEINT en production après le
+      déploiement, jusqu'à ce que Frédéric la pose (une ligne dans `app_setting`, écriture en production).
+- [x] R6.2 Le listing (24/11) : en-tête avec la date de la dernière collecte et la prochaine relecture (calculée :
+      1er dimanche de déc/fév/avr/juin/août/oct) ; bandeau orange si une source est MALADE ; « Où recruter » :
+      carte dessinée (projection des 17 agences, disques = vivier à 15 km de CETTE agence, cœur = joignables,
+      étiquettes qui ne se chevauchent pas), classement des agences, bloc sombre de la zone (candidats,
+      joignables, dans un réseau, 5 sources) ; liste filtrable : 4 vues (Tous, Joignables, Mes relances, En cours),
+      recherche (nom, commune, SIREN), 5 filtres (Réseau, Activité, Ancienneté, Suivi — dont « retirés de ma
+      liste » —, À savoir), 50 par page, export CSV (la liste filtrée, ou les lignes cochées).
+- [x] R6.3 La fiche (24/11) : en-tête, parcours en 6 étapes (cliquer = marquer ; recliquer la dernière = défaire),
+      « Ensuite » et sa relance, « Reprendre le suivi » après un « pas intéressé », la joindre (avec la
+      provenance de chaque coordonnée), l'encadré RGPD (case « informée », lien « ne veut plus être contactée »),
+      l'entreprise (une opposition au registre n'affiche RIEN d'autre), le fil (appel + résultat + date de
+      reprise, note, e-mail, rendez-vous), l'activité, les autres fiches du même SIREN. CV, contrat et « créer son
+      accès » : affichés DÉSACTIVÉS (R7).
+- [x] R6.4 Les fenêtres (24/11) : Ajouter (doublons cherchés en base pendant la saisie, refus si la personne est
+      sur la liste « ne plus contacter », commune cherchée sur geo.api.gouv.fr — le service que l'app utilise
+      déjà —, distance à l'agence la plus proche, situation, source du contact et texte RGPD qui suit) ; Modifier
+      (provenance de chaque champ : lu / corrigé / saisi, « revenir à celle du réseau », agence envisagée, qui la
+      suit, ce qui a changé) ; Retirer (3 niveaux, « EFFACER » à taper).
+      - ⚠ « Compléter depuis le registre public » (maquette Ajouter) n'est PAS fait : il appellerait l'API
+        Recherche d'entreprises depuis le navigateur. À décider s'il le veut ; la collecte, elle, l'appelle déjà.
+- [x] R6.5 Les gestes (24/11) : Appeler = lien `tel:` ; Écrire un e-mail = la messagerie de l'utilisateur s'ouvre
+      (`mailto:`) et l'envoi se note dans le fil — **aucun e-mail ne part de l'app** (D5 attend) ; le rendez-vous
+      se note dans le fil, avec sa date. ⚠ **Le filtre `related_entity_id` du backend n'est PAS fait** : la
+      conception du 24/11 a gardé le rendez-vous dans le fil, « sans toucher au backend ». À rouvrir seulement si
+      le rendez-vous doit entrer dans l'agenda Google.
+- [x] R6.6 Contrôle (24/11), **en local, sur des données FICTIVES** (mode maquette sans base, `lib/recrutement.ts`) :
+      - `npm run build` vert (tsc + vite), deux fois ;
+      - capture contre les 5 maquettes, au bureau (1 440 px) : trois défauts vus et corrigés (le bloc de la zone
+        et la 3e colonne de la fiche passaient à la ligne ; la fiche s'ouvrait à la hauteur de la liste) ;
+      - gestes éprouvés à l'écran : étape, appel « pas intéressé » + reprise, correction du téléphone (la
+        saisie garde le curseur, la provenance suit), Retirer bloqué sans « EFFACER », Ajouter (doublon repéré,
+        commune → « à 0,7 km de notre agence de Firminy ») ;
+      - téléphone (375 px) : rien ne déborde (largeur de page 375), la liste passe en cartes sur deux colonnes ;
+      - négociateur refusé : en base, prouvé par la répétition (R6.0 bis) ; dans l'écran, par le code (bouton,
+        menu du téléphone, rendu et renvoi exigent tous `isAdmin`).
+      - ⏳ **Reste l'essai en réel**, avec les vraies fiches : il demande le déploiement (push) et la clé.
+- 📝 **Ce que R6 a retouché hors de ses fichiers neufs** (en ajout seulement) : `App.tsx` en 14 petits points
+  (import, type d'écran, 2 adresses, titre, interrupteur, renvoi, 2 exclusions de barre, menu du téléphone, 2 boutons
+  de menu, 2 rendus) — la délégation disait « 6 points » : **c'est plus, je le signale** ; `layouts/MobileLayout.tsx`
+  (3 points : type, entrée admin, picto) ; `lib/api.ts` (1 mot : la clé ajoutée à la liste du mode maquette, qui ne
+  joue que SANS base).
 - [ ] R6.7 ⏸ Le déploiement
 - [ ] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant
 
