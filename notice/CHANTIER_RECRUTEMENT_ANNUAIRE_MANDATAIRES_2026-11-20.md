@@ -1167,7 +1167,20 @@ L'ordre :
   de menu, 2 rendus) — la délégation disait « 6 points » : **c'est plus, je le signale** ; `layouts/MobileLayout.tsx`
   (3 points : type, entrée admin, picto) ; `lib/api.ts` (1 mot : la clé ajoutée à la liste du mode maquette, qui ne
   joue que SANS base).
-- [ ] R6.7 ⏸ Le déploiement
+- [ ] R6.7 ⏸ Le déploiement — **R6 SEUL, à part (choix de Frédéric le 24/11)**.
+  - Pourquoi à part : le `main` local a 120 commits d'avance ET 74 de retard sur GitHub (dernier push depuis ici
+    vers le 18/11 ; GitHub a reçu `etape4-chap6-lot0` le 20/11). Réconcilier = déployer le travail des autres
+    sessions : pas à moi de le décider.
+  - Dossier `C:\Hektor\envoi-recrutement-r6`, branche `recrutement-r6-seul` = `origin/main` (`60c12a2`) + `9a20116`
+    (les 6 fichiers de R6, sans la note ; ajouts appliqués sans conflit ; build vert avec un lien de dossier
+    temporaire vers les `node_modules`, retiré ensuite). Deux fichiers générés par le build (`vite.config.js`,
+    `.d.ts`) y restent modifiés HORS commit : ma garde refuse `git restore`.
+  - ✅ **La clé `recrutement_ecran = admin` est POSÉE le 24/11 à 14:17** (accord écrit « Oui, pose-la » ;
+    `insert … on conflict do nothing`, relue). Retour arrière : `delete from public.app_setting where key =
+    'recrutement_ecran'`. Sans effet sur la version en ligne tant que R6 n'est pas déployé.
+  - ⏸ Frédéric pousse : `git -C C:\Hektor\envoi-recrutement-r6 push origin recrutement-r6-seul:main`.
+  - ⚠ Le jour où le `main` local sera réconcilié avec GitHub, R6 y sera deux fois (`971ba5c` et `9a20116`) avec
+    des ajouts identiques : ils doivent se fondre sans conflit, à vérifier ce jour-là.
 - [ ] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant
 
 **R7 — Les fonctions, une par une après décision**
