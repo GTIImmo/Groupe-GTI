@@ -1074,7 +1074,29 @@ L'ordre :
     - il y a ~13 points de branchement : 10 dans `App.tsx`, 3 dans `MobileLayout.tsx` ;
     - `ContactWorkflowModal` n'est pas exportée : les fenêtres seront dans le fichier de l'écran ;
     - en local sans base, une clé neuve rend `null` (liste en dur `api.ts:9553`).
-- [ ] R6.0 bis ⏸ Poser le patch de l'écran (production), puis sa répétition.
+- [x] R6.0 bis **Le patch de l'écran est POSÉ le 24/11 par Claude**, sur l'accord écrit de Frédéric
+      (« Oui, pose-le »), puis sa répétition.
+  - **Répétition : 8 contrôles sur 8, et les 10 scénarios** de la mise en situation sont passés
+    (transaction annulée) :
+    - les empreintes SQL sont égales aux valeurs Python ;
+    - le non-administrateur est refusé ;
+    - le parcours complet de l'administrateur passe ;
+    - les 3 niveaux de retrait se comportent comme prévu ;
+    - il ne reste aucune ligne d'essai, et les 2 116 fiches sont intactes.
+- ⭐ **24/11, 11:48 — 1er LANCEMENT DE LA VRAIE TÂCHE (Frédéric, `Start-ScheduledTask`) : il a trouvé un
+  vrai défaut**.
+  - Le défaut : psycopg2 et requests du Python système sont installés dans le dossier PERSONNEL
+    (`AppData\Roaming\Python`). Une tâche sans session ouverte (S4U) ne le connaît pas :
+    « No module named 'requests' ».
+  - **Le garde-fou a joué** : la descente est tombée, et le run s'est ARRÊTÉ avant de collecter
+    (« on ne collecte jamais sans la liste »), sortie 1.
+  - Défaut secondaire : le message disait « code 0 », parce que le battement écrasait le code. Le
+    code est maintenant gardé tout de suite, à la descente comme à la montée.
+  - **La correction** : `PYTHONUSERBASE` est posé pour le Python système, avec un **contrôle au
+    départ** (les deux bibliothèques doivent répondre avant toute collecte).
+  - Reproduit en retirant APPDATA, puis corrigé : essai à blanc sans APPDATA, descente faite,
+    sortie 0.
+  - ⏳ La tâche est à relancer pour l'essai complet.
 - [ ] R6.1 L'interrupteur : clé `recrutement_ecran`, crans `admin` / `on`, comme Transactions
 - [ ] R6.2 Le listing, son bandeau de la dernière collecte, « Où recruter »
 - [ ] R6.3 La fiche candidat et son parcours

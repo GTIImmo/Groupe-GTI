@@ -63,6 +63,11 @@ $py = Join-Path $root ".venv\Scripts\python.exe"
 # La descente et la montee parlent a la base par le ROBOT (psycopg2) : le Python SYSTEME l'a, le .venv non
 # (verifie le 24/11). Elles ne lisent jamais le .env du projet, seulement recrutement_donnees\robot.env.
 $pyBase = if ($env:RECRUTEMENT_PYTHON_BASE) { $env:RECRUTEMENT_PYTHON_BASE } else { "C:\Python314\python.exe" }
+# ⚠ 24/11, TROUVE PAR LE 1er LANCEMENT DE LA TACHE : psycopg2 et requests du Python systeme sont installes dans
+#   le dossier PERSONNEL (AppData\Roaming\Python\Python314\site-packages). Une tache sans session ouverte (S4U)
+#   ne connait pas ce chemin : « No module named 'requests' » et la descente tombait. On le donne explicitement.
+#   (Reproduit en retirant APPDATA, corrige avec PYTHONUSERBASE, le 24/11.)
+$pyBaseUtilisateur = if ($env:RECRUTEMENT_PYTHONUSERBASE) { $env:RECRUTEMENT_PYTHONUSERBASE } else { "C:\Users\admin\AppData\Roaming\Python" }
 $collecteur = Join-Path $root "recrutement\collecte_annuaires.py"
 $logDir = Join-Path $root "logs\scheduled"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
@@ -153,6 +158,18 @@ try {
     $montee = ($inter.RECRUTEMENT_MONTEE -eq "1") -and -not $DryRun
     Write-Output "    interrupteurs : descente=$($inter.RECRUTEMENT_DESCENTE) montee=$($inter.RECRUTEMENT_MONTEE) battements=$($inter.RECRUTEMENT_BATTEMENTS)$(if ($DryRun) { ' (DryRun : ni montee, ni sauvegarde, ni battement)' })"
 
+    # ── LE CONTROLE DE DEPART : si la descente ou la montee doivent tourner, le Python systeme et ses deux
+    #    bibliotheques doivent repondre MAINTENANT -- pas apres des heures de collecte.
+    if ($descente -or $montee) {
+        $env:PYTHONUSERBASE = $pyBaseUtilisateur
+        if (-not (Test-Path -LiteralPath $pyBase)) { throw "le Python systeme est absent : $pyBase" }
+        $verif = & $pyBase -c "import psycopg2, requests; print('ok')" 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "le Python systeme ne trouve pas psycopg2 / requests (PYTHONUSERBASE=$pyBaseUtilisateur) : $($verif | Select-Object -Last 1)"
+        }
+        Write-Output "    Python systeme : psycopg2 et requests trouves"
+    }
+
     # ── ① DESCENTE ────────────────────────────────────────────────────────────────────────────
     if (Test-Etape "descente") {
         if (-not $descente) {
@@ -164,9 +181,12 @@ try {
             if (-not (Test-Path -LiteralPath $pyBase)) { throw "descente allumee mais le Python systeme est absent : $pyBase" }
             # elle n'ecrit que des COMPTES : sa sortie va au journal de la tache
             & $pyBase -X utf8 $script 2>&1 | ForEach-Object { Write-Output "[descente] $_" }
-            if ($LASTEXITCODE -ne 0) {
-                Send-Battement "descente" "error" "code $LASTEXITCODE"
-                throw "la descente a echoue (code $LASTEXITCODE) : ON NE COLLECTE PAS sans la liste « ne plus contacter »"
+            # ⚠ le code est GARDE tout de suite : le battement qui suit lance un autre programme et l'ecraserait
+            #   (vu le 24/11 : « la descente a echoue (code 0) »)
+            $codeDescente = $LASTEXITCODE
+            if ($codeDescente -ne 0) {
+                Send-Battement "descente" "error" "code $codeDescente"
+                throw "la descente a echoue (code $codeDescente) : ON NE COLLECTE PAS sans la liste « ne plus contacter »"
             }
             Send-Battement "descente" "success"
             Write-Output "[descente] faite"
@@ -246,9 +266,10 @@ try {
             if (-not (Test-Path -LiteralPath $pyBase)) { throw "montee allumee mais le Python systeme est absent : $pyBase" }
             # elle n'ecrit que des COMPTES : sa sortie va au journal de la tache
             & $pyBase -X utf8 $script 2>&1 | ForEach-Object { Write-Output "[montee] $_" }
-            if ($LASTEXITCODE -ne 0) { $runFailed = $true; Send-Battement "montee" "error" "code $LASTEXITCODE" }
+            $codeMontee = $LASTEXITCODE   # garde avant le battement (meme raison que la descente)
+            if ($codeMontee -ne 0) { $runFailed = $true; Send-Battement "montee" "error" "code $codeMontee" }
             else { Send-Battement "montee" "success" }
-            Write-Output "[montee] code $LASTEXITCODE"
+            Write-Output "[montee] code $codeMontee"
         }
     }
 
