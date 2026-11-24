@@ -185,7 +185,13 @@ for i in T:
 arrive_et_reconnait = {s: {j for j in LIGNES_DE.get(s, set()) if sig_de(j, REP[s]) == sig_rows(REP[s])} for s in REP}
 
 
-def remede(garde, echange):
+# ⭐ v3 (24/11, son 3e mot, ③ et ④) : « une annulee ne porte AUCUNE part » -- « V3FO5NDA : NON, PAS DE COPIE DE LA REPARTITION
+#   TEYSSONNIER » ; « les 49 annulees : ON LAISSE, aucune part ». Une recopie dont TOUTES les lignes d'arrivee sont des annulees
+#   (Etat Actuel du Sheet) n'est pas faite ; les parts qui partent restent MISES DE COTE (regle 6), jamais supprimees.
+ANNULEES = {i for i in T if D.case(i, "Etat Actuel").strip().lower().startswith("annul")}
+
+
+def remede(garde, echange, sans_annulee=False):
     part_toutes = {s for s, L_ in possede.items() if s not in {cible_de[i] for i in L_}}
     if garde:
         gardees = {s for s in part_toutes if arrive_et_reconnait.get(s)}
@@ -194,10 +200,14 @@ def remede(garde, echange):
         gardees = set()
     prevu = {s: [dict(r) for r in rows] for s, rows in REP.items() if s not in part_toutes}
     recopies, mises, conflits, completees, decisions = [], [], [], [], []
+    refus_annulee = []
     for s in sorted(possede):
         L_ = possede[s]
         for t in sorted({cible_de[i] for i in L_} - {s, None}):
             Lt = "+".join(sorted(i for i in L_ if cible_de[i] == t))
+            if sans_annulee and all(i in ANNULEES for i in Lt.split("+")):
+                refus_annulee.append((s, t, Lt))
+                continue
             cur = prevu.get(t, [])
             if cur and sig_rows(cur) == sig_rows(REP[s]):
                 continue
@@ -253,6 +263,8 @@ def remede(garde, echange):
                 tj = cible_de[j]
                 if j <= i or ti == tj or not prevu.get(ti) or not prevu.get(tj):
                     continue
+                if sans_annulee and (i in ANNULEES or j in ANNULEES):
+                    continue
                 if sig_de(j, prevu[ti]) == sig_rows(prevu[ti]) and sig_de(i, prevu[tj]) == sig_rows(prevu[tj]):
                     ri, rj = prevu[ti], prevu[tj]
                     for r in ri:
@@ -265,13 +277,16 @@ def remede(garde, echange):
                     prevu[tj] = [dict(r, app_chaine_id=tj) for r in ri]
                     echanges.append("%s (chaine %s) <-> %s (chaine %s)" % (i, ti, j, tj))
     return {"prevu": prevu, "recopies": recopies, "mises": mises, "conflits": conflits, "completees": completees,
-            "decisions": decisions, "en_conflit": en_conflit, "gardees": gardees, "echanges": echanges}
+            "decisions": decisions, "en_conflit": en_conflit, "gardees": gardees, "echanges": echanges,
+            "refus_annulee": refus_annulee}
 
 
 R1 = remede(False, False)
 R2 = remede(True, True)
+R3 = remede(True, True, sans_annulee=True)
 dire()
-for nom_r, R_ in (("v1 (le remede du matin)", R1), ("v2 (+ la garde + l'echange)", R2)):
+for nom_r, R_ in (("v1 (le remede du matin)", R1), ("v2 (+ la garde + l'echange)", R2),
+                  ("v3 (+ aucune copie vers une annulee, sa decision)", R3)):
     vivantes = sum(len(v) for v in R_["prevu"].values())
     n_ech = sum(1 for x in R_["recopies"] if x.get("geste") == "echange")
     dire("LE REMEDE A2 A BLANC %s, AVEC SES DEUX DECISIONS : %d parts recopiees (dont %d par echange) . %d mises de cote "
@@ -280,15 +295,17 @@ for nom_r, R_ in (("v1 (le remede du matin)", R1), ("v2 (+ la garde + l'echange)
              n_rows, len(R_["mises"]), len(R_["recopies"]), len(R_["completees"]),
              "BOUCLE" if vivantes == n_rows - len(R_["mises"]) + len(R_["recopies"]) + len(R_["completees"])
              else "⛔ NE BOUCLE PAS"))
-for d_ in R2["decisions"]:
+dire("   ⭐ v3, SA DECISION « une annulee ne porte aucune part » : %d recopie(s) refusee(s) : %s" % (
+    len(R3["refus_annulee"]), " ; ".join("%s -> %s (%s)" % x for x in R3["refus_annulee"])))
+for d_ in R3["decisions"]:
     dire("   ⭐ " + d_)
 dire("   ⭐ LA GARDE (v2) : %d chaine(s) que v1 aurait videes et qu'une ligne qui y ARRIVE reconnait : %s" % (
     len(R2["gardees"]), " ; ".join("%s (gardee par %s, copie pour %s)" % (
         s, "+".join(sorted(arrive_et_reconnait[s])), "+".join(sorted(possede[s]))) for s in sorted(R2["gardees"]))))
 dire("   ⭐ L'ECHANGE (v2) : %s" % (" ; ".join(R2["echanges"]) or "aucun"))
-prevu = R2["prevu"]
-lignes_en_conflit = R2["en_conflit"]
-recopies, mises, completees = R2["recopies"], R2["mises"], R2["completees"]
+prevu = R3["prevu"]
+lignes_en_conflit = R3["en_conflit"]
+recopies, mises, completees = R3["recopies"], R3["mises"], R3["completees"]
 
 # ═══════════════════════════════ ① L'AUDIT SUR L'ETAT D'ARRIVEE ═══════════════════════════════════════════════════════
 

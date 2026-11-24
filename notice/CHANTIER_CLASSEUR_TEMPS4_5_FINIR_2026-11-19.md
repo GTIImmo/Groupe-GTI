@@ -5634,6 +5634,35 @@ SON ③ : S3HOG6UL et 6U5DQQ4J (21/10/2021) ECARTEES comme les 106 de C3 ; le pa
 PAS TOUCHES : A2, la vague, les 6 dates, l'interrupteur ; rien dans le Sheet ni chez Hektor.
 ```
 
+### 20.45 La vague : pas aujourd'hui ; le verrou eprouve a blanc ; la procedure du soir (24/11, ses 8e et 9e mots)
+
+Notice : notice/PROCEDURE_LA_VAGUE_DU_SOIR_2026-11-24.md. Outil du temoin : temoin_de_la_nuit_2026-11-24.py (photo / comparer).
+
+```
+SA QUESTION (8e mot) : jouer la vague aujourd'hui, ou les runs de nuit en journee ? -> NON, et il l'a confirme (9e mot) :
+  sans A2, la vague rend fausses 248 repartitions justes dont 94 ventes reglees sans part ; le fichier en place = l'essai du
+  20/11 (279 lignes) contre 632 ; le chainage ne se lance pas seul (doublure avant, ~12 etapes apres) ; un run de jour =
+  ~9 000 requetes contre sa limite de 7 800 ; pas de vrai retour arriere (612 numeros neufs).
+LE VERROU A BLANC (transaction annulee, la vraie app_repartition_absorber) : chaine 1875 -> proteges_app 1, lignes_ecrites 0,
+  dossiers_ecrits 0, INTACTE (37922d3d) ; TEMOIN INVERSE chaine 49 (que des suppositions) -> lignes_ecrites 2, dossiers_ecrits
+  1, RE-ECRITE ; rien n'est reste (49 garde son ecriture du 16/09).
+PHOTO AVANT LA NUIT (16:57 UTC) : 17 907 parts ; les 4 empreintes = attendues -> demain : `comparer` (tenu ? + temoin inverse
+  sur tout le registre : chaines changees par origine, apparues, disparues, reecrites a l'identique, mixtes).
+QUI POSE A2 (son A / B / C) -> MA REPONSE : C = « LA VAGUE DU SOIR » : une seule commande, ~20:30, gardes et arret
+  automatique ; POINT DE NON-RETOUR CONTROLE (rejeu de la vague sur l'etat du soir compare piece par piece au rejeu exact du
+  matin, sinon tout remis et arret) ; A2 automatique par pieces juste apres le chainage ; le run de 05:00 = temoin ; 0 requete
+  Hektor. Pas A : un refus d'A2 a 05:30 sans personne = 94 ventes reglees sans part au matin, et une etape du run pour un seul
+  coup. A LUI.
+REPETITION GENERALE : image 2026-11-24_175707, PASSAGE 80 = 79 + 4 lignes neuves (3 tranchees, 1 attente), 0 verdict change,
+  temoins identiques a 78 / 79 (ecarts nommes, aucun neuf).
+REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 728 / 4 728 justes et etiquettes, hors 0,
+  R7b 21/21 (2 nommes NEUF : 14110, 27609) ; retrait de E a blanc : P252U1JH et d2108609 seuls, 0 autre avec la vague.
+  Copie locale rafraichie (app_affaire_repartition, app_affaire_note). A2 v3 (= v2 + « une annulee ne porte aucune part ») :
+  158 copies refusees (dont V3FO5NDA), 199 recopiees, 143 mises de cote ; a l'arrivee 4 495 justes, 196 annulees sans part
+  (sa decision), 0 VENTE REGLEE SANS PART (garde 0), 99 rendues justes, 0 fausse ; U0GQ3KTO en reserve. A1 107 reflets -> 0
+  decolle ; A3 276 -> 0. RESTE (apres C accorde) : A2/A1/A3 par pieces + a blanc sur l'arrivee simulee, vague_du_soir.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
