@@ -5562,6 +5562,33 @@ A LUI : A2 (a blanc d'abord) ; les 11 en attente sans part ; 23 charges ; 12 nou
 ECRIT : le code de R26 et les 42 (Supabase). RIEN dans le Sheet, RIEN chez Hektor, pas de push. Interrupteur eteint.
 ```
 
+### 20.42 Ses six decisions : les cases vides a blanc (24/11, son 5e mot)
+
+Notice : notice/PROTOCOLE_SES_SIX_DECISIONS_LES_CASES_VIDES_A_BLANC_2026-11-24.md. Outil : cases_vides_generer_patchs_2026-11-24.py.
+
+```
+SON MOT : « Rien ne s'ecrit sans mon accord sur le patch ; chaque famille se joue A BLANC puis avec son inverse » ; ordre :
+  ⑥ et ① -> ④ -> les 2 de ⑤ -> ③ et ② en reserve nommee -> le reste attend la vague.
+RIEN D'ECRIT. Chaque patch joue en ALLER-RETOUR A BLANC (patch + inverse dans la meme transaction, retour exige a
+  l'empreinte d'avant, erreur voulue) ; verifie apres : journal 46, 0 sauvegarde, 0 colonne neuve, 0 charge, 0 date.
+① CHARGE : 18 mandats, carnet et reflet VIDES (Supabase). ⛔ 2 MANDATS CONTREDITS par le Sheet (46338/17322 : cc33cc38
+  vendeur reglee / afd672fa acquereur annulee ; 47174/17639 : df0ce30c acquereur reglee / 2c2566d7 vendeur annulee) ->
+  A LUI (proposition : la valeur de la vente reglee). ①a = 3 reglees (125888d3, 5YUGE9KA, 78004641 ; 21 000 EUR) VERT
+  fba1a157 -> 04f45cf7 -> fba1a157 ; ①b = 13 VERT e2233fb6 -> 44fc64cd -> e2233fb6. Carnet comme C1 (origine classeur,
+  ecrit_par classeur:<ligne>), reflet repose ANNONCE PAR ANNONCE, 0 autre reflet ; journal + mandat_annonce/mandat_numero.
+② 3 charges contraires (JEK94D31, KBZR2ND6, XQGPK8LV) : en reserve nommee.
+6 DATES : VERT df785d76 -> 46517bdd -> df785d76 ; ⚠ S3HOG6UL et 6U5DQQ4J ANTERIEURES au compromis (C3 les ecarterait) :
+  dans le patch, signalees -- a lui de les garder ou non.
+⑥ : 11 factures « Vente fixee » SANS VENTE chez nous (offre acceptee + compromis actif) -> la regle de C8 pose sur la VENTE :
+  rien fabrique, A LUI ; c6e5299a : une offre refusee seule -> C3 ne pose rien, nommee.
+③ a5cb141f : bien 11820 SANS VENTE chez Hektor (compromis 6171 annule sans date, offre 6172 refusee) ; « Protocole d'accord »
+  ; les parts DELAVAUD/RONDEAU 50/50 sont sur la chaine 6171, la ligne pointe 6172 -> A2 (a blanc) les recopie vers 6172 et
+  met de cote celles de 6171 : RIEN A LA MAIN. Les 15 autres nommees.
+⑤ : 5 deja justes + JRE23R1G nommes ; 739a0db1 / TR42PT5H et ④ : apres ⑥ et ①.
+JUMELLES T2GZOY5O / O6R10ZQA : la meme affaire (mandat 4369) ; seules l'Annulee (21/11 contre 21/09/2021) et « En attente de »
+  different ; 20073 porte 21/09 et la note F de O6R10ZQA -> A LUI.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

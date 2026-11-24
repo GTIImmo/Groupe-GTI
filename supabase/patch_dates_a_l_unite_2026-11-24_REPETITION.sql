@@ -1,0 +1,2 @@
+-- patch_dates_a_l_unite_2026-11-24 -- les controles, rejouables. AUCUNE ECRITURE.
+select 'dates_a_l_unite_2026-11-24' as lot, (select count(*) from public.app_classeur_realignement_journal where lot = 'dates_a_l_unite_2026-11-24') as au_journal, (select md5(coalesce(string_agg(concat_ws('|', app_affaire_id, kind, state, coalesce(date_annulation_app, '-')), ';' order by app_affaire_id), '')) from public.app_affaire_ledger where app_affaire_id in (27195, 4385, 27134, 16377, 17387, 24450)) as empreinte, '46517bdd81346d517fed9e81bc2a7c77' as attendue;
