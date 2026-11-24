@@ -270,6 +270,20 @@
 .rc-definitif { background: #fdeceb; border: 1px solid #f0c2c1; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .rc-definitif p { margin: 0; font-size: 13.5px; color: #7d2f2d; line-height: 1.5; }
 
+/* E1 (24/11/2026) : la fenêtre « Écrire » — maquette, planche 1 */
+.rc-ecrire { display: grid; grid-template-columns: 480px minmax(0, 1fr); margin: -4px -24px -8px; min-height: 560px; }
+.rc-ecrire-saisie { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; border-right: 1px solid #e2e5e6; min-width: 0; }
+.rc-ecrire-apercu { background: #f6f7f8; padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rc-ecrire-texte { min-height: 240px !important; line-height: 1.55; }
+.rc-lecture { display: flex; align-items: center; background: #f6f7f8 !important; color: #3f4446 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-trous { margin: 0; background: #fff3df; border: 1px solid #f1d3a6; color: #8a4f0f; border-radius: 12px; padding: 10px 12px; font-size: 13px; font-weight: 600; }
+.rc-verrou { display: flex; gap: 10px; background: #fdf0f6; border: 1px solid #f6b6d5; border-radius: 14px; padding: 12px 14px; font-size: 13px; color: #8c0044; line-height: 1.5; }
+.rc-ecrire-cadre { background: #fff; border: 1px solid #e2e5e6; border-radius: 14px; overflow: hidden; align-self: center; width: 100%; max-width: 640px; box-shadow: 0 8px 24px rgba(34, 35, 35, .08); }
+.rc-ecrire-cadre.is-tel { width: 375px; max-width: 100%; border-radius: 28px; }
+.rc-ecrire-cadre iframe { display: block; width: 100%; height: 520px; border: 0; background: #f6f7f8; }
+.rc-ecrire-tetes { padding: 10px 14px; border-bottom: 1px solid #eef0f1; font-size: 12.5px; color: #3f4446; line-height: 1.6; overflow-wrap: anywhere; }
+.rc-fil-detail summary { cursor: pointer; color: var(--rc-marque); font-size: 13px; font-weight: 600; margin-top: 4px; }
+
 /* Le picto du menu de gauche (posé par titre, comme Pilotage : pilotage.css) — celui de la maquette */
 :root {
   --rc-picto: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='8' r='3.5'/%3E%3Cpath d='M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.2M19 13v7M15.5 16.5h7'/%3E%3C/svg%3E");
@@ -296,6 +310,9 @@
   .rc-rangee { grid-template-columns: minmax(0, 1fr) auto; }
   .rc-rangee .rc-lib { grid-column: 1 / -1; }
   .rc-deux { grid-template-columns: minmax(0, 1fr); }
+  .rc-ecrire { grid-template-columns: minmax(0, 1fr); margin: 0; }
+  .rc-ecrire-saisie { border-right: 0; padding: 12px 0; }
+  .rc-ecrire-apercu { padding: 12px 0; background: transparent; }
   .rc-voile { padding: 0; }
   .rc-fenetre { border-radius: 0; max-height: 100vh; min-height: 100vh; }
 }

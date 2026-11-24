@@ -8,7 +8,11 @@
 //   l'utilisateur et note l'envoi dans le fil (le modèle de premier contact attend la relecture de Frédéric, D5).
 // En attente d'une décision (R7) et donc désactivés : le CV, le contrat, « créer son accès à bienvu ».
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { loadAppUsers } from './lib/api'
+import { deposerPieceEmail, gmailPieceTailleMax, loadAppUsers, retirerPieceEmail, type GmailPieceOrdinateur } from './lib/api'
+import {
+  MODELES, blocDu, blocTexte, envoyer as envoyerEmail, html as htmlEmail, lireExpediteur, lireReglages, remplir, sourceDe,
+  texteComplet, trous, valeursPour, type Expediteur, type ModeleCle, type Reglages,
+} from './lib/recrutementEmail'
 import {
   ETAPES, ajouterCandidat, chercherCommunes, chercherDoublons, corriger, distanceKm, lireCandidat, lireVivier, majSuivi,
   marquerEtape, nomComplet, nomReseau, noter, pourquoiSansContact, prochaineRelecture, retirerCandidat,
@@ -626,7 +630,7 @@ function titreEvenement(e: Evenement): string {
   switch (e.type) {
     case 'appel': return res ? `Appel : ${res}` : 'Appel'
     case 'note': return 'Note'
-    case 'email': return 'E-mail écrit'
+    case 'email': return e.texte?.startsWith('Objet : ') ? `E-mail envoyé : ${e.texte.slice(8).split('\n')[0]}` : 'E-mail écrit'
     case 'rdv': return e.rdv_le ? `Rendez-vous ${quand(e.rdv_le)}` : 'Rendez-vous'
     case 'etape': return e.texte ? e.texte.charAt(0).toUpperCase() + e.texte.slice(1) : 'Étape'
     case 'correction': return 'Fiche corrigée'
@@ -653,6 +657,7 @@ function FicheCandidat({ reseau, identifiant, candidat, agences, admins, monId, 
   const [rdvLe, setRdvLe] = useState('')
   const [relance, setRelance] = useState<{ quoi: string; le: string } | null>(null)
   const [modale, setModale] = useState<null | 'modifier' | NiveauRetrait>(null)
+  const [ecrire, setEcrire] = useState(false)   // E1 : la fenêtre « Écrire » (modèle, aperçu, envoi)
   const saisieRef = useRef<HTMLTextAreaElement | null>(null)
   const hautRef = useRef<HTMLButtonElement | null>(null)
   // la fiche s'ouvre EN HAUT, pas à la hauteur où était la ligne dans la liste
@@ -786,7 +791,7 @@ function FicheCandidat({ reseau, identifiant, candidat, agences, admins, monId, 
         <div className="rc-actions">
           {tel ? <a className="rc-btn rc-btn-main" href={telLien(tel)}>{Ico.tel}Appeler</a>
             : <button className="rc-btn rc-btn-main" type="button" disabled title={pourquoiSansContact({ reseau: f.reseau, telephone: null, email: mail })}>{Ico.tel}Appeler</button>}
-          <button className="rc-btn rc-btn-quiet" type="button" disabled={!mail} onClick={() => ouvrirOnglet('email')}>{Ico.mail}Écrire un e-mail</button>
+          <button className="rc-btn rc-btn-quiet" type="button" disabled={!mail} onClick={() => setEcrire(true)}>{Ico.mail}Écrire un e-mail</button>
           <button className="rc-btn rc-btn-quiet" type="button" onClick={() => ouvrirOnglet('rdv')}>{Ico.agenda}Planifier un rendez-vous</button>
           <button className="rc-btn rc-btn-quiet" type="button" onClick={() => setModale('modifier')}>Modifier</button>
           <button className="rc-btn rc-btn-quiet" type="button" aria-label="Retirer ou effacer ce candidat" style={{ padding: '0 12px' }} onClick={() => setModale('archiver')}>{Ico.poubelle}</button>
@@ -901,6 +906,13 @@ function FicheCandidat({ reseau, identifiant, candidat, agences, admins, monId, 
                 <button key={k} className={`rc-onglet${onglet === k ? ' is-on' : ''}`} role="tab" type="button" aria-selected={onglet === k} onClick={() => setOnglet(k)}>{t}</button>
               ))}
             </div>
+            {onglet === 'email' ? (
+              // E1 : un e-mail s'écrit dans la fenêtre « Écrire » (modèle, aperçu, envoi depuis la boîte de l'administrateur)
+              <div className="rc-saisie-pied" style={{ padding: '6px 2px' }}>
+                <span className="rc-mute" style={{ fontSize: 13 }}>{mail ? 'Modèle rempli depuis sa fiche, aperçu tel qu’elle le recevra, puis envoi.' : 'Pas d’e-mail connu.'}</span>
+                <button className="rc-btn rc-btn-main" type="button" style={{ minHeight: 38, marginLeft: 'auto' }} disabled={!mail} onClick={() => setEcrire(true)}>Écrire l’e-mail</button>
+              </div>
+            ) : (<>
             <label style={{ display: 'block' }}>
               <span style={{ position: 'absolute', left: -9999 }}>{AIDES[onglet]}</span>
               <textarea ref={saisieRef} rows={3} placeholder={AIDES[onglet]} value={texte} onChange={(e) => setTexte(e.target.value)} />
@@ -915,9 +927,10 @@ function FicheCandidat({ reseau, identifiant, candidat, agences, admins, monId, 
                 </div>
               ) : onglet === 'rdv' ? (
                 <label className="rc-mute" style={{ fontSize: 12.5 }}>le <input type="datetime-local" value={rdvLe} onChange={(e) => setRdvLe(e.target.value)} /></label>
-              ) : onglet === 'email' && !mail ? <span className="rc-mute" style={{ fontSize: 12.5 }}>Pas d’e-mail connu.</span> : <span />}
-              <button className="rc-btn rc-btn-main" type="button" style={{ minHeight: 38, marginLeft: 'auto' }} disabled={occupe || (onglet === 'email' && !mail)} onClick={envoyerSaisie}>{BOUTONS[onglet]}</button>
+              ) : <span />}
+              <button className="rc-btn rc-btn-main" type="button" style={{ minHeight: 38, marginLeft: 'auto' }} disabled={occupe} onClick={envoyerSaisie}>{BOUTONS[onglet]}</button>
             </div>
+            </>)}
           </div>
           <ol>
             {fil.map((e) => (
@@ -925,7 +938,9 @@ function FicheCandidat({ reseau, identifiant, candidat, agences, admins, monId, 
                 <span aria-hidden="true" className={`rc-puce${e.type === 'appel' || e.type === 'rdv' ? ' is-marque' : ''}`}>{e.synthese ? 'R' : LETTRES[e.type]}</span>
                 <div style={{ minWidth: 0 }}>
                   <p className="rc-fil-titre">{e.synthese ? 'Repérée par la collecte' : titreEvenement(e)}</p>
-                  {e.texte && e.type !== 'etape' && e.type !== 'retrait' ? <p className="rc-fil-texte">{texteLisible(e)}</p> : null}
+                  {e.type === 'email' && e.texte?.startsWith('Objet : ') ? (
+                    <details className="rc-fil-detail"><summary>voir l’e-mail tel qu’envoyé</summary><p className="rc-fil-texte">{e.texte.split('\n').slice(2).join('\n')}</p></details>
+                  ) : e.texte && e.type !== 'etape' && e.type !== 'retrait' ? <p className="rc-fil-texte">{texteLisible(e)}</p> : null}
                   <p className="rc-fil-quand">{e.synthese ? `le ${date(e.quand)}` : `${quand(e.quand)}${e.par ? `, ${e.par}` : ''}`}</p>
                 </div>
               </li>
@@ -966,6 +981,11 @@ function FicheCandidat({ reseau, identifiant, candidat, agences, admins, monId, 
         </div>
       </div>
 
+      {ecrire && mail ? (
+        <ModaleEcrire detail={d} candidat={candidat} a={mail} nom={nomComplet(personne)}
+          onFermer={() => setEcrire(false)}
+          onEnvoye={(patch) => { onPatch(patch); void relire() }} />
+      ) : null}
       {modale === 'modifier' ? (
         <ModaleModifier detail={d} candidat={candidat} agences={agences} admins={admins} monId={monId}
           onFermer={() => setModale(null)}
@@ -1382,6 +1402,205 @@ function ModaleRetirer({ nom, reseau, identifiant, initial, onFermer, onFait }: 
         ) : choix === 'ne_plus_contacter' ? (
           <p className="rc-info">Toutes ses fiches partent (même SIREN, même téléphone, même e-mail, même nom dans le même département), et elle ne pourra plus être rajoutée.</p>
         ) : null}
+      </div>
+    </Fenetre>
+  )
+}
+
+// ─── E1 (24/11/2026) : écrire à UN candidat — maquette, planche 1 ───
+// Le modèle se remplit depuis la fiche ; l'objet et le texte se modifient ; ce qui reste [À COMPLÉTER] bloque l'envoi ;
+// le bloc d'information RGPD est AJOUTÉ SEUL et ne se retire pas ; l'aperçu est le HTML exact qu'elle recevra.
+// Envoi par la boîte de l'administrateur (route Gmail existante) si `recrutement_envoi_email` est allumé ; sinon la
+// messagerie s'ouvre avec le texte prêt. Après : le fil note l'e-mail, l'étape passe à « Contactée », « informée » se coche.
+function ModaleEcrire({ detail, candidat, a, nom, onFermer, onEnvoye }: {
+  detail: Detail; candidat: Candidat | null; a: string; nom: string; onFermer: () => void; onEnvoye: (patch: Partial<Candidat>) => void
+}) {
+  const f = detail.fiche
+  const [de, setDe] = useState<Expediteur | null>(null)
+  const [reglages, setReglages] = useState<Reglages | null>(null)
+  const [modele, setModele] = useState<ModeleCle>(detail.fil.some((e) => e.type === 'email') ? 'relance' : 'premier')
+  const [objet, setObjet] = useState('')
+  const [corps, setCorps] = useState('')
+  const [pieces, setPieces] = useState<GmailPieceOrdinateur[]>([])
+  const [depots, setDepots] = useState(0)
+  const [tel, setTel] = useState(false)
+  const [etat, setEtat] = useState<'ecrire' | 'envoi' | 'envoye'>('ecrire')
+  const [parApp, setParApp] = useState(true)
+  const [erreur, setErreur] = useState<string | null>(null)
+  // ce que l'envoi a fait, gardé AU MOMENT de l'envoi (la fiche relue ensuite ne le dit plus)
+  const [fait, setFait] = useState<{ etape: boolean; informee: boolean }>({ etape: false, informee: false })
+  const fichierRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    let annule = false
+    void Promise.all([lireExpediteur(), lireReglages()]).then(([e, r]) => { if (!annule) { setDe(e); setReglages(r) } })
+    return () => { annule = true }
+  }, [])
+  // le modèle se remplit à l'ouverture (dès que l'expéditeur est connu) et à chaque changement de modèle
+  useEffect(() => {
+    const m = MODELES.find((x) => x.cle === modele) ?? MODELES[0]
+    const v = valeursPour(detail, candidat, de)
+    setObjet(remplir(m.objet, v))
+    setCorps(remplir(m.texte, v))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modele, de])
+
+  const bloc = reglages ? blocTexte(detail, reglages) : ''
+  const blocComplet = blocDu(detail)
+  const source = sourceDe(detail)
+  const aCompleter = [...trous(objet), ...trous(corps)]
+  const reglagesManquants = trous(bloc)
+  const opposition = detail.entreprise?.opposition === true
+  const envoiApp = reglages?.envoi === true
+  const pret = Boolean(de && reglages) && !aCompleter.length && !reglagesManquants.length && !opposition
+    && Boolean(objet.trim()) && Boolean(corps.trim()) && depots === 0 && etat === 'ecrire'
+  const apercu = useMemo(() => htmlEmail(corps, bloc || ' '), [corps, bloc])
+  const prenom = valeursPour(detail, candidat, de).prenom
+
+  // ce qui suit un envoi : le fil, l'étape, « informée »
+  const noterEnvoi = async () => {
+    await noter(f.reseau, f.identifiant, 'email', `Objet : ${objet.trim()}\n\n${texteComplet(corps, bloc)}`)
+    const patch: Partial<Candidat> = {}
+    const avancer = (detail.suivi?.etape ?? 1) < 2
+    if (avancer) { await marquerEtape(f.reseau, f.identifiant, 2); patch.etape = 2 }
+    if (blocComplet) await majSuivi(f.reseau, f.identifiant, { info_donnee: true })
+    setFait({ etape: avancer, informee: blocComplet })
+    onEnvoye(patch)
+  }
+
+  const envoyerParApp = async () => {
+    if (!pret || !de) return
+    setEtat('envoi')
+    setErreur(null)
+    try {
+      await envoyerEmail({ de, a, objet, corps, bloc, pieces, reseau: f.reseau, identifiant: f.identifiant })
+    } catch (e) {
+      setErreur(`L’e-mail n’est pas parti : ${e instanceof Error ? e.message : String(e)}`)
+      setEtat('ecrire')
+      return
+    }
+    try {
+      await noterEnvoi()
+    } catch (e) {
+      setErreur(`L’e-mail est PARTI, mais le fil n’a pas pu être mis à jour : ${e instanceof Error ? e.message : String(e)}`)
+    }
+    setParApp(true)
+    setEtat('envoye')
+  }
+
+  const ouvrirMessagerie = async () => {
+    if (!pret) return
+    const texte = texteComplet(corps, bloc)
+    try { await navigator.clipboard.writeText(texte) } catch { /* sans presse-papiers, le mailto porte le texte s'il tient */ }
+    const complet = `mailto:${a}?subject=${encodeURIComponent(objet.trim())}&body=${encodeURIComponent(texte)}`
+    window.location.href = complet.length <= 1900 ? complet : `mailto:${a}?subject=${encodeURIComponent(objet.trim())}`
+    try { await noterEnvoi() } catch (e) { setErreur(`Le fil n’a pas pu être mis à jour : ${e instanceof Error ? e.message : String(e)}`) }
+    setParApp(false)
+    setEtat('envoye')
+  }
+
+  const ajouterFichiers = async (liste: FileList | null) => {
+    const fichiers = Array.from(liste ?? [])
+    if (fichierRef.current) fichierRef.current.value = ''
+    const refus: string[] = []
+    const retenus = fichiers.filter((x) => {
+      if (x.size > gmailPieceTailleMax) { refus.push(`« ${x.name} » dépasse 8 Mo.`); return false }
+      return true
+    }).slice(0, Math.max(0, 10 - pieces.length))
+    setErreur(refus.length ? refus.join(' ') : null)
+    setDepots((n) => n + retenus.length)
+    await Promise.all(retenus.map(async (x) => {
+      try { const p = await deposerPieceEmail(x); setPieces((c) => [...c, p]) }
+      catch (e) { setErreur(e instanceof Error ? e.message : `« ${x.name} » n’a pas pu être déposé.`) }
+      finally { setDepots((n) => n - 1) }
+    }))
+  }
+  const retirerPiece = (id: string) => {
+    setPieces((c) => c.filter((p) => p.id !== id))
+    retirerPieceEmail(id).catch(() => undefined) // sinon le ménage des temporaires le retire après 2 jours
+  }
+
+  if (etat === 'envoye') {
+    return (
+      <Fenetre titre={parApp ? `Envoyé à ${nom}` : `Votre messagerie s’est ouverte pour ${nom}`} largeur={620} onFermer={onFermer}
+        sousTitre={parApp ? `Parti de ${de?.email ?? 'votre boîte'}.` : 'Le texte est prêt dans votre messagerie, et copié : collez-le s’il manque.'}
+        pied={<button className="rc-btn rc-btn-main" type="button" onClick={onFermer}>Fermer</button>}>
+        <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14, lineHeight: 1.5 }}>
+          {erreur ? <div className="rc-alerte rc-alerte-rouge" role="alert">{erreur}</div> : null}
+          <p style={{ margin: 0 }}>Le fil des échanges note l’e-mail{fait.etape ? ', l’étape passe à « Contactée »' : ''}{fait.informee ? ', et la case « informée » est cochée' : ''}.</p>
+          {!parApp && pieces.length ? <p className="rc-mute" style={{ margin: 0 }}>Les pièces jointes ne partent qu’avec l’envoi depuis l’app : joignez-les dans votre messagerie.</p> : null}
+        </div>
+      </Fenetre>
+    )
+  }
+
+  return (
+    <Fenetre titre={`Écrire à ${nom}`} largeur={1180} onFermer={onFermer}
+      sousTitre={envoiApp ? 'Le message part de votre boîte Gmail. Rien ne part sans votre clic.' : 'Votre messagerie s’ouvrira avec le texte prêt (l’envoi depuis l’app n’est pas encore allumé).'}
+      pied={<>
+        <span className={erreur ? 'rc-erreur' : 'rc-mute'} role={erreur ? 'alert' : undefined} style={{ marginRight: 'auto', fontSize: 13 }}>
+          {erreur ?? (opposition ? 'Opposée à la prospection au registre : on ne lui écrit pas.'
+            : aCompleter.length ? `À compléter avant d’envoyer : ${aCompleter.join(', ')}.`
+              : reglagesManquants.length ? 'Le bloc d’information attend deux réglages : l’adresse postale de GTI et l’adresse de contact pour les données.'
+                : !de ? 'Lecture de votre boîte…' : '')}
+        </span>
+        <button className="rc-btn rc-btn-quiet" type="button" onClick={onFermer}>Annuler</button>
+        {envoiApp
+          ? <button className="rc-btn rc-btn-main" type="button" disabled={!pret} onClick={() => void envoyerParApp()}>{etat === 'envoi' ? 'Envoi…' : `Envoyer à ${prenom.startsWith('{') ? nom : prenom}`}</button>
+          : <button className="rc-btn rc-btn-main" type="button" disabled={!pret} onClick={() => void ouvrirMessagerie()}>Ouvrir ma messagerie</button>}
+      </>}>
+      <div className="rc-ecrire">
+        <div className="rc-ecrire-saisie">
+          <div className="rc-champ">Modèle
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {MODELES.map((m) => (
+                <button key={m.cle} type="button" className={`rc-chip${modele === m.cle ? ' is-on' : ''}`} aria-pressed={modele === m.cle} onClick={() => setModele(m.cle)}>{m.nom}</button>
+              ))}
+            </div>
+          </div>
+          <div className="rc-deux">
+            <div className="rc-champ">De<span className="rc-saisie-champ rc-lecture">{de?.email ?? '…'}</span></div>
+            <div className="rc-champ">À<span className="rc-saisie-champ rc-lecture">{a}</span></div>
+          </div>
+          <label className="rc-champ">Objet<input type="text" value={objet} onChange={(e) => setObjet(e.target.value)} /></label>
+          <label className="rc-champ">Message<textarea className="rc-ecrire-texte" value={corps} onChange={(e) => setCorps(e.target.value)} /></label>
+          {aCompleter.length ? <p className="rc-trous">À compléter : {aCompleter.join(', ')} — remplacez ces passages dans le texte.</p> : null}
+          {opposition ? <div className="rc-alerte rc-alerte-rouge" role="alert"><span>Cette personne s’est <strong>opposée à la prospection</strong> au registre des entreprises : on ne lui écrit pas.</span></div> : null}
+          <div className="rc-verrou">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: '0 0 auto', marginTop: 2 }}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+            <span>{blocComplet
+              ? <><strong>Ajouté seul, et il reste :</strong> d’où vient son adresse ({source}), ce que nous gardons, combien de temps, ses droits, et « Ne plus me contacter ».</>
+              : <><strong>Ajouté seul :</strong> la ligne « Ne plus me contacter »{detail.suivi?.info_donnee_le ? ` (informée depuis le ${date(detail.suivi.info_donnee_le)})` : ''}.</>}</span>
+          </div>
+          <div className="rc-champ">Pièces jointes
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              {pieces.map((p) => (
+                <span key={p.id} className="rc-chip is-on">{p.nom}<button type="button" className="rc-lien" aria-label={`Retirer ${p.nom}`} onClick={() => retirerPiece(p.id)} style={{ marginLeft: 4 }}>{Ico.croix}</button></span>
+              ))}
+              <button className="rc-chip" type="button" disabled={pieces.length >= 10} onClick={() => fichierRef.current?.click()}>{depots ? 'Dépôt…' : 'Ajouter un fichier'}</button>
+              <input ref={fichierRef} type="file" multiple hidden onChange={(e) => void ajouterFichiers(e.target.files)} />
+            </div>
+            {!envoiApp && pieces.length ? <span className="rc-mute" style={{ fontWeight: 500, fontSize: 12 }}>Avec la messagerie, les pièces se joignent à la main.</span> : null}
+          </div>
+        </div>
+        <div className="rc-ecrire-apercu">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Aperçu — tel qu’elle le recevra</p>
+            <div className="rc-seg" role="group" aria-label="Format de l’aperçu">
+              <button type="button" className={tel ? '' : 'is-on'} aria-pressed={!tel} onClick={() => setTel(false)}>Bureau</button>
+              <button type="button" className={tel ? 'is-on' : ''} aria-pressed={tel} onClick={() => setTel(true)}>Téléphone</button>
+            </div>
+          </div>
+          <div className={`rc-ecrire-cadre${tel ? ' is-tel' : ''}`}>
+            <div className="rc-ecrire-tetes">
+              <div><strong>De :</strong> {de ? `${de.nom} — GTI Immobilier` : '…'}</div>
+              <div><strong>Objet :</strong> {objet || '—'}</div>
+              {pieces.length ? <div><strong>Pièces :</strong> {pieces.map((p) => p.nom).join(', ')}</div> : null}
+            </div>
+            {/* sans aucun script (pas d'allow-scripts) : le HTML est le nôtre, texte échappé ; « same-origin » pour qu'il s'affiche partout */}
+            <iframe title="Aperçu de l’e-mail" sandbox="allow-same-origin" srcDoc={apercu} />
+          </div>
+        </div>
       </div>
     </Fenetre>
   )

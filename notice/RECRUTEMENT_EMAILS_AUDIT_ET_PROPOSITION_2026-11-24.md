@@ -133,6 +133,26 @@ https://claude.ai/artifact/EBmocyoc2sRduq9cEg18vP — 4 planches, données ficti
 4. **Après** — le fil (e-mail envoyé, réponse lue dans Gmail, étape), « Planifier dans mon agenda », et la page
    publique « Ne plus me contacter » sur téléphone (avant / après le clic).
 
+## 4 bis. ✅ E1 CODÉ le 24/11 (« Oui, code l'étape 1 »)
+
+- `apps/hektor-v1/src/lib/recrutementEmail.ts` (neuf) : 4 modèles (premier contact = le texte validé ; relance ;
+  rendez-vous ; libre), cases `{prenom}` `{agence_proche}` `{expediteur}` remplies depuis la fiche, passages
+  `[À COMPLÉTER]` qui BLOQUENT l'envoi, le bloc RGPD (texte validé) ajouté seul tant qu'elle n'est pas informée
+  (sinon la ligne « Ne plus me contacter »), le HTML exact, la lecture de l'expéditeur et des réglages, l'envoi par la
+  route Gmail EXISTANTE (`relatedEntityType: recrutement`, journal du serveur inchangé).
+- `RecrutementScreen.tsx` : la fenêtre « Écrire » (planche 1) ; après l'envoi, le fil note « E-mail envoyé : <objet> »
+  avec « voir l'e-mail tel qu'envoyé », l'étape passe à « Contactée », la case « informée » se coche. Une personne
+  OPPOSÉE au registre : envoi refusé (proposé, accepté avec la maquette).
+- **Rien de neuf côté serveur ni en base.**
+- **Trois réglages en base** (`app_setting`, écriture en production = accord) :
+  - `recrutement_envoi_email` = `on` → le bouton « Envoyer » part par Gmail ; **absent → la fenêtre ouvre la
+    messagerie de l'administrateur avec le texte prêt (et copié)** : utile dès aujourd'hui, sans rien allumer ;
+  - `recrutement_email_adresse_postale` et `recrutement_email_contact_donnees` : sans eux, le bloc RGPD est
+    incomplet et l'envoi reste bloqué (message clair dans la fenêtre).
+- Éprouvé en local (données fictives) : remplissage, blocage tant qu'un passage reste à compléter, aperçu (bureau et
+  téléphone), envoi simulé, fil + étape + « informée », téléphone 375 px sans débordement ; build vert.
+  ⚠ L'aperçu dans un cadre totalement isolé ne s'affichait pas : cadre « même origine, sans aucun script ».
+
 ## 5. ⏸ Ce que Frédéric décide
 
 1. **L'adresse d'envoi** : la boîte de l'administrateur connecté, ou une adresse « recrutement@ » à créer.

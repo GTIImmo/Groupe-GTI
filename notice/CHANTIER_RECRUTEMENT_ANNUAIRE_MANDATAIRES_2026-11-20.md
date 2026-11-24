@@ -1282,6 +1282,9 @@ L'ordre :
       📐 **24/11 : audit des accès Google de l'app et PROPOSITION de l'envoi dans l'app** (un candidat, plusieurs
       candidats, aperçu, envoi doux, désinscription, réponses, agenda) : `notice/RECRUTEMENT_EMAILS_AUDIT_ET_PROPOSITION_2026-11-24.md`
       + maquette https://claude.ai/artifact/EBmocyoc2sRduq9cEg18vP. Rien de codé ; ⏸ validation de la maquette et 3 décisions.
+      ✅ **Maquette validée** (« Oui, code l'étape 1 ») ; décision « toutes les boîtes » pour lire les échanges.
+      ✅ **E1 CODÉ le 24/11** (écrire à UN candidat) — détail au §4 bis de la note des e-mails. ⏸ En ligne après un
+      push ; l'envoi par Gmail s'allume avec `recrutement_envoi_email` + 2 réglages du bloc RGPD (accord).
 - [ ] R7.2 Le rangement du CV
 - [ ] R7.3 Le contrat d'agent commercial et sa signature (chantier à part)
 - [ ] R7.4 « Créer son accès à bienvu »
