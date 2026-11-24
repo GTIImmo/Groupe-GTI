@@ -1136,8 +1136,19 @@ L'ordre :
     il simule les observations, pas les lecteurs. Le 06/12 aurait eu le même défaut.
   - eXp « 802 fiches (avant : 3) » n'est PAS un défaut : il lit la France entière, puis `siren` en retire 799 hors
     région (il en reste 3). Seul le compte de la mise à jour, pris AVANT ce retrait, trompe.
-  - ⏸ La correction (remise à zéro à l'ouverture d'une collecte + un essai qui la prouve) attend le « vas-y » de
-    Frédéric (délégation §15 : arrêt sur un contrôle rouge).
+  - ~~⏸ La correction attend le « vas-y »~~ → ✅ **CORRIGÉ le 24/11 sur son « Oui, corrige »** :
+    - `collecte ouvrir` remet à zéro `fiche.fiche_lue` et `grille_safti.lue` à l'ouverture d'une collecte NEUVE
+      (pas à la reprise d'une collecte déjà ouverte : la coupure à 9 min reprend où elle en était) ;
+    - « déjà lue » (`deja_lue_aujourdhui`, 4 lecteurs) veut dire « lue pendant la collecte en cours » ; hors
+      collecte (relecture `-Source`), « aujourd'hui » comme avant ;
+    - **`recrutement/test_ouverture_collecte.py`** (neuf, hors ligne) : 20 contrôles verts ; **témoin inverse
+      contre l'ancien collecteur : 7 ROUGES**, exactement le défaut du passage (SAFTI « 0 commune à lire », KW
+      « 0 fiche à lire », 3G saute sa fiche, la page du matin pas relue) ; `test_mise_a_jour` et `test_descente`
+      toujours verts.
+    - Conséquence : chaque collecte relit TOUTES les fiches (iad, SAFTI, KW, Dr House, 3G) — c'est la durée de
+      la 1re collecte (2 à 3 h), prévue par la limite de 8 h de la tâche.
+    - ⏳ La preuve en réel sera le passage du 06/12 (ou un passage lancé à la main, sur accord). La collecte
+      n° 2 reste fermée telle quelle : ses 3 sources malades n'ont fait partir personne.
   - ✅ Le correctif Dr House (`separer_nom` retire le HTML d'un nom, toutes sources) est POSÉ après le passage
     (`98b008c`) : éprouvé sur copie puis sur le vrai fichier, `test_mise_a_jour` et `test_descente` verts.
 - [x] R6.1 L'interrupteur : clé `recrutement_ecran` (24/11). **Admins seuls quel que soit le cran** (D3) : `admin`

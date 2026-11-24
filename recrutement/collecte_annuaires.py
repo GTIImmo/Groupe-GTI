@@ -1226,7 +1226,15 @@ def cmd_manufacture(con, lecteur, args) -> int:
 
 # ---- outils communs du 2e lot -----------------------------------------------------------------
 def deja_lue_aujourdhui(con, url) -> bool:
-    r = con.execute("select statut_http from page_lue where url=? and substr(lu_le,1,10)=?", (url, aujourdhui())).fetchone()
+    """Page deja lue (HTTP 200) PENDANT LA COLLECTE EN COURS ; hors collecte (relecture `-Source`), aujourd'hui.
+    ⚠ 24/11 : c'etait « aujourd'hui » dans tous les cas -- une page lue le matin (un essai) n'etait pas relue par
+    la collecte ouverte l'apres-midi, et ses fiches n'y etaient pas VUES. Le nom est garde (4 lecteurs l'appellent)."""
+    n = collecte_ouverte(con)
+    debut = con.execute("select debut from collecte where numero=?", (n,)).fetchone() if n else None
+    if debut and debut[0]:
+        r = con.execute("select statut_http from page_lue where url=? and lu_le >= ?", (url, debut[0])).fetchone()
+    else:
+        r = con.execute("select statut_http from page_lue where url=? and substr(lu_le,1,10)=?", (url, aujourdhui())).fetchone()
     return bool(r and r["statut_http"] == 200)
 
 
@@ -1928,9 +1936,16 @@ def cmd_collecte_ouvrir(con, lecteur, args) -> int:
         return CODE_ERREUR
     n = con.execute("select max(numero) from collecte").fetchone()[0] + 1
     con.execute("insert into collecte (numero, debut, etat) values (?,?,'en_cours')", (n, maintenant()))
+    # ⛔ 24/11, TROUVE PAR LE 1er PASSAGE COMPLET (collecte n° 2) : sans ces deux lignes, les marques « deja lu »
+    #   de la collecte d'avant restaient posees -- SAFTI n'a rien relu (« pages a lire : 0, fiches a lire : 0 »),
+    #   KW n'a pas relu ses 10 fiches de la region (ses temoins), 3G a saute ses 39 fiches : aucune n'a ete VUE,
+    #   et les trois sources sont sorties MALADES. Une collecte neuve RELIT TOUT. (A la REPRISE d'une collecte
+    #   deja ouverte -- coupure a 9 min --, on ne passe pas ici : les marques posees pendant elle sont gardees.)
+    n_fiches = con.execute("update fiche set fiche_lue=0 where fiche_lue=1").rowcount
+    n_grille = con.execute("update grille_safti set lue=0 where lue=1").rowcount
     con.commit()
     _CACHE["collecte"] = n
-    journal("collecte", f"collecte n° {n} ouverte")
+    journal("collecte", f"collecte n° {n} ouverte ; a relire : {n_fiches} fiches, {n_grille} communes SAFTI")
     return CODE_FINI
 
 
