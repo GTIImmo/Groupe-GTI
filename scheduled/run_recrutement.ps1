@@ -1,9 +1,11 @@
-﻿# Tache planifiee : LE RUN MENSUEL DU RECRUTEMENT                            20/11/2026
+﻿# Tache planifiee « GTI Recrutement » : LE RUN DU RECRUTEMENT, TOUS LES DEUX MOIS   20/11 -> 24/11/2026
 #
 # Note : notice/CHANTIER_RECRUTEMENT_ANNUAIRE_MANDATAIRES_2026-11-20.md, §13 (architecture) et §14
 #   (liste des taches). Decision de Frederic du 20/11 : « une collecte mensuelle est suffisante, et
 #   une architecture similaire au reste de l'app : tache planifiee Windows, run, mise a jour,
-#   monitoring ».
+#   monitoring ». Puis le 24/11 : « peut-on le passer a tous les 2 mois » -> le 1er dimanche de
+#   decembre, fevrier, avril, juin, aout, octobre a 10:00. Ce script s'appelait
+#   run_recrutement_mensuel.ps1 (renomme le 24/11 : plus de frequence dans le nom).
 #
 # CE QU'IL FAIT, EN 8 ETAPES (chacune a son battement « recrutement.<etape> ») :
 #   descente     Supabase -> local : liste « ne plus contacter », effacements, corrections (R4)
@@ -36,11 +38,11 @@
 # LES CODES : 0 = tout vert ; 1 = quelque chose a voir (source en echec ou malade, controle rouge,
 #   etape tombee). Convention du projet : un 1 se VOIT au Planificateur et a l'ecran Sante.
 #
-#   .\scheduled\run_recrutement_mensuel.ps1                          <- le run complet (comme la tache)
-#   .\scheduled\run_recrutement_mensuel.ps1 -DryRun                  <- collecte et controle, sans montee,
+#   .\scheduled\run_recrutement.ps1                                  <- le run complet (comme la tache)
+#   .\scheduled\run_recrutement.ps1         -DryRun                  <- collecte et controle, sans montee,
 #                                                                       sans sauvegarde, sans battement
-#   .\scheduled\run_recrutement_mensuel.ps1 -StartAtLabel controle   <- reprendre a une etape
-#   .\scheduled\run_recrutement_mensuel.ps1 -Source safti            <- relire UN site (apres reparation
+#   .\scheduled\run_recrutement.ps1         -StartAtLabel controle   <- reprendre a une etape
+#   .\scheduled\run_recrutement.ps1         -Source safti            <- relire UN site (apres reparation
 #                                                                       de son lecteur) : ni collecte
 #                                                                       ouverte, ni mise a jour
 
@@ -119,7 +121,7 @@ function Test-Etape {
 $runFailed = $false
 $verrou = Join-Path $donnees "run.lock"
 try {
-    Write-Output "=== Run mensuel du recrutement demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
+    Write-Output "=== Run du recrutement demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
 
     # ⛔ UN SEUL RUN A LA FOIS (vecu le 20/11 : deux lectures SAFTI en meme temps = double charge sur leur site)
     if (Test-Path -LiteralPath $verrou) {

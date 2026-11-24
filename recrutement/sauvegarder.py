@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Etape ⑥ du run mensuel du recrutement : la SAUVEGARDE de la base locale (note du chantier, §13 R5).
+"""Etape ⑦ du run du recrutement (tous les deux mois) : la SAUVEGARDE de la base locale (note, §13 R5).
 
-    python -X utf8 recrutement/sauvegarder.py            -> copie datee + rotation (12 gardees)
+    python -X utf8 recrutement/sauvegarder.py            -> copie datee + rotation (6 gardees)
     python -X utf8 recrutement/sauvegarder.py --essai    -> dit ce qu'il ferait, n'ecrit rien
 
 Patron : scheduled/run_backup.ps1 (dossier date sous C:\\Hektor\\Backups\\, retention glissante).
@@ -10,8 +10,9 @@ Patron : scheduled/run_backup.ps1 (dossier date sous C:\\Hektor\\Backups\\, rete
     par fichier ne portait pas le journal WAL) ;
   - la copie est RELUE (integrity_check + nombre de fiches egal a l'original) : une sauvegarde
     qu'on ne relit pas n'en est pas une ;
-  - le CSV du mois est copie a cote ;
-  - on garde les 12 plus recentes (un an au rythme mensuel). Les plus anciennes sont supprimees --
+  - le CSV de la collecte est copie a cote ;
+  - on garde les 6 plus recentes : UN AN au rythme de tous les deux mois (decision du 24/11 ; c'etait
+    12 au rythme mensuel). Les plus anciennes sont supprimees --
     c'est aussi ainsi qu'une personne effacee dans l'app disparait des sauvegardes (un an au plus,
     duree ecrite dans la mention d'information).
 Sortie : 0 = copie faite et relue, 1 = echec (le run le verra).
@@ -27,7 +28,7 @@ from pathlib import Path
 DOSSIER = Path(os.environ.get("RECRUTEMENT_DONNEES", r"C:\Hektor\recrutement_donnees"))
 BASE = DOSSIER / "recrutement.sqlite"
 CIBLE = Path(os.environ.get("RECRUTEMENT_SAUVEGARDES", r"C:\Hektor\Backups\recrutement"))
-GARDER = 12
+GARDER = 6  # un an, une collecte tous les deux mois
 
 
 def main() -> int:

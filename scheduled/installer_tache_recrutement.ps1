@@ -1,4 +1,9 @@
-﻿# Enregistre « GTI Recrutement Mensuel » : le 1er dimanche du mois a 10:00           20/11/2026
+﻿# Enregistre « GTI Recrutement » : le 1er dimanche, TOUS LES DEUX MOIS, a 10:00   20/11 -> 24/11/2026
+#
+# ⭐ 24/11/2026 -- DECISION DE FREDERIC : « peut-on le passer a tous les 2 mois ». La tache s'appelait
+#   « GTI Recrutement Mensuel » (enregistree le 24/11 au matin) : elle est RENOMMEE « GTI Recrutement »
+#   (plus de frequence dans le nom, il ne mentira plus si on la rechange) et ce script RETIRE
+#   l'ancienne. Les mois : decembre, fevrier, avril, juin, aout, octobre -- le 1er passage reste le 06/12.
 # ═══════════════════════════════════════════════════════════════════════════════
 # ⚠⚠ A LANCER DANS UNE POWERSHELL ADMINISTRATEUR (sans elevation, Register-ScheduledTask
 #    echoue). C'est Frederic qui la lance : le terminal de Claude n'est pas administrateur, et la
@@ -8,15 +13,17 @@
 #   le depot, et le script RELIT la tache enregistree pour la comparer REGLAGE PAR REGLAGE a une
 #   soeur qui marche (« GTI Menage Temporaires »).
 #   DEUX DIFFERENCES VOULUES, verifiees contre la valeur VOULUE (pas contre la soeur) :
-#     - le declencheur : CALENDRIER, le 1er dimanche de chaque mois a 10:00 (heure locale).
+#     - le declencheur : CALENDRIER, le 1er dimanche des mois pairs de l'annee scolaire (decembre,
+#       fevrier, avril, juin, aout, octobre) a 10:00 (heure locale).
 #       PowerShell ne sait pas creer un declencheur mensuel : on enregistre d'abord la tache comme
 #       la soeur, puis on remplace son declencheur dans le XML (meme forme que la seule tache
 #       calendrier du serveur, « Hektor-IngestSemestriel », relue le 20/11) ;
 #     - la limite d'execution : PT8H (la 1re collecte complete : 2 a 3 heures estimees le 20/11).
 #
-# CE QU'ELLE LANCE : scheduled/run_recrutement_mensuel.ps1 (8 etapes ; voir son en-tete).
+# CE QU'ELLE LANCE : scheduled/run_recrutement.ps1 (8 etapes ; voir son en-tete).
 #
-# DECLAREE AVANT d'etre enregistree dans monitoring/check_gti_health.py (« warning », 20/11).
+# DECLAREE AVANT d'etre enregistree dans monitoring/check_gti_health.py (« warning », 20/11 ; le nom
+#   « GTI Recrutement » et le seuil de 64 jours le 24/11).
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scheduled\installer_tache_recrutement.ps1
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scheduled\installer_tache_recrutement.ps1 -Essai
@@ -28,20 +35,23 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$nom     = "GTI Recrutement Mensuel"
-$soeur   = "GTI Menage Temporaires"
-$script  = "C:\Hektor\Projet\scheduled\run_recrutement_mensuel.ps1"
-$heure   = "10:00"
-$limite  = "PT8H"
+$nom       = "GTI Recrutement"
+$ancienNom = "GTI Recrutement Mensuel"   # le nom du 24/11 au matin : retire par ce script
+$soeur     = "GTI Menage Temporaires"
+$script    = "C:\Hektor\Projet\scheduled\run_recrutement.ps1"
+$heure     = "10:00"
+$limite    = "PT8H"
+# Les mois, DANS L'ORDRE DU CALENDRIER (le schema du Planificateur l'exige) : tous les deux mois.
+$MOIS      = @("February", "April", "June", "August", "October", "December")
 
 if (-not (Test-Path -LiteralPath $script)) { throw "Script introuvable : $script" }
 
-# Le declencheur mensuel, au format du Planificateur (1re semaine, dimanche, les 12 mois).
+# Le declencheur, au format du Planificateur (1re semaine, dimanche, les mois de $MOIS).
 function New-DeclencheurMensuel {
     $aujourdhui = Get-Date
     $premier = Get-Date -Year $aujourdhui.Year -Month $aujourdhui.Month -Day 1
     $debut = $premier.AddMonths(1).ToString("yyyy-MM-01") + "T" + $heure + ":00"
-    $mois = "<January /><February /><March /><April /><May /><June /><July /><August /><September /><October /><November /><December />"
+    $mois = ($MOIS | ForEach-Object { "<$_ />" }) -join ""
     return "<Triggers><CalendarTrigger><StartBoundary>$debut</StartBoundary><Enabled>true</Enabled>" +
            "<ScheduleByMonthDayOfWeek><Weeks><Week>1</Week></Weeks><DaysOfWeek><Sunday /></DaysOfWeek>" +
            "<Months>$mois</Months></ScheduleByMonthDayOfWeek></CalendarTrigger></Triggers>"
@@ -77,6 +87,13 @@ if (-not $ref) { throw "La tache de reference « $soeur » est introuvable : imp
 
 if (Get-ScheduledTask -TaskName $nom -ErrorAction SilentlyContinue) {
     Write-Host "La tache « $nom » existe deja -- elle va etre REMPLACEE (meme script, reglages reappliques)."
+}
+
+# L'ANCIEN NOM (« GTI Recrutement Mensuel », 24/11 au matin) est retire : deux taches lanceraient le
+# meme run, et la surveillance ne regarde plus que le nouveau nom.
+if (Get-ScheduledTask -TaskName $ancienNom -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName $ancienNom -Confirm:$false
+    Write-Host "L'ancienne tache « $ancienNom » est RETIREE."
 }
 
 # 1. Enregistree comme la soeur (declencheur quotidien provisoire, ACTIVE a la fin seulement)
@@ -138,12 +155,14 @@ Comparer "limite d'execution" $t.Settings.ExecutionTimeLimit           $limite
 Comparer "declencheur"        ([bool]$x.SelectSingleNode("//t:CalendarTrigger/t:ScheduleByMonthDayOfWeek", $nx)) $true
 Comparer "semaine du mois"    ($x.SelectSingleNode("//t:ScheduleByMonthDayOfWeek/t:Weeks/t:Week", $nx).InnerText) "1"
 Comparer "jour"               ($x.SelectSingleNode("//t:ScheduleByMonthDayOfWeek/t:DaysOfWeek", $nx).FirstChild.LocalName) "Sunday"
-Comparer "mois couverts"      ($x.SelectSingleNode("//t:ScheduleByMonthDayOfWeek/t:Months", $nx).ChildNodes.Count) 12
+Comparer "mois (tous les 2)"  (($x.SelectSingleNode("//t:ScheduleByMonthDayOfWeek/t:Months", $nx).ChildNodes | ForEach-Object { $_.LocalName }) -join ",") ($MOIS -join ",")
 Comparer "heure de depart"    (([datetime]$x.SelectSingleNode("//t:CalendarTrigger/t:StartBoundary", $nx).InnerText).ToString("HH:mm")) $heure
 Comparer "un seul declencheur" ($x.SelectNodes("//t:Triggers/*", $nx).Count) 1
 
 # ET LE SCRIPT APPELE : une tache qui pointe le mauvais fichier est verte et inutile.
-Comparer "script appele" ($t.Actions[0].Arguments -like "*run_recrutement_mensuel.ps1*") $true
+Comparer "script appele" ($t.Actions[0].Arguments -like "*\scheduled\run_recrutement.ps1*") $true
+# ET L'ANCIEN NOM EST BIEN PARTI : deux taches lanceraient le meme run.
+Comparer "ancienne tache retiree" ([bool](Get-ScheduledTask -TaskName $ancienNom -ErrorAction SilentlyContinue)) $false
 
 $prochaine = (Get-ScheduledTaskInfo -TaskName $nom).NextRunTime
 Write-Host ""
@@ -156,5 +175,5 @@ if ($rouges.Count -gt 0) {
 Write-Host "✅ TOUT VERT -- reglages identiques a « $soeur » (sauf le declencheur et la limite, differents EXPRES)."
 Write-Host ""
 Write-Host "Pour la desactiver :   Disable-ScheduledTask -TaskName `"$nom`""
-Write-Host "Essai a blanc du run : .\scheduled\run_recrutement_mensuel.ps1 -DryRun"
+Write-Host "Essai a blanc du run : .\scheduled\run_recrutement.ps1 -DryRun"
 exit 0

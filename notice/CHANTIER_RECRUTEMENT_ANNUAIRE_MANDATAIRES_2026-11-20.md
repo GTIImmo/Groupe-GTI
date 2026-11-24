@@ -541,21 +541,34 @@ Volumes réels du 20/11 ; **noms, numéros (plage fiction 06 39 98) et e-mails F
 > suffisante, et peux-tu faire une architecture similaire au reste de l'app ? tâche planifiée
 > Windows, run, mise à jour, monitoring, etc. »*. La 1ʳᵉ version (tâche hebdomadaire, pousseur seul)
 > est remplacée ; l'ancien texte reste lisible dans l'historique git de cette note.
+>
+> ⭐⭐ **Révisée encore le 24/11 : TOUS LES DEUX MOIS** — Frédéric : *« peut-on le passer à tous les
+> 2 mois »*. Les changements :
+> - la tâche devient **« GTI Recrutement »** : plus de fréquence dans le nom, il ne mentira plus si
+>   on la rechange. L'installeur retire « GTI Recrutement Mensuel », enregistrée le 24/11 au matin ;
+> - le lanceur devient **`run_recrutement.ps1`** ;
+> - le déclencheur : le **1er dimanche de décembre, février, avril, juin, août et octobre**, à 10:00 ;
+>   le 1er passage reste le 06/12 ;
+> - la fréquence de surveillance devient **`bimonthly` = 64 jours** (jusqu'à 9 semaines entre deux
+>   passages) ;
+> - **6 sauvegardes** gardées, soit toujours un an.
+> Ailleurs dans cette note, « mensuel », « monthly » et « 12 gardées » décrivent la version du 20/11.
+> Le journal les garde tels quels.
 
 ```
-                 TÂCHE WINDOWS « GTI Recrutement Mensuel »   (1er dimanche du mois, 10:00)
-                 └─ scheduled/run_recrutement_mensuel.ps1    (le RUN : 7 étapes, un battement chacune)
+                 TÂCHE WINDOWS « GTI Recrutement »   (1er dimanche, TOUS LES DEUX MOIS, 10:00)
+                 └─ scheduled/run_recrutement.ps1    (le RUN : 8 étapes, un battement chacune)
 
   ① descente     Supabase ─► local   liste « ne plus contacter », effacements, corrections de l'app
   ② collecte     sites des réseaux + registre public ─► recrutement.sqlite (une source à la fois)
   ③ mise à jour  collecte N comparée à N-1 : nouveaux, partis, revenus, changés ; garde-fou de source
   ④ contrôle     règle des coordonnées, opposition, témoins ─ ROUGE = on s'arrête, rien ne monte
   ⑤ montée       local ─► Supabase, schéma à part « recrutement »  (interrupteur RECRUTEMENT_MONTEE)
-  ⑥ sauvegarde   copie datée ─► C:\Hektor\Backups\recrutement\  (12 gardées = 1 an)
+  ⑥ sauvegarde   copie datée ─► C:\Hektor\Backups\recrutement\  (6 gardées = 1 an)
   ⑦ compte rendu la ligne de la collecte en base ─► bandeau de l'écran + écran Santé
 
   SURVEILLANCE   monitoring/check_gti_health.py : la tâche (résultat ≠ 0) + les 7 battements
-                 (app_worker_registry, fréquence neuve « monthly ») ─► écran Santé, e-mail du matin
+                 (app_worker_registry, fréquence neuve « bimonthly ») ─► écran Santé, e-mail du matin
 
   APP bienvu     écran « Recrutement » (admin, interrupteur recrutement_visible) ─► fonctions
                  public.rec_* ─► schéma recrutement ; e-mail et RDV par Google Workspace (déjà en place)
@@ -639,8 +652,9 @@ Chaque chapitre suit la méthode du §0 de `CLAUDE.md` : audit → explication �
 - États calculés : **nouveau** (vu pour la 1ʳᵉ fois), **présent**, **absent** (pas vu cette fois),
   **parti** (absent **deux collectes de suite**, source saine), **revenu**, **a changé de réseau**
   (même SIREN vu dans un autre réseau), **entreprise cessée** (registre).
-  ⚠ **Au rythme mensuel**, « deux collectes de suite » veut dire deux mois. Donc une **preuve
-  positive** fait partir tout de suite : sa propre page répond 404 ou 410, ou renvoie vers
+  ⚠ **Au rythme de tous les deux mois (24/11)**, « deux collectes de suite » veut dire **quatre
+  mois**. D'où l'importance de la **preuve positive**, qui fait partir tout de suite : sa propre
+  page répond 404 ou 410, ou renvoie vers
   l'accueil du réseau. Sans preuve, il reste « absent, à vérifier » jusqu'au mois suivant.
 - ⛔ **LE GARDE-FOU DE SOURCE** (leçon « un zéro ne se croit pas sans témoin positif ») : si une
   source rend **moins de 70 %** de ses fiches de la fois d'avant, ou perd un de ses **témoins
@@ -896,12 +910,13 @@ L'ordre :
     dans le XML. PowerShell ne sait pas créer un déclencheur mensuel.
   - Il compare ensuite 17 réglages, un par un.
   - Mode `-Essai` vert : le déclencheur est fabriqué et le XML transformé se relit.
-- [x] R5.5 Frédéric a enregistré la tâche le 24/11, en PowerShell administrateur. Relue par moi :
-  - état « Ready », S4U, limite PT8H, IgnoreNew ;
-  - déclencheur calendrier : 1ʳᵉ semaine, dimanche, les 12 mois, départ 2026-12-01 à 10:00 ;
-  - action `run_recrutement_mensuel.ps1` ;
-  - **prochain passage le dimanche 06/12/2026 à 10:00** ; dernier résultat 267011 (« jamais
-    lancée », accepté par la surveillance).
+- [ ] R5.5 ⏸ **À REFAIRE après le passage à tous les deux mois (24/11)** : Frédéric relance
+      l'installeur en administrateur. Il crée « GTI Recrutement » et retire « GTI Recrutement
+      Mensuel ».
+  - *1ʳᵉ fois, le 24/11 au matin, sous le nom « GTI Recrutement Mensuel » ; relue par moi : état
+    « Ready », S4U, PT8H, IgnoreNew, les 12 mois, 1er passage le 06/12 à 10:00.*
+  - ⏸ et avant cela, il commite à nouveau `check_gti_health.py`, qui porte le nouveau nom et la
+    fréquence `bimonthly`.
 - [ ] R5.6 Le premier run réel, puis son contrôle
 - [ ] R5.7 Vérifier si l'agent OVH (Veeam) couvre `Backups\recrutement` et `recrutement_donnees`
 
@@ -923,7 +938,8 @@ L'ordre :
 - [ ] R7.5 La notification « nouveaux candidats près de chez toi »
 
 **Les décisions** — prises par délégation le 20/11 (§15), **sauf avis contraire de Frédéric** :
-- [x] D1 Le 1er dimanche du mois à 10:00
+- [x] D1 ~~Le 1er dimanche du mois à 10:00~~ → **changé par Frédéric le 24/11 : le 1er dimanche TOUS
+      LES DEUX MOIS** (décembre, février, avril, juin, août, octobre), à 10:00
 - [x] D2 La gravité `warning`
 - [x] D3 Rubrique réservée aux administrateurs
 - [x] D4 La carte dessinée (celle de la maquette, aucune dépendance neuve)
@@ -1067,3 +1083,13 @@ L'ordre :
     refusé.
   - Le 1er run fera une collecte **locale** seulement (interrupteurs à 0) et mesurera la durée
     d'une collecte complète (RUN.3).
+- **24/11/2026, 11:00** — Frédéric : *« peut-on le passer à tous les 2 mois »*. Fait, sous
+  délégation (le détail est en tête du §13.1) :
+  - l'installeur : les 6 mois pairs depuis décembre ; il retire l'ancienne tâche et vérifie l'ordre
+    des mois et l'absence de l'ancienne ; `-Essai` vert ;
+  - le lanceur renommé `run_recrutement.ps1` (`git mv`) ; l'analyse PowerShell ne trouve aucune
+    erreur ;
+  - la surveillance : « GTI Recrutement », `bimonthly` = 64 jours ;
+  - la sauvegarde : 6 copies gardées.
+  - ⏸ Deux gestes reviennent à Frédéric : recommiter `check_gti_health.py`, puis relancer
+    l'installeur.
