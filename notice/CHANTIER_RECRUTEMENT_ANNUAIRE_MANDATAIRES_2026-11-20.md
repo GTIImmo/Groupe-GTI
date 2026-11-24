@@ -911,7 +911,16 @@ L'ordre :
     les parenthèses, chaînes et `$$` sont équilibrés.
   - ⭐ **Un vrai défaut trouvé avant le collage** : `app_user_profile.role` est un ENUM, et
     `coalesce(role, '')` aurait fait échouer la répétition → `role::text`.
-- [ ] R3.3 ⏸ Frédéric colle le patch, puis la répétition
+- [x] R3.3 **POSÉ le 24/11 par Claude, sur l'accord écrit de Frédéric** (*« fais-le toi-même, je te
+      donne mon accord »*), par `execute_sql`. Le garde-fou de la session ne l'a pas refusé.
+  - Le patch est passé sans erreur, exactement le contenu du fichier.
+  - **La répétition : 11 contrôles sur 11 OK**, dont la 1re partie dans la peau de l'app.
+  - **Le témoin refait à part**, dans une transaction annulée :
+    - l'administrateur reçoit le bandeau `{"fiches": 0, "sources": [], "collecte": null, "par_etat": {}}` ;
+    - le non-administrateur reçoit « 42501 Réservé aux administrateurs ».
+  - Après coup : le schéma est présent, les 7 battements aussi, et aucune table de témoin ne reste.
+  - ⏳ **Témoin inverse à lire demain** : la descente du 25/11 doit compter le même nombre de
+    tables qu'avant. Le schéma n'est pas exposé à l'API.
 
 **R4 — La montée et la descente** *(accord pour le premier envoi)*
 - [ ] R4.1 `recrutement/descendre.py` : liste noire, effacements, corrections ; arrêt si la base ne
@@ -1123,3 +1132,6 @@ L'ordre :
   - la sauvegarde : 6 copies gardées.
   - ⏸ Deux gestes reviennent à Frédéric : recommiter `check_gti_health.py`, puis relancer
     l'installeur.
+- **24/11/2026, après-midi** — **R3 posé en base** par Claude, sur l'accord écrit de Frédéric.
+  Répétition 11/11 ; le témoin administrateur / non-administrateur est refait à part. Détail en
+  R3.3. Prochaine étape : R4, la montée et la descente par le robot.
