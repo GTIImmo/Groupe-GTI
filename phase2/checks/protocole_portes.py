@@ -479,11 +479,18 @@ def main() -> int:
     for g_, x in groupes_mdc.items():
         cs = {chE[q] for q in g_}
         seul = len(cs) == 1 and mE[next(iter(cs))] == set(g_)
-        garde = all(labE_[q] == x["ancien_uuid"] for q in g_)
+        # ⭐ 24/11 : SA mise de cote (regle 6) d'une piece dont le dossier porte une piece PLUS PETITE prise par un morceau
+        #   deja rendu (14110 / AYIHPHF5, 27609 / UM4ZU2SX) : le passage SIMULE un numero NEUF -- le deja-rendu garde le
+        #   sien ; le rejeu exact doit redire ce que le passage a simule, ni plus ni moins
+        garde = (all(labE_[q] == x["ancien_uuid"] for q in g_) if x.get("garde_son_numero", True)
+                 else all(str(labE_[q]).startswith("NEUVE") for q in g_))
         if not (seul and garde):
             mdc_faux.append((sorted(g_), seul, garde))
-    dire("   ⭐ R7b, SA REGLE : %d dossier(s) mis de cote sur %d sont seuls a l'arrivee ET gardent leur ancien numero%s"
-         % (len(groupes_mdc) - len(mdc_faux), len(groupes_mdc), (" -- ⛔ %s" % mdc_faux) if mdc_faux else ""))
+    neufs_mdc = sorted(sorted(g_) for g_, x in groupes_mdc.items() if not x.get("garde_son_numero", True))
+    dire("   ⭐ R7b, SA REGLE : %d dossier(s) mis de cote sur %d sont seuls a l'arrivee ET ont le numero que le passage a "
+         "simule (leur ancien, sauf %d NOMME(S) qui recoivent un numero NEUF : %s)%s"
+         % (len(groupes_mdc) - len(mdc_faux), len(groupes_mdc), len(neufs_mdc), neufs_mdc,
+            (" -- ⛔ %s" % mdc_faux) if mdc_faux else ""))
     dire("      dont %d deja figes par le chainage (supprimes chez Hektor, ou sans date exclus de E : aucune ligne dans le fichier) : %s"
          % (len(mdc_figees), mdc_figees))
     # hors des biens du protocole, rien ne doit bouger

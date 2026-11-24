@@ -169,3 +169,22 @@ Passage 76 contre 75 : exactement ces 12 lignes changent. Aucun verdict rendu ne
 - 3THZJOOG.
 
 Chacune garde la phrase donnée plus haut.
+
+## Mise à jour du 24/11 (v20, passage 78) : tes 64 décisions du verrou, il en reste 17
+
+25 des 42 sont tranchées. Des 29 que tu comptais, quatre restent :
+- **P252U1JH et d2108609** : la nuit ne peut pas les réaliser. Leurs pièces 4126 et 21520 sont exclues de la règle E par ta décision des 19 et 20/11 (« on met de côté, on ne tranche pas »), et le chaînage ne les voit pas. Tes 64 décisions répondent aux deux questions que ces exclusions attendaient. Les retirer est un geste sur le code de la nuit, à ton mot.
+- **R7NU9NPM et 4G2UHO35** : elles attendent ta décision sur 19814 (ton doute du § 6, mesuré, non forcé).
+
+**Les 17** :
+- HUY49KEC, C0HXVVCW et SHN6RKDI : les trois biens de tes pièces 3741, 28116 et 26613, hors de ton tableau.
+- BR8ZTN5F : sa ligne ne tient qu'une copie.
+- XBR8QD6L, PPIM4947 et 3QZ4DAD1 : leurs pièces sont à part.
+- PEE1XTR8 et 9B7U8221 : deux lignes, un seul dossier (bien 50307).
+- 9Q0FHAKK : aucune pièce ne lui est prouvée.
+- 3THZJOOG, P252U1JH et d2108609 : une pièce sans date que la nuit ne voit pas.
+- 6684bcf1 : une pièce supprimée chez Hektor la fige.
+- M2G1Z1K8 : deux biens.
+- R7NU9NPM et 4G2UHO35 : 19814.
+
+Le détail : `notice/PROTOCOLE_REPONSES_24_11_LES_64_DU_VERROU_A1_A2_CONTROLE_P_B_2026-11-24.md`.

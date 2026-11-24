@@ -97,7 +97,7 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v19 -- 23/11 soir : ses trois decisions -- les 5 rattachements, ses 2 doublons nommes, le bien 39845"
+VERSION = "v20 -- 24/11 : ses 64 decisions du verrou -- 14 pieces donnees, 2 mises de cote, 19814 en suspens (son doute)"
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -149,6 +149,46 @@ MOTIFS = {
 # a part par SA decision (20/11 soir, B3) -- la meme liste que la V3
 # 14033 : sa B3 du 20/11 (« a part ») est REMPLACEE le 23/11 par son option B (a DONNADIEU) -- PIECE_DONNEE_PAR_DECISION
 A_PART_PAR_DECISION: dict = {}
+# ⭐ SES 64 DECISIONS DU VERROU (24/11, son mot « MOT_DU_24_11_LES_64_TRANCHEES_LES_REGLES_ET_LE_CONTROLE » et le detail
+#   SES_64_DECISIONS_DU_VERROU_23_11.md) : 64 transactions des 14 biens du verrou tranchees par lui, une par une, sur un
+#   tableau qui met en face toutes les transactions du bien et toutes les lignes du Sheet. « ⛔ TU NE LES APPLIQUES PAS A
+#   L'AVEUGLE. Tu les reprends avec TES propres mesures [...] UNE A LA FOIS. » -- protocole_ses_64_decisions_du_verrou_
+#   2026-11-24.py : 47 des 62 pieces donnees l'etaient DEJA a la meme ligne par le protocole (0 a une autre) ; restent 15 :
+#   14 posees ici (PIECE_DONNEE_PAR_DECISION), 1 en suspens (19814, son doute -- EN_SUSPENS_PAR_SON_DOUTE) ; et 2 mises
+#   de cote (regle 6 -- MISE_DE_COTE_PAR_DECISION).
+SON_MOT_DU_24_11 = "sa decision du 24/11 (ses 64 du verrou)"
+MISE_DE_COTE_PAR_DECISION = {
+    14110: "%s : « 14110 -> AUCUNE LIGNE, je la laisse de cote (regle 6) » -- compromis annule SANS DATE, 113 000, "
+           "honoraires 7 000 = la commission des TROIS lignes du bien 28653 : aucune preuve ne la donne ; ⚠ un indice, "
+           "pas une preuve : L2B2WGCF « ACQ se retractent » (une retractation suit un compromis signe)" % SON_MOT_DU_24_11,
+    27609: "%s : « DE COTE : 27609 » -- offre refusee du 23/10/2019, 100 000 : sa date n'est sur aucune case, "
+           "aucune ligne du bien 53858 n'a d'offre a ce prix" % SON_MOT_DU_24_11,
+}
+# ⛔ SON DOUTE (§ 6 de son mot du 24/11) : « les DEUX compromis annules 19814 (17/02/2020) et 19815 (sans date) sont tous
+#   les deux sur R7NU9NPM. Or 19814 est date APRES l'annulation de R7NU9NPM (01/02/2020) et AVANT l'offre de 4G2UHO35
+#   (24/02/2020) : il ne colle proprement a aucune des deux. ➡ Mesure-le et dis-moi ce que tu trouves. Ne force pas. »
+#   MA MESURE (24/11) : 16 j apres l'annulation de R7NU9NPM, 7 j avant l'offre de 4G2UHO35 ; honoraires 5 980 = la
+#   commission des DEUX lignes ; son acte prevu (date_acte) est le 17/05/2020 et 4G2UHO35 est annulee le 20/05/2020
+#   (« financement pas sur relance 13/5 ») -- un indice vers 4G2UHO35, contre la date de son offre. NON FORCE : elle reste a
+#   part, et le verrou tient les DEUX lignes dont l'etiquette dependrait d'elle (19814 est la plus petite piece de sa
+#   chaine, celle qui porte D2020-0091 : la ligne qui la recevra prendra ce numero).
+EN_SUSPENS_PAR_SON_DOUTE = {
+    19814: (("R7NU9NPM", "4G2UHO35"),
+            "SON DOUTE du 24/11 (§ 6), mesure et NON FORCE : compromis annule du 17/02/2020, 69 000, honoraires 5 980 "
+            "(la commission de R7NU9NPM ET de 4G2UHO35) -- 16 j apres l'annulation de R7NU9NPM (01/02/2020), 7 j avant "
+            "l'offre de 4G2UHO35 (24/02/2020) ; son acte prevu le 17/05/2020, 4G2UHO35 annulee le 20/05/2020 : a lui"),
+}
+for _a, _t in MISE_DE_COTE_PAR_DECISION.items():
+    A_PART_PAR_DECISION[_a] = _t
+for _a, (_ls, _t) in EN_SUSPENS_PAR_SON_DOUTE.items():
+    A_PART_PAR_DECISION[_a] = _t
+# ⭐ SES 20 A PART, SA DECISION DU 21/11 RENVERSEE POUR ONZE (24/11, § 1 bis) : « JE RENVERSE MA PROPRE DECISION DU 21/11
+#   SUR MES 20 PIECES A PART [...] j'en donne ONZE [...] 14110 -> AUCUNE LIGNE, je la laisse de cote (regle 6) [...] LA
+#   LISTE DES 20 NE DISPARAIT PAS : les NEUF autres restent a part [...] ⛔ GARDE LA LISTE DANS LE CODE comme temoin, mais
+#   ces onze-la n'y sont plus. » -- la liste source (SRC_V3_CALCUL, « a20 ») ne change pas : elle reste le temoin.
+SORTIES_DES_20_PAR_DECISION = {4126: "P252U1JH", 4327: "PYG8JZ0C", 4533: "PCDZXTIY", 4542: "RGCEC677", 4560: "QV5AYD2K",
+                               4621: "TND2I31B", 4669: "GYGF5F1X", 7710: "9DK01H85", 20088: "5QE9107L",
+                               21520: "d2108609", 14110: None}
 
 # ⛔ LES REGLES PROPOSEES -- jamais appliquees sans son mot. Un passage lance avec --variantes X,Y est marque
 #   « VARIANTE NON VALIDEE » : il sert a mesurer ce qu'une regle changerait (comparer), rien d'autre.
@@ -389,6 +429,51 @@ PIECE_DONNEE_PAR_DECISION = {
     19131: ("6FQO29C8", SA_DECISION_39845),
     19133: ("6FQO29C8", SA_DECISION_39845),
     19132: ("V3FO5NDA", SA_DECISION_39845),
+    # ⭐ SES 64 DECISIONS DU VERROU (24/11) -- les 14 que le protocole laissait a part ; MES mesures en face (le texte et
+    #   l'annulation rapatries viennent DU GEL : ils appuient, ils ne prouvent pas seuls -- sa P2, temoin 1 737 / 5 / 9)
+    4126: ("P252U1JH", SON_MOT_DU_24_11 + " : compromis annule sans date, 77 000, honoraires 7 000 (la commission des deux "
+                       "lignes) ; FOZ6HZLK a deja son compromis actif 4125 ; appui du gel : le texte de l'annulation et "
+                       "l'annulation rapatriee du 22/01/2022 sont ceux de P252U1JH"),
+    4327: ("PYG8JZ0C", SON_MOT_DU_24_11 + " : compromis annule sans date, 55 000, honoraires 4 500 (la commission des trois "
+                       "lignes) ; ACB4D8WI a son compromis actif 4328, G41FTEZ8 son compromis annule 4329 au jour ; "
+                       "PYG8JZ0C « retractation acq » ; appui du gel : l'annulation rapatriee du 01/08/2022"),
+    4533: ("PCDZXTIY", SON_MOT_DU_24_11 + " : compromis annule sans date, 99 000, honoraires 7 000 (la commission des deux "
+                       "lignes) ; FYNZEKI6 a son compromis actif 4534 ; appui du gel : « attente conf ecrite ACQ "
+                       "retractation » et l'annulation rapatriee sont ceux de PCDZXTIY"),
+    4542: ("RGCEC677", SON_MOT_DU_24_11 + " : compromis annule sans date, 108 000, honoraires 8 000 (la commission des trois "
+                       "lignes) ; appui du gel : « PB de parcelle » et l'annulation rapatriee du 01/08/2021 sont ceux de "
+                       "RGCEC677 ; ⚠ son prix 108 000 est aussi celui de l'offre 4544 de 40ELE6SQ -- le prix d'une affaire "
+                       "annulee est le prix negocie (sa P3) : il n'exclut pas"),
+    4560: ("QV5AYD2K", SON_MOT_DU_24_11 + " : compromis annule sans date, 60 000, honoraires 5 700 (la commission des deux "
+                       "lignes) ; BNWNKPJH a son compromis actif 4561 ; appui du gel : « Auboyer/Basin BVx dossX » et "
+                       "l'annulation rapatriee sont ceux de QV5AYD2K"),
+    4621: ("TND2I31B", SON_MOT_DU_24_11 + " : compromis annule sans date, 50 000 ; ⚠ ses honoraires 5 000 sont la commission "
+                       "de 0EMKY4ZS et de 910O0A2Q, pas de TND2I31B (4 500) -- sa P3 ; TND2I31B est la seule ligne annulee "
+                       "du bien dont les cases portent un compromis (« Vente Prevue » 30/01/2021, « SAFER », « RETRACTATION "
+                       "ACQ ») ; 910O0A2Q a son compromis actif 4622 ; appui du gel : texte et annulation de TND2I31B"),
+    4669: ("GYGF5F1X", SON_MOT_DU_24_11 + " : compromis annule sans date, 16 800, honoraires 1 800 (la commission des deux "
+                       "lignes) ; ZMQZSE9Q a son compromis actif 4670 ; appui du gel : « cpmis proc ACQ envoyee 27/4 » et "
+                       "l'annulation rapatriee sont ceux de GYGF5F1X"),
+    7710: ("9DK01H85", SON_MOT_DU_24_11 + " : compromis annule sans date, 135 000, honoraires 7 000 (la commission des deux "
+                       "lignes) ; SWDW99J5 a son compromis actif 7711 ; appui du gel : l'annulation rapatriee du "
+                       "01/12/2021"),
+    17203: ("LNWLBVKG", SON_MOT_DU_24_11 + " : compromis annule sans date, 150 000 = les offres de LNWLBVKG et d'ODF1PWJ0, "
+                        "honoraires 8 500 (la commission des trois lignes) ; OBBBCH0X a son compromis actif 17202 ; appui du "
+                        "gel : l'annulation rapatriee du 01/08/2024 et son motif sont ceux de LNWLBVKG"),
+    20088: ("5QE9107L", SON_MOT_DU_24_11 + " : compromis annule sans date, 50 000, honoraires 5 000 (la commission d'aucune "
+                        "ligne : 4 700 et 0) ; appui du gel : « CUb negatif redepose » et l'annulation rapatriee du "
+                        "21/06/2021 sont ceux de 5QE9107L"),
+    21520: ("d2108609", SON_MOT_DU_24_11 + " : compromis annule sans date, 282 000, honoraires 12 000 (la commission des deux "
+                        "lignes) ; 1c7b38f9 a son compromis actif 21521 ; appui du gel : « 20.8 annulation mail pj. 19.8 "
+                        "annulation orale des acq » et l'annulation rapatriee sont ceux de d2108609"),
+    4543: ("Z0BDVNBZ", SON_MOT_DU_24_11 + " : offre ACCEPTEE du 16/03/2022, 72 000 -- la seule offre acceptee du bien, dans "
+                       "la chaine de son compromis actif 4541 (56 j plus tard : au-dela des 31 j de « par sa chaine ») ; "
+                       "⚠ Z0BDVNBZ etait deja tranchee : elle gagne cette piece, son numero D2021-0130 ne change pas"),
+    19820: ("4G2UHO35", SON_MOT_DU_24_11 + ", SA CORRECTION (§ 6) : offre refusee du 29/10/2019, 69 000, sur aucune case -- "
+                        "la meme chaine et le meme dossier (D2019-0517) que 19819, au jour exact sur l'Offre Achat de "
+                        "4G2UHO35 ; « sans cette correction, 4G2UHO35 ne recevait RIEN »"),
+    19815: ("R7NU9NPM", SON_MOT_DU_24_11 + " : compromis annule sans date, 69 000, honoraires 5 980 (la commission de "
+                        "R7NU9NPM ET de 4G2UHO35)"),
 }
 RIEN_A_ETIQUETER_PAR_DECISION = {
     "SOF45TS3": "sa decision du 23/11 au soir (bien 39845) : « SOF45TS3 (mandat 15920) : rien a etiqueter -- sa tentative, "
@@ -446,6 +531,25 @@ SES_DECISIONS = {
         "source": "ses deux exceptions nommees du 23/11 au soir (DOUBLON_PAR_DECISION) -- pas une regle",
         "remplace": "DEUX_LIGNES_UN_DOSSIER (R13 ne les prenait pas : commission / compromis differents)",
         "lignes": {"DTZ227ER": [24440, 24441, 24442], "L597FO6M": [4445, 4446, 4447]}},
+    "ses 64 decisions du verrou (24/11)": {
+        "source": "son mot du 24/11 (MOT_DU_24_11_LES_64_TRANCHEES_LES_REGLES_ET_LE_CONTROLE.md) et le detail "
+                  "SES_64_DECISIONS_DU_VERROU_23_11.md : « J'ai tranche les 64 transactions libres des 14 biens du verrou, "
+                  "une par une » -- les vraies pieces de chaque ligne, telles que son fichier les ecrit (19814 : son "
+                  "doute, en suspens -- R7NU9NPM et 4G2UHO35 attendent)",
+        "remplace": "VERROU_PIECE_PLUS_PETITE (28 lignes), COPIE_SEULE (d2108609) ; sa B3 du 21/11 pour onze de ses 20 a "
+                    "part ; la paire DEBARD des jumelles (§ 18.9, ma mesure du 10/11) : il en fait DEUX affaires",
+        "lignes": {'FOZ6HZLK': [4125, 4127, 4129], 'P252U1JH': [4126, 4128], 'ACB4D8WI': [4328, 4332, 4333],
+                   'G41FTEZ8': [4329, 4330], 'PYG8JZ0C': [4327, 4331], 'FYNZEKI6': [4534, 4535, 4537],
+                   'PCDZXTIY': [4533, 4536], 'Z0BDVNBZ': [4541, 4543, 4546], '40ELE6SQ': [4544],
+                   'RGCEC677': [4542, 4545], 'BNWNKPJH': [4561, 4562, 4564], 'QV5AYD2K': [4560, 4563],
+                   '910O0A2Q': [4622, 4624, 4626], '0EMKY4ZS': [4623], 'TND2I31B': [4621, 4625],
+                   'ZMQZSE9Q': [4670, 4671, 4673], 'GYGF5F1X': [4669, 4672], 'SWDW99J5': [7711, 7713, 7714],
+                   '9DK01H85': [7710, 7712], 'AYIHPHF5': [14109, 14112, 14115], 'Z3DYDC4X': [14111, 14113],
+                   'L2B2WGCF': [14114], 'OBBBCH0X': [17202, 17204, 17207], 'ODF1PWJ0': [17205],
+                   'LNWLBVKG': [17203, 17206], 'MYILWKZQ': [19816, 19817, 19821], '4G2UHO35': [19819, 19820],
+                   'R7NU9NPM': [19814, 19815, 19818], 'ZW7MKTWH': [20089], '5QE9107L': [20088, 20090],
+                   'd2108609': [21520], '1c7b38f9': [21521, 21522, 21523], 'UM4ZU2SX': [27607, 27608, 27611],
+                   'OAUI9CKR': [27610]}},
     "39845 (bien 39845)": {
         "source": SA_DECISION_39845,
         "remplace": "A_SA_DECISION (son mot du 22/11, point 4) -- et le temoin a_sa_decision",
@@ -1055,6 +1159,8 @@ def les_20_a_part() -> set:
     donne a une ligne. Lues ou les temoins les lisent (SRC_V3_CALCUL, « a20 »)."""
     if not _A_PART_20:
         _A_PART_20.update(int(a) for _b, a, _w in json.loads(SRC_V3_CALCUL.read_text(encoding="utf-8"))["a20"])
+        # ⭐ 24/11 (§ 1 bis) : « ces onze-la n'y sont plus » -- la source ne change pas (elle reste le temoin)
+        _A_PART_20.difference_update(SORTIES_DES_20_PAR_DECISION)
     return _A_PART_20
 
 
@@ -1392,7 +1498,10 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         lies = {a for i in lignes_b for a in D.gel_l.get(i, set()) if a in D.REG and D.REG[a]["bien"] == b}
         ch_t = {S[a] for a in lies if a in S}
         X = sorted(a for a in D.par_bien.get(b, []) if S.get(a) in ch_t)
-    donnee = {a_: l_ for a_, (l_, _w) in PIECE_DONNEE_PAR_DECISION.items()}
+    # ses decisions du 24/11 portent leur raison dans la preuve (les anciennes gardent « sa decision (23/11) » : leurs
+    #   verdicts rendus ne changent pas de texte)
+    donnee = {a_: ((l_, _w) if _w.startswith(SON_MOT_DU_24_11) else l_)
+              for a_, (l_, _w) in PIECE_DONNEE_PAR_DECISION.items()}
     a_part_dec = dict(A_PART_PAR_DECISION)
     if joue("B3B") and 14033 in a_part_dec:         # 14033 : l'option B (variante, mesure seulement)
         del a_part_dec[14033]
@@ -1444,6 +1553,13 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
+    # ⛔ SON DOUTE (24/11, § 6) : une piece EN SUSPENS reste possible pour les lignes qu'il nomme, meme si les dates la
+    #   contredisent -- le verrou tient ces lignes tant qu'il n'a pas tranche (« Ne force pas »)
+    for a_, (ls_, _t) in EN_SUSPENS_PAR_SON_DOUTE.items():
+        if a_ in r["apart"]:
+            for gl_ in r["morceaux"]:
+                if gl_ & set(ls_) and gl_ not in r["possibles"][a_]:
+                    r["possibles"][a_].append(gl_)
     deja = {}
     if joue("R7a"):
         for gl, ids in r["morceaux"].items():
@@ -1516,6 +1632,13 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                    and a not in deja.get(gl, []) for gl in r["possibles"].get(a, [])):
                 isoles.add(a)
                 isoles_r18.add(a)
+    # ⭐ SA MISE DE COTE (24/11, regle 6 -- « on ne supprime pas une part, on la met de cote ») : la piece n'est donnee a
+    #   personne, elle est figee avec son dossier d'aujourd'hui (tout ce qu'aucun morceau ne prend), comme R7b
+    isoles_dec = set()
+    for a in sorted(r["apart"]):
+        if a in MISE_DE_COTE_PAR_DECISION and a not in isoles:
+            isoles.add(a)
+            isoles_dec.add(a)
     # E9 : la pose de nuit simulee sur le decoupage (chaque morceau devient un dossier ; le reste garde sa chaine)
     ch_new = {}
     for gl, ids in r["morceaux"].items():
@@ -1543,7 +1666,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         MISES_DE_COTE[a] = {"bien": b, "ancien_uuid": ancien, "ancien_numero": I.pieces[a]["app_dossier_numero"],
                             "ancienne_chaine": S.get(a), "etiquette_simulee": lab1[a],
                             "garde_son_numero": lab1[a] == ancien, "mise_de_cote_avec": [q for q in g_ if q != a],
-                            "regle": "R21" if a in isoles_r21 else ("R18" if a in isoles_r18 else ("R7c" if a in isoles_r7c else "R7b")),
+                            "regle": "SA_DECISION" if a in isoles_dec else ("R21" if a in isoles_r21 else ("R18" if a in isoles_r18 else ("R7c" if a in isoles_r7c else "R7b"))),
                             "pieces_du_dossier_prises_par_un_morceau": hors,
                             "etiquettes_du_groupe": sorted({str(lab1[q]) for q in g_}),
                             "groupe": g_, "lignes_du_gel": {str(q): sorted(I.gel_par_piece.get(q, [])) for q in g_}}
@@ -1638,7 +1761,16 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 preuves.append("a part TRANCHEE PAR LA REGLE R7c (validee le 23/11) -- aucune preuve ne peut la donner a "
                                "aucune de ses lignes possibles, hors de leurs dossiers : %s" % " ".join(
                                    "%d" % a for a in mis_de_cote if a in isoles_r7c))
-            m7 = [a for a in mis_de_cote if a not in isoles_r18 and a not in isoles_r21]
+            m7 = [a for a in mis_de_cote if a not in isoles_r18 and a not in isoles_r21 and a not in isoles_dec]
+            m_dec = [a for a in mis_de_cote if a in isoles_dec]
+            if m_dec:
+                preuves.append("a part MISE DE COTE PAR LA DECISION DU 24/11 (regle 6 : donnee a personne, figee avec son "
+                               "dossier d'aujourd'hui) ; son ancien numero dans la pose simulee : %s" % ", ".join(
+                                   "%d %s %s (dossier fige : %s)" % (
+                                       a, "GARDE" if lab1[a] == I.pieces[a]["app_dossier_uuid"] else "⛔ PERD (numero NEUF)",
+                                       I.pieces[a]["app_dossier_numero"] or "aucun",
+                                       " ".join(map(str, groupe_isole[S[a]])))
+                                   for a in m_dec))
             m21 = [a for a in mis_de_cote if a in isoles_r21]
             if m21:
                 preuves.append("a part MISE DE COTE PAR LA REGLE R21 : une affaire tombee complete (compromis annule + offre "
@@ -2081,6 +2213,8 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
                   int(bool(tenues.get(x["piece"]))))
     # les jumelles : leurs deux lignes, ensemble -- tranchees sur les MEMES pieces, ou en attente toutes les deux
     for j in T["familles"]["jumelles"]:
+        if set(j["lignes"]) <= remplacees:     # DEBARD : sa decision du 24/11 en fait DEUX affaires (SES_DECISIONS)
+            continue
         vs = [V.get(i) for i in j["lignes"]]
         if any(v is None for v in vs):
             noter("jumelles", "+".join(j["lignes"]), "les deux lignes", "une ligne ABSENTE DU SHEET", 1)

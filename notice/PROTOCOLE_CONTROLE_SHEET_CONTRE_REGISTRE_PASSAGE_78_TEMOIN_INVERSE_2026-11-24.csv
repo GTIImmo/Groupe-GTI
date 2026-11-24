@@ -1,0 +1,15 @@
+﻿gravite;colonne;comparees_hors_237;en_accord_hors_237;ecarts_hors_237;comparees_237;en_accord_237;ecarts_237
+1;repartition;0;0;0;0;0;0
+1;repartition entree;4492;4420;72;231;216;15
+1;repartition sortie;4492;4428;64;231;210;21
+2;charge commission;852;0;852;101;0;101
+2;commission (commission_agence de la vente);3687;2698;989;19;11;8
+2;commission (honoraires du compromis);4492;4084;408;231;203;28
+3;facture;3721;3579;142;25;17;8
+4;reglement;3737;3660;77;20;17;3
+5;annulation;619;278;341;208;148;60
+6;date compromis;4057;3928;129;169;166;3
+6;date offre;4464;4146;318;231;125;106
+6;date vente fixee;3774;3645;129;20;19;1
+7;texte F (en attente de);217;205;12;34;32;2
+7;texte G (commentaires);3877;3810;67;178;171;7

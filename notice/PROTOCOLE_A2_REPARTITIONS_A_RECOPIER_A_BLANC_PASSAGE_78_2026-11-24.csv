@@ -1,0 +1,455 @@
+﻿bien;ancienne_chaine;chaine_cible_apres_la_nuit;ligne;etat_de_la_ligne;cote;rang;nom_au_moment;pourcentage;origine;l_ancienne_chaine_reste_a;la_cible_a_deja_une_repartition
+53;21;22;7NI4WKV5;Annulée;entree;1;LUCILLE FORLICO;50.0;classeur_reconstitue;8GIIDS5T;non
+53;21;22;7NI4WKV5;Annulée;sortie;1;MELANIE LEGRAND;50.0;classeur_reconstitue;8GIIDS5T;non
+376;117;118;P0YMQODU;Vente réglée;entree;1;LUCILLE FORLICO;50.0;classeur_reconstitue;7HDK9XOG;non
+376;117;118;P0YMQODU;Vente réglée;sortie;1;MELANIE LEGRAND;50.0;classeur_reconstitue;7HDK9XOG;non
+378;125;126;AOPBUAOJ;Vente réglée;entree;1;MELANIE LEGRAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+378;125;126;AOPBUAOJ;Vente réglée;sortie;1;MELANIE LEGRAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+500;176;178;XCK96Z01;Annulée;entree;1;MELANIE LEGRAND;50.0;classeur_reconstitue;3TLH0CNW;non
+500;176;178;XCK96Z01;Annulée;sortie;1;MELANIE LEGRAND;50.0;classeur_reconstitue;3TLH0CNW;non
+557;199;200;S3J2JV0O;Annulée;entree;1;MELANIE LEGRAND;50.0;classeur_reconstitue;J62NO1EG;non
+557;199;200;S3J2JV0O;Annulée;sortie;1;MELANIE LEGRAND;25.0;classeur_reconstitue;J62NO1EG;non
+557;199;200;S3J2JV0O;Annulée;sortie;2;SYLVIE TEYSSONNIER;25.0;classeur_reconstitue;J62NO1EG;non
+2208;1059;1061;AHKQI7MX;Annulée;entree;1;LUCILLE FORLICO;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+2208;1059;1061;AHKQI7MX;Annulée;sortie;1;LUCILLE FORLICO;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+2208;1059;1060;YPNDHILU;Vente réglée;entree;1;LUCILLE FORLICO;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+2208;1059;1060;YPNDHILU;Vente réglée;sortie;1;LUCILLE FORLICO;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+2393;1101;1104;E6RLLKMN;Annulée;entree;1;MELANIE LEGRAND;50.0;classeur_reconstitue;2FBR2M9U;non
+2393;1101;1104;E6RLLKMN;Annulée;sortie;1;MELANIE LEGRAND;50.0;classeur_reconstitue;2FBR2M9U;non
+2629;1160;1161;F6XBD2IU;Vente réglée;entree;1;MELANIE LEGRAND;50.0;classeur_reconstitue;G1TVNXJ5;non
+2629;1160;1161;F6XBD2IU;Vente réglée;sortie;1;MELANIE LEGRAND;50.0;classeur_reconstitue;G1TVNXJ5;non
+3029;1228;1229;YAML8MHS;Annulée;entree;1;BENJAMIN TRIOLLIER;50.0;classeur_reconstitue;DCFLWTF3;non
+3029;1228;1229;YAML8MHS;Annulée;sortie;1;BENJAMIN TRIOLLIER;50.0;classeur_reconstitue;DCFLWTF3;non
+5620;2166;2167;ZLY1CLKF;Vente réglée;entree;1;SIMON DECHAUD;50.0;classeur_reconstitue;1W9FJJLB;non
+5620;2166;2167;ZLY1CLKF;Vente réglée;sortie;1;SIMON DECHAUD;50.0;classeur_reconstitue;1W9FJJLB;non
+5689;2210;2211;BZDTPD98;Vente réglée;entree;1;SIMON DECHAUD;50.0;classeur_reconstitue;HRC324JH;non
+5689;2210;2211;BZDTPD98;Vente réglée;sortie;1;SIMON DECHAUD;25.0;classeur_reconstitue;HRC324JH;non
+5689;2210;2211;BZDTPD98;Vente réglée;sortie;2;Nicolas BOUCHET;25.0;classeur_reconstitue;HRC324JH;non
+5838;2357;2358;USL9H5AJ;Vente réglée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;515UT1WG;non
+5838;2357;2358;USL9H5AJ;Vente réglée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;515UT1WG;non
+6025;2449;2451;6W6F4A4R;Annulée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;OVNWXXNF;non
+6025;2449;2451;6W6F4A4R;Annulée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;OVNWXXNF;non
+6151;2506;2507;5H9BOKWJ;Annulée;entree;1;SIMON DECHAUD;50.0;classeur_reconstitue;NE17WKHG;non
+6151;2506;2507;5H9BOKWJ;Annulée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;NE17WKHG;non
+6184;2532;2533;7PTB8Z3M;Annulée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;MYEK8UA6;non
+6184;2532;2533;7PTB8Z3M;Annulée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;MYEK8UA6;non
+6555;2633;2634;QXOCABQG;Vente réglée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;TQ17VW5I;non
+6555;2633;2634;QXOCABQG;Vente réglée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;TQ17VW5I;non
+6585;2641;2642;JTC1I5LJ;Annulée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;A5Y59R7M;non
+6585;2641;2642;JTC1I5LJ;Annulée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;A5Y59R7M;non
+8442;3669;3670;86ad8c0f;Vente réglée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;caea1510;oui
+8442;3669;3670;86ad8c0f;Vente réglée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;caea1510;oui
+8454;3676;3677;c08ff7cb;Vente réglée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;721e650c;non
+8454;3676;3677;c08ff7cb;Vente réglée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;721e650c;non
+8544;3719;3720;ZOJDHHL9;Vente réglée;entree;1;CHRISTELE GENTES;50.0;classeur_reconstitue;TQYCQNY4;non
+8544;3719;3720;ZOJDHHL9;Vente réglée;sortie;1;CHRISTELE GENTES;50.0;classeur_reconstitue;TQYCQNY4;non
+9247;4131;4132;43YX9GLG;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;H1KYESMD;non
+9247;4131;4132;43YX9GLG;Annulée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;H1KYESMD;non
+9340;4177;4179;61TDWJ65;Annulée;entree;1;ANNE FARGET;50.0;classeur_reconstitue;DBR6LG5W;non
+9340;4177;4179;61TDWJ65;Annulée;sortie;1;ANNE FARGET;50.0;classeur_reconstitue;DBR6LG5W;non
+9340;4177;4178;GN8TANP8;Annulée;entree;1;ANNE FARGET;50.0;classeur_reconstitue;DBR6LG5W;non
+9340;4177;4178;GN8TANP8;Annulée;sortie;1;ANNE FARGET;50.0;classeur_reconstitue;DBR6LG5W;non
+9365;4196;4197;5R6RC36Y;Annulée;entree;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+9365;4196;4197;5R6RC36Y;Annulée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+9483;4267;4269;UY443H27;Vente réglée;entree;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;NSRISB3C;non
+9483;4267;4269;UY443H27;Vente réglée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;NSRISB3C;non
+9483;4271;4267;NSRISB3C;Annulée;entree;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;ORPHELINE;oui
+9483;4271;4267;NSRISB3C;Annulée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;ORPHELINE;oui
+9483;4272;4268;9FP3UICY;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;ORPHELINE;non
+9483;4272;4268;9FP3UICY;Annulée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;ORPHELINE;non
+9491;4277;4278;WVMPHHDQ;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;HEQZW1KO;non
+9491;4277;4278;WVMPHHDQ;Vente réglée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;HEQZW1KO;non
+9582;4351;4353;VM0FHRB3;Annulée;entree;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;Q20JKY62;non
+9582;4351;4353;VM0FHRB3;Annulée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;Q20JKY62;non
+9608;4370;4371;TL9AFW0O;Vente réglée;entree;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;FWCFAN6O;non
+9608;4370;4371;TL9AFW0O;Vente réglée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;FWCFAN6O;non
+9629;4388;4385;U0GQ3KTO;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;ORPHELINE;oui
+9629;4388;4385;U0GQ3KTO;Annulée;sortie;1;FREDERIQUE JORAND;50.0;classeur_reconstitue;ORPHELINE;oui
+9748;4480;4483;3308P0UX;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;9WQ204HP;non
+9748;4480;4483;3308P0UX;Annulée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;9WQ204HP;non
+9748;4480;4481;N1CUULMN;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;9WQ204HP;non
+9748;4480;4481;N1CUULMN;Vente réglée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;9WQ204HP;non
+9771;4500;4501;WPGZK930;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;Z1EU0WC6;non
+9771;4500;4501;WPGZK930;Vente réglée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;Z1EU0WC6;non
+9780;4508;4509;3X3UPF1Q;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;TZPT6V9Y;non
+9780;4508;4509;3X3UPF1Q;Vente réglée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;TZPT6V9Y;non
+9780;4508;4510;VHZ88PLB;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;TZPT6V9Y;non
+9780;4508;4510;VHZ88PLB;Annulée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;TZPT6V9Y;non
+9868;4533;4534;FYNZEKI6;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;PCDZXTIY;non
+9868;4533;4534;FYNZEKI6;Vente réglée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;PCDZXTIY;non
+9877;4541;4542;RGCEC677;Annulée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;Z0BDVNBZ;non
+9877;4541;4542;RGCEC677;Annulée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;Z0BDVNBZ;non
+9902;4560;4561;BNWNKPJH;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;QV5AYD2K;non
+9902;4560;4561;BNWNKPJH;Vente réglée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;QV5AYD2K;non
+9946;4595;4596;RAQTPG0M;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;5SPO8UO2;non
+9946;4595;4596;RAQTPG0M;Annulée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;5SPO8UO2;non
+9961;4621;4622;910O0A2Q;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;TND2I31B;non
+9961;4621;4622;910O0A2Q;Vente réglée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;TND2I31B;non
+9993;4649;4654;2FOH8HE4;Annulée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;HHQZC2QP;non
+9993;4649;4654;2FOH8HE4;Annulée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;HHQZC2QP;non
+9993;4649;4650;VX5RZL6B;Vente réglée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;HHQZC2QP;non
+9993;4649;4650;VX5RZL6B;Vente réglée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;HHQZC2QP;non
+9993;4653;4649;HHQZC2QP;Annulée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;ORPHELINE;oui
+9993;4653;4649;HHQZC2QP;Annulée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;ORPHELINE;oui
+9993;4655;4651;N9J2533O;Annulée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;ORPHELINE;non
+9993;4655;4651;N9J2533O;Annulée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;ORPHELINE;non
+10017;4660;4661;CBBZXB2O;Annulée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;VFRHOV3Q;non
+10017;4660;4661;CBBZXB2O;Annulée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;VFRHOV3Q;non
+10043;4669;4670;ZMQZSE9Q;Vente réglée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;GYGF5F1X;non
+10043;4669;4670;ZMQZSE9Q;Vente réglée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;GYGF5F1X;non
+10109;4706;4707;VHE3HXC3;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;KCKQMFIL;non
+10109;4706;4707;VHE3HXC3;Vente réglée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;KCKQMFIL;non
+10165;4745;4746;3W10AEIK;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;0GV2LNV2;non
+10165;4745;4746;3W10AEIK;Annulée;sortie;1;CELINE HERITIER;50.0;classeur_reconstitue;0GV2LNV2;non
+10318;4850;4851;R9ANL92S;Vente réglée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+10318;4850;4851;R9ANL92S;Vente réglée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+10331;4857;4858;FP2KQU83;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;YZ1B0Q44;non
+10331;4857;4858;FP2KQU83;Annulée;sortie;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;YZ1B0Q44;non
+10375;4908;4909;GD6CVLJB;Vente réglée;entree;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;WBNLIAQD;non
+10375;4908;4909;GD6CVLJB;Vente réglée;sortie;1;SOPHIE DEBULOIS;50.0;classeur_reconstitue;WBNLIAQD;non
+12246;6340;6341;O1099YC0;Annulée;entree;1;CLAIRE RIBBES;50.0;classeur_reconstitue;08GV8OMZ;non
+12246;6340;6341;O1099YC0;Annulée;sortie;1;CLAIRE RIBBES;50.0;classeur_reconstitue;08GV8OMZ;non
+12414;6433;6434;7BPVD7K4;Vente réglée;entree;1;LAURE CAVARD;50.0;classeur_reconstitue;TCB4ZNQO;non
+12414;6433;6434;7BPVD7K4;Vente réglée;sortie;1;LAURE CAVARD;25.0;classeur_reconstitue;TCB4ZNQO;non
+12414;6433;6434;7BPVD7K4;Vente réglée;sortie;2;VIVIEN BERGER;25.0;classeur_reconstitue;TCB4ZNQO;non
+12728;6554;6555;EGR8KXOL;Vente réglée;entree;1;CLAIRE RIBBES;50.0;classeur_reconstitue;Q602VZJX;non
+12728;6554;6555;EGR8KXOL;Vente réglée;sortie;1;CLAIRE RIBBES;50.0;classeur_reconstitue;Q602VZJX;non
+12728;6554;6557;QJ9LLT05;Annulée;entree;1;CLAIRE RIBBES;50.0;classeur_reconstitue;Q602VZJX;non
+12728;6554;6557;QJ9LLT05;Annulée;sortie;1;CLAIRE RIBBES;50.0;classeur_reconstitue;Q602VZJX;non
+14472;7114;7115;7JXLR3JQ;Annulée;entree;1;LAURE CAVARD;50.0;classeur_reconstitue;WECT3RIT;non
+14472;7114;7115;7JXLR3JQ;Annulée;sortie;1;CLAIRE RIBBES;50.0;classeur_reconstitue;WECT3RIT;non
+14879;7293;7294;MPCRGJI1;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;Q5237UOE;non
+14879;7293;7294;MPCRGJI1;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;Q5237UOE;non
+15087;7448;7449;HRRSO81C;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;65M3RZSX;non
+15087;7448;7449;HRRSO81C;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;65M3RZSX;non
+15087;7452;7450;DN5U3GER;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;ORPHELINE;non
+15087;7452;7450;DN5U3GER;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;ORPHELINE;non
+15338;7545;7546;MCMUXOFP;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;GMWSIZKV;non
+15338;7545;7546;MCMUXOFP;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;GMWSIZKV;non
+15395;7579;7580;BUC1UXJH;Annulée;entree;1;FABIEN MALEYSSON;50.0;classeur_reconstitue;IW3Y1ZZU;non
+15395;7579;7580;BUC1UXJH;Annulée;sortie;1;FABIEN MALEYSSON;50.0;classeur_reconstitue;IW3Y1ZZU;non
+15449;7606;7605;R90OQT16;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;ORPHELINE;non
+15449;7606;7605;R90OQT16;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;ORPHELINE;non
+15451;7609;7610;XMWIRRAB;Annulée;entree;1;FABIEN MALEYSSON;50.0;classeur_reconstitue;3A2EL02E;non
+15451;7609;7610;XMWIRRAB;Annulée;sortie;1;FABIEN MALEYSSON;50.0;classeur_reconstitue;3A2EL02E;non
+15517;7645;7647;D5KU9GNT;Vente réglée;entree;1;DYLAN JOURGET;50.0;classeur_reconstitue;WBKHIDHS;non
+15517;7645;7647;D5KU9GNT;Vente réglée;sortie;1;DYLAN JOURGET;50.0;classeur_reconstitue;WBKHIDHS;non
+15631;7699;7700;U43BNSQW;Vente réglée;entree;1;FABIEN MALEYSSON;50.0;classeur_reconstitue;IPTGNTAL;non
+15631;7699;7700;U43BNSQW;Vente réglée;sortie;1;FABIEN MALEYSSON;50.0;classeur_reconstitue;IPTGNTAL;non
+15672;7710;7711;SWDW99J5;Vente réglée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;9DK01H85;non
+15672;7710;7711;SWDW99J5;Vente réglée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;9DK01H85;non
+15682;7719;7720;BLKP7JFQ;Vente réglée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;GPO3PZ76;non
+15682;7719;7720;BLKP7JFQ;Vente réglée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;GPO3PZ76;non
+15719;7767;7768;VKEQD9PH;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;IFQAPGOL;non
+15719;7767;7768;VKEQD9PH;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;IFQAPGOL;non
+15722;7778;7779;VEP1DVQ4;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;2SCBZXMH;non
+15722;7778;7779;VEP1DVQ4;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;2SCBZXMH;non
+15941;7942;7943;IQFPEZBB;Annulée;entree;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;8I79G718;non
+15941;7942;7943;IQFPEZBB;Annulée;sortie;1;BEATRICE LIOGIER;50.0;classeur_reconstitue;8I79G718;non
+16073;8019;8016;SXJDHXKF;Vente réglée;entree;1;SOLANGE ROMERA;50.0;classeur_reconstitue;ORPHELINE;oui
+16073;8019;8016;SXJDHXKF;Vente réglée;sortie;1;SOLANGE ROMERA;50.0;classeur_reconstitue;ORPHELINE;oui
+17583;8866;8868;FMVORN8Y;Annulée;entree;1;DYLAN JOURGET;50.0;classeur_reconstitue;PHYXLBYD;non
+17583;8866;8868;FMVORN8Y;Annulée;sortie;1;DYLAN JOURGET;50.0;classeur_reconstitue;PHYXLBYD;non
+19192;9496;9497;JHCF1D3M;Vente réglée;entree;1;STEPHANIE JEOFFROY;50.0;classeur_reconstitue;SC55F4MV;non
+19192;9496;9497;JHCF1D3M;Vente réglée;sortie;1;STEPHANIE JEOFFROY;50.0;classeur_reconstitue;SC55F4MV;non
+23353;11145;11146;e9260960;Vente réglée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;4f7b9749;non
+23353;11145;11146;e9260960;Vente réglée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;4f7b9749;non
+23530;11167;11168;UZ7HB9VH;Vente réglée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;GEQKYZCN;non
+23530;11167;11168;UZ7HB9VH;Vente réglée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;GEQKYZCN;non
+23543;11181;11182;UBISDN7Z;Annulée;entree;1;Corinne REYNAUD;50.0;classeur_reconstitue;VVMO1423;non
+23543;11181;11182;UBISDN7Z;Annulée;sortie;1;Corinne REYNAUD;50.0;classeur_reconstitue;VVMO1423;non
+24100;11373;11374;KZIM88QE;Annulée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;UV0JWYBL;non
+24100;11373;11374;KZIM88QE;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;UV0JWYBL;non
+24119;11412;11413;H6CTRVR6;Vente réglée;entree;1;MAGALI DIMARIA MARIA;50.0;classeur_reconstitue;E9GL6MUS;non
+24119;11412;11413;H6CTRVR6;Vente réglée;sortie;1;MAGALI DIMARIA MARIA;50.0;classeur_reconstitue;E9GL6MUS;non
+24206;11500;11501;DA57BFXT;Annulée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;CKISRI2B;non
+24206;11500;11501;DA57BFXT;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;CKISRI2B;non
+24252;11515;11516;M7P4FBYD;Annulée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;Z0ARUJPP;non
+24252;11515;11516;M7P4FBYD;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;Z0ARUJPP;non
+24361;11546;11547;X89SXIQZ;Vente réglée;entree;1;MARION BARBE;50.0;classeur_reconstitue;SXG8691T;non
+24361;11546;11547;X89SXIQZ;Vente réglée;sortie;1;MARION BARBE;50.0;classeur_reconstitue;SXG8691T;non
+24390;11581;11579;ULFVA1AQ;Annulée;entree;1;MARION BARBE;50.0;classeur_reconstitue;ORPHELINE;non
+24390;11581;11579;ULFVA1AQ;Annulée;sortie;1;MARION BARBE;50.0;classeur_reconstitue;ORPHELINE;non
+24410;11595;11598;GUUVDY2S;Annulée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;717OUUED;non
+24410;11595;11598;GUUVDY2S;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;717OUUED;non
+24479;11654;11655;29YBUBYA;Vente réglée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;6NOJ686I;non
+24479;11654;11655;29YBUBYA;Vente réglée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;6NOJ686I;non
+24484;11667;11668;YMEKXZK3;Vente réglée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;13KBCS85;non
+24484;11667;11668;YMEKXZK3;Vente réglée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;13KBCS85;non
+24510;11708;11709;SC58GWXX;Vente réglée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;VYNGKCR0;oui
+24510;11708;11709;SC58GWXX;Vente réglée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;VYNGKCR0;oui
+24528;11728;11729;HBZQXR67;Annulée;entree;1;STEPHANE DESOUSA;50.0;classeur_reconstitue;89QMXNNH;non
+24528;11728;11729;HBZQXR67;Annulée;sortie;1;STEPHANE DESOUSA;50.0;classeur_reconstitue;89QMXNNH;non
+24563;11790;11791;O9IYE0F0;Annulée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;QPLE2162;non
+24563;11790;11791;O9IYE0F0;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;QPLE2162;non
+24781;12011;12012;ANHQ1PK7;Vente réglée;entree;1;MAGALI DIMARIA MARIA;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+24781;12011;12012;ANHQ1PK7;Vente réglée;sortie;1;MAGALI DIMARIA MARIA;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+26131;12566;12567;QL70KV8I;Vente réglée;entree;1;MAGALI DIMARIA MARIA;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+26131;12566;12567;QL70KV8I;Vente réglée;sortie;1;MAGALI DIMARIA MARIA;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+28506;14033;14034;205f62be;Vente réglée;entree;1;EMMANUELLE PEREIRA;50.0;classeur_reconstitue;ea6a28a7;oui
+28506;14033;14034;205f62be;Vente réglée;sortie;1;EMMANUELLE PEREIRA;50.0;classeur_reconstitue;ea6a28a7;oui
+28548;14051;14052;4fc6b33a;Annulée;entree;1;EMMANUELLE PEREIRA;50.0;classeur_reconstitue;30898aa2;oui
+28548;14051;14052;4fc6b33a;Annulée;sortie;1;EMMANUELLE PEREIRA;50.0;classeur_reconstitue;30898aa2;oui
+28653;14109;14111;Z3DYDC4X;Annulée;entree;1;LAURENT MASSACRIER;50.0;classeur_reconstitue;AYIHPHF5;non
+28653;14109;14111;Z3DYDC4X;Annulée;sortie;1;LAURENT MASSACRIER;50.0;classeur_reconstitue;AYIHPHF5;non
+28661;14130;14131;LFHUEPY8;Annulée;entree;1;STEPHANE DESOUSA;50.0;classeur_reconstitue;E5OPC7JN;non
+28661;14130;14131;LFHUEPY8;Annulée;sortie;1;STEPHANE DESOUSA;50.0;classeur_reconstitue;E5OPC7JN;non
+28673;14141;14143;6D1WSAK8;Annulée;entree;1;STEPHANE DESOUSA;50.0;classeur_reconstitue;EC977D21;non
+28673;14141;14143;6D1WSAK8;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;EC977D21;non
+28677;14147;14148;5ELT15Q7;Vente réglée;entree;1;LAURENT MASSACRIER;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+28677;14147;14148;5ELT15Q7;Vente réglée;sortie;1;LAURENT MASSACRIER;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+30361;14808;14810;OCI5ECK2;Annulée;entree;1;OLIVIER POMBAR;50.0;classeur_reconstitue;L1ZAEBNM;non
+30361;14808;14810;OCI5ECK2;Annulée;sortie;1;OLIVIER POMBAR;50.0;classeur_reconstitue;L1ZAEBNM;non
+30376;14813;14816;FJS4IJGZ;Annulée;entree;1;VIVIEN BERGER;50.0;classeur_reconstitue;SWSN80FQ;non
+30376;14813;14816;FJS4IJGZ;Annulée;sortie;1;VIVIEN BERGER;50.0;classeur_reconstitue;SWSN80FQ;non
+30637;14912;14913;AVXWIZTU;Annulée;entree;1;OLIVIER POMBAR;50.0;classeur_reconstitue;XBGMB7XP;oui
+30637;14912;14913;AVXWIZTU;Annulée;sortie;1;OLIVIER POMBAR;50.0;classeur_reconstitue;XBGMB7XP;oui
+30717;14939;14940;DKTK22F2;Vente réglée;entree;1;OLIVIER POMBAR;50.0;classeur_reconstitue;ZE9WZW22;non
+30717;14939;14940;DKTK22F2;Vente réglée;sortie;1;OLIVIER POMBAR;50.0;classeur_reconstitue;ZE9WZW22;non
+30717;14939;14941;Q3KTCMVB;Annulée;entree;1;OLIVIER POMBAR;50.0;classeur_reconstitue;ZE9WZW22;non
+30717;14939;14941;Q3KTCMVB;Annulée;sortie;1;OLIVIER POMBAR;50.0;classeur_reconstitue;ZE9WZW22;non
+30879;15004;15005;MY2EIUFQ;Annulée;entree;1;OLIVIER POMBAR;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+30879;15004;15005;MY2EIUFQ;Annulée;sortie;1;OLIVIER POMBAR;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+31045;15059;15061;5VZDGQC3;Vente réglée;entree;1;VIVIEN BERGER;50.0;classeur_reconstitue;U39MLAJD;non
+31045;15059;15061;5VZDGQC3;Vente réglée;sortie;1;VIVIEN BERGER;50.0;classeur_reconstitue;U39MLAJD;non
+31164;15095;15096;TO8OJMH3;Annulée;entree;1;VIVIEN BERGER;50.0;classeur_reconstitue;84LAGWZR;non
+31164;15095;15096;TO8OJMH3;Annulée;sortie;1;VIVIEN BERGER;50.0;classeur_reconstitue;84LAGWZR;non
+32929;16015;16017;VNPQZFM8;Annulée;entree;1;HUGO LABBE;50.0;classeur_reconstitue;ZYVO6KK1;non
+32929;16015;16017;VNPQZFM8;Annulée;sortie;1;HUGO LABBE;50.0;classeur_reconstitue;ZYVO6KK1;non
+32960;16031;16032;UHVX3QH1;Vente réglée;entree;1;STEPHANIE MARTINEZ;50.0;classeur_reconstitue;LM6YKKZP;non
+32960;16031;16032;UHVX3QH1;Vente réglée;sortie;1;STEPHANIE MARTINEZ;50.0;classeur_reconstitue;LM6YKKZP;non
+33209;16113;16114;MMP3V5WF;Annulée;entree;1;HUGO LABBE;50.0;classeur_reconstitue;CSL29RHC;non
+33209;16113;16114;MMP3V5WF;Annulée;sortie;1;HUGO LABBE;50.0;classeur_reconstitue;CSL29RHC;non
+33255;16143;16144;KTZJRCR2;Vente réglée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+33255;16143;16144;KTZJRCR2;Vente réglée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+34006;16336;16337;AIV9UI0I;Vente réglée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;P0YWKL8J;non
+34006;16336;16337;AIV9UI0I;Vente réglée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;P0YWKL8J;non
+34007;16341;16343;YATQOEPB;Annulée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;5494P9OV;non
+34007;16341;16343;YATQOEPB;Annulée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;5494P9OV;non
+34007;16341;16342;ZGNIYS1Z;Annulée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;5494P9OV;non
+34007;16341;16342;ZGNIYS1Z;Annulée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;5494P9OV;non
+34048;16362;16364;1290IIOC;Vente réglée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;FS22QU5G;non
+34048;16362;16364;1290IIOC;Vente réglée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;FS22QU5G;non
+34066;16377;16379;JUTS27P6;Vente réglée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;R0JRVFDC;non
+34066;16377;16379;JUTS27P6;Vente réglée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;R0JRVFDC;non
+34066;16377;16378;RX6J289Y;Annulée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;R0JRVFDC;non
+34066;16377;16378;RX6J289Y;Annulée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;R0JRVFDC;non
+35680;16837;16838;TZ7MOW1S;Annulée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;V5TRCLJ8;non
+35680;16837;16838;TZ7MOW1S;Annulée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;V5TRCLJ8;non
+35681;16841;16842;DY4JG42E;Vente réglée;entree;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;73FOXX2A;non
+35681;16841;16842;DY4JG42E;Vente réglée;sortie;1;Pierrick MARTINEZ;50.0;classeur_reconstitue;73FOXX2A;non
+35716;16869;16870;CA2XNF38;Annulée;entree;1;SABRINA BLACHIER;50.0;classeur_reconstitue;YB35SKPR;non
+35716;16869;16870;CA2XNF38;Annulée;sortie;1;SABRINA BLACHIER;50.0;classeur_reconstitue;YB35SKPR;non
+36344;17153;17154;A6OS2TTJ;Vente réglée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+36344;17153;17154;A6OS2TTJ;Vente réglée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+37160;17408;17410;UV6YWU3W;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;D070WYC9;non
+37160;17408;17410;UV6YWU3W;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;D070WYC9;non
+37160;17408;17411;VBTXFSYD;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;D070WYC9;non
+37160;17408;17411;VBTXFSYD;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;D070WYC9;non
+37192;17432;17434;3ID282Y1;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;IT0BF6M4;non
+37192;17432;17434;3ID282Y1;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;IT0BF6M4;non
+37192;17432;17433;D96KSCYQ;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;IT0BF6M4;non
+37192;17432;17433;D96KSCYQ;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;IT0BF6M4;non
+37402;17524;17525;9JHY3CPQ;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;ODJRIJGW;non
+37402;17524;17525;9JHY3CPQ;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;ODJRIJGW;non
+39745;19069;19070;8SZDU4F5;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;9HLRYNLE;oui
+39745;19069;19070;8SZDU4F5;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;9HLRYNLE;oui
+39776;19094;19095;2IK4EYXH;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;H2GKG338;non
+39776;19094;19095;2IK4EYXH;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;H2GKG338;non
+39845;19131;19132;V3FO5NDA;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;6FQO29C8;non
+39845;19131;19132;V3FO5NDA;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;6FQO29C8;non
+39854;19140;19142;CC678DGO;Annulée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;TYLQESMU;non
+39854;19140;19142;CC678DGO;Annulée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;TYLQESMU;non
+40453;19511;19512;CYZA6GYS;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;A8LNQDOQ;non
+40453;19511;19512;CYZA6GYS;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;A8LNQDOQ;non
+40600;19575;19576;YQG8CN5T;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;WO5IQTLW;oui
+40600;19575;19576;YQG8CN5T;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;WO5IQTLW;oui
+40679;19611;19612;644UYQNA;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;34JO2UUN;non
+40679;19611;19612;644UYQNA;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;34JO2UUN;non
+40684;19619;19620;GWAP2ROG;Vente réglée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;AA797XO0;non
+40684;19619;19620;GWAP2ROG;Vente réglée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;AA797XO0;non
+40744;19656;19657;5SDJ4B0P;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;7ITH92WI;non
+40744;19656;19657;5SDJ4B0P;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;7ITH92WI;non
+40747;19664;19665;RD4LZYW0;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;HMVS1CZT;non
+40747;19664;19665;RD4LZYW0;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;HMVS1CZT;non
+40792;19690;19691;C0U52ILC;Vente réglée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;YKSL5L2U;non
+40792;19690;19691;C0U52ILC;Vente réglée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;YKSL5L2U;non
+40855;19736;19737;3WBNBNY4;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;C6XFV1E5;oui
+40855;19736;19737;3WBNBNY4;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;C6XFV1E5;oui
+40977;19814;19816;MYILWKZQ;Vente réglée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+40977;19814;19816;MYILWKZQ;Vente réglée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+41019;19828;19830;M3LQT4JY;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;HPOCWXIR;non
+41019;19828;19830;M3LQT4JY;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;HPOCWXIR;non
+41091;19862;19863;JBCC1KBT;Vente réglée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+41091;19862;19863;JBCC1KBT;Vente réglée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+41467;20072;20073;O6R10ZQA;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;QW7MPWOM;non
+41467;20072;20073;O6R10ZQA;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;QW7MPWOM;non
+41481;20088;20089;ZW7MKTWH;Annulée;entree;1;NADEGE PEYRARD;50.0;classeur_reconstitue;5QE9107L;oui
+41481;20088;20089;ZW7MKTWH;Annulée;sortie;1;NADEGE PEYRARD;50.0;classeur_reconstitue;5QE9107L;oui
+41672;20246;20247;1P6VET6U;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;b4cbb54d;non
+41672;20246;20247;1P6VET6U;Annulée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;b4cbb54d;non
+41705;20276;20277;FUDJ9CJC;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;S2B9H1VA;non
+41705;20276;20277;FUDJ9CJC;Annulée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;S2B9H1VA;non
+41721;20300;20301;HORVRQ6N;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;WIA7ITRD;non
+41721;20300;20301;HORVRQ6N;Annulée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;WIA7ITRD;non
+41724;20308;20309;676XP6GN;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;N0P2M218;non
+41724;20308;20309;676XP6GN;Annulée;sortie;1;Nicolas BOUCHET;25.0;classeur_reconstitue;N0P2M218;non
+41724;20308;20309;676XP6GN;Annulée;sortie;2;CHRISTELE GENTES;25.0;classeur_reconstitue;N0P2M218;non
+41797;20407;20408;DHG4SD0N;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;O1M5TV0O;non
+41797;20407;20408;DHG4SD0N;Annulée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;O1M5TV0O;non
+41833;20491;20492;XCAUACUJ;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;X0U0B171;non
+41833;20491;20492;XCAUACUJ;Annulée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;X0U0B171;non
+42215;20794;20795;MFMR0U6A;Vente réglée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+42215;20794;20795;MFMR0U6A;Vente réglée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+43126;21597;21598;9K4Y3S4N;Annulée;entree;1;Nicolas BOUCHET;50.0;classeur_reconstitue;GM8VDVK2;non
+43126;21597;21598;9K4Y3S4N;Annulée;sortie;1;Nicolas BOUCHET;50.0;classeur_reconstitue;GM8VDVK2;non
+43923;21946;21947;JJPTIU4H;Annulée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;GHX4LA2G;non
+43923;21946;21947;JJPTIU4H;Annulée;sortie;1;MORGANE SANGUIN;50.0;classeur_reconstitue;GHX4LA2G;non
+44198;22017;22018;4D2J48XD;Annulée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;CEOL50VM;non
+44198;22017;22018;4D2J48XD;Annulée;sortie;1;MORGANE SANGUIN;25.0;classeur_reconstitue;CEOL50VM;non
+44198;22017;22018;4D2J48XD;Annulée;sortie;2;MARION BILLIG BILLIGDURAND DURAND;25.0;classeur_reconstitue;CEOL50VM;non
+44205;22022;22024;L86MC4W7;Annulée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;ZGY9VWTQ;non
+44205;22022;22024;L86MC4W7;Annulée;sortie;1;MORGANE SANGUIN;50.0;classeur_reconstitue;ZGY9VWTQ;non
+44308;22085;22086;D3MEX415;Annulée;entree;1;CLAUDIE FERNANDEZ;50.0;classeur_reconstitue;88PMHJRA;non
+44308;22085;22086;D3MEX415;Annulée;sortie;1;CLAUDIE FERNANDEZ;25.0;classeur_reconstitue;88PMHJRA;non
+44308;22085;22086;D3MEX415;Annulée;sortie;2;MORGANE SANGUIN;25.0;classeur_reconstitue;88PMHJRA;non
+44308;22085;22087;KOYNCSYB;Annulée;entree;1;CLAUDIE FERNANDEZ;50.0;classeur_reconstitue;88PMHJRA;non
+44308;22085;22087;KOYNCSYB;Annulée;sortie;1;CLAUDIE FERNANDEZ;25.0;classeur_reconstitue;88PMHJRA;non
+44308;22085;22087;KOYNCSYB;Annulée;sortie;2;MORGANE SANGUIN;25.0;classeur_reconstitue;88PMHJRA;non
+44653;22269;22270;WG8CG5T2;Vente réglée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+44653;22269;22270;WG8CG5T2;Vente réglée;sortie;1;MORGANE SANGUIN;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+45672;22980;22979;NRZVKH85;Vente réglée;entree;1;CLAUDIE FERNANDEZ;50.0;classeur_reconstitue;AUCUNE LIGNE;oui
+45672;22980;22979;NRZVKH85;Vente réglée;sortie;1;CLAUDIE FERNANDEZ;50.0;classeur_reconstitue;AUCUNE LIGNE;oui
+45891;23050;23051;DBRDHEGH;Vente réglée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;VMWFLLW4;non
+45891;23050;23051;DBRDHEGH;Vente réglée;sortie;1;MORGANE SANGUIN;50.0;classeur_reconstitue;VMWFLLW4;non
+45891;23050;23054;SBH4QWDW;Annulée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;VMWFLLW4;non
+45891;23050;23054;SBH4QWDW;Annulée;sortie;1;MORGANE SANGUIN;50.0;classeur_reconstitue;VMWFLLW4;non
+45892;23056;23057;HJTL7XCC;Annulée;entree;1;MORGANE SANGUIN;50.0;classeur_reconstitue;AYQ5SMMS;non
+45892;23056;23057;HJTL7XCC;Annulée;sortie;1;MORGANE SANGUIN;50.0;classeur_reconstitue;AYQ5SMMS;non
+46346;23333;23335;UH6DNQHK;Annulée;entree;1;NICOLAS RAYNAUD;50.0;classeur_reconstitue;G9TTO1MQ;non
+46346;23333;23335;UH6DNQHK;Annulée;sortie;1;NICOLAS RAYNAUD;50.0;classeur_reconstitue;G9TTO1MQ;non
+47557;23993;23994;TRJ5Y59U;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;DAMOO7OU;non
+47557;23993;23994;TRJ5Y59U;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;DAMOO7OU;non
+47571;24004;24005;e48a523c;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;8c7725f2;non
+47571;24004;24005;e48a523c;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;8c7725f2;non
+47574;24010;24011;ccbbf3c8;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;1f3d536a;oui
+47574;24010;24011;ccbbf3c8;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;1f3d536a;oui
+47744;24107;24108;0VASTLW2;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;LMV1HON9;non
+47744;24107;24108;0VASTLW2;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;LMV1HON9;non
+47776;24122;24124;305KAY9W;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;H75WKJ6X;non
+47776;24122;24124;305KAY9W;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;H75WKJ6X;non
+47983;24281;24282;FRROUPY0;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;HW5D0412;non
+47983;24281;24282;FRROUPY0;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;HW5D0412;non
+48005;24309;24311;KODULWGN;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;U4O5Q370;non
+48005;24309;24311;KODULWGN;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;U4O5Q370;non
+48013;24319;24320;LQ1AVB07;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;SCYKLY77;non
+48013;24319;24320;LQ1AVB07;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;SCYKLY77;non
+48019;24333;24331;N8M7RKTN;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;ORPHELINE;non
+48019;24333;24331;N8M7RKTN;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;ORPHELINE;non
+48093;24380;24382;RF9KYWSY;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;9KHYVR1M;non
+48093;24380;24382;RF9KYWSY;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;9KHYVR1M;non
+48110;24399;24401;ZM3XZ6DG;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;TR1TVQCQ;non
+48110;24399;24401;ZM3XZ6DG;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;TR1TVQCQ;non
+48112;24406;24407;7P1JJ2PP;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;D7CZQBZG;non
+48112;24406;24407;7P1JJ2PP;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;D7CZQBZG;non
+48113;24411;24412;MEWRMGTU;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;7TXZXESY;non
+48113;24411;24412;MEWRMGTU;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;7TXZXESY;non
+48149;24443;24444;45PERG6S;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;BEI93QZ2;non
+48149;24443;24444;45PERG6S;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;BEI93QZ2;non
+48154;24450;24454;4PW2L3MG;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;6U5DQQ4J;non
+48154;24450;24454;4PW2L3MG;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;6U5DQQ4J;non
+48154;24450;24451;BETUXDEN;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;6U5DQQ4J;non
+48154;24450;24451;BETUXDEN;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;6U5DQQ4J;non
+48235;24494;24495;QALNGM20;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;E2ZYGRTL;non
+48235;24494;24495;QALNGM20;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;25.0;classeur_reconstitue;E2ZYGRTL;non
+48235;24494;24495;QALNGM20;Annulée;sortie;2;Joel CHAMPAGNAC;25.0;classeur_reconstitue;E2ZYGRTL;non
+48239;24499;24500;LLR19GDU;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;Q23M98IX;non
+48239;24499;24500;LLR19GDU;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;Q23M98IX;non
+48249;24511;24512;0IS41BM1;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;1HFA7NUI;non
+48249;24511;24512;0IS41BM1;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;1HFA7NUI;non
+48297;24563;24564;UWNRN6F2;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;BV4BJ0TU;non
+48297;24563;24564;UWNRN6F2;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;BV4BJ0TU;non
+48301;24571;24573;7T8CMWY6;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;8J3JDVHM;non
+48301;24571;24573;7T8CMWY6;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;8J3JDVHM;non
+48311;24588;24590;XH5KZ9LI;Vente réglée;entree;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;0OO1BEZD;non
+48311;24588;24590;XH5KZ9LI;Vente réglée;sortie;1;SYLVIE TEYSSONNIER;50.0;classeur_reconstitue;0OO1BEZD;non
+48321;24598;24599;VNK6GU21;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;1X9W3VUF;non
+48321;24598;24599;VNK6GU21;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;1X9W3VUF;non
+48330;24608;24610;XP8L3DAO;Annulée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;EWHWFF0Y;non
+48330;24608;24610;XP8L3DAO;Annulée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;EWHWFF0Y;non
+48353;24630;24631;50LQ2VSA;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+48353;24630;24631;50LQ2VSA;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+48370;24649;24650;ESVJUR12;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+48370;24649;24650;ESVJUR12;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+49484;25626;25627;OAQDRTNC;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;44ZVGG8Q;non
+49484;25626;25627;OAQDRTNC;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;44ZVGG8Q;non
+49850;25839;25840;46b0a92c;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;64225027;non
+49850;25839;25840;46b0a92c;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;64225027;non
+49924;25876;25877;T0WL4QE7;Annulée;entree;1;RAMAZAN KUS;50.0;classeur_reconstitue;H5YNNNX9;non
+49924;25876;25877;T0WL4QE7;Annulée;sortie;1;RAMAZAN KUS;50.0;classeur_reconstitue;H5YNNNX9;non
+49941;25888;25890;6N2UPC4E;Annulée;entree;1;TATIANA CROIZIER;50.0;classeur_reconstitue;IFNAD2KL;non
+49941;25888;25890;6N2UPC4E;Annulée;sortie;1;TATIANA CROIZIER;50.0;classeur_reconstitue;IFNAD2KL;non
+49948;25897;25898;81LLHEM6;Vente réglée;entree;1;RAMAZAN KUS;50.0;classeur_reconstitue;J1JRBV76;non
+49948;25897;25898;81LLHEM6;Vente réglée;sortie;1;RAMAZAN KUS;50.0;classeur_reconstitue;J1JRBV76;non
+50296;26013;26016;7MOMHHQ1;Annulée;entree;1;TATIANA CROIZIER;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+50296;26013;26016;7MOMHHQ1;Annulée;sortie;1;TATIANA CROIZIER;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+50356;26023;26024;0TECT361;Annulée;entree;1;MELISSA CANTY;50.0;classeur_reconstitue;I0K9TUCT;non
+50356;26023;26024;0TECT361;Annulée;sortie;1;MELISSA CANTY;50.0;classeur_reconstitue;I0K9TUCT;non
+50356;26026;26023;I0K9TUCT;Annulée;entree;1;MELISSA CANTY;50.0;classeur_reconstitue;ORPHELINE;oui
+50356;26026;26023;I0K9TUCT;Annulée;sortie;1;MELISSA CANTY;50.0;classeur_reconstitue;ORPHELINE;oui
+50368;26027;26029;DKH6IOKA;Vente réglée;entree;1;RAMAZAN KUS;50.0;classeur_reconstitue;YV95DVKD;non
+50368;26027;26029;DKH6IOKA;Vente réglée;sortie;1;RAMAZAN KUS;50.0;classeur_reconstitue;YV95DVKD;non
+50368;26027;26028;YFITUAFH;Annulée;entree;1;RAMAZAN KUS;50.0;classeur_reconstitue;YV95DVKD;non
+50368;26027;26028;YFITUAFH;Annulée;sortie;1;RAMAZAN KUS;50.0;classeur_reconstitue;YV95DVKD;non
+50400;26033;26034;0V3UQ41Y;Annulée;entree;1;MELISSA CANTY;50.0;classeur_reconstitue;Z2FX1C7S;non
+50400;26033;26034;0V3UQ41Y;Annulée;sortie;1;MELISSA CANTY;50.0;classeur_reconstitue;Z2FX1C7S;non
+50403;26041;26043;CPM9OKZE;Annulée;entree;1;MELISSA CANTY;50.0;classeur_reconstitue;6KGSYGM2;non
+50403;26041;26043;CPM9OKZE;Annulée;sortie;1;MELISSA CANTY;50.0;classeur_reconstitue;6KGSYGM2;non
+50581;26071;26072;M1OIXLBA;Annulée;entree;1;SEBASTIEN VIALETTE;50.0;classeur_reconstitue;YLAVM0I7;non
+50581;26071;26072;M1OIXLBA;Annulée;sortie;1;SEBASTIEN VIALETTE;50.0;classeur_reconstitue;YLAVM0I7;non
+50759;26154;26156;L4HEO3NF;Vente réglée;entree;1;RAMAZAN KUS;50.0;classeur_reconstitue;RP4HBTQN;non
+50759;26154;26156;L4HEO3NF;Vente réglée;sortie;1;RAMAZAN KUS;50.0;classeur_reconstitue;RP4HBTQN;non
+50759;26154;26155;ZOZ4VNMQ;Annulée;entree;1;RAMAZAN KUS;50.0;classeur_reconstitue;RP4HBTQN;non
+50759;26154;26155;ZOZ4VNMQ;Annulée;sortie;1;RAMAZAN KUS;50.0;classeur_reconstitue;RP4HBTQN;non
+52143;26603;26604;1TZEGF2D;Vente réglée;entree;1;TATIANA CROIZIER;50.0;classeur_reconstitue;HTFNZ9Z2;non
+52143;26603;26604;1TZEGF2D;Vente réglée;sortie;1;TATIANA CROIZIER;50.0;classeur_reconstitue;HTFNZ9Z2;non
+52143;26603;26605;G88ISQKI;Annulée;entree;1;TATIANA CROIZIER;50.0;classeur_reconstitue;HTFNZ9Z2;non
+52143;26603;26605;G88ISQKI;Annulée;sortie;1;TATIANA CROIZIER;50.0;classeur_reconstitue;HTFNZ9Z2;non
+52741;26832;26833;II80B5HW;Vente réglée;entree;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+52741;26832;26833;II80B5HW;Vente réglée;sortie;1;MARION BILLIG BILLIGDURAND DURAND;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+53342;27133;27140;2HOL5ISX;Annulée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;GQCBSQNY;non
+53342;27133;27140;2HOL5ISX;Annulée;sortie;1;CELINE HERITIER;50.0;classeur_reconstitue;GQCBSQNY;non
+53450;27239;27240;YIIWRP17;Annulée;entree;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;TEXTOJLH;non
+53450;27239;27240;YIIWRP17;Annulée;sortie;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;TEXTOJLH;non
+53657;27426;27427;EKRHN9WR;Annulée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;WPSKU3QA;non
+53657;27426;27427;EKRHN9WR;Annulée;sortie;1;NICOLAS COUDERT;50.0;classeur_reconstitue;WPSKU3QA;non
+53678;27445;27449;H78FD3YN;Annulée;entree;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;JRN2I7TM;non
+53678;27445;27449;H78FD3YN;Annulée;sortie;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;JRN2I7TM;non
+53699;27483;27484;265KVIXP;Annulée;entree;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;77VVY2X6;non
+53699;27483;27484;265KVIXP;Annulée;sortie;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;77VVY2X6;non
+53740;27512;27513;1D7EIYKW;Annulée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+53740;27512;27513;1D7EIYKW;Annulée;sortie;1;NICOLAS COUDERT;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+53806;27558;27560;9HPGTRWV;Annulée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;98ILQ6JE;non
+53806;27558;27560;9HPGTRWV;Annulée;sortie;1;NICOLAS COUDERT;50.0;classeur_reconstitue;98ILQ6JE;non
+53924;27660;27661;MDTBQXVO;Annulée;entree;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;P2CPKZZY;non
+53924;27660;27661;MDTBQXVO;Annulée;sortie;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;P2CPKZZY;non
+53942;27685;27687;EHQQU5U7;Annulée;entree;1;Joel CHAMPAGNAC;50.0;classeur_reconstitue;VR1K2NJW;non
+53942;27685;27687;EHQQU5U7;Annulée;sortie;1;CELINE HERITIER;50.0;classeur_reconstitue;VR1K2NJW;non
+53964;27721;27722;SA7DWYEZ;Vente réglée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+53964;27721;27722;SA7DWYEZ;Vente réglée;sortie;1;NICOLAS COUDERT;50.0;classeur_reconstitue;AUCUNE LIGNE;non
+54776;28178;28179;5f47de79;Vente réglée;entree;1;CELINE HERITIER;50.0;classeur_reconstitue;5a4371b5;oui
+54776;28178;28179;5f47de79;Vente réglée;sortie;1;CELINE HERITIER;50.0;classeur_reconstitue;5a4371b5;oui
+54976;28268;28269;N4AQ2NQP;Annulée;entree;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;DEZK3NBU;non
+54976;28268;28269;N4AQ2NQP;Annulée;sortie;1;CHRISTINE BRAVARD;50.0;classeur_reconstitue;DEZK3NBU;non
+58907;28546;28547;beeaf847;Vente réglée;entree;1;SANDRINE DELAVAUD;50.0;classeur_reconstitue;b42affe7;oui
+58907;28546;28547;beeaf847;Vente réglée;sortie;1;SANDRINE DELAVAUD;50.0;classeur_reconstitue;b42affe7;oui
+62311;28931;28930;fa06e4e5;Annulée;entree;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;ORPHELINE;non
+62311;28931;28930;fa06e4e5;Annulée;sortie;1;LUCAS VINCENT VINCENTLUCAS GONZALEZ;50.0;classeur_reconstitue;ORPHELINE;non
+43787;1000115;1000116;JEK94D31;Annulée;entree;1;CLAUDIE FERNANDEZ;50.0;classeur_reconstitue;LLQHD7MG;non
+43787;1000115;1000116;JEK94D31;Annulée;sortie;1;CLAUDIE FERNANDEZ;50.0;classeur_reconstitue;LLQHD7MG;non
+52937;1000125;1000126;0V00SLEU;Annulée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;KBW3J7DF;non
+52937;1000125;1000126;0V00SLEU;Annulée;sortie;1;NICOLAS COUDERT;50.0;classeur_reconstitue;KBW3J7DF;non
+52937;1000125;1000127;MPF7E8N7;Vente réglée;entree;1;NICOLAS COUDERT;50.0;classeur_reconstitue;KBW3J7DF;non
+52937;1000125;1000127;MPF7E8N7;Vente réglée;sortie;1;NICOLAS COUDERT;50.0;classeur_reconstitue;KBW3J7DF;non
+50119;1000250;1000050;G8YSAI5Z;Vente réglée;entree;1;TATIANA CROIZIER;50.0;classeur_reconstitue;ORPHELINE;non
+50119;1000250;1000050;G8YSAI5Z;Vente réglée;sortie;1;TATIANA CROIZIER;50.0;classeur_reconstitue;ORPHELINE;non

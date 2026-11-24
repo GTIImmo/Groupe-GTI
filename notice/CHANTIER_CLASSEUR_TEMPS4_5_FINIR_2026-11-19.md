@@ -5369,6 +5369,60 @@ LA LISTE DES IMPOSSIBLES : 42 (26 retenues par ses 20 a part, 15 autres, 3THZJOO
 RIEN D'ECRIT ; rien tire ; rien pousse.
 ```
 
+### 20.37 Son mot du 24/11 : ses 64 decisions du verrou, A1 et A2, le controle du § 7, P-b (v20, passages 77-78)
+
+Son mot : C:\Hektor\MOT_DU_24_11_LES_64_TRANCHEES_LES_REGLES_ET_LE_CONTROLE.md (detail : SES_64_DECISIONS_DU_VERROU_23_11.md).
+« ⛔ TU NE LES APPLIQUES PAS A L'AVEUGLE [...] UNE A LA FOIS. » Ordre : ① ses decisions ② relier et couper ③ A1 A2 ④ a
+blanc ⑤ le controle du § 7 ⑥ P-b ⑦ ce qui reste des 42. Notice : notice/PROTOCOLE_REPONSES_24_11_LES_64_DU_VERROU_A1_A2_
+CONTROLE_P_B_2026-11-24.md. Outils (lecture seule) : protocole_ses_64_decisions_du_verrou_2026-11-24.py,
+protocole_a1_a2_avis_et_repartitions_a_blanc_2026-11-24.py, protocole_controle_sheet_contre_registre_2026-11-24.py,
+protocole_p_b_le_mandat_seul_2026-11-24.py.
+
+```
+① SON FICHIER LU TEL QUEL : 78 pieces = 14 deja rangees + 62 donnees + 2 mises de cote (« 64 dont 2 »). TEMOIN DE L'OUTIL :
+  34 lignes rejugees = le passage 76. Sur les 62 : 47 DEJA a la meme ligne par le protocole, 0 a une autre ; 15 neuves :
+  11 par l'APPUI DU GEL + structure (4126 4327 4533 4542 4560 4621 4669 7710 17203 20088 21520 -- texte / annulation
+  rapatries ; la reglee a son compromis actif) ; 3 par la structure seule (4543 19820 19815) ; 1 DOUTE : 19814.
+  RESERVES NOMMEES : 4621 (honoraires 5 000 = 0EMKY4ZS / 910O0A2Q, pas TND2I31B 4 500 ; seule annulee avec trace de
+  compromis : Vente Prevue 30/01/2021, SAFER) ; 4542 (108 000 = l'offre 4544 de 40ELE6SQ ; P3) ; 14111 (date au jour sur
+  Z3DYDC4X, mais sa ligne se contredit : Annulee 21/03 < Compromis 06/04) ; 14110 (indice L2B2WGCF « ACQ se retractent »).
+  19814 (§ 6) : 16 j apres l'annulation de R7NU9NPM, 7 j avant l'offre de 4G2UHO35 ; acte prevu 17/05, 4G2UHO35 annulee
+  20/05 -- NON FORCE : EN_SUSPENS_PAR_SON_DOUTE, le verrou tient R7NU9NPM et 4G2UHO35 (19814 porte D2020-0091).
+② v20 : PIECE_DONNEE_PAR_DECISION (+14) ; MISE_DE_COTE_PAR_DECISION 14110 27609 (R7b, NEUF nomme : le deja-rendu garde son
+  numero) ; SORTIES_DES_20 : la liste du code = 9 (1059 3741 14033 16382 24124 24600 26613 27512 28116), la source reste
+  temoin ; SES_DECISIONS « ses 64 » ; jumelles DEBARD remplacees (deux affaires). Pose des etiquettes : NON TOUCHEE.
+  C2 : ses 237 REPRODUITS (4 723 / 4 486 / 237).
+④ PASSAGE 78 (77 = 78, seul le libelle des preuves) contre 76 : 4 723 + 75 ; dont 58 rien a etiqueter -> RESTE 42 -> 17.
+  27 changent : 25 TRANCHEES, 2 -> PIECE_SANS_DATE_INVISIBLE (P252U1JH, d2108609). DEJA RENDU : Z0BDVNBZ +4543 (sa
+  decision), D2021-0130 garde ; 4 perdent la mention d'une neutre (AYIHPHF5 FOZ6HZLK OBBBCH0X UM4ZU2SX). TEMOINS : 10
+  nouveaux, TOUS la V3 du 22/11 qui portait sa decision du 21/11 renversee le 24/11 ; ses_decisions 43 / 0 / 4.
+  REJEU EXACT 78 VERT : 0 introuvable (449 / 179) ; justes 4 723 / 4 723 ; etiquette 4 723 / 4 723 ; R7b 21 / 21 (14110,
+  27609 NEUF nommes) ; 0 hors ; 0 attente dont le dossier bouge (RGCEC677, Z3DYDC4X tranchees).
+③ A1 : SES CHIFFRES REPRODUITS (copies comprises) 2 543 / 10 / 25 / 3 (+7 reflet vide). Ses 5 EXACTEMENT ajoutes
+  (FYNZEKI6 BNWNKPJH 910O0A2Q SWDW99J5 ZMQZSE9Q) -- ⚠ mais les coupes deja validees en decollaient DEJA 66 (passage 76) :
+  81 apres la nuit 78. Recalcul depuis id_unique : 0 decolle, 107 reflets changent ; APRES la nuit (un NEUF n'existe
+  qu'apres la pose).
+  A2 : SA MESURE REPRODUITE (6 / 4). ⛔ Sur la vague 78 : 87 VENTES REGLEES perdraient leurs honoraires EN SILENCE (81 deja
+  au passage 76) ; 136 autres lignes perdent leur repartition ; 304 restent ; 8 434 ne bougent pas. 454 lignes a recopier
+  par LA LIGNE (journal a blanc). -> A1 ET A2 SONT DES PREALABLES A TOUTE VAGUE, pas a ses 10 coupes.
+⑤ LE CONTROLE (causes lues dans les rapports des lots : C8, C3, C4 du 16-17/11, rapatriement 13/11 et sa resolution des
+  noms) : repartition 4 420 / 4 492 d'accord (3 personnes differentes : TR42PT5H U0GQ3KTO 739a0db1) ; commission /
+  compromis 4 084 / 4 492 ; ⛔ commission_agence = la MOITIE 453 fois (a lui) ; charge commission jamais rapatriee (953) ;
+  facture 3 579 / 3 721 ; reglement 3 660 / 3 737 ; textes F 205 / 217, G 3 810 / 3 877.
+  SES TROIS ECARTS, CAUSE ECRITE : annulations 447 = le perimetre de C3 (273 offre seule, 107 date anterieure, 63 aucune
+  transaction, 4 compromis pas annule) ; reglements 31 et factures 81 = C8 aucune_vente + posees sur une piece a personne
+  + absentes du lot, moins les 51 valeurs sur des pieces qu'aucune ligne ne tient.
+  ⛔ 56 ECRITURES VRAIMENT MAL PLACEES (autre ligne, ou hors du dossier a l'arrivee) ; deux paires CROISEES par le gel :
+  TR42PT5H / 739a0db1 et 8RWTD0YX / U0GQ3KTO.
+⑥ P-b : 80 citent le mandat (tous P1, son chiffre) ; 3 sur leur bien par le mandat seul, toutes confirmees par une date ;
+  ⛔ 0 tenue par le mandat seul ; reconstituees (Prix « NON TROUVE » : 56 au passage 41, temoin) 62, 0. TEMOIN POSITIF :
+  4 / 5 de ses rattachements retrouves ; EJN79TJ1 nommee (le Lien CRM de HI06T9T9, au gel).
+⑦ 17 : les 13 de son decompte + P252U1JH, d2108609 (4126 / 21520 dans EXCLUES_DE_LA_REGLE_E : « a retirer quand... » --
+  ses decisions repondent ; geste sur le code de la nuit, a son mot) + R7NU9NPM, 4G2UHO35 (19814).
+A LUI : 19814 ; retirer 4126 et 21520 de E ; A2 l'ancienne repartition ; la commission_agence ; les 56 ; le tableau des 3
+  biens. RIEN D'ECRIT ; rien tire ; rien pousse.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
