@@ -159,6 +159,11 @@ https://claude.ai/artifact/EBmocyoc2sRduq9cEg18vP — 4 planches, données ficti
   nécessaires dans LES DEUX modes — sans elles, le bloc porte « [ADRESSE POSTALE DE GTI] » et l'envoi reste
   bloqué, même par la messagerie. Rien ne part donc avant ces deux réglages (vérifié dans l'aperçu réel).
 
+- ✅ **Les deux adresses du bloc RGPD sont POSÉES le 24/11 (~16:10)**, données par Frédéric : `recrutement_email_adresse_postale`
+  = « 22 rue Jean Jaurès, 42700 Firminy », `recrutement_email_contact_donnees` = « accueil@gti-immobilier.fr ».
+  La fenêtre peut donc ouvrir la messagerie avec un texte complet (une fois « [CE QUE GTI PROPOSE] » rempli).
+  `recrutement_envoi_email` (l'envoi direct par Gmail) reste ÉTEINT : à allumer seulement sur sa demande.
+
 ## 5. ⏸ Ce que Frédéric décide
 
 1. **L'adresse d'envoi** : la boîte de l'administrateur connecté, ou une adresse « recrutement@ » à créer.

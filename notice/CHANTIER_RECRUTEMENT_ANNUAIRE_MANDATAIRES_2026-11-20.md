@@ -1151,7 +1151,10 @@ L'ordre :
     - Conséquence : chaque collecte relit TOUTES les fiches (iad, SAFTI, KW, Dr House, 3G) — c'est la durée de
       la 1re collecte (2 à 3 h), prévue par la limite de 8 h de la tâche.
     - ⏳ La preuve en réel sera le passage du 06/12 (ou un passage lancé à la main, sur accord). **Décision de Frédéric
-      (24/11, 16:05) : on attend le 06/12** — d'ici là, l'écran garde le bandeau « 3 sources n'ont pas pu être relues ». La collecte
+      (24/11, 16:05) : on attend le 06/12** — d'ici là, l'écran garde le bandeau « 3 sources n'ont pas pu être relues ».
+      ↩ **Changé par Frédéric à ~16:10 : il veut REFAIRE une collecte d'essai, et en profiter pour AJOUTER des sites** :
+      « les réseaux de mandataires présents dans les 4 départements, ou des agences locales avec un annuaire de
+      collaborateurs ». Recherche lancée (lecture seule) ; la liste lui sera soumise avant tout lecteur. La collecte
       n° 2 reste fermée telle quelle : ses 3 sources malades n'ont fait partir personne.
   - ✅ Le correctif Dr House (`separer_nom` retire le HTML d'un nom, toutes sources) est POSÉ après le passage
     (`98b008c`) : éprouvé sur copie puis sur le vrai fichier, `test_mise_a_jour` et `test_descente` verts.
