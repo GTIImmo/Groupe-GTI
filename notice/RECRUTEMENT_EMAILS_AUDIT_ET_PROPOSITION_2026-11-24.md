@@ -153,6 +153,12 @@ https://claude.ai/artifact/EBmocyoc2sRduq9cEg18vP — 4 planches, données ficti
   téléphone), envoi simulé, fil + étape + « informée », téléphone 375 px sans débordement ; build vert.
   ⚠ L'aperçu dans un cadre totalement isolé ne s'affichait pas : cadre « même origine, sans aucun script ».
 
+- ✅ **EN LIGNE le 24/11 à 16:00** (poussé par Frédéric avec `GTI_ALLOW_PUSH=1`, GitHub = `c78a8a4`). Vu en réel, en
+  lecture seule (rien envoyé) : la fenêtre s'ouvre, l'expéditeur est lu, mode « Ouvrir ma messagerie ».
+  ⚠ **CORRECTION de ce que j'avais dit** : les deux adresses du bloc RGPD (postale, contact pour les données) sont
+  nécessaires dans LES DEUX modes — sans elles, le bloc porte « [ADRESSE POSTALE DE GTI] » et l'envoi reste
+  bloqué, même par la messagerie. Rien ne part donc avant ces deux réglages (vérifié dans l'aperçu réel).
+
 ## 5. ⏸ Ce que Frédéric décide
 
 1. **L'adresse d'envoi** : la boîte de l'administrateur connecté, ou une adresse « recrutement@ » à créer.
