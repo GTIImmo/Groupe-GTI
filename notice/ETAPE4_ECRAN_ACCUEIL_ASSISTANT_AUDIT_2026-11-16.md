@@ -3092,7 +3092,7 @@ déposée, travail `done`.
 
 Restent à trancher par lui : l'effacement des coordonnées d'un nouveau mandant (avant P3) ; le sens de « clearing ».
 
-## 90. LOT 0 FAIT : les 10 défauts corrigés (9 dans le code, le 7 attend la mémoire), éprouvés à l'écran et par un essai (19/11) — branche à part, NON poussé
+## 90. LOT 0 FAIT : les 10 défauts corrigés (9 dans le code, le 7 attend la mémoire), éprouvés à l'écran et par un essai (19/11) — POUSSÉ le 19/11 avec son accord (0a6abe6 sur main, Vercel prêt)
 
 **Ses mots** : « Vas-y, sois autonome, mais contrôle et vérifie par des tests pour avoir le résultat souhaité. »
 
@@ -3156,3 +3156,808 @@ toujours un type) ; les 4 fonds de l'éditeur passent par `fermerEditeurAvis`.
 **Reste à faire par lui** : dire s'il faut fusionner la branche dans `main` (quand l'autre session aura commité), puis
 pousser (son accord). Ensuite : P3, la mémoire (patch, son accord), après ses deux réponses (effacement des coordonnées,
 « clearing »).
+
+## 91. SES DEUX RÉPONSES (19/11) ; « clearing » audité ; P3, LA MÉMOIRE DU PARCOURS : patch écrit, répété, POSÉ EN PRODUCTION le 19/11
+
+**Ses mots** : « Ok vas-y, je valide ta reco de règle, et non je sais pas, audit pour clearing. »
+
+### 91.1 La règle d'effacement, VALIDÉE
+
+Les coordonnées d'un nouveau mandant s'effacent **dès que la fenêtre les a reçues**. Le reste du parcours s'efface
+**30 jours** après son dernier mouvement (proposition du §80.8). Des coordonnées jamais prises (parcours abandonné)
+s'effacent aussi à 30 jours, avec leur parcours.
+⚠ Conséquence assumée : si la personne ferme la fenêtre sans créer, les coordonnées ne sont plus dans la base (la fenêtre
+les avait, elle les perd en se fermant, comme une saisie à la main). Il faudra les ressaisir.
+
+### 91.2 « clearing » : l'audit (lecture seule)
+
+- **Ce que c'est chez Hektor** : une case oui / non / non précisé du bloc des **diagnostics**, entre l'ERP (risques) et
+  le plomb (`console_job_worker.js`, `HEKTOR_OUI_NON_EXACT_FIELDS`). Notre fenêtre la montre à l'étape 5 « Diagnostics
+  & énergie » sous le libellé brut « Clearing » (App.tsx:1686), le worker l'envoie, la fiche l'affiche (31820).
+- **Son sens** : NON TROUVÉ. Aucune note, aucune capture de Hektor ne porte son libellé : la saisie console ne garde que
+  le libellé des boutons (« Non précisé », « Oui », « Non »). ⚠ Hypothèse NON prouvée : dans le vocabulaire des
+  diagnostics, « clearing » désigne le contrôle de fin de travaux après retrait d'amiante (mesure d'empoussièrement).
+  Seul l'écran de Hektor (l'infobulle ou le libellé de la case) le dirait.
+- **Son usage, mesuré** sur les 13 565 fiches : la case n'existe que dans les **125** fiches qui ont un relevé de la
+  console. **1 seule dit « oui »** (une maison active), **6 disent « non »**, 100 « non précisé », 18 sans valeur.
+  Témoin positif : `diag_assainissement` est présent dans 12 942 fiches par la même recherche.
+- **Déjà décidé ailleurs** : `clearing` est exclu du contrôle au retour (8a7, « ne se lit pas dans la fiche »).
+- **Conclusion** : on garde la décision du §88, « laissé à la main, déclaré ». Aucune question du parcours ne la pose.
+  À rouvrir seulement si l'écran de Hektor lui donne un sens utile.
+
+### 91.3 P3 — la mémoire du parcours : ce que pose le patch
+
+Fichiers : `supabase/patch_assistant_parcours_memoire_2026-11-19.sql`, `…_INVERSE.sql`, `…_REPETITION.sql`.
+Patron repris : le schéma privé `ged_prive` de la GED (morceau 9, 13/11).
+
+- **`app_assistant_parcours`** : un parcours (genre `creation_estimation` / `creation_annonce` / `avis`), ses réponses
+  aux NOMS DES CASES DE LA FENÊTRE, l'étape, l'état, l'annonce quand elle existe. Écrite par le **serveur seul**.
+  **Lue par** : son auteur, **le négociateur de l'annonce** dès qu'elle existe (e-mail du profil actif = celui de la
+  fiche), l'admin. ⚠ Le manager n'est pas nommé. ⚠ Choix fait par moi, à valider : **l'auteur garde la lecture** après
+  la création (c'est sa conversation, qu'il lit déjà). Une contrainte REFUSE les clés `email` / `telephone` dans les
+  réponses.
+- **Le schéma `assistant_prive`** et sa table `mandant_coordonnees` (civilité, nom, prénom, e-mail, téléphone,
+  adresse, CP, ville ; aucune autre case acceptée). Deux portes seulement :
+  - `app_assistant_mandant_deposer` : l'**écran de l'auteur**, sur SON parcours de création en cours ;
+  - `app_assistant_mandant_prendre` : l'écran qui ouvre la fenêtre (auteur ou admin) ; **rend ET efface** ; une
+    seconde prise ne rend rien.
+  - ⭐ **La clé de service n'a AUCUNE des deux portes** : le serveur de l'assistant (celui qui parle au modèle) ne peut
+    ni les écrire ni les lire, même par erreur. L'API ne voit pas ce schéma, donc **la descente de 07:45 ne les
+    recopie pas** sur le serveur local (ni dans la sauvegarde de 09:00).
+- **L'effacement à 30 jours** : `app_assistant_parcours_purger()` et la tâche pg_cron `assistant-parcours-purge`
+  (03:15 UTC = 04:15 à Paris).
+- **Rien ne l'appelle encore** : le moteur (P1), les boutons (P2) et D7 viendront à part. La table naît vide.
+
+### 91.4 Les preuves (sans rien garder)
+
+- **La répétition** jouée en base par `jouer_sql.py` (transaction annulée) : **TOUT EST VERT, 31 contrôles**, patch
+  puis inverse. Elle se met à la place de chaque personne (auteur, autre, négociateur réel, admin réel, anonyme, clé de
+  service) seulement autour de l'appel testé. Elle prouve notamment :
+  - avant l'annonce, le négociateur ne lit pas ; après, il lit (**témoin positif**) ; un autre ne lit jamais ;
+  - l'écran n'écrit pas le parcours ; ni l'écran ni la clé de service ne lisent la table privée ;
+  - la clé de service ne peut ni prendre ni déposer ;
+  - la prise efface, la seconde prise rend vide, un autre ne prend rien et n'efface rien ;
+  - un dépôt vide efface ; un parcours fini ne reçoit plus de coordonnées ;
+  - la purge efface le vieux parcours AVEC ses coordonnées, garde ceux qui ont bougé (le déclencheur remet `maj_le`) ;
+  - l'inverse retire tout et laisse les conversations, les messages et les cartes.
+- **Relu après** : aucune table, aucun schéma, aucune fonction, aucune tâche restés en base.
+- **Trois mutants, trois rouges** : la prise qui n'efface pas (rouge ⑪) ; la règle sans le négociateur (rouge ④) ; le
+  dépôt ouvert à un autre (rouge ⑦).
+- ⚠ Mon outil de répétition refusait tout `end;`, même dans un bloc : il ne regarde plus que le texte HORS des blocs
+  `$…$`. Témoin : il refuse toujours le patch (qui porte `commit;`).
+
+### 91.5 Ce que ça pourrait casser ailleurs
+
+- La descente recopiera `app_assistant_parcours` (vide au départ) ; rien d'autre ne la lit.
+- Une 15e tâche pg_cron : un DELETE d'une petite table par nuit.
+- Rien sur les tables métier, les conversations, les cartes, `app_agent_run`.
+
+### 91.6 LA POSE (19/11, son accord : « colle-le toi-même, tu as mon accord »)
+
+- Posé par moi, le fichier TEL QUEL (empreinte md5 `28d28c2e…` vérifiée = celui du commit 713712b et de la répétition),
+  ses propres `begin` / `commit` : « PATCH PASSÉ, sans erreur ». Ses vérifications internes ont tenu.
+- **Relu par une seconde voie** (le connecteur de la base) : les 2 tables, 0 ligne, 1 règle de lecture, la tâche
+  `assistant-parcours-purge 15 3 * * *` active (15 tâches pg_cron en tout) ; la clé de service n'a ni le schéma
+  privé ni la porte de prise ; l'écran a la prise mais pas la purge ; anon n'a pas le dépôt ; l'écran n'écrit pas le
+  parcours, la clé de service oui.
+- **Ce que voit la descente**, lu dans la spec de l'API comme elle la lit : 255 tables ; `app_assistant_parcours` OUI,
+  `mandant_coordonnees` NON. Témoin positif : `app_assistant_action` vue.
+- Retour arrière s'il le faut : `…_INVERSE.sql` (rien ne l'appelle encore, la table est vide).
+
+**Reste** : P1, le moteur de questions côté serveur (« vas-y »). Question ouverte : l'auteur garde-t-il la lecture après
+la création (choix posé par moi) ?
+
+## 92. SA DÉCISION « que le négo et admin » (19/11) : patch écrit, répété, COLLÉ EN PRODUCTION le 19/11
+
+**Ses mots** : « 2. Que le négo et admin » (à ma question : l'auteur garde-t-il la lecture après la création ?).
+
+- **Ce que ça change** (`supabase/patch_assistant_parcours_lecture_nego_2026-11-19.sql`, + `_INVERSE`, + `_REPETITION`) :
+  l'auteur lit son parcours SEULEMENT tant qu'aucune annonce n'y est attachée ; dès qu'elle existe, son négociateur et
+  l'admin seulement. La prise des coordonnées suit la même règle (l'admin toujours). Rien d'autre ne bouge.
+- **Garde** : le patch s'arrête si la règle ou la fonction ne sont plus celles posées le 19/11 (texte de la règle,
+  empreinte md5 `1be5c94e…` de la fonction, retours chariot retirés — leçon 30).
+- **Répétition** jouée en base puis annulée : **11 contrôles verts + le témoin inverse** (l'inverse rejoué, l'auteur
+  relit). Relu après : la base porte toujours la règle du matin (0 ligne dans la table).
+- **En pratique** : un commercial crée pour lui-même (la fenêtre le force sur lui, D2) ; il reste le négociateur, donc
+  il garde la lecture. Seul l'auteur qui crée POUR un autre la perd après la création.
+
+**Collé le 19/11** par moi, avec son accord (« Oui vas y »), par le même script que P3 (empreinte du fichier vérifiée
+avant : md5 `a714cb9a…`, celui du commit 7976217). « PATCH PASSÉ, sans erreur ». **Relu en base** : une seule règle de
+lecture, de la forme nouvelle (`user_id = auth.uid() AND app_dossier_id IS NULL` OR admin OR négociateur) ; la prise
+porte `app_dossier_id is null` ; elle reste exécutable par `authenticated` SEUL (ni anon, ni service_role) ; 0 ligne.
+
+## 93. P1 — LE MOTEUR DE QUESTIONS CÔTÉ SERVEUR (19/11) : écrit, éprouvé hors ligne, dormant, NON poussé
+
+**Ses mots** : « 1. Oui » (à « je commence P1 ? »).
+
+### 93.1 Ce qui est écrit
+
+- **Les données** `backend/app/services/parcours_creation.json` : les 19 questions du §88, dans la LANGUE DE LA FENÊTRE
+  (noms de ses cases), leur forme (cases, compteurs, cocher, grille, pièces, mandant, fichiers, texte), leurs
+  conditions (type de bien ; piscine cochée ; construction de moins de 10 ans), le profil de chaque type de bien, les
+  cases automatiques et les deux laissées à la main (dépôt de garantie, « clearing »). ⭐ Les OPTIONS des cases ne sont
+  pas recopiées : l'écran (P2) les prendra dans la fenêtre elle-même — une seule source.
+- **Le moteur** `backend/app/services/assistant_parcours.py`, SANS modèle : la question suivante, le repère « 4 sur
+  17 », et l'enregistrement d'une réponse qui ne touche QUE les cases de sa question (« je ne sais pas » et « je
+  complète plus tard » font avancer ; vider une case la retire ; la composition et les photos ont leur forme). ⛔ Une
+  coordonnée de mandant (e-mail, téléphone…) est REFUSÉE : elle passe par les cases protégées (P3).
+- **La table** (`ParcoursStore`) : créer et écrire par la clé de service ; relire pour l'écran avec le JETON de la
+  personne (la règle de lecture de la base décide) ; écrire est CONDITIONNEL (même `maj_le`, à lui, en cours, avant la
+  création) : deux onglets, un seul passe.
+- **Trois routes** dans `routers/assistant.py` : `POST /assistant/parcours` (commencer, dans SA conversation),
+  `GET /assistant/parcours/{id}` (relire), `POST /assistant/parcours/{id}/reponse` (répondre). Derrière l'interrupteur
+  **`assistant_parcours`** (off / admin / on), **ABSENT en base = éteint** : rien ne change tant qu'on ne l'allume pas.
+  Même l'admin ne répond pas dans le parcours d'un autre.
+
+### 93.2 Les preuves (hors ligne)
+
+- **La couverture, versée au dépôt** : `apps/hektor-v1/test_etape4_parcours_couverture.cjs` exécute le CODE RÉEL
+  d'App.tsx (groupes, cases par profil, cases du haut, profil de chaque type, type par défaut, clés d'une pièce) et le
+  croise avec les données du serveur : **TOUT EST VERT** — maison 136, appartement 132, terrain 59, garage 43,
+  immeuble 71, autre 51 cases montrées, **0 oubliée** ; aucune question vide ; les 29 types au bon profil ; aucune
+  case posée deux fois ; aucune coordonnée parmi les réponses ; témoin inverse (une case retirée → 1 oubli).
+  ⭐⭐ **Il a corrigé le §88** : mon programme de travail sous-comptait le terrain (45 au lieu de 59) et l'immeuble (35 au
+  lieu de 71) ; et **la copropriété d'un IMMEUBLE était un vrai oubli** (la fenêtre la montre). Corrigé dans les données.
+  Plusieurs questions ont aussi leurs vrais types (piscine : maison seule ; intervenants et construction récente :
+  maison et appartement ; pas de diagnostics pour un garage…).
+- **L'essai du serveur** `backend/tests/test_assistant_parcours.py` : **58 contrôles verts** (conditions par type,
+  refus, parcours complet qui finit pour les 6 types — maison 15 questions, appartement 17, terrain 12, garage 11,
+  immeuble 15, autre 12 —, table conditionnelle, routes : interrupteur, conversation d'un autre, parcours d'un autre,
+  question non posée, e-mail refusé, écriture concurrente, fiche créée ; aucune requête vers OpenAI).
+  **Trois mutants, trois rouges** (case d'une autre question acceptée ; coordonnée acceptée ; piscine toujours posée).
+- **Rien de cassé ailleurs** : les essais de l'assistant rejoués — gestes 415, fichiers 28, lecteur 73, socle 30
+  (sa partie 5 SAUTÉE comme avant : le SDK de l'agent n'est installé dans aucun Python de cette machine).
+
+### 93.3 Ce que ça pourrait casser ailleurs
+
+- Le routeur de l'assistant gagne 3 routes ; les routes existantes ne sont pas touchées (essais rejoués).
+- Render redéploie le serveur au push : les routes y dorment tant que `assistant_parcours` est absent.
+- ⚠ Non éprouvé : contre la VRAIE table (seulement contre une fausse table qui imite les conditions de PostgREST).
+  L'épreuve réelle viendra avec P2 (l'écran), interrupteur sur « admin ».
+
+**Poussé le 19/11** avec son accord, après fusion de main (11 commits de l'autre session : classeur, GED lot G'),
+front construit, essais rejoués verts (couverture, lot 0, serveur 58, gestes 415, lecteur 73, fichiers 28, socle 30).
+⚠ Un rouge À L'AUTRE SESSION, pas à moi : `test_ged_remplir_contact.cjs` 79 verts / 1 rouge (« une case changée depuis
+l'ouverture n'est pas écrite… ») — ma branche ne change aucun code du front par rapport à main.
+
+**Reste** : P2, les boutons sous une question dans l'écran de l'assistant.
+
+## 94. P2 — LES BOUTONS SOUS UNE QUESTION (19/11) : écrit en 4 morceaux, éprouvé hors ligne et en maquette, dormant, POUSSÉ le 19/11 avec son accord (« Ok »)
+
+**Ses mots** : « Oui p2 », puis « B, entrée admin » (avant P4, un parcours commence par une entrée d'essai réservée à
+l'admin). Puis, en voyant l'entrée sous une conversation d'exemple « baisse de prix » : « Stop … pourquoi tu lances un
+formulaire d'ajout d'annonce sur cette question à l'IA ? ». Explication donnée : ce n'est pas l'IA, c'est mon clic d'essai
+en maquette ; à la fin (P4) c'est l'IA qui proposera le parcours selon la demande, sans aucun bouton. Sa réponse :
+« ah j'ai compris, reprends comme prévu » → l'entrée d'essai est GARDÉE telle quelle (admin, marquée « Essai admin, sans
+l'IA »), elle disparaît à P4.
+
+### 94.1 Les 4 morceaux (commits 0452d9a, 7ba4009, 663be48, 21b36b0, 80a7483)
+
+1. **Serveur** (0452d9a) : `GET /assistant/parcours?conversationId=` (une conversation rouverte retrouve ses parcours, relus
+   avec SON jeton) et `POST /assistant/parcours/{id}/cree` (la fiche créée termine le parcours, une seule fois, écriture
+   conditionnelle). La vue rend aussi la forme et les cases de CHAQUE question posée (pour « Modifier »). Essai serveur :
+   **67 verts** (9 nouveaux).
+2. **La question à l'écran** (7ba4009) : `ParcoursGuide.tsx`, la carte de la maquette v27 (en-tête rose, fil des rubriques,
+   compteurs « − n + », pastilles, champs, pièces une à une ; « Je ne sais pas », « Plus tard », « Valider » ; les réponses
+   en pastilles vertes « Modifier »). Les cases et listes viennent de `catalogueParcoursFenetre` (App.tsx) : celles que la
+   FENÊTRE montre pour ce type de bien, avec SES libellés et SES listes. La rue / le code postal / la ville du haut sont
+   proposés en recopie dans l'adresse privée (§89 D6). Tout dort derrière `assistant_parcours` (sonde : 403 = rien).
+3. **Le mandant (D7)** (663be48) : un contact existant (recherche dans tout le réseau, décision « R » ; son NUMÉRO seul part
+   dans les réponses) ou un nouveau mandant : civilité, nom, prénom, e-mail, téléphone, adresse, CP, ville dans un état À
+   PART, déposé par l'écran au coffre privé (`app_assistant_mandant_deposer`, jeton de la personne) ; JAMAIS au serveur de
+   l'assistant. Bandeau au cadenas de la planche 11.
+4. **La fin** (21b36b0) : « Ouvrir la fenêtre remplie » → `assistantOuvrirParcours` : la fenêtre remise à zéro comme au
+   bouton, chaque réponse dans SA case (aucune traduction), la composition pièce par pièce, le mandant existant retrouvé
+   par son numéro, les coordonnées d'un nouveau mandant PRISES au coffre (prendre = effacer) ; une estimation sans date
+   porte la date du jour (comme le scan, D5). Le bandeau dit « d'après tes réponses au parcours ». Après « Créer », le
+   parcours est noté terminé (avec le bien) et l'écran le montre « créée ».
+
+### 94.2 Les preuves
+
+- **Essai du catalogue contre le vrai App.tsx** (`apps/hektor-v1/test_etape4_parcours_catalogue.cjs`, 80a7483) : **21 verts**.
+  Profil par profil, le catalogue montre EXACTEMENT les cases de la fenêtre (maison 136, appartement 132, terrain 59, garage
+  43, immeuble 71, autre 51) ; chaque case montrée des 19 questions a son libellé et sa liste ; la liste est l'objet même
+  de la fenêtre ; pas de négociateur à choisir pour un commercial ; l'ouverture range chaque case hors des groupes ; la
+  réponse envoyée au serveur ne prend jamais une coordonnée. **Deux témoins** : un catalogue qui oublie une case est
+  attrapé ; un écran volontairement faux (`corps.email = coordonnees.email`) est attrapé — ⚠ ma première garde le RATAIT
+  (elle ne lisait pas `corps.xxx =`), corrigée avant le commit.
+- **En maquette** (sans base, données inventées) : le parcours complet joué à l'écran — bien, intérieur (compteurs),
+  composition, dehors coché, nouveau mandant —, puis la fenêtre ouverte et relue étape par étape : 10 cases marquées (Offre
+  5, Secteur 3, Composition 1, Mandat 1), adresse / code postal / ville, la pièce, Mme. Lefèvre et son e-mail à l'étape
+  Mandat, la date d'estimation du jour ; une SECONDE ouverture dit que les coordonnées ne sont plus gardées. L'e-mail tapé
+  n'apparaît plus nulle part dans la page après « Valider ».
+- **Trois défauts trouvés et corrigés en route** : deux clics rapides sur « + » ne comptaient qu'un (le compteur partait de
+  l'ancienne valeur) ; un nombre sans son libellé dans la pastille verte (« 1 » → « Pieces : 1 ») ; la civilité effacée par
+  une frappe juste après le clic (même cause que le compteur). Plus une fausse donnée de maquette (type 1 = Maison rangé en
+  appartement).
+- Rejoués verts : couverture (0 oubli), lot 0, essais serveur de l'assistant (parcours 67, gestes 415, socle 30).
+
+### 94.3 Ce que ça pourrait casser ailleurs
+
+- L'écran de l'assistant : les cartes d'aujourd'hui ne bougent pas ; le parcours n'apparaît que si l'interrupteur
+  `assistant_parcours` l'ouvre au compte (ABSENT en base = rien).
+- La fenêtre de création : une nouvelle voie d'entrée qui ne fait que POSER des valeurs, comme la carte d'aujourd'hui ;
+  la création elle-même n'a gagné qu'un bloc après le succès (noter le parcours terminé), qui n'échoue jamais la création.
+- La règle des cases du haut est RECOPIÉE dans le catalogue : l'essai du catalogue exige les mêmes noms que la fenêtre.
+
+### 94.4 Limites dites
+
+- Pas éprouvé contre la vraie table ni la vraie fenêtre connectée : c'est l'essai réel (interrupteur sur « admin », son
+  accord).
+- « Modifier » une autre question pendant qu'on en remplit une perd la saisie non validée de celle-ci.
+- Après un rechargement de la page, l'écran ne sait plus que des coordonnées sont déjà au coffre (il ne peut pas les
+  relire sans les effacer) : re-valider « nouveau mandant » sans rien taper est alors refusé ; il suffit de les retaper.
+- Les photos (forme « fichiers ») restent à déposer dans la fenêtre (P6).
+
+### 94.5 L'ESSAI RÉEL (19/11, 09:25-09:31 UTC) — VERT, sur la production, dans le Chrome de Frédéric, avec son accord
+
+**Ses mots** : « Oui » (allumer l'interrupteur pour l'essai réel), puis « Utilise chrome ».
+
+- **L'interrupteur** : `app_setting` `assistant_parcours` = `admin`, ajouté à 09:25:11 UTC (description écrite dans la
+  ligne). L'assistant lui-même est déjà réservé à l'admin (`assistant_ia` = admin) : aucun négociateur ne voit rien.
+  Retour arrière : retirer la ligne.
+- **Le parcours, en ligne** (main 505ffa6, Render et Vercel) : une conversation NEUVE, « Je veux créer une estimation
+  d'essai (essai du parcours guidé, ne rien créer chez Hektor) » (un appel au modèle ; il a répondu sans carte). L'entrée
+  d'essai est apparue (la sonde marche), puis « Une estimation » → parcours `f674be40-c8f7-4e5d-8b65-2514211e55ef`.
+  Données INVENTÉES : 1 rue de l'Essai, 42700 Firminy, Maison, agence FIRMINY, 95 m², 4 pièces, 3 chambres, une cuisine
+  de 11 m², jardin, terrain 600 m² ; nouveau mandant « Mme Essai-Parcours Claire », essai.parcours@exemple.invalid.
+- **Ce que la base a gardé** (relu par le connecteur) : les réponses dans la langue de la fenêtre, recopies de l'adresse
+  comprises ; le parcours est passé de 17 à 15 questions quand le type « Maison » a été choisi ; « nouveau » SEUL dans les
+  réponses ; ⭐ aucune coordonnée ni dans les réponses ni dans `app_assistant_message` ; 1 ligne au coffre privé (civilité,
+  nom, prénom, e-mail, téléphone).
+- **La fenêtre remplie** (capture : `notice/preuve_parcours_guide_fenetre_remplie_2026-11-19.jpg`) : « Pré-rempli par
+  l'assistant : 16 cases, d'après tes réponses au parcours » — Offre 6 (Maison, 95, 4, 3, terrain 600, jardin oui),
+  Secteur 8 (les adresses du haut, privée et publique), Composition 1 (la cuisine), Mandat 1 (Mme., Essai-Parcours, Claire,
+  l'e-mail, le téléphone). Fermée par « Revenir à la conversation », SANS « Créer ».
+- **Après** : le coffre est VIDE (0 ligne, prendre = effacer, prouvé) ; le parcours reste « en cours » (purgé dans 30 jours) ;
+  0 travail de création d'annonce depuis 09:20 → rien chez Hektor. Page rechargée : la conversation retrouve son parcours
+  (15 pastilles, « Tout est répondu »), l'entrée d'essai se cache tant qu'un parcours est en cours.
+- **Non éprouvé en réel** : « Créer » puis la note « créée » du parcours (route et code éprouvés hors ligne seulement) — il
+  faudrait créer une vraie fiche chez Hektor, ce qui n'était pas demandé.
+
+**Reste** : P5, P4, P6, P7, P8.
+
+## 95. P4-a — L'ASSISTANT PROPOSE LE PARCOURS, DÉJÀ REMPLI DE LA DEMANDE (19/11) : POUSSÉ (c8f0a9d) et ÉPROUVÉ EN RÉEL, vert
+
+**Ses mots** : (avant P5) « est-ce que le formulaire conserve toujours en source la conversation / agenda / scan … et
+ainsi ne pas poser la question déjà donnée ? » → confirmé (§78 règle 1, §80.4, §83), mais NON codé : P2 posait tout.
+« Oui, P4 d'abord », puis « Vas-y, A » (la traduction « cases du scan » → « cases de la fenêtre » côté SERVEUR).
+Ordre convenu : P4-a (la demande, l'agenda, le contact) → P4-b (la fiche par photo) → P4-c (les services publics,
+proposés à confirmer) → P4-d (les phrases libres, le petit lecteur).
+
+### 95.1 Ce qui est écrit (commits 89e775b, 67309d2, 9894b34)
+
+- **La traduction, côté serveur, produite par la fenêtre** : `apps/hektor-v1/parcours_traduction.cjs` exécute App.tsx
+  et écrit `backend/app/services/parcours_traduction.json` (les tables du remplisseur du scan — 25 miroirs, 15 directes,
+  79 cases —, les listes qu'il résout, les 29 types de bien et leurs synonymes, et ~1 900 EXEMPLES de ce que rendent les
+  fonctions de la fenêtre). `parcours_traduction.py` refait les 5 petites fonctions (normaliser, oui / non, liste, type de
+  bien, type de pièce) et `traduire()`, qui suit `applyDraftAnnonceScan` case par case, plus les recopies d'adresse (D6).
+  `node parcours_traduction.cjs --verifier` dit si le fichier n'est plus à jour avec App.tsx.
+- **Le moteur** (`assistant_parcours.py`) : `appliquer_depart()` pré-remplit sans JAMAIS remplacer une réponse, garde la
+  source (`_sources` = « demande »), ignore une coordonnée, une case d'aucune question ; une question dont les
+  `essentiels` (nouveaux, dans `parcours_creation.json` : le bien = type + adresse + CP + ville ; l'intérieur = surface +
+  pièces ; la composition ; le terrain ; le mandant EXISTANT ; le titre + le texte) sont tous dits devient « connue » :
+  pas reposée, affichée verte, modifiable. Un mandant « nouveau » reste posé (ses coordonnées : cases protégées).
+- **Le geste** `proposer_parcours_creation` (carte « Créer par questions guidées ») : mêmes clés que la carte « créer »,
+  SANS la garde des essentiels (le parcours pose ce qui manque) ; au clic, seule la mémoire du parcours est écrite, dans
+  SA conversation. ⛔ L'outil n'est MONTRÉ à l'IA que si `assistant_parcours` l'ouvre au compte ; la consigne gagne une
+  ligne `{{parcours}}` (vide sinon) ; le geste relit l'interrupteur lui-même (patron Youtrust). La carte « créer »
+  d'aujourd'hui reste (fiche papier jointe : le scan de la fenêtre la lit).
+- **L'écran** : la carte « Commencer les questions » ; au clic, le parcours s'ouvre sous la conversation, déjà rempli ;
+  les questions connues en pastilles vertes marquées « dit ». **L'entrée d'essai admin est RETIRÉE.**
+
+### 95.2 Les preuves (hors ligne)
+
+- Traduction : **33 verts** — sur ~1 900 exemples produits par App.tsx, le serveur rend EXACTEMENT les réponses de la
+  fenêtre ; une lecture complète traduite case par case ; 3 cases que le scan remplit mais que la fenêtre ne montre
+  JAMAIS (taxe d'habitation, fibre « cable », gardien — absentes des listes par profil ; la fenêtre les retire aussi à
+  la création) : le parcours ne les garde pas.
+- Parcours : **84 verts** (17 nouveaux : départ rempli, connues sautées, jamais d'écrasement, sources, mandant nouveau
+  toujours posé, interrupteur fermé / « admin » / commercial refusé, carte, création dans SA conversation).
+- Inventaires mis à jour (pas des défauts) : la liste des outils d'un négociateur (+1, et un outil fermé n'est pas
+  montré), 44 gestes au lieu de 43, la consigne rendue sans gabarit (et la ligne du parcours seulement si ouvert).
+- Rejoués verts : socle 31, gestes 415, lecteur 74, fichiers 28 ; couverture, catalogue, lot 0 ; build.
+- **Maquette** : « Crée une estimation par questions, maison 12 rue des Tilleuls… » → la carte « Créer par questions
+  guidées » (« Déjà dit, pas reposé : le bien, l'intérieur »), « Commencer les questions » → les pastilles « dit » et la
+  première question posée = la composition.
+
+### 95.3 Ce que ça pourrait casser ailleurs
+
+- La consigne de l'IA (partagée) : une ligne, SEULEMENT pour les comptes ouverts ; ailleurs rien ne change (l'outil n'est
+  pas même montré). ⚠ À éprouver en réel : que l'IA propose le parcours sur une création, et JAMAIS sur une baisse de
+  prix ou une question simple.
+- `_controler_creation` gagne un paramètre `exiger` (vrai par défaut : la carte « créer » est inchangée).
+
+### 95.4 L'ESSAI RÉEL (19/11, 11:04-11:06, heure de Paris) — VERT, dans le Chrome de Frédéric, avec son accord (« Oui, les deux »)
+
+Poussé c8f0a9d (après fusion de 3 commits GED de l'autre session — dont la correction du rouge que je lui avais signalé :
+une fausse alerte CRLF de son essai) ; Render et Vercel vérifiés sur c8f0a9d avant l'essai. Trois conversations NEUVES :
+- **Création** (« Nouvelle estimation d'essai… maison au 3 rue de l'Essai, 42700 Firminy, 110 m², 5 pièces, 3 chambres,
+  terrain 500 m², le vendeur est un nouveau contact ») : l'IA a proposé la carte « Créer par questions guidées » (« Déjà
+  dit, pas reposé : le bien, l'intérieur ») SANS poser elle-même une question. « Commencer les questions » → le parcours
+  `7f069b90…` s'ouvre avec « Le bien » et « L'intérieur » en pastilles « dit », première question « Le quartier »
+  (2 sur 15). En base : 15 cases venues de la demande (adresses et recopies, Maison, 110, 5 pièces, 3 chambres, terrain
+  500, mandant « nouveau »), aucune coordonnée. Capture : `notice/preuve_parcours_rempli_de_la_demande_2026-11-19.jpg`.
+- **Baisse de prix** (annonce d'essai 62774) : AUCUN parcours ; l'IA a lu que le bien est clos et n'a préparé aucune carte.
+- **Question simple** (« Combien d'annonces actives à Firminy ? ») : 16, réponse directe, aucune carte, aucun parcours.
+- **Coût** : 0,0226 $ + 0,0246 $ + 0,0220 $ = 0,069 $ (≈ 41 000 jetons lus par tour : les outils et la consigne ; plus
+  que les 0,015 $ du 18/11).
+- Le parcours d'essai reste « en cours » en base (purge à 30 jours). Rien chez Hektor.
+- ⚠ Détail vu : la pastille « Le bien » résume « Maison · Vente classique +8 » (l'ordre des cases met la famille avant
+  l'adresse) ; à mieux résumer (le type et la rue) — cosmétique.
+
+**Reste** : P4-b (par photo), P4-c (services publics), P4-d (phrases libres).
+
+## 96. La pastille corrigée, puis P4-b — LA FICHE PAPIER LUE DANS LE PARCOURS (19-20/11) : POUSSÉ (f1ff8a7) et ÉPROUVÉ EN RÉEL, vert
+
+**Ses mots** : « ok corrige le petit détail : la pastille, et ensuite enchaîne dans le chantier ».
+
+### 96.1 La pastille (commit 8d9e07c)
+
+Une réponse montre ses ESSENTIELS d'abord (le bien : le type, puis la rue) et une valeur recopiée ne compte qu'une
+fois : « Maison · 3 rue de l'Essai +3 » au lieu de « Maison · Vente classique +8 » (vu à l'essai réel du §95.4). Le
+serveur donne maintenant les `essentiels` de chaque question à l'écran.
+
+### 96.2 P4-b (commits 0b94f44 serveur, 986f511 écran) — planche 2 de la maquette
+
+- **Le même scan que la fenêtre, côté serveur** (`openai_listing_sheet_service`, une page par appel, en parallèle) :
+  la fiche jointe À LA DEMANDE (l'IA passe ses photos dans la carte du parcours ; lue AU CLIC, jamais avant) ou
+  PENDANT le parcours (« Lire la fiche papier » : le trombone, puis `POST /assistant/parcours/{id}/fiche`).
+- **Comme l'écran** : plusieurs pages = la meilleure confiance case par case ; à moins de 75 % = « à vérifier » (la case
+  le dit, et sa question est REPOSÉE même si l'essentiel est connu) ; la note brute de la fiche à défaut de note.
+- **La dictée prime** : la fiche ne remplace aucune réponse donnée (prouvé : « maison, 118 m² » dits gardés contre
+  « appartement, 64 m² » lus).
+- ⛔ **Les coordonnées du mandant lues sur la fiche** partent AU COFFRE PRIVÉ avec le jeton de la personne
+  (`app_assistant_mandant_deposer`) : ni les réponses, ni la vue, ni l'IA ne les voient ; le mandant devient
+  « nouveau » et la question du mandant sait que le coffre est rempli.
+- **Les pages de l'avis de valeur** (fourchette, état, points, argumentaire, charges, postes) sont gardées à part ; à
+  l'ouverture, la fenêtre les passe à SON remplisseur du scan (le brouillon que l'éditeur relit après la création), puis
+  le parcours pose ses cases, qui priment.
+- **Le coût d'un scan est enfin mesuré** : le service rend ses jetons (`usage`, une clé de plus que l'écran ignore) ;
+  le parcours garde pages, pages lues et coût (`_fiche.mesure`).
+- La consigne (comptes ouverts seulement) : fiche jointe -> le même geste avec ses photos ; sans fiche, une phrase
+  pour conseiller de la photographier (planche 1).
+
+### 96.3 Les preuves (hors ligne)
+
+- Traduction **39 verts** (6 nouveaux : fusion de deux pages, doutes et leurs recopies, coordonnées À PART, pages de
+  l'avis, fiche vide). Parcours **94 verts** (10 nouveaux : rien lu avant le clic, 2 pages lues, la dictée prime, doute =
+  question reposée, coordonnées au coffre avec SON jeton et nulle part ailleurs, la route pendant le parcours, le
+  parcours d'un autre refusé, fiche illisible refusée sans écriture). Rejoués verts : socle 31, gestes 415, lecteur 74,
+  fichiers 28, couverture, catalogue, lot 0, build.
+- **Maquette** : la bande « Tu as la fiche papier ? … » → « Je lis la fiche… » → « Fiche lue : … le mandant gardé à
+  part » ; la case « Pieces · à vérifier » dans la question reposée.
+
+### 96.4 Limites dites
+
+- Pas éprouvé en réel : il faut une PHOTO de fiche papier (une fiche d'essai remplie à la main) ; le coût réel d'un scan
+  sera lu dans `_fiche.mesure`.
+- La lecture prend ~30 s par lot de pages (le scan de la fenêtre aussi) ; une page illisible ne coule pas les autres.
+
+### 96.5 L'ESSAI RÉEL (20/11, 08:48-08:51, heure de Paris) — VERT, dans son Chrome, avec son accord
+
+**Ses mots** : « Pousse et essaie n'importe, utilise une photo du test ». Poussé f1ff8a7 après fusion de 4 commits de
+l'autre session (GED P6, le double-clic de « Nouveau contact » ; App.tsx touché des deux côtés, fusion automatique sans
+conflit ; tous les essais verts dont `test_contact_double_clic` et la table de traduction toujours à jour). Render et
+Vercel vérifiés sur f1ff8a7.
+- **La fiche** : la fiche d'essai générée « FICHE_A_SCANNER_V2 » (Téléchargements ; données inventées : Mme Sophie
+  Marchand, une longère au Puy-en-Velay), pages 1 et 2, jointes par le trombone.
+- **La demande** (« Nouvelle estimation d'essai à partir de la fiche papier jointe (2 pages)… ») : l'IA a mis les deux
+  photos dans la carte du parcours (« La fiche papier (2 photos) sera lue au clic ») ; rien lu avant le clic.
+- **Au clic** : lue en **32 s**, **62 cases** remplies par la fiche ; « Le bien » (Maison · 12 chemin des Vignes —
+  « Longère » reconnue par les synonymes de la fenêtre), « L'intérieur » (165 m², 7 pièces), « La composition »
+  (7 pièces) en pastilles « lu » ; première question posée : le quartier (2 sur 16).
+- **En base** : terrain 1 500, piscine oui, mandant « nouveau » ; ⭐ les 7 coordonnées lues (civilité, nom, prénom,
+  téléphone, adresse, CP, ville) AU COFFRE seulement — 0 dans les réponses, 0 dans les messages de l'assistant ; aucune
+  case à moins de 75 %.
+- ⭐ **Le coût d'un scan, mesuré pour la première fois** : **0,0118 $ pour 2 pages** (gpt-4.1-mini), ≈ 0,006 $ la page.
+- **La fenêtre remplie** : « Pré-rempli par l'assistant : 51 cases » (Offre 12, Secteur 9, Composition 1, Détails 26,
+  Mandat 2, Diffusion 1) ; à l'étape Mandat, « Ajouter un nouveau mandant » avec Mme., Marchand, Sophie, 0622334455 —
+  venus du coffre. Capture : `notice/preuve_parcours_fiche_lue_2026-11-20.jpg`. Fermée SANS « Créer ».
+- **Après** : le coffre est VIDE ; 0 travail d'annonce ; le parcours d'essai `9ba5f308…` reste « en cours » (purge 30 j).
+- Non éprouvé en réel : les pages 3-4 de la fiche (l'avis) — seule l'exposition a été gardée à part, faute de ces pages.
+
+**Reste** : P4-c (services publics, proposés à confirmer), P4-d (phrases libres).
+
+## 97. P4-b bis — LES PHOTOS DU BIEN ET LA FICHE DE VISITE NE SE CONFONDENT PLUS (20/11) : POUSSÉ (7353637) et ÉPROUVÉ EN RÉEL, vert
+
+**Ses mots** : « l'assistant doit bien comprendre la différence entre les deux !!! Et cela doit être clair pour
+l'utilisateur + garde-fou possible. Ce sont vraiment deux choses différentes : une, simplement un ajout de photo avec
+visible ou non visible, couverture, uniquement des photos ; l'autre, un document type pour envoyer à un agent qui ajoute
+une annonce. » Puis « Vas-y, P4-b bis ».
+
+**Le vocabulaire, fixé** :
+- **LES PHOTOS DU BIEN** = la galerie de l'annonce (salon, façade…) : ajoutées, visibles ou masquées, la couverture.
+  JAMAIS lues par le scan. Aujourd'hui : la carte « Ajouter des photos » (annonce existante) ; à la création, l'étape
+  Photos de la fenêtre ; dans le parcours : **P6** (à faire).
+- **LA FICHE DE VISITE** = le patron rempli à la main : un DOCUMENT lu par l'agent de scan pour remplir une création.
+  JAMAIS dans la galerie. Aujourd'hui : « Par photo, avec l'IA » dans la fenêtre, la carte « créer », **P4-b** dans le
+  parcours.
+
+**Ce qui est écrit (commit fc6af12)** :
+- **La consigne** (tous les comptes) : « DEUX CHOSES À NE JAMAIS CONFONDRE » ; l'IA ne voit que le NOM des fichiers :
+  si la personne ne l'a pas dit clairement, elle DEMANDE « Ce sont des photos du bien, ou la fiche de visite
+  remplie ? » et ne devine jamais ; des photos du bien jointes à une création vont à l'étape Photos de la fenêtre.
+- **Les outils**, des noms qui ne se confondent pas : `photos_du_bien` (carte « Ajouter des photos »),
+  `fiche_de_visite` (carte « créer » et parcours) ; leurs descriptions le répètent. Les cartes enregistrées gardent
+  « fichiers » en interne : rien de cassé.
+- **Le garde-fou** : si le scan lit moins de 5 cases sur toutes les pages, ce n'est PAS une fiche de visite : RIEN n'est
+  gardé, et la phrase dit « les PHOTOS DU BIEN s'ajoutent à l'étape Photos de la fenêtre (ou par la carte « Ajouter des
+  photos ») ». Le coût d'une erreur reste ≈ 0,006 $ la page ; rien de faux n'entre.
+- **L'écran** : « Lire la fiche de visite » ; « la fiche de visite remplie (le patron, pas les photos du bien) » ;
+  la question « Les photos » : « les photos du bien (la galerie de l'annonce) — pas la fiche de visite » ; la carte
+  « créer » dit « Fiche de visite : N pages ».
+
+**Preuves (hors ligne)** : parcours **96 verts** (+2 : une photo du bien passée pour la fiche -> refusée, RIEN gardé,
+la phrase ; l'IA passe la fiche par `fiche_de_visite`) ; lecteur **76** (+2 : la consigne sépare et fait demander ; les
+paramètres des 3 outils) ; gestes 415 (la phrase des pages), socle 31, traduction 39, couverture, catalogue, lot 0, build.
+
+**Non éprouvé en réel** : l'IA qui DEMANDE devant des photos ambiguës, et qui envoie une photo du bien vers l'étape
+Photos et non vers le scan — à éprouver après le push (une photo de bien, une fiche, une demande ambiguë).
+
+### 97.1 L'ESSAI RÉEL (20/11, 10:03-10:06, heure de Paris) — VERT sur les trois cas et le garde-fou
+
+**Ses mots** : « Oui, pousse et essaie ». Poussé 7353637 (après fusion de 3 commits GED, sans fichier commun ; tous les
+essais verts) ; Render et Vercel vérifiés. Dans son Chrome, trois conversations NEUVES, rien chez Hektor :
+- **Cas 1 — la fiche de visite** (page 1 de la fiche d'essai FICHE_A_SCANNER_V2, « je joins la fiche de visite
+  remplie ») : la carte du parcours la porte (« La fiche de visite (1 page) sera lue au clic ») ; carte non validée (le
+  scan est déjà prouvé au §96.5).
+- **Cas 2 — une photo du bien** (le salon de l'annonce 24113, export console ; « je joins une photo du salon pour
+  l'annonce ») : la carte du parcours SANS la photo (« Déjà dit : le bien, l'intérieur ») ; l'IA : « La photo du salon
+  pourra être ajoutée à l'étape Photos ; elle ne sera pas scannée comme une fiche de visite. »
+- ⭐ **Le garde-fou, en réel** : dans ce parcours, la photo du salon passée VOLONTAIREMENT par « Lire la fiche de
+  visite » → « Ce n'est pas une fiche de visite (3 cases lues) : rien n'est gardé. Les PHOTOS DU BIEN s'ajoutent à
+  l'étape Photos… » ; en base : 0 case du scan, aucune fiche gardée, « 5 rue du Test » et 100 m² intacts. ⚠ Le scan a
+  INVENTÉ 3 cases sur une photo de salon : le garde-fou n'était pas de trop.
+- **Cas 3 — une demande ambiguë** (la même photo, « Nouvelle estimation d'essai, voici les photos. ») : AUCUNE carte ;
+  l'IA DEMANDE « Ce sont des photos du bien, ou la fiche de visite remplie photographiée ? ».
+- **Coût** : 3 tours = 0,0228 + 0,0235 + 0,0210 $ = 0,067 $ ; + un scan refusé (≈ 0,006 $).
+- Parcours d'essai `7c201a11…` laissé « en cours » (purge 30 j). Le parcours du cas 2 ne garde rien du salon.
+
+**Reste** : P4-c (services publics), P4-d (phrases libres) ; P6 (photos du bien).
+
+## 98. P4-c — LES SERVICES PUBLICS, PROPOSÉS À CONFIRMER (20/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P4-c » (dans la suite de « Vas-y, A » : P4 dans l'ordre a, b, c, d).
+
+**Ce que ça fait.** Dès que l'adresse du bien est dite (la rue ET le code postal ou la ville), l'écran demande EN
+ARRIÈRE-PLAN au serveur (`POST /assistant/parcours/{id}/publics`) ce que disent les services publics :
+- le **DPE réel** de l'ADEME → `dpe_cons`, `dpe_ges`, `dpe_date` (JJ/MM/AAAA, la forme de la fenêtre ; le worker accepte
+  aussi AAAA-MM-JJ, `normalizeOptionalFrenchDate`) — question « L'énergie », maquette E05 « C'est lui ? Oui / Un autre » ;
+- sa **surface** → `surfappart`, seulement quand le DPE est À L'ADRESSE et SEUL (sinon c'est peut-être un autre
+  logement) — « L'intérieur », maquette E03 « Oui, 118 m² / Autre » ;
+- l'**année de construction** (BDNB) → `ANNEE_CONS` — « L'énergie » ;
+- la **parcelle** (cadastre) → `surfterrain`, pour une MAISON ou un TERRAIN seulement (pour un appartement, la parcelle
+  est celle de tout l'immeuble) et seulement si le numéro de rue est trouvé — « Le dehors », maquette E04 ;
+- la **copropriété** (registre national RNIC) → `copropriete` OUI, `copropriete_nb_lot`, `copropriete_statut_syndicat`
+  (PROCEDURE_EN_COURS / PAS_DE_PROCEDURE) — appartement ou immeuble, maquette N07 « C'est elle ? Oui / Une autre ».
+
+Ce sont **les routes de l'éditeur d'avis** (`routers/geo.py` : `dpe`, `bdnb`, `cadastre`, `copro_rnie`), appelées telles
+quelles avec le jeton de la personne ; le géocodage est celui de l'écran (Géoplateforme, score ≥ 0,35). On n'envoie que
+l'adresse du bien.
+
+⛔ **Rien n'est posé en silence.** Le serveur garde des PROPOSITIONS dans `reponses._publics` (clé = adresse + type +
+surface ; une surface dite ensuite relit, pour départager les DPE d'un immeuble). La vue ne montre une proposition que si
+sa question est posée pour ce bien ET qu'aucune de ses cases n'a de réponse (ni dite, ni lue sur la fiche de visite).
+« Oui » remplit les cases DANS LA CARTE (« Repris de : ADEME, DPE. Vérifie, puis Valider ») ; « Autre » la range ; la
+personne valide toujours elle-même. Chaque proposition porte sa **prudence** quand il le faut (DPE de proximité, plusieurs
+DPE à l'adresse, copropriété trouvée sur une parcelle voisine, parcelle unique sous l'adresse).
+⛔ « Pas de DPE » (maquette E05) n'est PAS proposé : son sens n'est pas tranché (non concerné ? vierge ? pas fait ?).
+⛔ Un service en panne ne propose rien (noté dans `_publics.erreurs`) ; une adresse introuvable ne fait rien deviner.
+
+**Ce que ça pourrait casser ailleurs, et ce qui est fait contre.**
+- *Une réponse qui croise la lecture publique* (écriture conditionnelle sur `maj_le`) : la route de réponse et la lecture
+  de la fiche de visite **rejouent** leur écriture sur la ligne fraîche **si et seulement si** seul `_publics` a bougé
+  (`seul_publics_a_bouge`) ; un autre changement (un second onglet) reste refusé en 409, comme avant.
+- *La saisie en cours dans la carte* : la carte se remettait à zéro à chaque nouvelle `maj_le` ; la clé suit désormais les
+  réponses GARDÉES de la question (une lecture publique qui revient ne vide pas ce que la personne tape).
+- *Une vue plus ancienne qui arrive après une plus récente* : l'écran garde la plus récente (`maj_le`).
+- Les routes de l'éditeur d'avis ne sont pas modifiées ; la fenêtre de création non plus.
+
+**Preuves (hors ligne)** : parcours **130 verts** (+34 : la clé, la date, les 5 propositions et leurs prudences, maison /
+appartement, « Pas de DPE » absent, la vue qui cache ce qui est déjà dit, AUCUNE case posée par la route, pas de relecture
+en double, le jeton de la personne, la panne d'un service, l'adresse introuvable, la réponse rejouée et le second onglet
+refusé, la fiche croisée, l'interrupteur, chaque case dans SA question) ; gestes 415, lecteur 76, socle 31, traduction 39,
+fichiers 28, catalogue et couverture verts, build.
+**Maquette** : `notice/preuve_parcours_services_publics_propositions_2026-11-20.jpg` (l'énergie : DPE « C'est lui ? » et
+année « C'est bien ça ? ») et `notice/preuve_parcours_services_publics_2026-11-20.jpg` (après « Oui » sur le DPE et
+« Autre » sur l'année : date, conso, GES remplis, année vide) ; le dehors : « 1 245 m² au cadastre », « Oui » remplit 1245.
+
+**Non éprouvé en réel** : les vrais services sur une vraie adresse, la durée de la lecture, le croisement réponse /
+lecture. À éprouver après le push, sur une conversation neutre, sans cliquer « Créer ».
+
+**Reste** : P4-d (phrases libres) ; P6 (photos du bien).
+
+### 98.1 POUSSÉ (f515ba9) ET ÉPROUVÉ EN RÉEL (20/11, 10:36-10:40, heure de Paris) — VERT ; une trouvaille hors du parcours
+
+**Ses mots** : « Pousse et essaie ». Poussé f515ba9 (avec la note §97.1) ; Render et Vercel vérifiés. Dans son Chrome, une
+conversation NEUVE : « Nouvelle estimation d'essai par questions : un appartement au 13 rue Vimore 42700 Firminy » (une
+adresse réelle, prise dans les DPE publiés par l'ADEME : il en faut une vraie pour que les services répondent). Rien
+chez Hektor, rien validé dans la carte de l'énergie, jamais « Créer ». Parcours `35dd08ad…` laissé « en cours » (purge 30 j).
+- La lecture publique est partie seule à l'ouverture du parcours (~14 s, en arrière-plan) : géocodage au numéro (score
+  0,96), 0 erreur de service ; propositions gardées : DPE (D · GES D du 06/11/2026, 223 kWh/m², 46 kg) et année (1948) ;
+  ni parcelle (un appartement), ni copropriété (le registre n'a rien trouvé), ni surface (DPE pas à l'adresse) — comme voulu.
+- La surface dite (87 m²) a RELANCÉ la lecture (clé `…|2|87`) ; les deux réponses données PENDANT cette lecture
+  (composition, dehors) sont passées sans 409.
+- À l'écran, dans « L'énergie » : les deux bandeaux, la prudence ; « Oui » sur l'année remplit 1948 dans la carte
+  (« Repris de : base nationale des bâtiments. Vérifie, puis Valider »). En base : AUCUNE case posée (ni ANNEE_CONS, ni
+  dpe_cons). Preuve : `notice/preuve_parcours_services_publics_reel_2026-11-20.jpg`. Coût : un tour d'IA (≈ 0,02 $).
+
+⭐⭐ **LA TROUVAILLE — la route du DPE de l'éditeur d'avis ne trouve plus le DPE À L'ADRESSE.** Le DPE proposé était
+« le plus proche » alors que l'ADEME publie DIX DPE au 13 rue Vimore. Cause, rejouée pas à pas : le RNB rend désormais
+pour chaque adresse `id` = « 42095_2120_00013 » (la forme de l'ADEME) ET `ban_id` = un identifiant d'une autre forme
+(« 0e9ec990-… ») ; `geo.dpe` (l. 396) prend `ban_id` d'abord → l'ADEME rend 0 ligne → repli « proximité » TOUJOURS.
+Mesure dans les avis gardés (`app_dossier_estimation.sources.dpe`) : juillet-août « adresse » 8 fois ; novembre : le seul
+DPE gardé est « proximité ». Le RNB a changé entre-temps ; le défaut touche l'éditeur d'avis ET le parcours.
+Correctif proposé (une ligne, seul lecteur de ce champ dans le serveur) : essayer `id` puis `ban_id`. ⛔ Route partagée :
+NON corrigé, attend son accord.
+
+### 98.2 LA ROUTE DU DPE RETROUVE L'ADRESSE (20/11) : audité, mesuré, corrigé, éprouvé hors ligne et sur vraies API — NON poussé
+
+**Ses mots** : « oui mais il faut être sûr donc audit et analyse puis test ».
+
+**L'audit (lecture seule, vraies API publiques).**
+- Côté ADEME, 1 000 DPE récents et anciens (5 tris / départements) : `identifiant_ban` = la clé BAN « 42095_2120_00013 »
+  804 fois, un identifiant de RUE sans numéro 192 fois, vide 4 fois — JAMAIS la forme `ban_id` du RNB.
+- Côté RNB, 60 adresses réelles (15 villes, 4 DPE récents chacune) : `id` a la forme de l'ADEME 58 fois sur 60 ; `ban_id`
+  a une autre forme 54 fois (vide 6). Règle actuelle (`ban_id` d'abord) : DPE trouvé à l'adresse **4 fois sur 60** ;
+  `id` d'abord : 49 (39 au bon numéro, 10 sur un autre numéro du même immeuble — la 1re adresse RNB n'est pas toujours
+  celle demandée).
+- La ligne fautive vient du commit 4b203fb (01/07) : elle marchait en juillet-août (8 avis « adresse »), quand le RNB
+  donnait la même forme aux deux champs ; en novembre, le seul avis gardé est « proximité ».
+- Les lecteurs : la route `/geo/dpe` a DEUX appelants — l'éditeur d'avis (« Tout générer », « Régénérer le DPE »,
+  ouverture par l'assistant ; ce qu'il garde va dans `app_dossier_estimation.sources.dpe` et donc dans le PDF des avis
+  générés ENSUITE) et le parcours (P4-c). Ni le worker ni la synchro n'interrogent le RNB ou l'ADEME. Le seul lecteur
+  du champ dans le serveur est `geo.dpe` (la route `/geo/rnb` ne rend que l'adresse en texte).
+
+**Le correctif (`routers/geo.py`, `dpe` seule ; additif pour les appelants).**
+1. paramètre optionnel `ban` : l'identifiant EXACT de l'adresse (le parcours le prend au géocodage, `type=housenumber`) ;
+2. adresse exacte = `ban` s'il a la forme BAN, sinon la 1re adresse du bâtiment RNB (le sens de juillet, gardé pour
+   l'éditeur) → « adresse » ;
+3. les AUTRES numéros du même bâtiment (5 au plus) → « batiment » (nouvelle valeur : même immeuble, pas l'adresse) ;
+4. sinon la proximité, comme avant. Un identifiant qui n'a pas la forme BAN n'est jamais envoyé (`_CLE_BAN`) ;
+   `ban_id` ne sert qu'en repli s'il a la bonne forme (l'ancienne forme du RNB marche encore).
+Le parcours : prudence « Un DPE d'une autre entrée du même immeuble… », et pas de surface proposée dans ce cas.
+L'éditeur : « batiment » tombe dans sa phrase prudente existante (« DPE le plus proche (adresse exacte introuvable) — à
+vérifier »), sans le badge « Proximité » ; son écran n'est PAS modifié (seul le type `matched_by` de lib/api.ts apprend
+la valeur). Les avis déjà gardés ne bougent pas.
+
+**Ce que ça pourrait casser ailleurs** : l'éditeur choisira le DPE de l'adresse au lieu de celui d'un voisin (le but) ;
+jusqu'à 5 appels ADEME de plus dans le pire cas (mesuré : ~0,3 s par appel de la route, en moyenne).
+
+**Preuves.**
+- Hors ligne : `backend/tests/test_geo_dpe.py` **11 verts** (forme actuelle du RNB → « adresse », l'autre forme jamais
+  envoyée, la surface départage, l'ancienne forme marche, l'adresse exacte avant le bâtiment, un identifiant mal formé
+  jamais envoyé, « batiment », 5 numéros au plus, la proximité) + ⭐ **témoin inverse** : le code de f515ba9 rend
+  « proximité » sur la même adresse. Parcours **132 verts** (+2 : la prudence « batiment », l'adresse exacte transmise) ;
+  gestes 415, lecteur 76, socle 31, traduction 39, fichiers 28, registre d'estimation 12/12, build.
+- Sur vraies API, le NOUVEAU code, 60 adresses, 0 erreur : **éditeur** 49 « adresse », 5 « batiment », 6 « proximité »
+  (contre 4 / 0 / 56) ; **parcours** **60 sur 60 au bon numéro**. Le 13 rue Vimore : 25 DPE à l'adresse ; sans surface
+  « le plus récent, pas forcément celui de ce logement » ; à 87 m² « celui dont la surface est la plus proche » (le DPE
+  de 87 m² du 06/11/2026).
+
+**Non éprouvé en réel dans l'application** : après le push — le parcours sur une conversation neutre (sans écriture
+ailleurs que sa ligne). « Régénérer le DPE » dans l'éditeur ÉCRIT l'avis d'un bien (sources) : pas sans son accord.
+
+### 98.3 LE CORRECTIF DU DPE POUSSÉ (2ebff77) ET ÉPROUVÉ EN RÉEL (20/11, 10:58-11:00, heure de Paris) — VERT
+
+**Ses mots** : « Pousse et essaie ». Poussé 2ebff77 (avec la note §98.1) ; Render vérifié (`/health` = 2ebff774547c).
+Dans son Chrome, une conversation NEUVE, la MÊME adresse que le §98.1 pour comparer : « Nouvelle estimation d'essai par
+questions : un appartement de 87 m² au 13 rue Vimore 42700 Firminy ». Parcours `ea762ec3…` laissé « en cours » (purge
+30 j) ; rien chez Hektor, rien validé dans l'énergie, jamais « Créer ».
+- Avant (§98.1, 10:36) : « Le DPE le plus proche : il n'y en a pas à cette adresse exacte. Il peut être celui d'un voisin. »
+- Après : « **25 DPE à cette adresse : c'est celui dont la surface est la plus proche.** » (clé `…|2|87`, 0 erreur ;
+  année 1948 ; pas de surface proposée, puisque 25 DPE).
+- « Oui » sur le DPE remplit la carte : date 06/11/2026, consommation 223, GES 46 (« Repris de : ADEME, DPE ») ; en base,
+  AUCUNE case posée (ni dpe_cons, ni dpe_date, ni ANNEE_CONS). Preuve : `notice/preuve_parcours_dpe_a_l_adresse_reel_2026-11-20.jpg`.
+- Coût : un tour d'IA (≈ 0,02 $).
+
+**Non éprouvé en réel** : l'éditeur d'avis (« Régénérer le DPE » écrit l'avis d'un bien — pas sans son accord) ; son
+gain est mesuré sur vraies API au §98.2 (49 « adresse » + 5 « batiment » sur 60, contre 4).
+
+**Reste** : P4-d (phrases libres) ; P6 (photos du bien).
+
+## 99. P4-d — LES PHRASES LIBRES, LUES TOUT DE SUITE PAR LE PETIT LECTEUR (20/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P4-d », puis ses deux choix (20/11) : **la zone du bas** (comme la maquette : « Réponds, dicte, ou
+touche une réponse… ») et **lue tout de suite**.
+
+**Ce que ça fait.**
+- Pendant qu'une question du parcours est ouverte, la zone du bas porte la pastille « Pour : « Le dehors » — ta phrase
+  est gardée et lue, sans l'assistant. ✕ Demander à l'assistant ». Entrée = la phrase part à la route
+  `POST /assistant/parcours/{id}/phrase` (pas de tour d'IA du grand assistant). « ✕ » rend la zone à l'assistant pour
+  cette question (« Ton message ira à l'assistant. Répondre à « Le dehors » »). Un fichier joint part toujours à
+  l'assistant (le trombone ne change pas).
+- Le serveur : ⛔ RETIRE téléphones et e-mails (`parcours_phrases.retirer_coordonnees`) AVANT le modèle ; vérifie le
+  plafond du jour ; lit la phrase par le **petit lecteur** (`OpenAIListingSheetService.extract_texte`, agent
+  `parcours_phrase`, gpt-4.1-mini, le MÊME schéma que le scan, la consigne connaît la question ouverte) ; puis la même
+  traduction que la fiche de visite (`parcours_traduction.lire_fiche`).
+- Ce qui en est fait (`parcours_phrases.appliquer`, fonction pure) :
+  · les cases de la **question ouverte** reviennent pour la CARTE (« Repris de : ta phrase. Vérifie, puis Valider ») —
+    rien n'est gardé avant « Valider » ;
+  · les cases d'**autres questions** sont pré-remplies, source « phrase » (pastille « dit »), avec leur doute s'il y en
+    a ; ⛔ jamais à la place d'une réponse ;
+  · ce qui ne rentre dans **aucune case** va dans la **note** de la fenêtre (comme le scan), ajouté aux phrases d'avant ;
+    ⛔ jamais sur une note dite ou lue sur la fiche ;
+  · un **nom de vendeur** lu n'est PAS gardé : masqué « [vendeur] » dans la phrase gardée, et l'écran renvoie aux cases
+    protégées de « Le mandant » ;
+  · la phrase est **gardée** sous sa question (« gardée · 1 case ici, 1 plus loin, le reste dans la note ») ; 40 au plus.
+- Le journal des agents (`app_agent_run`, clé `parcours_phrase`) : jetons, coût, nombre de caractères — JAMAIS le texte.
+  La dépense du jour (plafond 3 $) compte désormais `assistant` ET `parcours_phrase` ; le compte des QUESTIONS du jour
+  ne change pas.
+- Écran : une proposition des services publics se retire dès qu'une de ses cases est remplie dans la carte (vu en
+  maquette : la phrase « 612 m² » remplissait le terrain et le cadastre proposait encore 1 245 m²).
+
+**Ce que ça pourrait casser ailleurs, et ce qui est fait contre.**
+- La zone du bas change de destination pendant un parcours : la pastille le DIT, « ✕ » le défait, et elle ne s'applique
+  qu'à un parcours EN COURS de la conversation ouverte, sans fichier joint ; sur l'accueil et hors parcours, rien ne change.
+- Le service du scan : une méthode AJOUTÉE (`extract_texte`), la lecture des images (`extract`) n'est pas touchée.
+- Le registre des agents : une fiche ajoutée en code (`parcours_phrase`), les autres inchangées.
+- `depense_du_jour` lit deux clés au lieu d'une : le plafond devient plus prudent, jamais moins.
+- La classe `asp-garde` (le cadre protégé du mandant) existait : les nouvelles sont `asp-phr`, `asi-pour` (vérifié libres).
+
+**Preuves (hors ligne)** : parcours **156 verts** (+24 : téléphones et e-mail retirés, rien d'autre ; phrase vide ou
+trop longue ; la carte de la question ouverte, rien gardé ; l'année ailleurs avec son doute ; une réponse jamais
+remplacée ; le reste dans la note, ajouté, jamais sur une note dite ; le vendeur masqué ; 40 au plus ; la route : le
+lecteur n'a JAMAIS vu le téléphone, le journal sans le texte, la question non posée, le parcours d'un autre, le plafond
+(aucun appel), le lecteur en panne (rien écrit), l'interrupteur, le plafond qui compte les deux clés, la consigne) ;
+gestes 415, lecteur 76, socle 31, traduction 39, fichiers 28, DPE 11, catalogue, couverture, build.
+**Maquette** : `notice/preuve_parcours_phrase_libre_2026-11-20.jpg` (la phrase gardée avec « [coordonnée retirée] »,
+« Repris de : ta phrase », le terrain rempli, la pastille) et `notice/preuve_parcours_phrase_vers_assistant_2026-11-20.jpg`
+(« ✕ » : le message ira à l'assistant).
+
+**Non éprouvé en réel** : le petit lecteur sur une vraie phrase (≈ 0,001 $), sa durée, le rendu en production.
+
+**Reste** : P6 (photos du bien), puis P5, P7, P8 et l'épreuve case par case.
+
+### 99.1 POUSSÉ (ef84ad6) ET ÉPROUVÉ EN RÉEL (20/11, 12:12-12:14, heure de Paris) — VERT, avec une réserve sur la note
+
+**Ses mots** : « Pousse et essaie ». Poussé ef84ad6 (avec la note §98.3) ; Render (`/health` = ef84ad639962) et Vercel
+(une chaîne propre à P4-d dans le JS servi) vérifiés. Dans son Chrome, une conversation NEUVE : « Nouvelle estimation
+d'essai par questions : une maison au 12 rue des Tilleuls 42700 Firminy ». Parcours `b5013b88…` laissé « en cours »
+(purge 30 j) ; rien chez Hektor, rien validé, jamais « Créer ».
+- La zone du bas montre « Pour : « Le quartier » — ta phrase est gardée et lue, sans l'assistant. ✕ Demander à l'assistant ».
+- Phrase tapée : « Quartier calme, école et commerces à 5 minutes à pied, bus en bas de la rue. Il y a 612 m² de terrain
+  avec un abri de jardin, construite vers 1975. Vendeur au 06 12 34 56 78. » (un numéro inventé).
+- À l'écran : la phrase gardée avec « [coordonnée retirée] », « gardée · 2 cases ici, 3 plus loin, le reste dans la
+  note », « Le téléphone ou l'e-mail a été retiré… », « Repris de : ta phrase » ; Proximité et Environnement remplis
+  dans la carte (non validés). Preuve : `notice/preuve_parcours_phrase_libre_reel_2026-11-20.jpg`.
+- En base : `surfterrain` 612, `JARDIN-` OUI, `ANNEE_CONS` 1975, source « phrase » ; PROXIMITE/ENVIRONNEMENT NON gardés
+  (la carte) ; ⛔ le téléphone n'est NULLE PART dans le parcours ; le journal des agents : `parcours_phrase`,
+  gpt-4.1-mini, 5 955 + 166 jetons, **0,00265 $**, `{question, caracteres: 180, retires: 1}` — pas le texte.
+
+⚠ **Deux écarts trouvés en réel** (non corrigés, à décider) :
+1. **La note répète tout** : le lecteur a mis dans `rawNotes` un résumé de TOUTE la phrase (« Quartier calme avec école,
+   commerces, bus proches; terrain 612 m2 avec abri de jardin, construction vers 1975. ») au lieu du seul reste (l'abri de
+   jardin, le bus). La fenêtre recevrait une note redondante. Remède proposé : une consigne plus stricte (« rawNotes ne
+   répète JAMAIS ce qui est dans un champ ») — à éprouver de nouveau en réel.
+2. **Le coût** est 2,6 fois l'estimation (0,00265 $ au lieu de ~0,001 $) : la consigne reprend toutes les conventions du
+   scan (~6 000 jetons d'entrée). Sans gravité au plafond (3 $/jour = plus de 1 000 phrases).
+- « vers 1975 » n'a pas été marqué « à vérifier » (le lecteur a donné une confiance haute) ; « bus en bas de la rue »
+  n'est pas allé dans Transport.
+
+### 99.2 LA CONSIGNE DU PETIT LECTEUR RESSERRÉE (20/11) : mesurée sur 5 phrases inventées, NON poussée
+
+**Ses mots** : « Oui, corrige » (après la réserve du §99.1 : la note répétait toute la phrase).
+
+**La cause** : le schéma du scan a DEUX sorties libres (le champ `note` et `rawNotes`), et la consigne du scan (écrite
+pour une fiche) n'en dit rien ; les cases du quartier n'y sont pas décrites non plus.
+
+**Ce qui change (le petit lecteur SEUL ; le scan de la fiche — `extract`, `scan_fiche` — n'est pas touché).**
+- La consigne `parcours_phrase` dit désormais : la note et `rawNotes` ne gardent QUE le reste, jamais un résumé, null si
+  tout est rangé ; « vers / environ » = confiance 0,6 au plus ; transport / proximité / environnement décrits ;
+  `surface` = la surface HABITABLE, `livingSurface` = le séjour seulement ; l'assainissement s'écrit « egout » ou
+  « fosse septique » ; les pièces citées remplissent le tableau `pieces`, À LA RACINE de la réponse ; un oui/non que la
+  phrase ne dit pas reste null.
+- `extract_texte` remet à leur place le tableau des pièces, les postes et les notes que le lecteur range DANS `fields`
+  (le schéma non strict le lui permet) ; une valeur « null » écrite en toutes lettres n'est pas une valeur.
+
+**Trois défauts trouvés EN MESURANT, et corrigés** (chacun vu sur une vraie réponse du modèle) :
+1. « 118 m² habitables » allait dans la surface du SÉJOUR (le lecteur lisait `livingSurface` comme « habitable »).
+2. « tout-à-l'égout » n'allait nulle part : la traduction (celle de la fenêtre) ne reconnaît ni « tout-a-l'egout » ni
+   « tout a l egout » ; « egout » seul, si.
+3. Après une retouche, la composition sortait VIDE : le lecteur écrivait bien les 7 pièces… dans `fields`, où le
+   nettoyage ne les voit pas. Sortie brute relue, remise en place côté serveur.
+
+**La mesure** (vrais appels au modèle, phrases INVENTÉES, aucune écriture en base, ≈ 0,0028 $ la phrase) :
+- quartier → transport « bus en bas de la rue », proximité, environnement « calme » ; terrain 612 et année 1975
+  (à vérifier, 0,6) ailleurs ; note = « abri de jardin » (au lieu du résumé de toute la phrase) ;
+- dehors → jardin ; l'eau = puits ; note = « abri de jardin » ;
+- intérieur → surface habitable 118, 5 pièces, 3 chambres, sud, cuisine séparée ; note vide ;
+- composition → **7 pièces sur 7** (3 essais sur 3), cheminée, séjour 32 ;
+- énergie → chaudière, gaz, assainissement « tout à l'égout » ; double vitrage ; note = « chaudière refaite il y a deux ans ».
+
+**Hors de ce chantier, noté et non corrigé** : la consigne du SCAN de la fiche (`scan_fiche`) écrit l'assainissement
+« tout-a-l'egout » — une forme que la traduction de la fenêtre ne reconnaît pas : le scan de la fiche perd probablement
+l'assainissement. À vérifier sur une vraie fiche, s'il le demande. Et « cuisine équipée » ne remplit aucune case (la
+fenêtre fait de même avec son scan).
+
+**Preuves (hors ligne)** : parcours **159 verts** (+3 : la consigne, les pièces remises en place, « null ») ; gestes 415,
+lecteur 76, socle 31, traduction 39, fichiers 28, DPE 11.
+**Non éprouvé en réel dans l'application** : la nouvelle consigne en production (après le push).
+
+### 99.3 LA CONSIGNE RESSERRÉE, POUSSÉE (559084c) ET ÉPROUVÉE EN RÉEL (20/11, 12:33-12:35, heure de Paris) — VERT
+
+**Ses mots** : « pousse et essai ». Poussé 559084c (avec la note §99.1) ; Render vérifié (`/health` = 559084c74449).
+Dans son Chrome, une conversation NEUVE, la MÊME demande et la MÊME phrase qu'au §99.1, pour comparer. Parcours
+`82371d50…` laissé « en cours » (purge 30 j) ; rien chez Hektor, rien validé, jamais « Créer ».
+- Avant (§99.1) : note = « Quartier calme avec école, commerces, bus proches; terrain 612 m2 avec abri de jardin,
+  construction vers 1975. » ; 2 cases dans la carte (le bus nulle part) ; année sans doute.
+- Après : **note = « abri de jardin »** ; **3 cases dans la carte** (Transport « bus en bas de la rue », Proximité,
+  Environnement « calme ») ; ailleurs : terrain 612, jardin, année 1975 **à vérifier (0,7)** ; le téléphone nulle part ;
+  0,00271 $. Preuve : `notice/preuve_parcours_phrase_consigne_reel_2026-11-20.jpg`.
+
+**Reste** : P6 (photos du bien), puis P5, P7, P8 et l'épreuve case par case.
+
+## 100. P6 — LES PHOTOS DU BIEN DEPUIS LE PARCOURS (20/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P6 ». Le plan (§89) : « un second paramètre « photos du bien » de la carte, versé dans l'étape 2
+APRÈS l'ouverture (l'ouverture les vide aujourd'hui) ». La maquette v27, planche 13 : vignettes, une « masquée », la
+1re en couverture, « En ajouter », « Elles vont à l'étape 2 Photos de la fenêtre (20 au plus) et partent comme
+aujourd'hui, une par une, après Créer ». ⛔ Les PHOTOS DU BIEN ne sont jamais lues (ni scan, ni modèle) — règle du 20/11.
+
+**Ce qui est écrit.**
+- La question « Les photos du bien » (forme `fichiers`) : quand le trombone est ouvert au compte, « Joindre les photos du
+  bien » les dépose au coffre de l'assistant (le même que le trombone ; WebP passe en JPEG au dépôt, comme la fenêtre),
+  vignettes, « Masquer / Afficher », « En couverture » (la 1re), « Retirer », 20 au plus ; « Valider » garde la liste.
+  Sans trombone : la phrase d'avant (à l'étape Photos de la fenêtre).
+- La réponse `photos` garde l'ORDRE et la visibilité (`[{id, visible}]` ; un numéro seul, l'ancienne forme, vaut
+  visible ; une entrée vide est ignorée ; un numéro qui n'est pas celui du coffre est refusé) ; la pastille dit
+  « 3 photos · 1 masquée ».
+- Le **second paramètre de la carte** du parcours, `photos_du_bien` (À PART de `fiche_de_visite`) : des photos du bien
+  jointes avec la demande vont dans cette question (relues au coffre au clic, JPEG/PNG/WebP, 20 au plus) ; un même
+  fichier dans les deux paramètres est REFUSÉ (l'IA doit demander) ; la carte le dit (« Les 2 photos du bien iront à
+  l'étape Photos de la fenêtre (jamais lues) »). La consigne du parcours y envoie les photos du bien.
+- La route `GET /assistant/parcours/{id}/photos` (l'auteur seul, même l'admin ne lit pas celles d'un autre) : relit
+  chaque photo au coffre DANS LE DOSSIER DE L'AUTEUR, rend un lien de lecture court ; une photo purgée (les dépôts sont
+  gardés 2 jours) ou qui n'est pas une image est COMPTÉE (`absentes`), jamais inventée.
+- À l'ouverture de la fenêtre (`assistantOuvrirParcours`), APRÈS la remise à zéro : les photos sont relues, mises dans
+  l'étape 2 « Photos » dans leur ordre avec leur visibilité ; elles partent comme aujourd'hui après « Créer » ; une
+  photo manquante est DITE (« … n'a pas pu être reprise (les dépôts sont gardés 2 jours) : ajoute-la à l'étape Photos »).
+
+**Ce que ça pourrait casser ailleurs, et ce qui est fait contre.**
+- La case `photos` du parcours change de forme : l'ancienne (une liste de numéros) reste acceptée.
+- L'outil `parcours_creation` gagne un paramètre (requis par le schéma, vide s'il n'y a rien) ; l'essai du P4-b bis qui
+  interdisait `photos_du_bien` sur le parcours est mis à jour : la séparation reste (deux paramètres, refus d'un même
+  fichier dans les deux, la carte de création directe n'a toujours que `fiche_de_visite`).
+- La carte de création DIRECTE (hors parcours, `ouvrir_creation_annonce`) n'est PAS touchée : des photos du bien n'y vont
+  toujours pas (l'IA dit qu'elles s'ajoutent à l'étape Photos).
+- La fenêtre : rien ne change dans son étape Photos ni dans l'envoi après « Créer » ; elle reçoit des fichiers comme si
+  la personne les avait choisis.
+
+**Preuves.** Hors ligne : parcours **171 verts** (+13 : l'ordre et la visibilité, 20 au plus, un numéro mal formé, la
+question, la carte qui annonce les photos, le clic qui les range, pas « connue », un même fichier deux fois, un PDF, 21
+photos, l'outil, la route : le dossier de l'auteur, la photo purgée comptée, le parcours d'un autre) ; lecteur **77**
+(+1) ; gestes 415, socle 31, traduction 39, fichiers 28, DPE 11, catalogue, couverture, build.
+Maquette (trois images fabriquées injectées dans le choix de fichiers) : `notice/preuve_parcours_photos_du_bien_2026-11-20.jpg`
+(jardin en couverture, salon masqué, « 3 photos jointes · 1 masquée ») ; pastille « 3 photos · 1 masquée » ; la fenêtre
+ouverte : `notice/preuve_parcours_photos_dans_la_fenetre_2026-11-20.jpg` (étape 2 : jardin, façade visibles, salon masqué,
+dans l'ordre).
+
+**Non éprouvé en réel** : le dépôt au vrai coffre, les liens de lecture, la fenêtre de production, et l'IA qui passe des
+photos du bien jointes à la demande dans `photos_du_bien`.
+
+**Reste** : P5 (listes du rapport et de l'envoi), P7 (documents, voie A), P8, et l'épreuve case par case.
+
+### 100.1 POUSSÉ (59433ee, avec la fusion de 17 commits GED) ET ÉPROUVÉ EN RÉEL (20/11, 19:01-19:06, heure de Paris) — VERT, sauf la vignette (corrigée, non poussée)
+
+**Ses mots** : « Pousse et essai ». Avant le push : 17 commits de la session GED sur main (Masquer posé en base, visuel
+V3, dossier rangé par moment) ; un seul fichier commun (`App.tsx`) ; fusion locale SANS conflit ; build, mes essais et
+les deux essais GED (`test_ged_socle` 16, `test_ged_dossier_range` 17) verts après fusion. Render et Vercel vérifiés.
+Dans son Chrome, une conversation NEUVE, `salon.jpg` (photo du salon, dossier d'essai) jointe au trombone :
+« Nouvelle estimation d'essai par questions : une maison au 12 rue des Tilleuls 42700 Firminy. Je joins une photo du
+bien (le salon) pour la galerie. » Parcours `25978be6…` laissé « en cours » (purge 30 j) ; jamais « Créer ».
+- ⭐ L'IA a passé la photo par `photos_du_bien` : la carte dit « La photo du bien ira à l'étape Photos de la fenêtre
+  (jamais lue) » et l'IA « la photo du salon ira à l'étape Photos ».
+- La question « Les photos » montrait « 1 photo jointe · la 1re en couverture » — ⚠ MAIS SA VIGNETTE VIDE (voir plus bas).
+- « Valider », puis « Ouvrir la fenêtre remplie » : à l'étape 2, **« 1 photo(s) préparée(s) » : salon.jpg, 499 Ko,
+  Visible** (la vraie image). Preuve : `notice/preuve_parcours_photo_du_bien_reel_2026-11-20.jpg`. La fenêtre est laissée
+  ouverte, rien cliqué (fermer avec une photo demande une confirmation).
+- En base : `photos = [{id: f98fd72c…, visible: true}]`, source « demande », question « faite » ; AUCUNE fiche lue (le
+  salon n'est jamais passé au scan) ; 0 travail de création ni d'envoi de photo.
+
+⚠ **Le défaut trouvé en réel (la vignette vide)** : la carte s'affiche d'abord avec les valeurs de la question d'AVANT
+(aucune photo), puis reçoit les siennes ; la relecture des liens ne se lançait qu'au premier rendu, donc jamais. En
+maquette, je n'avais éprouvé que des photos DÉPOSÉES sur place (elles ont leur aperçu local). Corrigé : la relecture suit
+la liste des photos SANS aperçu (`sansApercu`). Build et essais verts ; non poussé, non revu en réel (la maquette ne peut
+pas reproduire : ses parcours vivent en mémoire).

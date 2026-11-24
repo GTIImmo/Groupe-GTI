@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "note": "Étape 4 chap. 6, P1 (19/11/2026) : les 19 questions du parcours de CRÉATION (§88), dans la langue de la fenêtre « Nouvelle annonce » (noms de ses cases). Vérifié contre App.tsx par apps/hektor-v1/test_etape4_parcours_couverture.cjs : 0 case oubliée par type de bien. Les options des cases ne sont PAS recopiées ici : l'écran les prend dans la fenêtre elle-même. P4-a (19/11) : `essentiels` = les cases qui, toutes dites dans la demande, font que la question n'est pas reposée (elle s'affiche « connue », modifiable).",
+  "genres": ["creation_estimation", "creation_annonce"],
+  "auto": ["NO_DOSSIER", "dateenr", "diffusable"],
+  "a_la_main": {
+    "DEPOT_GARANTIE": "dépôt de garantie : location seulement",
+    "clearing": "sens inconnu chez Hektor, 1 « oui » sur 13 565 fiches (§91.2)"
+  },
+  "type_par_defaut": "2",
+  "cles_piece": ["idTypePiece", "typeLabel", "detailPiece", "etagePiece", "surfacePiece", "notePublique", "notePrivee", "noteInterAgence"],
+  "profil_par_type": {"1": "house", "2": "apartment", "4": "apartment", "5": "land", "7": "other", "10": "house", "11": "house", "15": "garage", "16": "garage", "17": "house", "18": "apartment", "20": "other", "21": "building", "22": "house", "24": "other", "25": "house", "26": "apartment", "27": "house", "28": "house", "29": "garage", "30": "house", "31": "apartment", "39": "house", "41": "apartment", "43": "land", "44": "land", "45": "land", "49": "house", "50": "apartment"},
+  "questions": [
+    {
+      "id": "bien", "titre": "Le bien",
+      "phrase": "Quel bien, et où est-il ?",
+      "forme": "cases",
+      "essentiels": ["type", "adresse_haut", "cp", "ville"],
+      "champs": ["type", "offre_famille", "sous_type", "agence", "negociateur", "adresse_haut", "cp", "ville",
+                 "adresse", "villeprivee", "codeprive", "codepublique", "villepublique", "latitude", "longitude"]
+    },
+    {
+      "id": "quartier", "titre": "Le quartier",
+      "phrase": "Les transports, ce qui est à proximité, l'environnement.",
+      "forme": "cases",
+      "champs": ["TRANSPORT", "PROXIMITE", "ENVIRONNEMENT", "immeuble"]
+    },
+    {
+      "id": "appartement", "titre": "L'étage et la résidence",
+      "phrase": "À quel étage, et dans quelle résidence ?",
+      "forme": "cases", "profils": ["apartment", "building"],
+      "champs": ["floorState", "ETAGE", "DERNIER_ETAGE", "ASCENSEUR", "RESIDENCE", "TYPE_RESIDENCE"]
+    },
+    {
+      "id": "copropriete", "titre": "La copropriété",
+      "phrase": "Le bien est-il en copropriété ?",
+      "forme": "cases", "profils": ["apartment", "building"],
+      "champs": ["copropriete", "copropriete_lot", "copropriete_nb_lot", "copropriete_quote_part", "montant_fonds_travaux",
+                 "copropriete_plan_sauvegarde", "copropriete_statut_syndicat"]
+    },
+    {
+      "id": "interieur", "titre": "L'intérieur",
+      "phrase": "La surface, les pièces, la cuisine, l'exposition et la vue.",
+      "forme": "compteurs", "profils": ["house", "apartment", "building", "other"],
+      "essentiels": ["surfappart", "nbpieces"],
+      "champs": ["surfappart", "SURF_CARREZ", "nbpieces", "NB_CHAMBRES", "NB_NIVEAUX", "NB_ETAGES", "NB_SDB", "NB_SE", "NB_WC",
+                 "SURF_SEJOUR", "CUISINE", "CUISINE_EQUIPEMENT", "EXPOSITION", "vuee"]
+    },
+    {
+      "id": "composition", "titre": "La composition",
+      "phrase": "Pièce par pièce : le type, la surface, l'étage.",
+      "forme": "pieces",
+      "essentiels": ["composition"],
+      "champs": ["composition"]
+    },
+    {
+      "id": "dehors", "titre": "Le dehors",
+      "phrase": "Coche ce qu'il y a dehors ; je demande ensuite le nombre et la surface.",
+      "forme": "cocher",
+      "champs": ["surfterrain", "JARDIN-", "SURFACE_JARDIN", "PISCINE-", "GARAGE_BOX", "SURFACE_GARAGE", "CAVE", "SURFACE_CAVE",
+                 "BALCON", "NB_BALCON", "SURFACE_BALCON", "TERRASSE", "NB_TERRASSE", "SURFACE_TERRASSE", "NB_PARK_INT",
+                 "NB_PARK_EXT", "MURS_MITOYENS", "terrain_arbore", "terrain_piscinable", "SHON"]
+    },
+    {
+      "id": "piscine", "titre": "La piscine",
+      "phrase": "Comment est la piscine ?",
+      "forme": "cases", "profils": ["house"], "si": {"champ": "PISCINE-", "vaut": "OUI"},
+      "champs": ["PISCINE_TYPE", "PISCINE_NATURE", "PISCINE_DIMENSIONS", "PISCINE_TRAITEMENT", "PISCINE_CHAUFFEE",
+                 "PISCINE_COUVERTE", "POOL_HOUSE", "PISCINE_DETAILS"]
+    },
+    {
+      "id": "terrain", "titre": "Le terrain à bâtir",
+      "phrase": "Le terrain est-il constructible, viabilisé, raccordé ?",
+      "forme": "cases", "profils": ["land"],
+      "essentiels": ["surfterrain"],
+      "champs": ["terrain_constructible", "terrain_surface_constructible", "terrain_viabilise", "terrain_raccordement_eau",
+                 "terrain_raccordement_gaz", "terrain_raccordement_electricite", "terrain_raccordement_telephone"]
+    },
+    {
+      "id": "energie", "titre": "L'énergie",
+      "phrase": "L'année, le DPE, le chauffage, l'eau, l'assainissement et l'état.",
+      "forme": "cases",
+      "champs": ["ANNEE_CONS", "dpe_date", "dpe_non_concerne", "dpe_vierge", "isDpeAltitude", "dpe_cons", "dpe_ges",
+                 "valeurEnergieFinale", "dpe_couts_min", "dpe_couts_max", "dpe_annee_reference", "formatChauff", "typeChauff",
+                 "energieChauff", "EAU", "ASSAINISSEMENT", "DISTRIBUTION_EAU", "ENERGIE_EAU", "etat_exterieur", "etat_interieur"]
+    },
+    {
+      "id": "diagnostics", "titre": "Les diagnostics",
+      "phrase": "Pour chaque diagnostic : fait, à faire ou non concerné, sa date, une remarque.",
+      "forme": "grille", "profils": ["house", "apartment", "land", "building", "other"],
+      "champs": ["diag_termites", "diag_termites_date", "diag_termites_commentaire",
+                 "diag_amiante", "diag_amiante_date", "diag_amiante_commentaire",
+                 "diag_electrique", "diag_electrique_date", "diag_electrique_commentaire",
+                 "diag_loi_carrez", "diag_loi_carrez_date", "diag_loi_carrez_commentaire",
+                 "diag_risques_nat_tech", "diag_risques_nat_tech_date", "diag_risques_nat_tech_commentaire",
+                 "diag_plomb", "diag_plomb_date", "diag_plomb_commentaire",
+                 "diag_gaz", "diag_gaz_date", "diag_gaz_commentaire",
+                 "diag_assainissement", "diag_assainissement_date", "diag_assainissement_commentaire"]
+    },
+    {
+      "id": "confort", "titre": "Le confort",
+      "phrase": "Coche les équipements.",
+      "forme": "cocher", "profils": ["house", "apartment", "garage", "building"],
+      "champs": ["ACCES_HANDI", "climatisation", "climatisationspec", "cheminee", "volets_elctriques", "double_vitrage",
+                 "triple_vitrage", "porte_blindee", "interphone", "visiophone", "alarme", "digicode", "detecteur_fumee"]
+    },
+    {
+      "id": "construction_recente", "titre": "La construction récente",
+      "phrase": "Le bien a moins de 10 ans : les garanties et les certificats.",
+      "forme": "cases", "profils": ["house", "apartment"], "si": {"champ": "ANNEE_CONS", "moins_de_ans": 10},
+      "champs": ["garantie_decennale", "assurance_dommages_ouvrage", "certificat_conformite", "declaration_achevement_travaux"]
+    },
+    {
+      "id": "intervenants", "titre": "Les intervenants",
+      "phrase": "Le diagnostiqueur et le syndic.",
+      "forme": "cases", "profils": ["house", "apartment"],
+      "champs": ["diagnostiqueur", "syndic"]
+    },
+    {
+      "id": "visite", "titre": "La visite",
+      "phrase": "Quand est-il libre, et comment le visiter ?",
+      "forme": "cases",
+      "champs": ["DISPO", "DATE_LIBER", "DATE_DISPO", "CLES", "moyens_visite"]
+    },
+    {
+      "id": "mandant", "titre": "Le mandant",
+      "phrase": "Le vendeur est-il déjà dans le fichier ?",
+      "forme": "mandant",
+      "essentiels": ["mandant"],
+      "champs": ["mandant_choix", "mandant"]
+    },
+    {
+      "id": "argent", "titre": "L'argent",
+      "phrase": "Les charges, la taxe foncière, les travaux, puis la valeur ou le prix.",
+      "forme": "cases",
+      "champs": ["TAXE_FONCIERE", "CHARGES", "CHARGES_DETAIL", "TRAVAUX", "ESTIMATION_MONTANT", "ESTIMATION_DATE", "prix",
+                 "PRIXNETVENDEUR", "_selecterHonoraires2", "_tauxHonoraire2", "_pourcentHonoraire2", "_detailHonoraire2",
+                 "_selecterHonoraires3", "_tauxHonoraire3", "_pourcentHonoraire3", "_detailHonoraire3", "masque"]
+    },
+    {
+      "id": "photos", "titre": "Les photos",
+      "phrase": "Les photos du bien (la galerie de l'annonce) — pas la fiche de visite.",
+      "forme": "fichiers",
+      "champs": ["photos"]
+    },
+    {
+      "id": "texte", "titre": "Le titre et le texte",
+      "phrase": "Le titre, le texte de l'annonce et une note interne.",
+      "forme": "texte",
+      "essentiels": ["titre", "corps"],
+      "champs": ["titre", "corps", "note"]
+    }
+  ]
+}

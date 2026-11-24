@@ -358,6 +358,9 @@ def bdnb(
     }
 
 
+# La clé d'interopérabilité BAN d'une adresse : commune INSEE (Corse 2A/2B), voie, numéro, suffixe éventuel.
+_CLE_BAN = re.compile(r"\d[\dAB]\d{3}_[0-9a-z]{4}_\d{5}(_[0-9a-z]+)?")
+
 _DPE_SELECT = ("etiquette_dpe,etiquette_ges,date_etablissement_dpe,adresse_ban,type_batiment,"
                "conso_5_usages_par_m2_ep,emission_ges_5_usages_par_m2,surface_habitable_logement,identifiant_ban")
 
@@ -378,28 +381,52 @@ def dpe(
     lat: float = Query(...),
     lon: float = Query(...),
     surface: float | None = Query(None, description="Surface habitable du bien (m²) — départage les DPE d'un immeuble"),
+    ban: str | None = Query(None, max_length=40, description="Identifiant BAN EXACT de l'adresse (forme 42095_2120_00013), connu du géocodage"),
     authorization: str | None = Depends(require_request_user),
     settings: Settings = Depends(get_settings),
 ):
     """DPE ADEME (open data) : dernier diagnostic RÉEL du bien (étiquette DPE + GES,
     conso, date, adresse). Stratégie de précision :
-      1) adresse EXACTE via l'id BAN du bâtiment RNB (distingue le bon immeuble) ;
+      1) adresse EXACTE : l'identifiant `ban` s'il est donné (le géocodage de l'adresse tapée),
+         sinon la 1re adresse du bâtiment RNB le plus proche -> « adresse » ;
+      1 bis) les AUTRES numéros du même bâtiment RNB (5 au plus) -> « batiment » (même immeuble,
+         autre entrée : pas l'adresse exacte, l'écran le dit) ;
       2) si `surface` fournie, on prend le DPE dont la surface colle le mieux (le bon
          appartement dans l'immeuble), sinon le plus récent ;
-      3) repli « proximité » (rayon 90 m) si aucune adresse BAN exploitable.
+      3) repli « proximité » (rayon 90 m) si aucune adresse exploitable.
+    ⚠ 20/11 : le RNB rend pour chaque adresse `id` = la clé d'interopérabilité BAN (« 42095_2120_00013 »,
+    la forme de l'`identifiant_ban` ADEME) ET `ban_id` = l'identifiant BAN d'une AUTRE forme (« 0e9ec990-… »).
+    On lisait `ban_id` d'abord : 0 DPE à l'adresse, repli « proximité » TOUJOURS (mesure : 4 adresses sur 60
+    trouvées, contre 60 sur 60 avec l'identifiant exact). `ban_id` ne sert plus qu'en repli, s'il a la bonne forme.
     Gratuit, sans clé."""
     get_authenticated_user(settings, authorization)
 
-    # 1) Adresse exacte (id BAN du bâtiment le plus proche au RNB).
+    def _cle(v: object) -> str | None:
+        t = str(v or "").strip()
+        return t if _CLE_BAN.fullmatch(t) else None
+
+    # 1) Adresse exacte : celle du géocodage si on la connaît, sinon la 1re du bâtiment RNB le plus proche.
     building = _rnb_closest(lat, lon)
-    adr = (building.get("addresses") or [{}])[0] if building else {}
-    ban = (adr or {}).get("ban_id") or (adr or {}).get("id")
+    numeros: list[str] = []
+    for a in (building or {}).get("addresses") or []:
+        c = _cle((a or {}).get("id")) or _cle((a or {}).get("ban_id"))
+        if c and c not in numeros:
+            numeros.append(c)
+    exacte = _cle(ban) or (numeros[0] if numeros else None)
     rows: list = []
     matched_by: str | None = None
-    if ban:
-        rows = _dpe_lines({"qs": f'identifiant_ban:"{ban}"', "size": 30, "sort": "-date_etablissement_dpe"})
+    if exacte:
+        rows = _dpe_lines({"qs": f'identifiant_ban:"{exacte}"', "size": 30, "sort": "-date_etablissement_dpe"})
         if rows:
             matched_by = "adresse"
+
+    # 1 bis) Les autres numéros du même bâtiment (une autre entrée du même immeuble).
+    if not rows:
+        for c in [n for n in numeros if n != exacte][:5]:
+            rows = _dpe_lines({"qs": f'identifiant_ban:"{c}"', "size": 30, "sort": "-date_etablissement_dpe"})
+            if rows:
+                matched_by = "batiment"
+                break
 
     # 2) Repli proximité si rien à l'adresse exacte.
     if not rows:
@@ -423,8 +450,8 @@ def dpe(
         "found": bool(chosen),
         "lat": lat,
         "lon": lon,
-        "matched_by": matched_by,               # "adresse" (précis) ou "proximite" (indicatif)
-        "nb_adresse": len(rows) if matched_by == "adresse" else None,
+        "matched_by": matched_by,               # "adresse" (précis), "batiment" (même immeuble, autre numéro) ou "proximite" (indicatif)
+        "nb_adresse": len(rows) if matched_by in ("adresse", "batiment") else None,
         "etiquette_dpe": chosen.get("etiquette_dpe"),
         "etiquette_ges": chosen.get("etiquette_ges"),
         "date": chosen.get("date_etablissement_dpe"),

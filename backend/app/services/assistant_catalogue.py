@@ -81,8 +81,9 @@ CATALOGUE = CATALOGUE + FONCTIONS_GESTES
 CATALOGUE = CATALOGUE + FONCTIONS_LECTURE_LOT3 + FONCTIONS_LECTURE_LOT4
 
 
-def fonctions_du_role(role: str) -> list[Fonction]:
-    return [f for f in CATALOGUE if role in f.roles]
+def fonctions_du_role(role: str, exclues: frozenset[str] = frozenset()) -> list[Fonction]:
+    # `exclues` (P4-a, 19/11) : un outil fermé par son interrupteur n'est même pas montré à l'IA
+    return [f for f in CATALOGUE if role in f.roles and f.nom not in exclues]
 
 
 async def appeler(ctx: ContexteAssistant, fonction: Fonction, arguments: str) -> str:
@@ -107,7 +108,7 @@ async def appeler(ctx: ContexteAssistant, fonction: Fonction, arguments: str) ->
     return json.dumps(resultat, ensure_ascii=False, default=str)
 
 
-def outils_sdk(role: str) -> list[Any]:
+def outils_sdk(role: str, exclues: frozenset[str] = frozenset()) -> list[Any]:
     # ⚠ import du SDK ICI SEULEMENT, jamais au chargement du module (pièce 1 de l'étape 1)
     from agents import FunctionTool
 
@@ -124,5 +125,5 @@ def outils_sdk(role: str) -> list[Any]:
             on_invoke_tool=invoquer(f),
             strict_json_schema=True,
         )
-        for f in fonctions_du_role(role)
+        for f in fonctions_du_role(role, exclues)
     ]

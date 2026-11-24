@@ -149,7 +149,9 @@ export async function deposerFichier(fichier: File): Promise<FichierJoint> {
   fichier = await webpEnJpeg(fichier)  // 19/11 (§89, D10) : la carte « Ajouter des photos » ne prend que JPEG / PNG
   if (MAQUETTE) {
     await attendre(400)
-    return { id: Math.random().toString(16).slice(2).padEnd(32, '0').slice(0, 32), nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
+    const id = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+    if (fichier.type.startsWith('image/')) apercusMaquette.set(id, { nom: fichier.name, type: fichier.type, url: URL.createObjectURL(fichier) })
+    return { id, nom: fichier.name, type: fichier.type, libelle: fichier.type, taille: fichier.size }
   }
   const depot = await appelerJson<{ id: string; bucket: string; chemin: string; jeton: string; type: string }>(
     '/assistant/fichiers/preparer', 'POST', { nom: fichier.name, type: fichier.type || 'application/octet-stream', taille: fichier.size })
@@ -159,6 +161,26 @@ export async function deposerFichier(fichier: File): Promise<FichierJoint> {
     throw new RefusAssistant(0, `« ${fichier.name} » n'a pas pu être envoyé au coffre : ${error.message}`)
   }
   return appelerJson<FichierJoint>(`/assistant/fichiers/${depot.id}/confirmer`, 'POST')
+}
+
+// maquette : les aperçus des images déposées (le vrai coffre rend un lien de lecture signé)
+const apercusMaquette = new Map<string, { nom: string; type: string; url: string }>()
+
+/** P6 (20/11) : une photo du bien du parcours, dans son ordre (la 1re = couverture), visible ou masquée. */
+export type PhotoDuBien = { id: string; visible: boolean }
+export type PhotoDuBienLue = PhotoDuBien & { nom: string; type: string; url: string; taille?: number }
+
+/** P6 : les photos du bien du parcours, relues au coffre (dossier de l'auteur) avec un lien de lecture court ; une photo
+ *  purgée du coffre (dépôts gardés 2 jours) est COMPTÉE dans `absentes`, jamais inventée. */
+export async function photosDuBienParcours(id: string): Promise<{ photos: PhotoDuBienLue[]; absentes: number }> {
+  if (MAQUETTE) {
+    const p = fauxParcours.find((x) => x.id === id)
+    const liste = (Array.isArray(p?.reponses.photos) ? p!.reponses.photos : []) as PhotoDuBien[]
+    const photos = liste.filter((x) => apercusMaquette.has(x.id)).map((x) => ({ ...x, ...apercusMaquette.get(x.id)! }))
+    return { photos, absentes: liste.length - photos.length }
+  }
+  const r = await appeler<{ photos: PhotoDuBienLue[]; absentes: number }>(`/assistant/parcours/${encodeURIComponent(id)}/photos`, 'GET')
+  return { photos: r.photos ?? [], absentes: r.absentes ?? 0 }
 }
 
 export async function retirerFichier(id: string): Promise<void> {
@@ -274,6 +296,7 @@ export async function contactDeLaRecherche(cle: string): Promise<string | null> 
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
+  if (MAQUETTE && id.startsWith('carte-parcours')) return attendre(600).then(() => ({ ok: true, etat: 'executee' as const, resultat: { ouvrir: 'parcours', parcours: parcoursFauxRempli() } }))
   if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: id.startsWith('carte-creation') ? OUVERTURE_EXEMPLE : id.startsWith('carte-avis') ? AVIS_EXEMPLE : { relance_id: 1 } }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/valider`, 'POST')
 }
@@ -296,6 +319,259 @@ export async function noterCreationCarte(id: string, suite: { app_dossier_id: nu
   const r = await appelerJson<{ resultat: Record<string, unknown> }>(`/assistant/actions/${encodeURIComponent(id)}/suite`, 'POST', suite)
   return r.resultat
 }
+
+// ── 19/11 (étape 4 chap. 6, P2) : LE PARCOURS GUIDÉ — les questions à boutons, sans modèle ──────────────────────────
+// Le serveur (routers/assistant.py, P1) pose la question suivante et garde les réponses dans app_assistant_parcours, dans la
+// LANGUE DE LA FENÊTRE (noms de ses cases). Un clic n'appelle jamais le modèle. Derrière l'interrupteur `assistant_parcours`
+// (403 tant qu'il n'est pas ouvert pour ce compte). ⛔ Les coordonnées d'un NOUVEAU mandant ne passent pas par ici.
+export type QuestionParcours = { id: string; titre: string; phrase: string; forme: string; champs: string[]; essentiels?: string[] }
+// P4-a (19/11) : « connue » = l'essentiel était dans la demande (lue par l'IA) : pas reposée, modifiable
+export type EtatQuestionParcours = 'faite' | 'passee' | 'nsp' | 'connue' | null
+export type ParcoursVue = {
+  id: string
+  genre: 'creation_estimation' | 'creation_annonce' | 'avis'
+  etat: 'en_cours' | 'termine' | 'abandonne'
+  app_dossier_id: number | null
+  maj_le?: string
+  profil: string | null
+  question: QuestionParcours | null
+  repere: { rang: number; total: number; faites: number }
+  questions: Array<QuestionParcours & { etat: EtatQuestionParcours }>
+  reponses: Record<string, unknown>
+  /** P4-a : d'où vient une case pré-remplie (« demande » = ce que la personne a dit, « scan » = la fiche lue) */
+  sources?: Record<string, string>
+  /** P4-b : les cases lues sur la fiche à moins de 75 % -> « à vérifier » (leur confiance) */
+  doutes?: Record<string, number>
+  /** P4-b : la fiche papier lue (sans ses coordonnées : elles sont au coffre) et les pages de l'avis gardées à part */
+  fiche?: { coffre?: boolean; doutes?: number; mesure?: { pages: number; lues: number; cout_usd: number }; avis?: { fields: Record<string, string>; statePosts: Array<Record<string, unknown>> } } | null
+  /** P4-c : ce que les services publics disent du bien, PROPOSÉ à confirmer (jamais posé) ; `a_jour` = lu pour l'adresse dite */
+  publics?: { possible: boolean; a_jour: boolean; le?: string | null; propositions: PropositionPublique[] } | null
+  /** P4-d : les phrases libres gardées (sans téléphone ni e-mail) et ce qu'elles ont rempli */
+  phrases?: PhraseParcours[]
+  /** P4-d, côté écran seulement : ce qu'une phrase lue met dans la CARTE de sa question (la personne valide) */
+  remplir?: { question: string; cases: Record<string, unknown>; dire: DirePhrase; jeton: number } | null
+  fin: boolean
+}
+/** P4-d : une phrase libre gardée sous sa question */
+export type PhraseParcours = { question: string; texte: string; le?: string; carte?: string[]; remplies?: string[]; note?: boolean }
+export type DirePhrase = { carte: number; remplies: number; note: boolean; vendeur: boolean; retires: number }
+/** P4-c : une proposition d'un service public (DPE ADEME, base des bâtiments, cadastre, registre des copropriétés).
+ *  « Oui » remplit ses cases DANS LA CARTE ; la personne valide ensuite elle-même. */
+export type PropositionPublique = {
+  id: string
+  question: string
+  phrase: string
+  source: string
+  prudence?: string | null
+  demande: string
+  oui: string
+  non: string
+  cases: Record<string, string>
+}
+/** Une case de la fenêtre, telle que la fenêtre la montre (libellé, liste), fournie par l'App : une seule source. */
+export type CaseParcours = {
+  nom: string
+  libelle: string
+  genre: 'liste' | 'nombre' | 'texte' | 'long'
+  options?: Array<{ value: string; label: string }>
+  entier?: boolean
+  si?: { nom: string; vaut: string }
+}
+export type CatalogueParcours = { cases: Record<string, CaseParcours>; typesPiece: Array<{ value: string; label: string }> }
+
+const AUCUNE_CONVERSATION = '00000000-0000-0000-0000-000000000000'
+
+/** Ouvert pour ce compte ? Sonde la liste (une conversation qui n'existe pas : 200 et rien, ou 403 interrupteur fermé). */
+export async function parcoursOuvert(): Promise<boolean> {
+  if (MAQUETTE) return true
+  try {
+    await appeler<{ ok: boolean }>(`/assistant/parcours?conversationId=${AUCUNE_CONVERSATION}`, 'GET')
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function parcoursDeConversation(conversationId: string): Promise<ParcoursVue[]> {
+  if (MAQUETTE) return fauxParcours.filter((p) => p.conversation === conversationId).map((p) => vueFausse(p))
+  const r = await appeler<{ parcours: ParcoursVue[] }>(`/assistant/parcours?conversationId=${encodeURIComponent(conversationId)}`, 'GET')
+  return r.parcours
+}
+
+export async function commencerParcours(genre: 'creation_estimation' | 'creation_annonce', conversationId: string | null): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    const p = { id: `p${Date.now()}`.padEnd(36, '0'), conversation: conversationId, genre, reponses: {} as Record<string, unknown>, etats: {} as Record<string, EtatQuestionParcours>, etat: 'en_cours' as const }
+    fauxParcours.push(p)
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>('/assistant/parcours', 'POST', { genre, conversationId })
+  return r.parcours
+}
+
+export async function repondreParcours(id: string, question: string, geste: 'repondre' | 'passer' | 'nsp', valeurs: Record<string, unknown>): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(250)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    for (const [k, v] of Object.entries(valeurs)) {
+      if (v === '' || v === null || (Array.isArray(v) && !v.length)) delete p.reponses[k]
+      else p.reponses[k] = v
+    }
+    p.etats[question] = geste === 'repondre' ? 'faite' : geste === 'passer' ? 'passee' : 'nsp'
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/reponse`, 'POST', { question, geste, valeurs })
+  return r.parcours
+}
+
+/** P4-b : la fiche papier jointe PENDANT le parcours (photos déjà déposées au trombone) est lue par le scan de la
+ *  fenêtre, côté serveur ; rien de déjà répondu n'est remplacé ; les coordonnées du mandant vont au coffre. */
+export async function lireFicheParcours(id: string, fichiers: string[]): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(1200)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    for (const [k, v] of Object.entries({ type: '1', surfappart: '64', nbpieces: '3', adresse_haut: '8 rue du Scan', cp: '42100', ville: 'Saint-Étienne' })) {
+      if (!(k in p.reponses)) { p.reponses[k] = v; p.lus = { ...(p.lus ?? {}), [k]: 'scan' } }
+    }
+    p.doutes = { nbpieces: 0.55 }
+    p.fiche = { coffre: true, doutes: 1, mesure: { pages: fichiers.length, lues: fichiers.length, cout_usd: 0.004 } }
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/fiche`, 'POST', { fichiers: fichiers.join('|') })
+  return r.parcours
+}
+
+/** P4-c : l'adresse est dite -> le serveur lit le DPE, l'année, la parcelle, la copropriété (services publics, avec le
+ *  jeton de la personne) et garde des PROPOSITIONS. Lancé par l'écran en arrière-plan ; aucune case n'est posée. */
+export async function chercherPublicsParcours(id: string): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(900)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    p.publicsCle = clePublicsFausse(p.reponses)
+    p.publics = [
+      { id: 'dpe', question: 'energie', source: 'ADEME, DPE', prudence: null, demande: "C'est lui ?", oui: 'Oui', non: 'Un autre',
+        phrase: 'DPE D · GES C du 14/03/2023, 182 kWh/m²/an, 32 kg CO₂/m²/an.', cases: { dpe_cons: '182', dpe_ges: '32', dpe_date: '14/03/2023' } },
+      { id: 'annee', question: 'energie', source: 'base nationale des bâtiments', prudence: null, demande: "C'est bien ça ?", oui: 'Oui', non: 'Autre',
+        phrase: 'Construit en 1974.', cases: { ANNEE_CONS: '1974' } },
+      { id: 'surface', question: 'interieur', source: 'ADEME, DPE', prudence: null, demande: "C'est bien ça ?", oui: 'Oui, 118 m²', non: 'Autre',
+        phrase: '118 m² habitables d’après le DPE.', cases: { surfappart: '118' } },
+      ...(p.reponses.type === '1' ? [{ id: 'terrain', question: 'dehors', source: 'cadastre', demande: "C'est bien ça ?", oui: 'Oui, 1 245 m²', non: 'Autre',
+        prudence: "La parcelle sous l'adresse : un terrain fait de plusieurs parcelles peut être plus grand.",
+        phrase: '1 245 m² au cadastre (parcelle AB 123).', cases: { surfterrain: '1245' } }] : []),
+    ]
+    return vueFausse(p)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/publics`, 'POST', {})
+  return r.parcours
+}
+
+/** P4-d : une PHRASE LIBRE tapée dans la zone du bas pendant qu'une question est ouverte, lue tout de suite par le
+ *  petit lecteur (sans téléphone ni e-mail). Rend la vue, les cases pour la CARTE de la question et ce qu'il faut dire. */
+export async function phraseParcours(id: string, question: string, texte: string): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    await attendre(800)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    // maquette : « 612 m² » remplit la surface de la question ouverte, le reste va dans la note
+    const m = texte.match(/(\d+)\s*m/)
+    const champ = question === 'interieur' ? 'surfappart' : question === 'dehors' ? 'surfterrain' : null
+    const cases: Record<string, unknown> = m && champ ? { [champ]: m[1] } : {}
+    const propre = texte.replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[coordonnée retirée]').replace(/0[1-9](?:[\s.-]?\d{2}){4}/g, '[coordonnée retirée]')
+    const reste = propre.replace(/(\d+)\s*m²?/, '').trim()
+    if (reste && !p.reponses.note) p.reponses.note = reste
+    p.phrases = [...(p.phrases ?? []), { question, texte: propre, carte: Object.keys(cases), remplies: [], note: Boolean(reste) }]
+    return { ...vueFausse(p), remplir: { question, cases, dire: { carte: Object.keys(cases).length, remplies: 0, note: Boolean(reste), vendeur: false, retires: propre === texte ? 0 : 1 }, jeton: Date.now() } }
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue; carte: Record<string, unknown>; dire: DirePhrase }>(
+    `/assistant/parcours/${encodeURIComponent(id)}/phrase`, 'POST', { question, texte })
+  return { ...r.parcours, remplir: { question, cases: r.carte ?? {}, dire: r.dire, jeton: Date.now() } }
+}
+
+export async function noterParcoursCree(id: string, appDossierId: number | null): Promise<ParcoursVue> {
+  if (MAQUETTE) {
+    const p = fauxParcours.find((x) => x.id === id)
+    if (p) { p.etat = 'termine'; p.app_dossier_id = appDossierId }
+    return vueFausse(p!)
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue }>(`/assistant/parcours/${encodeURIComponent(id)}/cree`, 'POST', { app_dossier_id: appDossierId })
+  return r.parcours
+}
+
+// ── P2 morceau 3 (D7) : LES COORDONNÉES D'UN NOUVEAU MANDANT -- jamais par le serveur de l'assistant, jamais au modèle.
+// L'écran les dépose lui-même, avec le JETON de la personne, dans le schéma privé (P3 : assistant_prive, invisible de
+// l'API et de la descente) ; la fenêtre les PREND à son ouverture, et prendre, c'est effacer (règle du 19/11).
+export type CoordonneesMandant = Partial<Record<'civilite' | 'nom' | 'prenom' | 'email' | 'telephone' | 'adresse' | 'cp' | 'ville', string>>
+const coffreMaquette = new Map<string, CoordonneesMandant>()
+
+export async function deposerCoordonneesMandant(parcoursId: string, coordonnees: CoordonneesMandant): Promise<number> {
+  if (MAQUETTE) {
+    const propres = Object.fromEntries(Object.entries(coordonnees).filter(([, v]) => String(v ?? '').trim())) as CoordonneesMandant
+    if (Object.keys(propres).length) coffreMaquette.set(parcoursId, propres)
+    else coffreMaquette.delete(parcoursId)
+    return Object.keys(propres).length
+  }
+  const { data, error } = await supabase!.rpc('app_assistant_mandant_deposer', { p_parcours_id: parcoursId, p_coordonnees: coordonnees })
+  if (error) throw new RefusAssistant(0, `Les coordonnées n'ont pas été gardées : ${error.message}`)
+  return Number(data ?? 0)
+}
+
+export async function prendreCoordonneesMandant(parcoursId: string): Promise<CoordonneesMandant | null> {
+  if (MAQUETTE) {
+    const c = coffreMaquette.get(parcoursId) ?? null
+    coffreMaquette.delete(parcoursId)
+    return c
+  }
+  const { data, error } = await supabase!.rpc('app_assistant_mandant_prendre', { p_parcours_id: parcoursId })
+  if (error) throw new RefusAssistant(0, `Les coordonnées du mandant n'ont pas pu être reprises : ${error.message}`)
+  return (data as CoordonneesMandant | null) ?? null
+}
+
+// Mode maquette (sans base) : quatre questions pour dessiner chaque forme à l'écran (le vrai moteur en a 19, côté serveur)
+type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null; lus?: Record<string, string>; doutes?: Record<string, number>; fiche?: ParcoursVue['fiche']; publics?: PropositionPublique[]; publicsCle?: string | null; phrases?: PhraseParcours[] }
+const fauxParcours: FauxParcours[] = []
+const FAUSSES_QUESTIONS: QuestionParcours[] = [
+  { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'], essentiels: ['type', 'adresse_haut', 'cp', 'ville'] },
+  { id: 'interieur', titre: "L'intérieur", phrase: "Combien de pièces, et comment est l'intérieur ?", forme: 'compteurs', champs: ['surfappart', 'nbpieces', 'NB_CHAMBRES', 'NB_NIVEAUX', 'EXPOSITION'], essentiels: ['surfappart', 'nbpieces'] },
+  { id: 'composition', titre: 'La composition', phrase: 'Pièce par pièce.', forme: 'pieces', champs: ['composition'] },
+  { id: 'dehors', titre: 'Le dehors', phrase: "Qu'y a-t-il dehors ?", forme: 'cocher', champs: ['JARDIN-', 'PISCINE-', 'surfterrain', 'GARAGE_BOX'] },
+  { id: 'energie', titre: "L'énergie", phrase: "L'année, le DPE.", forme: 'cases', champs: ['ANNEE_CONS', 'dpe_date', 'dpe_cons', 'dpe_ges'] },
+  { id: 'mandant', titre: 'Le mandant', phrase: 'Qui vend ?', forme: 'mandant', champs: ['mandant_choix', 'mandant'] },
+  { id: 'photos', titre: 'Les photos du bien', phrase: 'Les photos du bien (la galerie de l’annonce) — pas la fiche de visite.', forme: 'fichiers', champs: ['photos'] },
+]
+/** maquette P4-a : le parcours qu'ouvre la carte, déjà rempli de la demande (le bien et l'intérieur « connus ») */
+function parcoursFauxRempli(): ParcoursVue {
+  const p: FauxParcours = { id: `p${Date.now()}`.padEnd(36, '0'), conversation: null, genre: 'creation_estimation', etat: 'en_cours',
+    reponses: { type: '1', adresse_haut: '12 rue des Tilleuls', cp: '42700', ville: 'Firminy', surfappart: '118', nbpieces: '5' },
+    etats: { bien: 'connue', interieur: 'connue' } }
+  fauxParcours.push(p)
+  return vueFausse(p)
+}
+
+function vueFausse(p: FauxParcours): ParcoursVue {
+  const q = FAUSSES_QUESTIONS.find((x) => !p.etats[x.id]) ?? null
+  return {
+    id: p.id, genre: p.genre, etat: p.etat, app_dossier_id: p.app_dossier_id ?? null, profil: p.reponses.type === '1' ? 'house' : 'apartment',  // maquette : 1 = Maison, sinon un appartement
+    question: q, repere: { rang: q ? FAUSSES_QUESTIONS.indexOf(q) + 1 : FAUSSES_QUESTIONS.length, total: FAUSSES_QUESTIONS.length, faites: Object.keys(p.etats).length },
+    questions: FAUSSES_QUESTIONS.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
+    sources: { ...Object.fromEntries(Object.keys(p.reponses).filter((k) => p.etats.bien === 'connue' && ['type', 'adresse_haut', 'cp', 'ville', 'surfappart', 'nbpieces'].includes(k)).map((k) => [k, 'demande'])), ...(p.lus ?? {}) },
+    doutes: p.doutes ?? {}, fiche: p.fiche ?? null, phrases: p.phrases ?? [],
+    publics: {  // maquette P4-c : même règle que le serveur (question posée, aucune de ses cases déjà dite)
+      possible: clePublicsFausse(p.reponses) != null, a_jour: clePublicsFausse(p.reponses) != null && p.publicsCle === clePublicsFausse(p.reponses),
+      propositions: (p.publics ?? []).filter((x) => FAUSSES_QUESTIONS.some((q) => q.id === x.question)
+        && Object.keys(x.cases).every((c) => p.reponses[c] === undefined || p.reponses[c] === '')),
+    },
+  }
+}
+
+function clePublicsFausse(r: Record<string, unknown>): string | null {
+  const v = (c: string) => String(r[c] ?? '').trim().toLowerCase()
+  return v('adresse_haut') && (v('cp') || v('ville')) ? ['adresse_haut', 'cp', 'ville', 'type', 'surfappart'].map(v).join('|') : null
+}
+
+/** P2 morceau 4 : la fenêtre remplie par un parcours a créé la fiche -> l'écran de l'assistant met le parcours à jour. */
+export const EVENEMENT_PARCOURS_CREE = 'gti-assistant-parcours-cree'
 
 /** L'App prévient l'écran de l'assistant qu'une carte « créer » a abouti (il peut être démonté : la carte se relira). */
 export const EVENEMENT_CREATION_FAITE = 'gti-assistant-creation-faite'
@@ -369,8 +645,11 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     return true
   }
   const avis = q.includes('avis de valeur')
-  const creation = !avis && q.includes('estimation')
-  const texte = avis
+  const parcours = !avis && q.includes('questions')  // P4-a : « crée une estimation par questions »
+  const creation = !avis && !parcours && q.includes('estimation')
+  const texte = parcours
+    ? "Je te propose de la créer par questions guidées : ce que tu m'as dit est déjà rangé, les questions suivent à boutons."
+    : avis
     ? "J'ai préparé l'avis de valeur de l'[annonce 4](annonce:4). L'éditeur reprendra le dernier avis, calculera le marché DVF et les autres sources ; rien ne sera généré avant ton clic sur « Générer »."
     : creation
     ? "J'ai préparé la création. Relis les valeurs : la fenêtre s'ouvrira déjà remplie, et rien ne sera créé avant ton clic sur « Créer ». Le [patron vierge à imprimer](patron:fiche-saisie) sert pour la prochaine fiche papier."
@@ -385,7 +664,14 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     await attendre(40, signal)
     if (q.includes('coupe') && mot.startsWith('annonces')) return false
   }
-  if (avis) {
+  if (parcours) {
+    surEvenement({ type: 'outil', nom: 'proposer_parcours_creation' })
+    surEvenement({
+      type: 'carte', id: `carte-parcours-${Date.now()}`, geste: 'parcours_creation',
+      resume: "Créer une estimation par questions guidées. Déjà dit, pas reposé : le bien, l'intérieur. 13 questions à boutons ensuite, sans l'IA ; à la fin, la fenêtre de création s'ouvre remplie et rien n'est créé avant ton clic « Créer »",
+      expire_le: new Date(Date.now() + 30 * 60_000).toISOString(),
+    })
+  } else if (avis) {
     surEvenement({ type: 'outil', nom: 'proposer_ouvrir_avis_de_valeur' })
     surEvenement({
       type: 'carte', id: `carte-avis-${Date.now()}`, geste: 'ouvrir_avis_de_valeur',

@@ -1212,8 +1212,8 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 43,
-     "43 gestes (le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 44,
+     "44 gestes (le parcours guidé le 19/11 (P4-a), le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
      "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, ajouter une photo et déposer des documents le 17/11, "
      "ouvrir la création et l'avis de valeur le 18/11), "
      "tous « proposer_ » : le "
@@ -2240,7 +2240,8 @@ etat14.pop("contact")
 voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "fichiers": f"{'a' * 32}|{'c' * 32}"}), "JPEG, PNG ou WebP"),
      "⛔ un PDF n'est pas une photo de fiche : refusé (le scan ne lit que des images)")
 ges.MAX_PAGES_SCAN = 1
-voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR), "photos au plus"), "⛔ trop de pages pour le scan : refusé")
+voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), CR), "pages au plus pour la fiche de visite"),
+     "⛔ trop de pages pour le scan : refusé")
 ges.MAX_PAGES_SCAN = 5
 voir(refuse(lambda: ges.preparer_ouvrir_creation_annonce(nouveau_ctx(), {**CR, "negociateur": "pereira"}), "c'est toi"),
      "⛔ un COMMERCIAL ne choisit pas le négociateur : c'est lui (la fenêtre le pose)")

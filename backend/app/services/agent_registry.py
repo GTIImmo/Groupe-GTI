@@ -135,11 +135,38 @@ _SCAN_FICHE_INSTRUCTIONS = (
 )
 
 
+# Agent « phrase libre du parcours » (P4-d, 20/11/2026) : le petit lecteur. Il lit UNE phrase tapée ou dictée pendant le
+# parcours guidé, avec le MÊME format de sortie que le scan (les mêmes cases), pour que la même traduction vers la
+# fenêtre serve. Les conventions des cases sont celles du scan (reprises telles quelles à partir des montants).
+_CONVENTIONS_DU_SCAN = _SCAN_FICHE_INSTRUCTIONS[_SCAN_FICHE_INSTRUCTIONS.index("Les montants et surfaces"):]
+_PARCOURS_PHRASE_INSTRUCTIONS = (
+    "Tu lis UNE PHRASE tapee ou dictee par un negociateur immobilier qui decrit un bien a vendre ou a estimer "
+    "(la question en cours : {{question}}). Retourne uniquement ce que la phrase DIT, dans les champs prevus. "
+    "N'invente jamais une valeur : un oui/non que la phrase ne dit pas reste null (jamais 'non' par defaut). "
+    "Une phrase courte ne remplit que quelques champs : laisse tous les autres a null. "
+    "Une valeur approximative ('vers', 'environ', 'a peu pres', 'autour de') : confidence 0.6 au plus. "
+    "Les pieces : des que la phrase cite des pieces (sejour, cuisine, chambres, salle de bains, WC...), remplis le "
+    "tableau pieces, une entree par piece (type, etage, surface, detail ou note) ; trois chambres = trois entrees. "
+    "Le tableau pieces se place a la RACINE de la reponse, a cote de fields, jamais a l'interieur de fields. "
+    "Les surfaces : surface = la surface HABITABLE du bien ('118 m2 habitables', '118 m2') ; livingSurface = "
+    "UNIQUEMENT la surface du sejour ou du salon, quand la phrase dit 'sejour' ou 'salon' ; landSurface = le terrain. "
+    "L'assainissement : sanitation = 'egout' (pour tout a l'egout, ecrit ainsi en un mot) ou 'fosse septique'. "
+    "Le quartier : transport = les transports (bus, tram, gare, metro, autoroute) ; proximity = ce qui est proche "
+    "(ecoles, commerces, services, centre) ; environment = le cadre (calme, vue, voisinage, verdure). "
+    "LE RESTE : le champ note ET rawNotes ne contiennent QUE ce que la phrase dit et qui n'a trouve place dans AUCUN "
+    "autre champ, en quelques mots (ex. 'abri de jardin'). Ne repete JAMAIS dans note ou rawNotes une information deja "
+    "mise dans un autre champ ou dans le tableau pieces ; ne resume jamais la phrase. Si tout a "
+    "trouve sa place : note = null et rawNotes = null. N'y mets jamais un nom de personne, un telephone ou un e-mail. "
+    "Conventions des champs (les memes que pour une fiche papier) : " + _CONVENTIONS_DU_SCAN
+)
+
+
 # Defauts EN CODE (filet de securite). model=None -> modele par defaut de l'env.
 DEFAULT_SPECS: dict[str, AgentSpec] = {
     "redacteur": AgentSpec("redacteur", _REDACTEUR_INSTRUCTIONS, None, 1200),
     "avis_valeur": AgentSpec("avis_valeur", _AVIS_VALEUR_INSTRUCTIONS, None, 1200),
     "scan_fiche": AgentSpec("scan_fiche", _SCAN_FICHE_INSTRUCTIONS, None, 6500),
+    "parcours_phrase": AgentSpec("parcours_phrase", _PARCOURS_PHRASE_INSTRUCTIONS, None, 1500),
 }
 
 

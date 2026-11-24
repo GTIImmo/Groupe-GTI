@@ -1,10 +1,12 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
 import {
-  EVENEMENT_CREATION_FAITE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
+  EVENEMENT_CREATION_FAITE, EVENEMENT_PARCOURS_CREE, RefusAssistant, deposerFichier, etatFichiers, listerConversations, poserQuestion, refuserCarte,
   relireConversation, retirerFichier, rouvrirCarte, separerFichiersJoints, validerCarte,
+  parcoursDeConversation, parcoursOuvert, phraseParcours,
   type CarteAssistant, type CibleCarte, type ConversationAssistant, type CreationFaite, type EtatFichiers, type EvenementFlux,
-  type OuvertureAvis, type OuvertureCreation,
+  type OuvertureAvis, type OuvertureCreation, type CatalogueParcours, type ParcoursVue,
 } from './lib/assistant'
+import ParcoursGuide, { type ParcoursGuideProps } from './ParcoursGuide'
 import { poserDepotAssistant } from './lib/depotAssistant'
 import {
   EVENEMENT_ASSISTANT_CITER, EVENEMENT_ASSISTANT_DEMANDER, EVENEMENT_ASSISTANT_OUVRIR,
@@ -51,7 +53,9 @@ type Mode = { type: 'accueil' } | { type: 'conversation' } | { type: 'toutes' }
 const CONVERSATION_GARDEE = 'gti_assistant_conversation'
 
 // Les gestes : l'en-tête de la carte et la phrase de fin (le serveur ne rend que des numéros).
-const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>) => string; suite?: string }> = {
+const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>) => string; suite?: string; valider?: string }> = {
+  // 19/11 (P4-a) : créer par le parcours guidé ; le clic n'écrit que la mémoire du parcours
+  parcours_creation: { titre: 'Créer par questions guidées', fait: () => 'Le parcours commence ci-dessous.', suite: 'Les questions se répondent à boutons, sans l\'IA.', valider: 'Commencer les questions' },
   demande_direction: { titre: 'Demande à la direction', fait: () => 'Demande envoyée.', suite: 'Elle attend la direction dans Suivi.' },
   creer_relance: { titre: 'Relance', fait: () => 'Relance créée.' },
   statut_relance: { titre: 'Relance', fait: () => 'Relance mise à jour.' },
@@ -374,7 +378,7 @@ function CarteCreation({ carte, onValider, onRefuser, onRouvrir, onAvis }: { car
         {fiche.composition || fiche.photos ? (
           <p className="asi-cr-note">
             {[fiche.composition ? `Composition : ${fiche.composition} pièce${fiche.composition > 1 ? 's' : ''}` : '',
-              fiche.photos ? `Fiche papier : ${fiche.photos} photo${fiche.photos > 1 ? 's' : ''}, lue${fiche.photos > 1 ? 's' : ''} par le scan de la fenêtre (ce que tu as dit l'emporte)` : '']
+              fiche.photos ? `Fiche de visite : ${fiche.photos} page${fiche.photos > 1 ? 's' : ''}, lue${fiche.photos > 1 ? 's' : ''} par le scan de la fenêtre (ce que tu as dit l'emporte)` : '']
               .filter(Boolean).join('. ')}
           </p>
         ) : null}
@@ -407,9 +411,9 @@ function CarteVue({ carte, onValider, onRefuser, onRouvrir, onAvis }: { carte: C
         <div className="asi-c-b"><p className="asi-resume">{carte.resume}</p><LiensCarte cibles={carte.cibles} /></div>
         {carte.detail ? <div className="asi-c-end is-ko">{carte.detail}</div> : null}
         <div className="asi-c-f">
-          <button className="asi-b is-main" type="button" onClick={onValider}>Valider</button>
+          <button className="asi-b is-main" type="button" onClick={onValider}>{geste?.valider ?? 'Valider'}</button>
           <button className="asi-b" type="button" onClick={onRefuser}>Refuser</button>
-          <small>Rien ne part avant ton clic.</small>
+          <small>{carte.geste === 'parcours_creation' ? "Rien n'est créé : seule la fenêtre, à la fin, crée par ton clic." : 'Rien ne part avant ton clic.'}</small>
         </div>
       </div>
     )
@@ -483,6 +487,12 @@ export default function AccueilAssistant(props: {
   onOuvrirCreation: (ouverture: OuvertureCreation, carteId: string) => void
   // 18/11 (§70) : la carte « avis de valeur » (et « Préparer l'avis de valeur » d'une estimation créée) ouvre l'éditeur
   onOuvrirAvis: (ouverture: OuvertureAvis) => void
+  // 19/11 (étape 4 chap. 6, P2) : le parcours guidé -- les cases et listes de la FENÊTRE (une seule source), l'entrée
+  // venue de la carte « créer par questions » de l'IA (P4-a ; l'entrée d'essai admin est retirée), la question du mandant (morceau 3)
+  // et l'ouverture de la fenêtre remplie (morceau 4). Sans catalogue, aucun parcours ne s'affiche.
+  catalogueParcours?: (profil: string | null) => CatalogueParcours
+  chercherMandantsParcours?: ParcoursGuideProps['chercherMandants']
+  onOuvrirParcours?: (vue: ParcoursVue) => void
 }) {
   const [vue, setVue] = useState<'assistant' | 'tableau'>('assistant')
   const [mode, setMode] = useState<Mode>({ type: 'accueil' })
@@ -502,6 +512,21 @@ export default function AccueilAssistant(props: {
   const controleur = useRef<AbortController | null>(null)
   const fil = useRef<HTMLDivElement | null>(null)
   const champRef = useRef<HTMLTextAreaElement | null>(null)
+  // 19/11 (P2) : les parcours guidés de la conversation ouverte ; la sonde dit si l'interrupteur l'ouvre à ce compte
+  const [parcours, setParcours] = useState<ParcoursVue[]>([])
+  const sondeParcours = useRef<Promise<boolean> | null>(null)
+  // P4-d (20/11) : la question OUVERTE d'un parcours -- la zone du bas y envoie la phrase (sans tour d'IA) ; « ✕ » la
+  //   rend à l'assistant pour cette question ; le petit lecteur la lit tout de suite
+  const [questionOuverte, setQuestionOuverte] = useState<{ parcoursId: string; id: string; titre: string } | null>(null)
+  const [pourAssistant, setPourAssistant] = useState<string | null>(null)
+  const [phraseEnCours, setPhraseEnCours] = useState(false)
+  const [phraseErreur, setPhraseErreur] = useState<string | null>(null)
+  const surQuestion = useCallback((parcoursId: string, q: { id: string; titre: string } | null) => {
+    setQuestionOuverte((avant) => (q ? { parcoursId, ...q } : avant?.parcoursId === parcoursId ? null : avant))
+    setPhraseErreur(null)
+  }, [])
+  const avecParcours = !!props.catalogueParcours
+  if (avecParcours && !sondeParcours.current) sondeParcours.current = parcoursOuvert()
 
   // la même requête que le tableau de bord, une fois le RÔLE connu (porteeRecherches = undefined tant que le profil
   // n'est pas chargé : avant, un admin passait pour un négociateur et ne voyait que SES recherches, 0 au lieu de 737,
@@ -551,6 +576,7 @@ export default function AccueilAssistant(props: {
     conversationId.current = null
     garderConversation(null)
     setTours([])
+    setParcours([])
     setTitre('')
     setBlocage(null)
     setMode({ type: 'accueil' })
@@ -564,9 +590,14 @@ export default function AccueilAssistant(props: {
     setMode({ type: 'conversation' })
     setBlocage(null)
     setTours([])
+    setParcours([])
     setChargement(true)
     conversationId.current = id
     garderConversation(id)
+    // 19/11 (P2) : ses parcours guidés, relus à côté (un échec ne bloque pas la conversation)
+    void sondeParcours.current?.then((ouvert) => (ouvert ? parcoursDeConversation(id) : []))
+      .then((liste) => { if (conversationId.current === id) setParcours(liste) })
+      .catch(() => undefined)
     try {
       const { conversation, messages, cartes } = await relireConversation(id)
       if (conversationId.current !== id) return
@@ -666,7 +697,8 @@ export default function AccueilAssistant(props: {
   useEffect(() => {
     const el = fil.current
     if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight
-  }, [tours])
+  }, [tours, parcours])
+
 
   // 17/11 (le trombone) : l'état est lu une fois ; fermé, refusé ou injoignable = pas de trombone (jamais une erreur)
   useEffect(() => {
@@ -800,6 +832,13 @@ export default function AccueilAssistant(props: {
         if (carte.geste === 'ouvrir_creation_annonce' && r.resultat?.ouvrir === 'creation_annonce') {
           portes.current.onOuvrirCreation(r.resultat as unknown as OuvertureCreation, carte.id)
         }
+        // 19/11 (P4-a) : « créer par questions » n'écrit que la mémoire du parcours -- il s'ouvre sous la conversation,
+        // déjà rempli de la demande ; les questions suivent à boutons, sans le modèle
+        if (carte.geste === 'parcours_creation' && r.resultat?.ouvrir === 'parcours') {
+          const vue = (r.resultat as unknown as { parcours: ParcoursVue }).parcours
+          setParcours((l) => [...l.filter((x) => x.id !== vue.id), vue])
+          window.setTimeout(() => { if (fil.current) fil.current.scrollTop = fil.current.scrollHeight }, 0)
+        }
         // 18/11 (§70-3) : « avis de valeur » n'écrit rien -- l'app ouvre l'ÉDITEUR du bien, pré-rempli de la dictée
         if (carte.geste === 'ouvrir_avis_de_valeur' && r.resultat?.ouvrir === 'avis_de_valeur') {
           portes.current.onOuvrirAvis(r.resultat as unknown as OuvertureAvis)
@@ -853,10 +892,42 @@ export default function AccueilAssistant(props: {
     return () => window.removeEventListener(EVENEMENT_CREATION_FAITE, surCreation)
   }, [majCarte])
 
+  // 19/11 (P2 morceau 4) : la fenêtre remplie par un parcours a créé la fiche -> le parcours passe à « créée »
+  useEffect(() => {
+    const surParcours = (e: Event) => {
+      const v = (e as CustomEvent<ParcoursVue>).detail
+      if (v?.id) setParcours((l) => l.map((x) => (x.id === v.id ? v : x)))
+    }
+    window.addEventListener(EVENEMENT_PARCOURS_CREE, surParcours)
+    return () => window.removeEventListener(EVENEMENT_PARCOURS_CREE, surParcours)
+  }, [])
+
+  // P4-d : une phrase va à la question ouverte quand un parcours est en cours dans CETTE conversation, sans fichier joint
+  const cleQuestionOuverte = questionOuverte ? `${questionOuverte.parcoursId}:${questionOuverte.id}` : null
+  const versParcours = !!questionOuverte && mode.type === 'conversation' && !joints.length && pourAssistant !== cleQuestionOuverte
+    && parcours.some((p) => p.id === questionOuverte.parcoursId && p.etat === 'en_cours' && p.app_dossier_id == null)
+  const envoyerPhrase = async (brute: string) => {
+    const texte = brute.trim()
+    if (!texte || !questionOuverte || phraseEnCours) return
+    setChamp('')
+    setPhraseErreur(null)
+    setPhraseEnCours(true)
+    try {
+      const v = await phraseParcours(questionOuverte.parcoursId, questionOuverte.id, texte)
+      setParcours((l) => l.map((x) => (x.id === v.id && !(x.maj_le && v.maj_le && v.maj_le < x.maj_le) ? v : x)))
+    } catch (e) {
+      setChamp(texte)  // la phrase revient dans le champ : rien n'est perdu
+      setPhraseErreur(e instanceof Error ? e.message : "La phrase n'a pas pu être lue.")
+    } finally {
+      setPhraseEnCours(false)
+    }
+  }
+  const soumettre = (texte: string) => (versParcours ? envoyerPhrase(texte) : envoyer(texte))
+
   const onTouche = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      void envoyer(champ)
+      void soumettre(champ)
     }
   }
 
@@ -907,7 +978,7 @@ export default function AccueilAssistant(props: {
     <button className="asi-go is-stop" type="submit" aria-label="Arrêter la réponse"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg></button>
   ) : (
     <button className="asi-go" type="submit" aria-label={joints.some((j) => j.etat === 'envoi') ? 'Envoi des fichiers en cours' : 'Envoyer'}
-      disabled={pause || !champ.trim() || joints.some((j) => j.etat === 'envoi')}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
+      disabled={pause || phraseEnCours || !champ.trim() || joints.some((j) => j.etat === 'envoi')}><Picto epais={2.3}><path d="M12 19V5M6 11l6-6 6 6" /></Picto></button>
   )
 
   // 17/11 (le trombone) : seulement si l'interrupteur `assistant_fichiers` l'ouvre à ce compte
@@ -958,8 +1029,16 @@ export default function AccueilAssistant(props: {
       </div>
     </form>
   ) : (
-    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void envoyer(champ) }}
+    <form className="asi-ask" onSubmit={(e) => { e.preventDefault(); if (enCours) arreter(); else void soumettre(champ) }}
       onDragOver={(e) => { if (trombone?.ouvert) e.preventDefault() }} onDrop={deposerParGlisser}>
+      {versParcours && questionOuverte ? (
+        <p className="asi-pour">{phraseEnCours ? <>Je lis ta phrase pour <b>« {questionOuverte.titre} »</b>…</>
+          : <>Pour : <b>« {questionOuverte.titre} »</b> — ta phrase est gardée et lue, sans l'assistant.</>}
+          {!phraseEnCours ? <button type="button" onClick={() => setPourAssistant(cleQuestionOuverte)}>✕ Demander à l'assistant</button> : null}</p>
+      ) : questionOuverte && pourAssistant === cleQuestionOuverte && !joints.length ? (
+        <p className="asi-pour">Ton message ira à l'assistant. <button type="button" onClick={() => setPourAssistant(null)}>Répondre à « {questionOuverte.titre} »</button></p>
+      ) : null}
+      {phraseErreur ? <p className="asi-pour-ko" role="alert">{phraseErreur}</p> : null}
       {listeJoints}
       <div className="asi-ask-row">
         {boutonTrombone}
@@ -971,7 +1050,7 @@ export default function AccueilAssistant(props: {
           onChange={(e) => setChamp(e.target.value)}
           onKeyDown={onTouche}
           aria-label="Ta réponse"
-          placeholder={pause ? "L'assistant reprend demain." : 'Réponds ou demande autre chose…'}
+          placeholder={pause ? "L'assistant reprend demain." : versParcours ? 'Réponds, dicte, ou touche une réponse…' : 'Réponds ou demande autre chose…'}
         />
         {boutonEnvoi}
       </div>
@@ -1091,6 +1170,18 @@ export default function AccueilAssistant(props: {
               </Fragment>
             )
           })}
+          {props.catalogueParcours ? parcours.map((p) => (
+            <div key={p.id} className="asi-ai">
+              <span className="asi-mk"><Sceau /></span>
+              <div className="asi-ai-b">
+                <ParcoursGuide vue={p} catalogue={props.catalogueParcours!} onVue={(v) => setParcours((l) => l.map((x) => (x.id === v.id
+                  // P4-c : la lecture des services publics revient en arrière-plan -- une vue plus ANCIENNE ne remplace pas la plus récente
+                  && !(x.maj_le && v.maj_le && v.maj_le < x.maj_le) ? v : x)))}
+                  onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} ficheOuverte={Boolean(trombone?.ouvert)}
+                  onQuestion={surQuestion} />
+              </div>
+            </div>
+          )) : null}
           {blocage ? <MessageBlocage blocage={blocage} onRenvoyer={(q) => void envoyer(q)} /> : null}
         </div>
       </section>
