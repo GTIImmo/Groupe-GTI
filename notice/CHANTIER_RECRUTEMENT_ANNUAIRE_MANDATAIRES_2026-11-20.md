@@ -1224,7 +1224,7 @@ L'ordre :
     branch -d recrutement-r6-seul`) et la coquille vide `C:\Hektor\envoi-recrutement-r6` (tenue par un processus).
   - ⚠ Le jour où le `main` local sera réconcilié avec GitHub, R6 y sera deux fois (`971ba5c` et `9a20116`) avec
     des ajouts identiques : ils doivent se fondre sans conflit, à vérifier ce jour-là.
-- [ ] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant — **ÉCRITE le 24/11
+- [x] R6.8 R5 bis : la tâche quotidienne `GTI Recrutement Sauvegarde`, déclarée avant — **ÉCRITE le 24/11
       (`c41d35d`), RIEN de posé ni d'enregistré.**
   - Pourquoi une pièce à part : « GTI Sauvegarde » ne copie que le schéma `public`, et le robot ne LISAIT pas le
     suivi, le fil ni les retraits (voulu en R6). Rien de ce que l'app écrit n'avait donc de copie hors de Supabase.
@@ -1254,6 +1254,12 @@ L'ordre :
   - ✅ Interrupteur `RECRUTEMENT_SAUVEGARDE_QUOTIDIENNE=1` (copie d'avant du fichier dans le brouillon de la session).
   - ⏸ Reste à Frédéric : commiter `check_gti_health.py`, PUIS lancer l'installeur (administrateur). Le premier
     passage de la tâche sera le lendemain à 09:30.
+  - ✅ **FAIT par Frédéric le 24/11** : `check_gti_health.py` commité (`2fc01a6`, déclarée AVANT), puis la tâche
+    enregistrée — relue : Ready, S4U / Limited, quotidienne 09:30, limite PT1H, IgnoreNew, bon script. **Premier
+    passage : 25/11 à 09:30** (jamais tournée : 267011). La branche de transport `recrutement-r6-seul` est retirée.
+  - ⏳ À relire le 25/11 après 09:30 : le journal `logs\scheduledecrutement_sauvegarde_<date>.log` (« tout vert »),
+    une 2e copie dans `quotidien\`, le battement `recrutement.sauvegarde_quotidienne`. C'est la seule preuve qui
+    compte : mon terminal ne lit pas `python_paquets\psycopg2` (installé en administrateur), la tâche si.
   - ⚠ Vu en chemin : mon terminal ne peut pas LIRE `python_paquets\psycopg2` (installé depuis une PowerShell
     administrateur) ; la tâche, elle, le lit (descente du 13:34). Mes essais prennent les mêmes versions dans le
     dossier que voit l'app Claude.
