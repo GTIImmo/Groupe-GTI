@@ -1092,11 +1092,32 @@ L'ordre :
     (« on ne collecte jamais sans la liste »), sortie 1.
   - Défaut secondaire : le message disait « code 0 », parce que le battement écrasait le code. Le
     code est maintenant gardé tout de suite, à la descente comme à la montée.
-  - **La correction** : `PYTHONUSERBASE` est posé pour le Python système, avec un **contrôle au
-    départ** (les deux bibliothèques doivent répondre avant toute collecte).
-  - Reproduit en retirant APPDATA, puis corrigé : essai à blanc sans APPDATA, descente faite,
-    sortie 0.
-  - ⏳ La tâche est à relancer pour l'essai complet.
+  - ~~La correction : `PYTHONUSERBASE`~~ → ⛔ **FAUSSE, réfutée par le 2e lancement (11:58, même
+    panne en 1 seconde)**. Mon essai « sans APPDATA » ne reproduisait rien : il tournait DANS
+    l'application Claude, qui voit des fichiers que la tâche ne voit pas.
+  - ⭐⭐ **LA VRAIE CAUSE (24/11, 12:00)** : le Python système n'a JAMAIS eu psycopg2 ni requests.
+    - Ils avaient été installés « pour l'utilisateur » depuis l'application Claude. Or cette
+      application est un **paquet Windows (MSIX)** : Windows a rangé les fichiers dans son dossier
+      PRIVÉ, `AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Python`, le 25/06.
+    - Un terminal Claude les voit à l'adresse habituelle ; une tâche, un service ou un PowerShell
+      ordinaire ne les voient pas.
+    - Les droits du dossier portent d'ailleurs la marque du paquet (un SID `S-1-15-3-…`).
+  - **LA CORRECTION, DE NOUVEAU** : le robot a **son propre dossier de paquets**,
+    `recrutement_donnees\python_paquets`, à un endroit que tout le serveur voit.
+    - Le Python système y est lancé avec **`-s`** (sans dossier personnel), et `PYTHONPATH` est posé
+      pour cet appel seulement, sans déborder sur le .venv de la collecte.
+    - ⭐ Avec `-s`, un essai depuis Claude se comporte **exactement** comme la tâche : la panne est
+      reproduite de mon côté (`python -s -c "import psycopg2"` → No module named 'psycopg2').
+  - **Éprouvé dans les deux sens (à blanc, `-Source groupement`)** :
+    - **sans le dossier** : refus au départ, en 1 s, avec la commande d'installation dans le
+      message, sortie 1 ;
+    - **avec un dossier qui contient les paquets** : descente faite, collecte code 0, contrôle VERT,
+      sortie 0.
+  - ⏸ **Frédéric installe le dossier UNE fois** (un téléchargement, hors de ma délégation) :
+    `C:\Python314\python.exe -m pip install --target C:\Hektor\recrutement_donnees\python_paquets
+    psycopg2-binary==2.9.12 requests==2.34.2 urllib3==2.7.0 idna==3.18 charset_normalizer==3.4.7
+    certifi==2026.6.17`. Ce sont les versions exactes éprouvées depuis le 24/11 matin.
+  - ⏳ Puis il relance la tâche pour l'essai complet.
 - [ ] R6.1 L'interrupteur : clé `recrutement_ecran`, crans `admin` / `on`, comme Transactions
 - [ ] R6.2 Le listing, son bandeau de la dernière collecte, « Où recruter »
 - [ ] R6.3 La fiche candidat et son parcours

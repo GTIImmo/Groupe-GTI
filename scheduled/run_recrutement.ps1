@@ -63,11 +63,25 @@ $py = Join-Path $root ".venv\Scripts\python.exe"
 # La descente et la montee parlent a la base par le ROBOT (psycopg2) : le Python SYSTEME l'a, le .venv non
 # (verifie le 24/11). Elles ne lisent jamais le .env du projet, seulement recrutement_donnees\robot.env.
 $pyBase = if ($env:RECRUTEMENT_PYTHON_BASE) { $env:RECRUTEMENT_PYTHON_BASE } else { "C:\Python314\python.exe" }
-# ⚠ 24/11, TROUVE PAR LE 1er LANCEMENT DE LA TACHE : psycopg2 et requests du Python systeme sont installes dans
-#   le dossier PERSONNEL (AppData\Roaming\Python\Python314\site-packages). Une tache sans session ouverte (S4U)
-#   ne connait pas ce chemin : « No module named 'requests' » et la descente tombait. On le donne explicitement.
-#   (Reproduit en retirant APPDATA, corrige avec PYTHONUSERBASE, le 24/11.)
-$pyBaseUtilisateur = if ($env:RECRUTEMENT_PYTHONUSERBASE) { $env:RECRUTEMENT_PYTHONUSERBASE } else { "C:\Users\admin\AppData\Roaming\Python" }
+# ⚠⚠ 24/11, TROUVE PAR LES 2 PREMIERS LANCEMENTS DE LA TACHE : le Python systeme N'A PAS psycopg2 ni requests.
+#   Ils avaient ete installes « pour l'utilisateur » DEPUIS L'APPLICATION CLAUDE, qui est un paquet Windows
+#   (MSIX) : Windows a range ces fichiers dans le dossier PRIVE de l'application
+#   (AppData\Local\Packages\Claude_...\LocalCache\Roaming\Python). Un terminal Claude les voit ; la tache, un
+#   service ou un PowerShell ordinaire, NON. (La 1re correction, PYTHONUSERBASE, ne pouvait donc rien.)
+#   ➡ Le robot a SON dossier de paquets, a un endroit que tout le serveur voit, et le Python systeme est lance
+#   avec -s (sans dossier personnel) : un essai depuis Claude se comporte alors EXACTEMENT comme la tache.
+$paquetsRobot = if ($env:RECRUTEMENT_PAQUETS_PYTHON) { $env:RECRUTEMENT_PAQUETS_PYTHON } else { Join-Path $donnees "python_paquets" }
+$installPaquets = "C:\Python314\python.exe -m pip install --target $paquetsRobot psycopg2-binary==2.9.12 requests==2.34.2 urllib3==2.7.0 idna==3.18 charset_normalizer==3.4.7 certifi==2026.6.17"
+# Le Python systeme, avec SEULEMENT le dossier du robot en plus : PYTHONPATH est pose pour cet appel et rendu
+# apres, pour ne jamais deborder sur le .venv (la collecte garde ses propres bibliotheques).
+#   (fonction SIMPLE, sans param() : « -X » et « -c » passent tels quels dans $args au lieu d'etre pris pour
+#   des parametres PowerShell)
+function Invoke-PythonRobot {
+    $ancien = $env:PYTHONPATH
+    $env:PYTHONPATH = $paquetsRobot
+    try { & $pyBase -s @args 2>&1 }
+    finally { if ($null -eq $ancien) { Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue } else { $env:PYTHONPATH = $ancien } }
+}
 $collecteur = Join-Path $root "recrutement\collecte_annuaires.py"
 $logDir = Join-Path $root "logs\scheduled"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
@@ -161,13 +175,15 @@ try {
     # ── LE CONTROLE DE DEPART : si la descente ou la montee doivent tourner, le Python systeme et ses deux
     #    bibliotheques doivent repondre MAINTENANT -- pas apres des heures de collecte.
     if ($descente -or $montee) {
-        $env:PYTHONUSERBASE = $pyBaseUtilisateur
         if (-not (Test-Path -LiteralPath $pyBase)) { throw "le Python systeme est absent : $pyBase" }
-        $verif = & $pyBase -c "import psycopg2, requests; print('ok')" 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            throw "le Python systeme ne trouve pas psycopg2 / requests (PYTHONUSERBASE=$pyBaseUtilisateur) : $($verif | Select-Object -Last 1)"
+        if (-not (Test-Path -LiteralPath $paquetsRobot)) {
+            throw "le dossier des paquets du robot est absent ($paquetsRobot). L'installer UNE fois : $installPaquets"
         }
-        Write-Output "    Python systeme : psycopg2 et requests trouves"
+        $verif = Invoke-PythonRobot -c "import psycopg2, requests; print(psycopg2.__file__)"
+        if ($LASTEXITCODE -ne 0) {
+            throw "le Python systeme ne trouve pas psycopg2 / requests dans $paquetsRobot : $($verif | Select-Object -Last 1). Reinstaller : $installPaquets"
+        }
+        Write-Output "    Python systeme : psycopg2 et requests trouves ($($verif | Select-Object -Last 1))"
     }
 
     # ── ① DESCENTE ────────────────────────────────────────────────────────────────────────────
@@ -180,7 +196,7 @@ try {
             if (-not (Test-Path -LiteralPath $script)) { throw "descente allumee mais recrutement\descendre.py absent" }
             if (-not (Test-Path -LiteralPath $pyBase)) { throw "descente allumee mais le Python systeme est absent : $pyBase" }
             # elle n'ecrit que des COMPTES : sa sortie va au journal de la tache
-            & $pyBase -X utf8 $script 2>&1 | ForEach-Object { Write-Output "[descente] $_" }
+            Invoke-PythonRobot -X utf8 $script | ForEach-Object { Write-Output "[descente] $_" }
             # ⚠ le code est GARDE tout de suite : le battement qui suit lance un autre programme et l'ecraserait
             #   (vu le 24/11 : « la descente a echoue (code 0) »)
             $codeDescente = $LASTEXITCODE
@@ -265,7 +281,7 @@ try {
             if (-not (Test-Path -LiteralPath $script)) { throw "montee allumee mais recrutement\pousser.py absent" }
             if (-not (Test-Path -LiteralPath $pyBase)) { throw "montee allumee mais le Python systeme est absent : $pyBase" }
             # elle n'ecrit que des COMPTES : sa sortie va au journal de la tache
-            & $pyBase -X utf8 $script 2>&1 | ForEach-Object { Write-Output "[montee] $_" }
+            Invoke-PythonRobot -X utf8 $script | ForEach-Object { Write-Output "[montee] $_" }
             $codeMontee = $LASTEXITCODE   # garde avant le battement (meme raison que la descente)
             if ($codeMontee -ne 0) { $runFailed = $true; Send-Battement "montee" "error" "code $codeMontee" }
             else { Send-Battement "montee" "success" }
