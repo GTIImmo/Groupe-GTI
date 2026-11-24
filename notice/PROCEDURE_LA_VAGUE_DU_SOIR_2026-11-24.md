@@ -336,3 +336,29 @@ qu'une nuit ordinaire.
 
 ⚠ **A1 et A3 ne sont pas encore fabriqués en patch.** Ce sont les reflets des avis, des notes et des conditions : des
 reflets, pas de l'argent. La commande les joue à l'étape 7 s'ils sont au manifeste.
+
+### Son 11e mot (24/11, le soir) : A1 et A3 avec la vague ; les 42 nommées ; l'ordre de demain
+
+- **⭐ (a) A1 et A3 AVEC LA VAGUE, à l'étape 7, le même soir.** Son contrôleur compte ce qui porte un reflet de dossier :
+  2 560 avis, 4 524 notes et les conditions, soit **plus de 7 000 écritures**. Avec 795 étiquettes qui changent, attendre le
+  lendemain laisserait des milliers d'écritures pointer, à l'écran, des dossiers qui n'existent plus.
+  - « C'est le geste le moins dangereux de la soirée : **un reflet n'est pas une clé**. » Les avis sont identifiés par la
+    ligne du Sheet ; les notes et les conditions par leur transaction. Rafraîchir un reflet ne déplace aucune écriture.
+- **⬜ À chiffrer demain matin, avant son accord :** sur ces 7 000, **combien la vague rend faux**, et **combien A1 et A3
+  en réparent**. « Je veux savoir ce que je répare. »
+- **Les deux gardes : « garde-les telles quelles ».** L'horaire a refusé 21:31. Le point de non-retour a trouvé 0 écart,
+  puis a refusé exactement les 2 pièces d'une version fausse. « Une garde qui n'a jamais rien refusé ne vaut rien. »
+- **Le brouillon du passage 81** (636 lignes, md5 a6d58791) est le bon.
+- **✅ Les 42 chaînes sans ligne ni part à l'arrivée : « ça me va », puisqu'aucune ne porte de vente réglée.** « Tu les
+  NOMMES au journal avec leur raison, et on n'y touche pas. »
+  - **FAIT :** leur motif dit « RESTE à l'arrivée (membres …) SANS LIGNE NI PART — NOMMÉE (son mot du 24/11 : aucune vente
+    réglée, on n'y touche pas) ». Il est au journal et dans la mise de côté.
+  - Un contrôle explicite est ajouté au patch : 0 part et 0 vente réglée sur les 42.
+  - Gardes et empreinte d'après inchangées (c6978c4f). Ce contrôle se jouera à blanc demain avec le reste.
+- **Les durées lui vont :** 8 minutes, et 2 min 30 pour la fenêtre dangereuse. Le créneau hh:02 → hh:25 vérifié par la
+  garde lui va : « c'est elle qui choisit, pas moi ».
+- **⏰ Demain, dans cet ordre :**
+  1. le témoin de la nuit, avant tout autre geste ;
+  2. la préparation du jour, A1 et A3 compris, avec leur chiffrage ;
+  3. son accord sur les quatre pièces, plus A1 et A3.
+- ⛔ Rien cette nuit.

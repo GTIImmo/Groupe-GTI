@@ -179,8 +179,10 @@ sig = lambda rows: sorted((r[1], int(r[2]), str(r[3]), float(r[5])) for r in row
 MOTIF, VERS_MISE = {}, {}
 for s_ in sorted(MISES_CH):
     L_ = "+".join(sorted(MISES_CH[s_]))
-    reste = (" ; la chaine %d reste (membres %s) sans aucune ligne" % (
-        s_, ",".join(map(str, MEMBRES[s_]))) if MEMBRES.get(s_) else "")
+    # ✅ SON MOT du 24/11 (11e) : « LES 42 CHAINES SANS LIGNE NI PART A L'ARRIVEE : ca me va, puisque AUCUNE ne porte de
+    #   vente reglee. Tu les NOMMES au journal avec leur raison, et on n'y touche pas. »
+    reste = (" ; la chaine %d RESTE a l'arrivee (membres %s) SANS LIGNE NI PART -- NOMMEE (son mot du 24/11 : aucune "
+             "vente reglee, on n'y touche pas)" % (s_, ",".join(map(str, MEMBRES[s_]))) if MEMBRES.get(s_) else "")
     if s_ in VERS_DE:
         VERS_MISE[s_] = min(VERS_DE[s_])
         MOTIF[s_] = "%s quitte la chaine %d -> recopiee sur la chaine de la piece %d%s" % (
@@ -203,7 +205,10 @@ for s_ in sorted(MISES_CH):
         sys.exit(1)
 dire("MOTIFS des %d chaines mises de cote : %s" % (len(MOTIF), dict(__import__("collections").Counter(
     ("recopiee" if "recopiee" in m_ else "annulee" if "ANNULEE" in m_ else "memes parts" if "MEMES" in m_ else
-     "completee") + (" (la chaine reste)" if " reste (" in m_ else "") for m_ in MOTIF.values()))))
+     "completee") + (" (la chaine reste)" if " RESTE a l'arrivee (" in m_ else "") for m_ in MOTIF.values()))))
+NOMMEES = sorted(s_ for s_ in MISES_CH if MEMBRES.get(s_))
+dire("NOMMEES (son mot du 24/11) : %d chaines restent a l'arrivee sans ligne ni part : %s" % (
+    len(NOMMEES), ", ".join(map(str, NOMMEES))))
 
 # ─── G3 : les ventes reglees sans part A L'ARRIVEE, avant A2 (chaines nommees) ─────────────────────────────────────
 # a l'arrivee (simulee ou reelle) : une chaine dont un membre est une VENTE reglee et qui ne porte aucune part
@@ -226,7 +231,8 @@ D = {"lot": LOT, "tab": TAB, "liste": LISTE, "e_membres": E_MEMBRES, "n_membres"
      "c_pct": "%g" % float(CC["pourcentage"]), "n_cibles": len(CIBLES), "n_touchees": len(TOUCHEES),
      "n_journal": len(REC) + len(MIS) + 1, "cibles": ", ".join(map(str, CIBLES)),
      "sources": ", ".join(map(str, SOURCES)), "passage": X["passage"], "image": X["image"],
-     "src": "phase2/checks/a2_vague_generer_patch_2026-11-24.py"}
+     "src": "phase2/checks/a2_vague_generer_patch_2026-11-24.py",
+     "nommees": ", ".join(map(str, NOMMEES)) or "-1", "n_nommees": len(NOMMEES)}
 D["n_net"] = len(REC) - len(MIS) + 1
 
 EXPR_MEMBRES = T("""(select md5(coalesce(string_agg(x, ';' order by c), '')) from (
@@ -402,6 +408,13 @@ begin
   -- la completee : la chaine de NRZVKH85 porte ses deux cotes
   select count(*) into n from public.app_affaire_repartition where app_chaine_id = %(ch_comp)s;
   if n <> 2 then raise exception '⛔ controle : la chaine %(ch_comp)s porte % part(s) au lieu de 2', n; end if;
+  -- ✅ LES %(n_nommees)s CHAINES NOMMEES (son mot du 24/11) : elles restent a l'arrivee SANS LIGNE NI PART, et AUCUNE ne
+  --    porte de vente reglee -- on n'y touche pas, et on le prouve
+  select count(*) into n from public.app_affaire_repartition where app_chaine_id in (%(nommees)s);
+  if n <> 0 then raise exception '⛔ controle : % part(s) sur les %(n_nommees)s chaines nommees', n; end if;
+  select count(*) into n from public.app_affaire_ledger where app_chaine_id in (%(nommees)s)
+     and kind = 'vente' and coalesce(vente_reglee_app, '') <> '';
+  if n <> 0 then raise exception '⛔ controle : % vente(s) reglee(s) sur les %(n_nommees)s chaines nommees', n; end if;
   -- ⭐ LA GARDE DU TEMPS 2 : plus AUCUNE vente reglee sans part a l'arrivee
   e := (%(sql_vr)s);
   if e <> '' then raise exception '⛔ controle : ventes reglees sans part apres A2 : [%]', e; end if;

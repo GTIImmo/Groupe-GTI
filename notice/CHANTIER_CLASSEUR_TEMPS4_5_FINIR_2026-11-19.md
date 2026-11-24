@@ -5698,6 +5698,17 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   - Puis la preparation du jour et son accord sur les quatre pieces.
   - A1 et A3 ne sont pas encore fabriques en patch.
 - **Le detail :** notice/PROCEDURE_LA_VAGUE_DU_SOIR_2026-11-24.md, section « Le 24/11 au soir : les trois pieces ».
+### 20.47 Son 11e mot : A1 et A3 avec la vague ; les 42 nommees (24/11, le soir)
+
+- **(a) A1 et A3 avec la vague, a l'etape 7, le meme soir.** Plus de 7 000 ecritures portent un reflet de dossier (2 560 avis,
+  4 524 notes, les conditions). « Un reflet n'est pas une cle » : le rafraichir ne deplace aucune ecriture.
+- **A chiffrer demain matin, avant son accord :** combien la vague rend faux, et combien A1 et A3 en reparent.
+- **Les deux gardes « telles quelles »** (elles ont refuse pour de vrai) ; le brouillon du passage 81 (a6d58791) est le bon.
+- **Les 42 chaines sans ligne ni part : « ca me va »,** car aucune vente reglee. Elles sont NOMMEES dans le motif (journal et mise
+  de cote), et un controle explicite est ajoute au patch A2 (0 part, 0 vente reglee). Gardes et empreinte d'apres sont
+  inchangees.
+- **Demain, dans cet ordre :** le temoin de la nuit, puis la preparation (A1 et A3 compris), puis son accord sur les quatre
+  pieces, plus A1 et A3.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
