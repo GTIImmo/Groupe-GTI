@@ -5589,6 +5589,33 @@ JUMELLES T2GZOY5O / O6R10ZQA : la meme affaire (mandat 4369) ; seules l'Annulee 
   different ; 20073 porte 21/09 et la note F de O6R10ZQA -> A LUI.
 ```
 
+### 20.43 Ses quatre reponses : les trois patchs a lire avant d'ecrire (24/11, son 6e mot)
+
+Notice : notice/PROTOCOLE_SES_QUATRE_REPONSES_LES_TROIS_PATCHS_A_LIRE_2026-11-24.md. Outils : cases_vides_generer_patchs_2026-11-24.py,
+repartition_4_5_generer_patchs_2026-11-24.py.
+
+```
+SON MOT : « VAS-Y -- SI CE SONT BIEN CEUX-LA (① 20 charges, ④ 6 suppositions, ⑤ 2 corrections). SI C'EST AUTRE CHOSE, TU ME
+  LES NOMMES AVANT D'ECRIRE. » -> mes 3 patchs etaient ①a/①b/dates : AUTRE CHOSE -> RIEN D'ECRIT, les 3 qu'il nomme fabriques.
+① patch_charge_2026-11-24 : 18 mandats poses (5 reglees en tete, dont cc33cc38 vendeur et df0ce30c acquereur : SA DECISION ② la
+  vente reglee fait foi) + 2 annulees NOMMEES au journal avec leur valeur (afd672fa acquereur, 2c2566d7 vendeur). VERT
+  95015873 -> b58ba6cb -> 95015873.
+④ patch_suppositions_2026-11-24 : 6 chaines, 12 parts (les deux moities de chaque chaine ; A07EC3DH et QXDW8EQA : la sortie
+  ne change que d'origine -- a lui) ; noms resolus comme le 13/11 (Joel CHAMPAGNAC) ; anciennes parts ENTIERES dans
+  app_affaire_repartition_mise_de_cote (la table du 22/11, nee avec ce patch). VERT 1c741e0f -> 91a61e04 -> 1c741e0f.
+⑤ patch_corrections_2026-11-24 : 27196 entree COUDERT -> HERITIER (739a0db1), 27195 entree HERITIER -> COUDERT (TR42PT5H) ;
+  JRE23R1G non touchee. VERT e6fc6ff4 -> adb3c8f8 -> e6fc6ff4.
+LES 2 DATES ANTERIEURES NOMMEES : S3HOG6UL 21/10/2021 < compromis 17387 du 03/11/2021 ; 6U5DQQ4J 21/10/2021 < compromis
+  24450 du 28/10/2021 (C3 ecartait 106 « anterieures ») -> a lui ; T2GZOY5O nommee en reserve (entrera au journal du patch
+  des dates).
+⑥ : on attend la vente (23/11/2026 -> 20/01/2027) ; A REVOIR EN JANVIER 2027 ; c6e5299a nommee.
+CAUSE COMMUNE (a5cb141f, date vide) : chainages deja coupes aujourd'hui avec une ligne : 4 / 6 a date vide (a5cb141f,
+  I847SPN3, IEYXREWQ, 959b7669) ; dans les coupes de la vague 37 / 207 (18 % contre 2,2 % au registre) ; 170 coupes sans
+  date vide = des lignes qui partageaient une chaine.
+JUMELLES : O6R10ZQA = la bonne (20073, deja posee) ; T2GZOY5O en reserve (offre refusee, pas de date) ; PAOLONE non resolu.
+RIEN D'ECRIT. Verifie apres les 4 essais : journal 46, 0 table de mise de cote, 0 sauvegarde, 0 colonne, suppositions intactes.
+```
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

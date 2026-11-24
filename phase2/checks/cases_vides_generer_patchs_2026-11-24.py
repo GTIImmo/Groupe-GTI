@@ -46,10 +46,18 @@ APRES = dict(x.split("=") for x in a.apres)
 
 # ── ① LA CHARGE : (ligne, n° au Sheet, piece qui porte le mandat, annonce, mandat, valeur, etat de la ligne, commission) ──
 #   mesure du 24/11 (image du passage 79, carnet et registre lus CHEZ SUPABASE : carnet VIDE, reflet VIDE, 1 mandat par annonce)
-CHARGE_1A = [  # les 3 VENTES REGLEES sans contradiction (les 2 autres reglees sont sur les mandats contredits)
+CHARGE_1A = [  # LES 5 VENTES REGLEES D'ABORD (32 000 EUR) -- dont les deux mandats que le Sheet contredisait : SA DECISION
+    #   du 24/11 (6e mot, ②) : « LA VENTE REGLEE FAIT FOI » (une ligne annulee n'a jamais donne lieu a facture)
     ("125888d3", 4211, 23986, "47542", "17840", "acquereur", "Vente reglee", 9000),
     ("5YUGE9KA", 3, 11134, "23297", "17564", "acquereur", "Vente reglee", 5000),
     ("78004641", 4550, 30778, "17548", "17481", "acquereur", "Vente reglee", 7000),
+    ("cc33cc38", 4634, 28965, "46338", "17322", "vendeur", "Vente reglee", 6000),
+    ("df0ce30c", 4670, 30813, "47174", "17639", "acquereur", "Vente reglee", 5000),
+]
+# LES DEUX ANNULEES ECARTEES (son mot : « tu NOMMES les deux lignes annulees ecartees, avec leur valeur, au journal »)
+ECARTEES = [
+    ("afd672fa", 4399, 23329, "46338", "17322", "acquereur", "Annulee", 6000, "cc33cc38"),
+    ("2c2566d7", 4343, 23801, "47174", "17639", "vendeur", "Annulee", 8000, "df0ce30c"),
 ]
 CHARGE_1B = [
     ("1eec6575", 4799, 30825, "63490", "18999", "vendeur", "Compromis en attente", 3500),
@@ -77,7 +85,7 @@ DATES = [
 ]
 
 
-def lot_charge(nom, lignes, titre):
+def lot_charge(nom, lignes, titre, ecartees=()):
     keys = ", ".join("(%s, %s)" % (q(x[3]), q(x[4])) for x in lignes)
     annonces = sorted({x[3] for x in lignes})
     empreinte = ("(select md5(coalesce(string_agg(concat_ws('|', m.annonce, m.numero, coalesce(k.valeur_app, '-'), "
@@ -89,8 +97,13 @@ def lot_charge(nom, lignes, titre):
     valeurs = ",\n    ".join("(%d, %s, %d, %s, %s, %s, %s, %s)" % (
         k, q(x[0]), x[1], "null" if x[2] is None else str(x[2]), q(x[3]), q(x[4]), q(x[5]),
         q("%s ; etat au Sheet : %s ; Commission TTC %s EUR" % (titre, x[6], x[7]))) for k, x in enumerate(lignes, 1))
+    valeurs += "".join(",\n    (%d, %s, %d, %d, %s, %s, %s, %s)" % (
+        len(lignes) + k, q(x[0]), x[1], x[2], q(x[3]), q(x[4]), q(x[5]),
+        q("NOMMEE, ECARTEE -- SA DECISION du 24/11 (6e mot, ②) : la vente reglee (%s) fait foi sur ce mandat ; une ligne "
+          "annulee n'a jamais donne lieu a facture, sa charge n'a jamais ete appliquee ; etat au Sheet : %s ; Commission TTC "
+          "%s EUR" % (x[8], x[6], x[7]))) for k, x in enumerate(ecartees, 1))
     n = len(lignes)
-    m = {"lot": nom, "tab": nom.replace("-", ""), "n": n, "keys": keys, "valeurs": valeurs, "empreinte": empreinte, "nom": "patch_" + nom,
+    m = {"lot": nom, "tab": nom.replace("-", ""), "n": n, "n_j": len(lignes) + len(ecartees), "keys": keys, "valeurs": valeurs, "empreinte": empreinte, "nom": "patch_" + nom,
          "annonces": ", ".join(q(x) for x in annonces),
          "repose": "\n".join("select public.app_reposer_charge_mandat_app(%s, 10000);" % q(x) for x in annonces),
          "garde_avant": ("if e <> '%s' then raise exception '⛔ garde : empreinte %% au lieu de %s', e; end if;" % (
@@ -136,7 +149,8 @@ alter table public.app_classeur_realignement_journal add column if not exists ma
 insert into public.app_classeur_realignement_journal
   (lot, n, famille, colonne, geste, de_app_affaire_id, de_kind, de_app_chaine_id, de_dossier_numero, de_dossier_uuid,
    vers_app_affaire_id, valeur, ligne_origine, ligne_origine_num, lot_origine, pourquoi, ecrit_par, mandat_annonce, mandat_numero)
-select '%(lot)s', v.n, 'charge_commission', 'app_mandat_champ_app.valeur_app (charge_commission)', 'POSER (case vide)',
+select '%(lot)s', v.n, 'charge_commission', 'app_mandat_champ_app.valeur_app (charge_commission)',
+       case when v.pourquoi like 'NOMMEE%%' then 'NOMMEE (ecartee : la vente reglee fait foi)' else 'POSER (case vide)' end,
        v.piece, d.kind, d.app_chaine_id, d.app_dossier_numero, d.app_dossier_uuid, null, v.valeur, v.ligne, v.num,
        'Sheet (colonne Charge Commission) -- son 5e mot du 24/11', v.pourquoi, '%(nom)s', v.annonce, v.numero
   from (values
@@ -147,7 +161,7 @@ select '%(lot)s', v.n, 'charge_commission', 'app_mandat_champ_app.valeur_app (ch
 -- ─── ④ LE GESTE : le carnet (la valeur LUE AU JOURNAL), puis le reflet, annonce par annonce (jamais tout le registre) ────
 insert into public.app_mandat_champ_app (hektor_annonce_id, numero_mandat, champ, valeur_app, origine, ecrit_par, ecrit_le)
 select j.mandat_annonce, j.mandat_numero, 'charge_commission', j.valeur, 'classeur', 'classeur:' || j.ligne_origine, now()
-  from public.app_classeur_realignement_journal j where j.lot = '%(lot)s'
+  from public.app_classeur_realignement_journal j where j.lot = '%(lot)s' and j.geste = 'POSER (case vide)'
 on conflict (hektor_annonce_id, numero_mandat, champ) do nothing;
 %(repose)s
 
@@ -159,12 +173,14 @@ begin
     join public.app_mandat_champ_app k on k.hektor_annonce_id = j.mandat_annonce and k.numero_mandat = j.mandat_numero
      and k.champ = 'charge_commission' and k.valeur_app = j.valeur and k.origine = 'classeur'
      and k.ecrit_par = 'classeur:' || j.ligne_origine
-   where j.lot = '%(lot)s';
+   where j.lot = '%(lot)s' and j.geste = 'POSER (case vide)';
   if n <> %(n)d then raise exception '⛔ controle : % charge(s) au carnet sur %(n)d', n; end if;
+  select count(*) into n from public.app_classeur_realignement_journal where lot = '%(lot)s';
+  if n <> %(n_j)d then raise exception '⛔ controle : % ligne(s) au journal sur %(n_j)d (dont les ecartees, NOMMEES)', n; end if;
   select count(*) into n from public.app_classeur_realignement_journal j
     join public.app_mandat_register_current r on r.hektor_annonce_id::text = j.mandat_annonce and r.numero_mandat::text = j.mandat_numero
      and r.mandat_charge_honoraires_app = j.valeur
-   where j.lot = '%(lot)s';
+   where j.lot = '%(lot)s' and j.geste = 'POSER (case vide)';
   if n <> %(n)d then raise exception '⛔ controle : % reflet(s) pose(s) sur %(n)d', n; end if;
   -- rien d'autre n'a bouge dans le registre de ces annonces
   select count(*) into n from public.app_mandat_register_current r
@@ -172,10 +188,10 @@ begin
       on s.hektor_annonce_id = r.hektor_annonce_id and s.numero_mandat = r.numero_mandat
    where r.mandat_charge_honoraires_app is distinct from s.mandat_charge_honoraires_app
      and (r.hektor_annonce_id::text, r.numero_mandat::text) not in (select mandat_annonce, mandat_numero
-                                                                   from public.app_classeur_realignement_journal where lot = '%(lot)s');
+                                                                   from public.app_classeur_realignement_journal where lot = '%(lot)s' and geste = 'POSER (case vide)');
   if n <> 0 then raise exception '⛔ controle : % autre(s) reflet(s) ont bouge', n; end if;
   select count(*) into n from public.app_classeur_realignement_journal where lot = '%(lot)s' and ligne_origine is not null and ligne_origine_num is not null;
-  if n <> %(n)d then raise exception '⛔ controle : % ligne(s) d''origine au journal sur %(n)d', n; end if;
+  if n <> %(n_j)d then raise exception '⛔ controle : % ligne(s) d''origine au journal sur %(n)d', n; end if;
   e := %(empreinte)s;
   %(garde_apres)s
   raise notice '✅ %(n)d charges au carnet, %(n)d reflets, 0 autre reflet, ligne d''origine au journal ; empreinte apres %%', e;
@@ -189,11 +205,11 @@ begin
   select count(*) into n from public.app_classeur_realignement_journal j
     join public.app_mandat_champ_app k on k.hektor_annonce_id = j.mandat_annonce and k.numero_mandat = j.mandat_numero
      and k.champ = 'charge_commission' and k.valeur_app = j.valeur and k.origine = 'classeur' and k.ecrit_par = 'classeur:' || j.ligne_origine
-   where j.lot = '%(lot)s';
+   where j.lot = '%(lot)s' and j.geste = 'POSER (case vide)';
   if n <> %(n)d then raise exception '⛔ garde du retour : % charge(s) du lot retrouvee(s) sur %(n)d (une saisie est passee ?)', n; end if;
 end $$;
 delete from public.app_mandat_champ_app k using public.app_classeur_realignement_journal j
- where j.lot = '%(lot)s' and k.hektor_annonce_id = j.mandat_annonce and k.numero_mandat = j.mandat_numero
+ where j.lot = '%(lot)s' and j.geste = 'POSER (case vide)' and k.hektor_annonce_id = j.mandat_annonce and k.numero_mandat = j.mandat_numero
    and k.champ = 'charge_commission' and k.valeur_app = j.valeur and k.origine = 'classeur' and k.ecrit_par = 'classeur:' || j.ligne_origine;
 %(repose)s
 do $$
@@ -309,9 +325,8 @@ end $$;
 
 ECRITS = []
 for nom, (gardes, aller, retour, empreinte, m) in (
-        ("charge_1a_reglees_2026-11-24", lot_charge("charge_1a_reglees_2026-11-24", CHARGE_1A,
-                                                    "① LES VENTES REGLEES D'ABORD (son 5e mot du 24/11)")),
-        ("charge_1b_2026-11-24", lot_charge("charge_1b_2026-11-24", CHARGE_1B, "① les 13 autres (son 5e mot du 24/11)")),
+        ("charge_2026-11-24", lot_charge("charge_2026-11-24", CHARGE_1A + CHARGE_1B,
+                                         "① LES 20 CHARGES (son 5e mot du 24/11 ; les 5 ventes reglees en tete)", ECARTEES)),
         ("dates_a_l_unite_2026-11-24", lot_dates("dates_a_l_unite_2026-11-24"))):
     base = "patch_" + nom
     entete = ("-- %s -- genere par phase2/checks/cases_vides_generer_patchs_2026-11-24.py (son 5e mot du 24/11 : « rien ne "
@@ -333,7 +348,7 @@ for nom, (gardes, aller, retour, empreinte, m) in (
         "as au_journal, %s as empreinte, '%s' as attendue;\n" % (base, nom, JOURNAL, nom, empreinte, APRES.get(nom, "?")),
         encoding="utf-8")
     ECRITS.append(base)
-for f in sorted(SORTIE.glob("patch_charge_1*_2026-11-24*.sql")) + sorted(SORTIE.glob("patch_dates_a_l_unite_2026-11-24*.sql")):
+for f in sorted(SORTIE.glob("patch_charge_2026-11-24*.sql")) + sorted(SORTIE.glob("patch_dates_a_l_unite_2026-11-24*.sql")):
     t = f.read_text(encoding="utf-8")
     print("%-75s %6d octets ; commit %d ; jetons non remplaces %d" % (f.name, len(t.encode()), t.count("\ncommit;"),
                                                                      t.count("%(")))

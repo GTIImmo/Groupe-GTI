@@ -1,0 +1,1 @@
+select (select md5(coalesce(string_agg(concat_ws('|', app_chaine_id, cote, rang, hektor_user_id, nom_au_moment, pourcentage, origine, ecrit_par), ';' order by app_chaine_id, cote, rang), '')) from public.app_affaire_repartition where app_chaine_id in (1027, 1875, 4234, 6391, 9370, 27984)) as empreinte;
