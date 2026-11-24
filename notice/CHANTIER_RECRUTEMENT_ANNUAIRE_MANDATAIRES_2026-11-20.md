@@ -1223,6 +1223,10 @@ L'ordre :
     nom** (`<p>… <strong>…</strong>`, deux personnes dans une carte) — React l'échappe, aucun danger, mais
     illisible : retiré à l'affichage. ⏳ La vraie correction est au collecteur (lecteur Dr House), APRÈS le
     passage en cours (il relance le collecteur à chaque tranche : on ne le modifie pas pendant).
+  - ✅ **24/11 : le `main` local est RÉCONCILIÉ avec GitHub** — fusion `6f0013b` (14:23, une autre session :
+    « 2 conflits sans apport de GitHub, local gardé »), poussée vers 15:05. Vérifié : les 3 fichiers de l'écran sont
+    identiques à mes commits, `App.tsx` ne diffère en rien sur le recrutement, et **les deux corrections de `87d2e94`
+    sont EN LIGNE** (trouvées dans la version servie). Le collecteur corrigé, lui, sert depuis ce serveur.
   - ⏳ Il reste à retirer la branche locale `recrutement-r6-seul` (ma garde refuse : `git -C C:\Hektor\Projet
     branch -d recrutement-r6-seul`) et la coquille vide `C:\Hektor\envoi-recrutement-r6` (tenue par un processus).
   - ⚠ Le jour où le `main` local sera réconcilié avec GitHub, R6 y sera deux fois (`971ba5c` et `9a20116`) avec
