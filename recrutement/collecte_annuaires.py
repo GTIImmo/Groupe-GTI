@@ -174,6 +174,10 @@ def siren_depuis_rsac(texte: str | None) -> str | None:
 
 def separer_nom(nom_complet: str) -> tuple[str, str]:
     """« Carole Pichon-Grand » -> (Carole, Pichon-Grand) ; « Sylvie VERSCHAVE » -> (Sylvie, VERSCHAVE)."""
+    # ⚠ 24/11 : vu en réel, Dr House met parfois du HTML dans le « name » de son JSON-LD (un duo : « <p>Prénom
+    #   <strong>Nom</strong></p><p>&nbsp;et&nbsp;</p>… ») -- 3 fiches. Un nom n'a jamais de balise ni d'entité :
+    #   on les retire ici, pour TOUTES les sources (la prochaine collecte réécrit les noms déjà connus).
+    nom_complet = re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]*>", " ", nom_complet or ""))).strip()
     # « Ariane Roffet (EI) » : la mention entre parentheses n'est pas un nom
     mots = [m for m in re.sub(r"\([^)]*\)", " ", nom_complet or "").split() if re.search(r"[A-Za-zÀ-ÿ]", m)]
     if not mots:
