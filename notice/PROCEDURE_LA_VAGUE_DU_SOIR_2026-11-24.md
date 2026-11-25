@@ -865,3 +865,64 @@ dans A2.
 - **corrigé :** il comparait les 4 gestes du 24/11 à leur empreinte de ce jour-là. Celle des 42 avait changé par les gestes
   accordés du 25/11 (A3 sur des reflets de notes, les dates sur 27195 et 27134). **PROUVÉ :** en retirant ces deux effets
   par leurs sauvegardes, l'empreinte redonne exactement **072b3cb3**. Il compare désormais la photo à maintenant.
+
+### Le 25/11, la suite : le commit de la pose, les 21 ventes réglées, le rejeu du chaînage, la colonne A
+
+**La pose commitée** (35fa604, en local, pas de push). Le message nomme les interrupteurs ALLUMÉS
+(`APP_CHAINAGE_DETACHEMENTS=1`, `APP_CHAINAGE_GARDE_G2=0`) : `.env` est ignoré par git. Vérifié avant le commit :
+- `detachements_manuels.csv` : 636 lignes, md5 051aee25 ;
+- le module : 10 lignes retirées (21520 et 4126), 0 ajoutée ; restent 4496, 4720, 26613.
+
+**Les ventes réglées non protégées. Ses 21 contre mes 12 : ce sont deux populations.**
+- **Les 21 de son contrôleur sont celles du REGISTRE** (`vente_reglee_app`) : 3 729 chaînes, dont 3 708 entièrement
+  protégées et 21 avec au moins une part `hektor%`. **Recompté identique.**
+  - Mélanie LEGRAND en porte **11** chez moi, pas 10 : 49, 78, 98, 102, 165, 204, 249, 1075, 1081, 1116, 1128.
+- **Le classeur les nomme TOUTES** : chacune a une ligne tranchée « Vente réglée ».
+  - **20 sont 20 des 22 « NOM NON RÉSOLU »** du témoin de fin, motif « nettoyage : apporteur avec une part ». Le Sheet donne
+    une part à un **apporteur** qui n'est pas un négociateur : **meilleursagents** sur 15 lignes (souvent 75/25), **GTI** sur 4
+    (dont ABED 50 / GTI 50), **DENOPCE 1/2** sur 1. Le rapatriement du 13/11 les a mises en quarantaine, et elles sont restées
+    sur la supposition de Hektor, que la nuit réécrit à l'identique.
+  - **La 21e est 22979** (NRZVKH85, FERNANDEZ 100) : mixte, juste, protégée.
+- **Mes 12 sont des lignes « Vente réglée » AU SHEET dont la vente n'est PAS réglée au registre** (`vente_reglee_app`
+  vide), justes sur des suppositions. Aucune n'est dans ses 21.
+- **⇒ Réparable ?** Les 20 sont dans le classeur, mais leur part d'apporteur n'a pas de place dans le registre des parts,
+  qui ne connaît que des négociateurs. C'est une règle à lui : comment poser la part d'un apporteur. Les 12 se protègent
+  mécaniquement (les mêmes valeurs, recopiées en `classeur_reconstitue`) : c'est aussi sa décision.
+
+**② Le rejeu du chaînage : SANS une requête Hektor.** Sa commande (`run_quotidien.ps1 -StartAtLabel « phase2 doublure du
+ledger d affaires »`) n'a **PAS** été lancée telle quelle : elle enchaîne aussi l'entretien des compromis et des ventes par la
+console (jusqu'à 2 × 150 lectures Hektor) et la sonde des photos (50 requêtes). J'ai joué ses **deux premières étapes** comme
+le run les joue (la doublure, puis `affaire_ledger.py --refresh --push`), et rien d'autre.
+- **Résultat :** la doublure en 83 s, le chaînage en 98 s, 31 375 lignes poussées.
+- **Les empreintes des chaînes** (94db0a65) **et des étiquettes** (8285bce3) sont **IDENTIQUES avant et après**.
+- **La pose :** pose 0, propagation 0, fusion 0, scission 0 ; le journal des étiquettes reste à 12 208 ; **0 orpheline** ;
+  17 968 parts.
+- **La vague est déterministe.**
+
+**③ La colonne A** (`ecrire_colonne_a_du_sheet_2026-11-20.py`, à blanc, aucune écriture dans le Sheet) :
+- **`simuler`** rend 34 verdicts, 33 verts, sans aucun POST vers Google. Le rouge est un **témoin non éprouvé** :
+  « ETIQUETTE_PARTAGEE », car plus aucune ligne réelle ne montre une étiquette partagée.
+- **`preparer --nom vague1a --premieres 50`** : 50 lignes, **0 écartée**
+  (`notice/CLASSEUR_VAGUE_vague1a_2026-11-25.csv`, sha 5c2e8a02).
+- **`a_blanc`** : **50 À ÉCRIRE, 0 sautée** ; empreinte de la vague 5c2e8a02c756e706 ; colonne A 8b6e4e39eb626cfa (vide sur
+  les 4 807 lignes).
+- **Le bon à lire**, avec la ligne du Sheet, l'ID, le numéro de dossier et l'acquéreur, est dans
+  `notice/CLASSEUR_VAGUE_vague1a_2026-11-25_LE_BON_A_LIRE.txt`.
+- **⛔ Rien n'est écrit** : son accord vient après sa lecture de son Sheet.
+
+**Les lignes « à plusieurs dossiers ».**
+- **Au 19/11**, 224 lignes étaient dans la case « plusieurs dossiers ». **Après la vague, selon la règle de l'outil :**
+  - 19 ont encore plusieurs étiquettes ;
+  - 10 relèvent de sa DÉCISION_19 du 20/11 ;
+  - les 195 autres passent dans un fichier, et leur à blanc en déclare 192 écrivables (3 sautées).
+- **Sur tout le Sheet, 63 lignes** portent aujourd'hui plusieurs étiquettes : 19 « plusieurs dossiers », 17 PATCH_V2, 11
+  « étiquette partagée », 6 en attente et 10 de VAGUE_1. **Sans les 10 de VAGUE_1, cela fait 53** : probablement ses 53, à
+  confirmer. Elles restent vides et nommées : l'outil les écarte.
+
+**Sa « décision B » du 20/11** (9 lignes : « vague 2, après G2 ») **est accomplie, par la vague**.
+- Les 9 lignes (WG8CG5T2, R9ANL92S, SA7DWYEZ, ANHQ1PK7, MFMR0U6A, V5NJER40, JBCC1KBT, A6OS2TTJ, QL70KV8I) ont été coupées
+  par les morceaux du brouillon, sans G2.
+- Chacune a reçu l'étiquette **neuve** que B prévoyait (par exemple WG8CG5T2 : D2019-0572 → D2020-0638), et porte les parts
+  recopiées par A2.
+- **L'outil de la colonne A les écarte encore** : sa liste DECISION_B est écrite dans son code et exige 9 lignes. Les
+  écrire demanderait de lever cette exclusion, donc un changement de code, à son « vas-y ».

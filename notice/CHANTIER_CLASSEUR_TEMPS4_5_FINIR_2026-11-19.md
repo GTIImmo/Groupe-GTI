@@ -5805,6 +5805,20 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - **Le balayage :** aucun autre endroit sans l'origine (le remede et les dates compris).
 - **Le temoin de demain :** photo reprise a 10:01 apres le geste ; la question « 8016 protegee du run ? » est ajoutee. L'ecart
   des 42 au 24/11 est PROUVE du aux seuls gestes accordes du 25/11 (072b3cb3 retrouvee).
+### 20.54 Le 25/11 : la pose commitee ; les 21 ventes reglees (des apporteurs) ; le chainage rejoue identique ; la colonne A prete
+
+- **La pose est commitee** (35fa604), avec dans le message les interrupteurs allumes (.env n'est pas suivi par git).
+- **Les 21 ventes reglees du registre** qui portent une part `hektor%` : 20 sont des « noms non resolus », ou le Sheet donne
+  une part a un APPORTEUR (meilleursagents 15, GTI 4, DENOPCE 1/2 1) ; la 21e est 22979, mixte, juste et protegee. Mes 12
+  sont d'autres lignes : « Vente reglee » au Sheet, mais pas au registre. Reparer = sa regle pour la part d'un apporteur.
+- **Le chainage rejoue** (les 2 premieres etapes de sa commande ; les suivantes appellent Hektor et ne sont pas jouees) :
+  empreintes des chaines et des etiquettes identiques, aucune pose / propagation / fusion / scission, 0 orpheline.
+- **La colonne A :**
+  - simuler : 33 verts sur 34 (le rouge = le temoin « etiquette partagee » non eprouve) ;
+  - vague1a de 50 : 50 a ecrire, 0 sautee (vague 5c2e8a02, colonne A 8b6e4e39) -- A SON ACCORD apres lecture.
+  - Les lignes a plusieurs etiquettes : 63 en tout, dont 53 hors de la case VAGUE_1 -- sans doute ses 53.
+- **La decision B** (9 lignes) est accomplie par la vague, mais l'outil de la colonne A les ecarte encore : la lever, c'est a
+  lui.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
