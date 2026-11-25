@@ -1251,3 +1251,111 @@ aujourd'hui. Cela fait **+214, et non +106.**
 
 **⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 50 de la vague1a ne sont pas touchées. La
 vague1b attend.
+
+### ⭐ On suit le protocole : l'écrivain branché sur ses pièces, le classement refait, la vague1c prête (25/11, après-midi)
+
+> « ALORS ON SUIT LE PROTOCOLE. C'est lui mon juge [...] Refais le classement sur SES pièces, pas sur le gel. [...] GARDE
+> CE TÉMOIN DANS CHAQUE VAGUE : zéro ligne écrite contre le protocole, et tu t'arrêtes si ce n'est pas zéro. [...] NE TRANCHE
+> PAS SEUL : laisse les quatre lignes VIDES et nomme-les. [...] Dis-moi QUI D'AUTRE lit le gel. »
+
+**L'écrivain juge désormais par le protocole** (`ecrire_colonne_a_du_sheet_2026-11-20.py`).
+- **Le nouveau juge, `RegistreProtocole` :**
+  - les pièces d'une ligne viennent du socle du protocole (passage 81, celui que la vague a réalisé) ;
+  - le registre de Supabase ne donne plus que l'étiquette, l'origine et le numéro de chaque transaction, à l'instant ;
+  - **le gel n'est plus lu.**
+  - Une ligne que le protocole n'a pas tranchée est sautée et nommée (PAS_TRANCHEE_PAR_LE_PROTOCOLE). Toutes les étapes
+    passent par lui : preparer, a_blanc, ecrire, simuler.
+- **Son témoin, `contre_le_protocole`, gardé dans chaque vague :** chaque ligne à écrire doit être tranchée, et
+  l'étiquette écrite doit être son étiquette à l'arrivée, qui est lue dans un autre champ du verdict que ses pièces. Le
+  témoin joue trois fois :
+  - **avant toute écriture :** toute la vague est jugée avant la sauvegarde et avant d'armer quoi que ce soit. Une seule
+    ligne contre le protocole, et **rien ne s'écrit** (refus, code 3). À blanc : rouge, code 1, la ligne nommée ;
+  - **avant chaque paquet :** il est relu à l'instant ;
+  - **après l'écriture :** c'est le critère ⑥, « zéro ligne écrite contre le protocole ».
+- **Le défaut de `preparer`** est maintenant le classement par le protocole, et la garde de fraîcheur reste en tête.
+
+**① Le classement sur les pièces du protocole** (`classer_colonne_a_par_le_protocole_2026-11-25.py`, en lecture seule).
+- **Le fichier :** `notice/CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-25.csv` et sa fiche de fabrication (13:12:15 UTC).
+- **La répartition des 4 802 lignes :**
+  - **4 647 en VAGUE_1** ;
+  - 50 déjà écrites ;
+  - 73 pas tranchées (dont 58 « rien à étiqueter ») ;
+  - **4 doubles de saisie** ;
+  - 9 lignes de sa décision B et 19 de ses 19.
+- **Les lignes écrivables :** 4 697 sans ses 28 décisions (50 écrites + 4 647), et 4 725 avec elles.
+- **Par rapport au classement par le gel de midi :** 189 lignes deviennent écrivables, dont **62 ventes réglées** au Sheet.
+  3 lignes en sortent, celles que le protocole n'a pas tranchées.
+- **Les témoins, tous verts :**
+  - l'étiquette à l'arrivée est celle d'aujourd'hui, 4 729 sur 4 729 ;
+  - les 50 cases écrites portent l'étiquette du protocole, 50 sur 50 ;
+  - la VAGUE_1 a 4 647 étiquettes distinctes, et aucune n'est déjà en A ;
+  - les 5 lignes du danger inverse sont à leur place ;
+  - les 4 doubles sont nommés ;
+  - les totaux 4 725 et 4 697 sont retrouvés.
+- **⚠ Une correction :** le danger inverse portait sur **4 lignes, et non 5**. 8NZ6V6XB est l'une de ses 19 décisions du
+  20/11 : l'écrivain la refusait déjà.
+- **Ses doubles de saisie, laissés VIDES et nommés :**
+  - VIALLARD : 3308P0UX et YRUF0S9H, dossier D2022-0644 ;
+  - PAOLONE : T2GZOY5O et O6R10ZQA, dossier D2021-0797.
+  - L'écrivain les saute de lui-même (ÉTIQUETTE_PARTAGEE : « le dossier porte aussi... »). Laquelle garder, c'est à lui.
+
+**L'épreuve de l'outil (`simuler`) : 38 verdicts, 0 rouge.** Aucun POST n'est parti, et elle a tourné sur 228 lignes
+nominales dont la case A était vide.
+- **Les témoins neufs :**
+  - une ligne réelle non tranchée est glissée dans la vague : elle est sautée, PAS_TRANCHEE (CQGLHH2X) ;
+  - le double VIALLARD est vu comme partagé ;
+  - PLUSIEURS_DOSSIERS est semé, car aucune ligne réelle ne le montre plus sur les pièces du protocole ;
+  - le témoin positif C5 est semé : une copie mise dans un autre dossier, et la ligne s'écrit quand même.
+- **Le scénario D (son témoin) :**
+  - sans graine, les 3 lignes s'écriraient ;
+  - avec la graine, l'à blanc est rouge et nomme L31D0YNA ;
+  - l'écriture est refusée en entier : 0 POST, mémoire vide, colonne A inchangée.
+
+**② La vague suivante, vague1c : 50 lignes, PAS écrite.**
+- **Le fichier :** `notice/CLASSEUR_VAGUE_vague1c_2026-11-25.csv`, préparé sur le classement par le protocole.
+- **L'à blanc :** 50 à écrire, 0 sautée, **0 contre le protocole**. L'empreinte de la vague est **097355f07e338848**,
+  celle de la colonne A **2b60fa4b312a7bc1**. Rapport : `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_141523_vague1c_A_BLANC`.
+- **Son contenu :**
+  - les lignes 2 et 3 ;
+  - **ses 17 trous des lignes 4 à 70, tous**, y compris les 3 que le gel bloquait : LPBAZ1D4 (D2025-0219), FYC1KCHQ
+    (D2024-0461) et I847SPN3 (D2022-0352, le dossier du protocole) ;
+  - puis les lignes 71 à 101, dont LTJYTEVC, elle aussi débloquée par le protocole.
+  - On y compte 33 ventes réglées. 46 lignes étaient déjà dans la vague1b, qui est remplacée.
+- **Le bon à lire,** avec la ligne, l'ID, le dossier, l'état, la case par le gel et l'acquéreur, est dans
+  `notice/CLASSEUR_VAGUE_vague1c_2026-11-25_LE_BON_A_LIRE.txt`. Il est local seulement.
+
+**④ Qui d'autre lit le gel ? Mesuré dans le code, dans la base et dans le moniteur.**
+- **La nuit : rien ne le lit.** Aucun script du run ne le lit. La descente se contente de le copier dans la base locale.
+- **Les écrans : rien.** Le front ne lit ni le gel ni ses vues.
+- **La base :** aucune fonction ne le lit ni ne l'écrit. Deux vues le lisent, et le **moniteur** les surveille :
+  - **`data.classeur_lien_casse`** (critique, seuil 0) contrôle qu'un lien pointe une transaction qui existe. Aujourd'hui :
+    0 DISPARUE et 6 ABSENTE_CHEZ_HEKTOR, connues. C'est un contrôle d'intégrité, pas de justesse : **il n'est pas
+    touché.**
+  - **`data.classeur_ligne_sans_lien`** (avertissement, seuil 92, il donne 71) compte les lignes sans lien DANS LE GEL.
+    **Elle porte le même défaut, en petit :**
+    - le protocole a relié 19 de ces lignes ;
+    - sa table des lignes (`app_classeur_ligne_id`, 4 794 lignes) ne connaît pas les 8 lignes les plus récentes du Sheet.
+- **Le protocole lui-même lit le gel, et c'est voulu.** Il s'en sert comme d'une **pièce à conviction** (R9 : « le gel du
+  16/11 ne la donne qu'à cette ligne »). **⛔ Réécrire le gel en place changerait donc la preuve du protocole.**
+- **Les autres outils du chantier qui le lisent** sont des outils d'un seul passage, du 16 au 22/11, et ne tournent plus.
+  L'écrivain ne le lit plus depuis aujourd'hui.
+- **Le même défaut ailleurs, oui : les valeurs posées une fois à partir du gel, les 16 et 17/11** (ventes réglées et
+  factures, dates d'annulation, commissions).
+  - **Sur les 256 liens que le protocole délie, 0 valeur n'est mal placée.**
+    - 56 pièces portent une valeur posée depuis le classeur.
+    - 55 de ces valeurs viennent de la ligne dont le protocole garde le dossier (la pièce y est « à part », mais dans le
+      même dossier).
+    - La 56e (27134) a été posée aujourd'hui depuis la bonne ligne, IEYXREWQ.
+  - **Sur les 108 liens que le protocole relie, 47 valeurs du Sheet n'ont JAMAIS été posées** :
+    - **17 ventes réglées sur des chaînes que le registre ne dit PAS réglées**, dont ses rattachements 2U5QPKRC et
+      91IHSGNC, et 6FQO29C8 ;
+    - 1 vente réglée sur une chaîne déjà réglée par une autre pièce ;
+    - **29 dates d'annulation**, dont 6U5DQQ4J, l'une des 2 antérieures qu'il a écartées : elle reste écartée.
+  - Les avis, les notes, les conditions et les parts ne sont pas concernés : A1, A3 et A2 les ont réalignés par pièces
+    pendant la vague.
+- **Ce qui suit, à son mot :**
+  - ne pas réécrire le gel ;
+  - mettre ses lecteurs sur le protocole : l'écrivain (c'est fait), la sentinelle (à faire) ;
+  - poser depuis le protocole les 47 valeurs qui manquent, moins les écartées.
+
+**⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 50 de la vague1a ne sont pas touchées.

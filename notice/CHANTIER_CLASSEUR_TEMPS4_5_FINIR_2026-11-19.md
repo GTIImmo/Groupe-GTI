@@ -5869,6 +5869,21 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   ou sans la garde : ses temoins tombent sur les 50 ecrites) -- a refaire avant toute ecriture.
 - **A lui** : l'ecrivain prend-il le verdict du protocole comme source (A), ou pose-t-on les liens du protocole dans le
   gel (B) ? Puis ses 28 decisions du 20/11, les 2 doubles, KT0601S6.
+
+### 20.58 On suit le protocole : ecrivain branche sur SES pieces, temoin « contre le protocole », vague1c prete ; qui lit le gel (25/11)
+
+- **L'ecrivain** juge par le socle du protocole (passage 81 ; `RegistreProtocole`) : plus le gel. Temoin `contre_le_protocole`
+  avant toute ecriture (une ligne contre -> RIEN), avant chaque paquet, et critere 6 apres. simuler : 38 verdicts, 0 rouge.
+- **① Le classement par le protocole** (`classer_colonne_a_par_le_protocole_2026-11-25.py`, fiche 13:12:15 UTC) : 4 647
+  VAGUE_1 + 50 ecrites (= 4 697 ; 4 725 avec ses 28 decisions) ; 73 pas tranchees ; ses 4 doubles VIDES et nommes
+  (VIALLARD 3308P0UX/YRUF0S9H, PAOLONE T2GZOY5O/O6R10ZQA). +189 lignes vs le gel, dont 62 ventes reglees. Correction : le
+  danger inverse = 4 lignes (8NZ6V6XB est une de ses 19).
+- **② vague1c** : 50, a blanc 50/0, 0 contre le protocole (vague 097355f07e338848, colonne A 2b60fa4b312a7bc1) -- ses 17
+  trous, dont LPBAZ1D4, FYC1KCHQ, I847SPN3. A SON ACCORD.
+- **④ Qui lit le gel** : ni la nuit, ni un ecran, ni une fonction ; le moniteur par 2 vues (lien_casse : integrite, non
+  touchee ; ligne_sans_lien : meme defaut, 71, table des lignes perimee de 8) ; le protocole lui-meme (preuve R9 : ne pas
+  le reecrire en place). Valeurs posees une fois depuis le gel : 0 mal placee sur les 256 delies ; 47 JAMAIS posees sur les
+  108 relies (17 ventes reglees sur des chaines non reglees, 1 deja reglee, 29 dates dont 6U5DQQ4J ecartee par lui).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

@@ -83,7 +83,16 @@ FENETRE_INTERDITE = ((3, 30), (9, 30))   # le run (04:00), la pose des etiquette
 DECISION_B = RACINE / "notice" / "TEMPS6_DECISION_B_LIGNES_REPORTEES_EN_VAGUE_2_PAR_G2_2026-11-20.csv"
 #: decision du 20/11 (« LES 19 : OUI, sors-les, comme les 9 de B ») -- mesure du § 13.8 (temps7)
 DECISION_19 = RACINE / "notice" / "TEMPS7_DECISION_DU_20_11_LES_19_HORS_DE_LA_VAGUE_1_2026-11-20.csv"
-CLASSEMENT = RACINE / "notice" / "TEMPS5_Q8_LES_LIGNES_DU_SHEET_ET_LEUR_VAGUE_2026-11-19.csv"
+#: ⭐ SON MOT DU 25/11 : « ON SUIT LE PROTOCOLE. C'est lui mon juge [...] Refais le classement sur SES pieces, pas sur
+#   le gel. » -- le classement du 19/11 (TEMPS5_Q8, sur le gel) est REMPLACE par celui-ci ; preparer refuse un classement
+#   sans fiche de fabrication ou plus vieux que la derniere vague (fraicheur_du_classement).
+CLASSEMENT = RACINE / "notice" / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-25.csv"
+#: LE JUGE : le verdict du protocole, ligne par ligne (pieces, preuves, etiquette a l'arrivee) -- le passage que la vague
+#  du 25/11 a realise (manifeste e65ea11d ; temoin : etiquette a l'arrivee = etiquette d'aujourd'hui, 4 729 / 4 729).
+#  ⛔ L'ecrivain ne lit PLUS le gel (app_classeur_lien) pour savoir quelles pieces sont sur une ligne : le gel date du
+#  19/11, le protocole lui a delie 256 liens et en a relie 108 (324 lignes), et la vague ne l'a pas touche.
+SOCLE_PROTOCOLE = Path(r"C:\Hektor\chantier_classeur_q6_cache\protocole\socle.sqlite")
+PASSAGE_DU_PROTOCOLE = 81
 SORTIES = Path(r"C:\Hektor\Backups\classeur_colonne_a")
 SORTIES_SIMULATION = Path(r"C:\Hektor\chantier_classeur_q6_cache\ecrivain_colonne_a_simulation")
 
@@ -353,11 +362,19 @@ class RegistreSimule:
     semer le temoin « C5 seule » sans toucher la base)."""
 
     def __init__(self, vrai: Registre, origine_forcee: dict[int, str],
-                 confiance_forcee: dict[str, str] | None = None) -> None:
+                 confiance_forcee: dict[str, str] | None = None, arrivee_forcee: dict[str, str] | None = None,
+                 uuid_force: dict[int, str] | None = None) -> None:
         self.vrai, self.forcee = vrai, origine_forcee
         # ⭐ 22/11 (son mot, reponses 21, § 2 : « SEME-LE ET FAIS-LE CRIER ») : la confiance du gel forcee sur une ligne,
         #   pour semer le temoin LIEN_NON_SUR, qui n'a plus d'exemple reel depuis le patch de confiance
         self.confiance_forcee = confiance_forcee or {}
+        # ⭐ 25/11 : semer « une ligne qui s'ecrirait CONTRE le protocole » (son etiquette a l'arrivee changee) et « une
+        #   ligne a plusieurs dossiers » (l'etiquette d'une de ses pieces changee) -- aucune ligne reelle ne les montre
+        self.arrivee_forcee = arrivee_forcee or {}
+        self.uuid_force = uuid_force or {}
+
+    def arrivee(self, i):
+        return self.arrivee_forcee[i] if i in self.arrivee_forcee else self.vrai.arrivee(i)
 
     def liens_des_lignes(self, ids):
         out = self.vrai.liens_des_lignes(ids)
@@ -379,6 +396,9 @@ class RegistreSimule:
         for a, o in self.forcee.items():
             if a in out:
                 out[a] = self._forcer(out[a], o)
+        for a, u in self.uuid_force.items():
+            if a in out:
+                out[a] = dict(out[a], uuid=u)
         return out
 
     def transactions_des_dossiers(self, uuids):
@@ -387,6 +407,99 @@ class RegistreSimule:
             if a in out:
                 out[a] = self._forcer(out[a], o)
         return out
+
+
+class RegistreProtocole:
+    """⭐ SON MOT DU 25/11 : « ON SUIT LE PROTOCOLE. » Le registre de Supabase pour les TRANSACTIONS (etiquette, origine,
+    numero, a l'instant), et le VERDICT DU PROTOCOLE pour savoir quelles pieces sont sur une ligne : une ligne TRANCHEE
+    porte SES pieces (prouvees : confiance « sure ») ; une ligne en ATTENTE n'en porte aucune -- elle est sautee et
+    nommee (PAS_TRANCHEE_PAR_LE_PROTOCOLE). Le gel (app_classeur_lien) n'est plus lu. Lecture seule."""
+
+    def __init__(self, vrai: Registre, socle: Path = SOCLE_PROTOCOLE, passage: int = PASSAGE_DU_PROTOCOLE) -> None:
+        import sqlite3
+        self.vrai, self.passage = vrai, passage
+        if not socle.exists():
+            raise LectureRatee("le socle du protocole est introuvable : %s" % socle)
+        con = sqlite3.connect("file:%s?mode=ro" % socle.as_posix(), uri=True)
+        p = con.execute("select image, version from passage where id=?", (passage,)).fetchone()
+        if not p:
+            con.close()
+            raise LectureRatee("le passage %d n'est pas dans le socle du protocole" % passage)
+        self.image, self.version = p
+        self.v: dict[str, dict] = {}
+        for i, verdict, e, ps, m, mt in con.execute(
+                "select id_unique, verdict, etiquette, pieces, motif, motif_texte from verdict where passage=?", (passage,)):
+            self.v[i] = {"verdict": verdict, "etiquette": e or "", "pieces": [int(a) for a in json.loads(ps or "[]")],
+                         "motif": m or "", "motif_texte": mt or ""}
+        con.close()
+        self.lignes_de: dict[int, set[str]] = defaultdict(set)
+        for i, x in self.v.items():
+            if x["verdict"] == "TRANCHEE":
+                for a in x["pieces"]:
+                    self.lignes_de[a].add(i)
+        self._arrivee: dict[str, str | None] = {}
+
+    def __getattr__(self, nom):
+        return getattr(self.vrai, nom)
+
+    def tranchees(self) -> int:
+        return sum(1 for x in self.v.values() if x["verdict"] == "TRANCHEE")
+
+    def motif_attente(self, i: str) -> str | None:
+        """None si la ligne est TRANCHEE ; sinon pourquoi le protocole ne l'a pas tranchee."""
+        x = self.v.get(i)
+        if x is None:
+            return "ABSENTE du passage %d du protocole (ligne nee apres son image ?)" % self.passage
+        if x["verdict"] != "TRANCHEE":
+            return "%s : %s" % (x["motif"], x["motif_texte"][:160])
+        return None
+
+    def liens_des_lignes(self, ids) -> dict[str, list[tuple[int, str]]]:
+        out: dict[str, list[tuple[int, str]]] = {}
+        for i in set(ids):
+            x = self.v.get(i)
+            if x and x["verdict"] == "TRANCHEE" and x["pieces"]:
+                out[i] = [(a, "sûre") for a in sorted(x["pieces"])]
+        return out
+
+    def liens_des_transactions(self, txs) -> dict[int, set[str]]:
+        return {a: set(self.lignes_de[a]) for a in set(txs) if self.lignes_de.get(a)}
+
+    def arrivee(self, i: str) -> str | None:
+        """L'etiquette a l'arrivee du protocole, d'AUJOURD'HUI : une etiquette existante telle quelle ; « NEUVE:<piece> »
+        (le protocole ne pouvait pas connaitre l'uuid que la vague donnerait) -> l'etiquette d'aujourd'hui de la piece."""
+        if i not in self._arrivee:
+            x = self.v.get(i)
+            e = (x or {}).get("etiquette") or ""
+            if not x or x["verdict"] != "TRANCHEE" or not e:
+                self._arrivee[i] = None
+            elif e.startswith("NEUVE:"):
+                a = int(e.split(":", 1)[1])
+                self._arrivee[i] = (self.vrai.transactions([a]).get(a) or {}).get("uuid")
+            else:
+                self._arrivee[i] = e
+        return self._arrivee[i]
+
+
+def contre_le_protocole(reg, decisions) -> list[dict]:
+    """⛔ SON MOT DU 25/11 : « GARDE CE TEMOIN DANS CHAQUE VAGUE : zero ligne ecrite contre le protocole, et tu t'arretes
+    si ce n'est pas zero. » Pour chaque ligne A_ECRIRE : elle doit etre TRANCHEE par le protocole, et l'etiquette qu'on
+    ecrirait doit etre SON etiquette a l'arrivee (lue dans un AUTRE champ du verdict que ses pieces)."""
+    if not hasattr(reg, "arrivee"):
+        raise VerrouRefuse("l'ecrivain n'a pas le verdict du protocole : il ne juge plus par le gel (son mot du 25/11)")
+    out = []
+    for d in decisions:
+        if d.get("verdict") != "A_ECRIRE":
+            continue
+        i = d["id_unique"]
+        motif = reg.motif_attente(i)
+        if motif:
+            out.append({"id_unique": i, "pourquoi": "PAS_TRANCHEE", "detail": motif[:120], "etiquette": d["etiquette"]})
+            continue
+        e = reg.arrivee(i)
+        if d["etiquette"] != e:
+            out.append({"id_unique": i, "pourquoi": "AUTRE_ETIQUETTE", "etiquette": d["etiquette"], "protocole": e})
+    return out
 
 
 def copie(a: int, info: dict[int, dict]) -> bool:
@@ -577,6 +690,11 @@ def juger_paquet(entrees, col_a, col_al, reg, memo: dict, exclus_b: dict, double
         if propre(col_a[row - 1]):
             sauter("A_DEJA_REMPLIE", "A porte %r -- on n'ecrase jamais" % propre(col_a[row - 1])[:60])
             continue
+        # ⭐ 25/11 : le protocole est le juge -- une ligne qu'il n'a pas tranchee ne s'ecrit pas (et se nomme)
+        motif = reg.motif_attente(i) if hasattr(reg, "motif_attente") else None
+        if motif:
+            sauter("PAS_TRANCHEE_PAR_LE_PROTOCOLE", motif)
+            continue
         l = liens.get(i, [])
         if not l:
             sauter("SANS_LIEN", "le gel ne relie plus cette ligne a aucune transaction")
@@ -716,6 +834,19 @@ def derouler_ecriture(*, mode: str, nom: str, entrees, sha_vague: str, sheet, me
     if mode == "ecrire":
         verifier_verrous(interrupteur=interrupteur, env_le_definit=env_le_definit, sha_vague=sha_vague,
                          sha_donne=sha_donne, emp_a=emp_a, emp_donnee=emp_donnee, quand=quand, memoire=memoire)
+    # ⛔ SON MOT DU 25/11 : « zero ligne ecrite contre le protocole, et tu t'arretes si ce n'est pas zero ». Toute la
+    #   vague est jugee AVANT la sauvegarde et avant d'armer quoi que ce soit ; une seule ligne contre -> RIEN ne s'ecrit.
+    memo0 = memoire.lire(ids=[e["id_unique"] for e in entrees]) if memoire_existe else {}
+    avant_tout = juger_paquet(entrees, [r[A] for r in valeurs], [r[AL] for r in valeurs], reg, memo0, exclus_b,
+                              doubles_dans_la_vague(entrees))
+    contre = contre_le_protocole(reg, avant_tout)
+    rapport["contre_le_protocole"] = contre
+    journal("TEMOIN du protocole : %d ligne(s) a ecrire, %d CONTRE le protocole %s" % (
+        sum(1 for d in avant_tout if d["verdict"] == "A_ECRIRE"), len(contre), contre[:5]))
+    if contre and mode == "ecrire":
+        raise VerrouRefuse("TEMOIN DU PROTOCOLE : %d ligne(s) s'ecriraient CONTRE le protocole -- RIEN n'est ecrit : %s"
+                           % (len(contre), contre[:5]))
+    if mode == "ecrire":
         sheet.arme = True
         memoire.arme = True
         sauvegarder(sortie / "sauvegarde", valeurs, entrees,
@@ -738,6 +869,11 @@ def derouler_ecriture(*, mode: str, nom: str, entrees, sha_vague: str, sheet, me
                                                                      len(paquet) - len(a_ecrire)))
         if mode == "a_blanc" or not a_ecrire:
             continue
+        c_p = contre_le_protocole(reg, a_ecrire)          # relu a l'instant, juste avant d'ecrire CE paquet
+        if c_p:
+            rapport["arret"] = {"paquet": k, "contre_le_protocole": c_p, "mal_posees": []}
+            journal("⛔ ARRET avant le paquet %d : %d ligne(s) s'ecriraient CONTRE le protocole : %s" % (k, len(c_p), c_p[:5]))
+            break
         now = datetime.now(timezone.utc).isoformat()
         memoire.poser_prevu([{"id_unique": d["id_unique"], "colonne": COLONNE, "valeur": d["etiquette"], "avant": "",
                               "etat": "prevu", "vague": nom, "ligne_vue": d["ligne"], "ecrit_le": now,
@@ -770,8 +906,8 @@ def derouler_ecriture(*, mode: str, nom: str, entrees, sha_vague: str, sheet, me
     prevues = [d for d in rapport["decisions"] if d["verdict"] == "A_ECRIRE"]
     rapport["a_ecrire"] = len(prevues)
     if mode == "a_blanc":
-        rapport["code"] = 0
-        return 0, rapport
+        rapport["code"] = 1 if contre else 0
+        return rapport["code"], rapport
     apres = sheet.lire_tout()
     a_apres = a_par_id(apres)
     pos_apres = positions([r[AL] for r in apres])
@@ -791,16 +927,20 @@ def derouler_ecriture(*, mode: str, nom: str, entrees, sha_vague: str, sheet, me
                 c4.append(i)
     valeurs_a = Counter(propre(r[A]) for r in apres[1:] if propre(r[A]))
     c5 = sorted(v for v, n in valeurs_a.items() if n > 1)
+    # ⑥ (25/11) : zero ligne ECRITE contre le protocole -- relu apres l'ecriture
+    c6 = [x["id_unique"] for x in contre_le_protocole(reg, [{"id_unique": i, "etiquette": u, "verdict": "A_ECRIRE"}
+                                                           for i, (_, u) in ecrites.items()])]
     rapport["criteres"] = {
         "1_ecrites_relues_sur_leur_ID_Unique": {"attendu": len(ecrites), "fausses": c1},
         "2_aucune_autre_case_A_modifiee": {"fausses": c2},
         "3_rien_hors_de_A_par_nous": {"lignes_touchees_par_un_humain": c3, "dont_parmi_les_notres": c3_nous},
         "4_etiquette_ecrite_egale_a_celle_des_transactions": {"fausses": c4},
         "5_aucun_uuid_sur_deux_lignes": {"fausses": c5},
+        "6_zero_ligne_ecrite_contre_le_protocole": {"fausses": c6},
         "a_blanc_prevoyait": len(prevues), "ecrites_verifiees": len(ecrites),
     }
     rapport["ecrites"] = {i: {"ligne": r, "etiquette": u} for i, (r, u) in ecrites.items()}
-    rouge = bool(c1 or c2 or c3_nous or c4 or c5)
+    rouge = bool(c1 or c2 or c3_nous or c4 or c5 or c6)
     code = 4 if rapport["arret"] else (1 if rouge else 0)
     rapport["code"] = code
     return code, rapport
@@ -975,12 +1115,15 @@ def preparer(args, reg, journal=print) -> int:
         sep = ";" if tete.count(";") > tete.count(",") else ","
         source = {propre(r["id_unique"]): r for r in csv.DictReader(f, delimiter=sep)}
     dans_la_case = [i for i, r in source.items() if propre(r.get(args.colonne_case)) == args.case]
+
+    def ligne_de(i):          # le classement neuf porte la ligne d'AUJOURD'HUI ; celui du 19/11, celle du 19/11
+        return int(source[i].get("ligne_du_sheet") or source[i].get("ligne_au_19_11") or 0)
     if args.ids:
         voulues = [x.strip() for x in args.ids.split(",") if x.strip()]
     elif args.premieres:
-        voulues = sorted(dans_la_case, key=lambda i: int(source[i].get("ligne_au_19_11") or 0))[:args.premieres]
+        voulues = sorted(dans_la_case, key=ligne_de)[:args.premieres]
     elif args.toutes:
-        voulues = sorted(dans_la_case, key=lambda i: int(source[i].get("ligne_au_19_11") or 0))
+        voulues = sorted(dans_la_case, key=ligne_de)
     else:
         journal("preparer : --ids, --premieres N ou --toutes")
         return 3
@@ -1007,7 +1150,7 @@ def preparer(args, reg, journal=print) -> int:
         elif len(uuids) != 1:
             refus.append((i, "plusieurs etiquettes maintenant %s" % uuids))
         else:
-            lignes.append([i, args.nom, propre(source[i].get("ligne_au_19_11")), uuids[0], " ".join(map(str, txs)),
+            lignes.append([i, args.nom, str(ligne_de(i) or ""), uuids[0], " ".join(map(str, txs)),
                            "", "%s=%s (%s)" % (args.colonne_case, args.case, Path(args.source).name)])
     sortie = Path(args.dossier or (RACINE / "notice")) / ("CLASSEUR_VAGUE_%s_%s.csv"
                                                           % (args.nom, maintenant_local().strftime("%Y-%m-%d")))
@@ -1032,7 +1175,8 @@ def ecrire_rapport(dossier: Path, rapport: dict, titre: str) -> None:
                                           encoding="utf-8")
     l = ["# %s" % titre, "", "```"]
     for k in ("mode", "vague", "heure", "lignes_du_fichier", "sha_vague", "empreinte_colonne_a_avant",
-              "a_ecrire", "compte_raisons", "memoire_a_defaire", "compte", "videes", "marquees_deja_vides",
+              "a_ecrire", "compte_raisons", "contre_le_protocole", "memoire_a_defaire", "compte", "videes",
+              "marquees_deja_vides",
               "laissees", "differences_avec_l_avant_de_la_vague", "arret", "code"):
         if k in rapport:
             l.append("%-36s %s" % (k, rapport[k]))
@@ -1096,11 +1240,13 @@ def simuler(reg: Registre, journal=print) -> int:
                 "etiquette_prevue": u[0] if len(u) == 1 else (u[0] if u else ""), "transactions": txs, "admis": [],
                 "case_source": cl.get(i, {}).get("case_aujourd_hui", "")}, info, l
 
-    # ── les lignes nominales : la case VAGUE_1, dans l'ordre du Sheet, hors decision B ──
-    v1 = sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "VAGUE_1" and i not in exclus_b and i in pos0),
-                key=lambda i: pos0[i][0])
+    # ── les lignes nominales : la case VAGUE_1, dans l'ordre du Sheet, hors decision B, et A ENCORE VIDE (25/11 : les
+    #    50 premieres sont ecrites -- l'epreuve ne seme plus ses temoins sur des cases deja remplies) ──
+    v1 = sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "VAGUE_1" and i not in exclus_b and i in pos0
+                 and not propre(valeurs[pos0[i][0] - 1][A])), key=lambda i: pos0[i][0])
     nominales = [entree_vivante(i, "SIMULATION")[0] for i in v1[:240]]
-    journal("%d lignes nominales tirees de la vague 1 du 19/11 (3 paquets)" % len(nominales))
+    journal("%d lignes nominales tirees de la VAGUE_1 du classement %s, case A vide (3 paquets)"
+            % (len(nominales), CLASSEMENT.name))
 
     # ════ SCENARIO A : nominal + temoins inverses semes ════
     journal("SCENARIO A -- nominal, et 12 temoins inverses qui DOIVENT etre sautes et nommes")
@@ -1134,10 +1280,18 @@ def simuler(reg: Registre, journal=print) -> int:
     # une ligne des 19 du 20/11, glissee dans la vague
     b19 = sorted(i for i, (r, _) in exclus_b.items() if r == "DECISION_19")[0]
     ent.append(entree_vivante(b19, "SIMULATION")[0]); attendus[b19] = "DECISION_19"
-    # des lignes REELLES dans les cases bloquees du 19/11 : la premiere qui, a l'instant, montre le defaut
+    # ⭐ 25/11 : une ligne REELLE que le protocole n'a pas tranchee, glissee dans la vague -> sautee et nommee
+    pt = next((i for i in sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "PAS_TRANCHEE" and i in pos0
+                                  and not propre(valeurs[pos0[i][0] - 1][A])), key=lambda i: pos0[i][0])), None)
+    if pt:
+        ent.append(entree_vivante(pt, "SIMULATION")[0]); attendus[pt] = "PAS_TRANCHEE_PAR_LE_PROTOCOLE"
+    else:
+        attendu(False, "temoin PAS_TRANCHEE_PAR_LE_PROTOCOLE : aucune ligne reelle -- NON EPROUVE")
+    # des lignes REELLES dans les cases bloquees : la premiere qui, a l'instant, montre le defaut (25/11 : sur les
+    #   pieces du protocole, « etiquette partagee » = SES doubles de saisie ; « plusieurs dossiers » n'a plus de ligne
+    #   reelle -> SEME plus bas ; « lien a valider » n'existe plus -> SEME)
     confiance_forcee: dict[str, str] = {}
-    for case, raison in (("ETIQUETTE_PARTAGEE", "ETIQUETTE_PARTAGEE"), ("PLUSIEURS_DOSSIERS", "PLUSIEURS_DOSSIERS"),
-                         ("LIEN_A_VALIDER", "LIEN_NON_SUR")):
+    for case, raison in (("DOUBLE_DE_SAISIE", "ETIQUETTE_PARTAGEE"), ("LIEN_A_VALIDER", "LIEN_NON_SUR")):
         trouve = None
         for i in sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == case and i in pos0 and i not in exclus_b),
                         key=lambda i: pos0[i][0])[:15]:
@@ -1165,24 +1319,49 @@ def simuler(reg: Registre, journal=print) -> int:
     s = next(x)
     forcee = {a: "classeur" for a in par_id[s]["transactions"]}
     attendus[s] = "C5_SEULE"
-    reg_sim = RegistreSimule(reg, forcee, confiance_forcee)
+    # ⭐ 25/11 : PLUSIEURS_DOSSIERS SEME -- sur les pieces du protocole, aucune ligne reelle ne le montre plus : une ligne
+    #   nominale a deux pieces de Hektor, dont on change l'etiquette de l'une dans le registre simule
+    uuid_force: dict[int, str] = {}
+    hors = set(attendus) | set(graines)
+    for e in ent[11:]:
+        if e["id_unique"] in hors:
+            continue
+        info_e = reg.transactions(e["transactions"])
+        hk_e = [a for a in e["transactions"] if a in info_e and not copie(a, info_e)]
+        if len(hk_e) >= 2:
+            uuid_force[hk_e[-1]] = "11111111-1111-1111-1111-111111111111"
+            attendus[e["id_unique"]] = "PLUSIEURS_DOSSIERS"
+            journal("   temoin PLUSIEURS_DOSSIERS SEME sur %s (piece %d mise dans un autre dossier, dans le registre "
+                    "simule)" % (e["id_unique"], hk_e[-1]))
+            break
+    else:
+        attendu(False, "temoin PLUSIEURS_DOSSIERS : aucune ligne nominale a deux pieces de Hektor -- NON EPROUVE")
     # temoin POSITIF de la regle C5 : une ligne qui a une creation du Sheet dans un AUTRE dossier, et qui s'ecrit
-    c5_pos = None
-    for i in sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "PLUSIEURS_DOSSIERS" and i in pos0
-                     and i not in exclus_b), key=lambda i: pos0[i][0])[:80]:
+    #   (25/11 : cherchee dans la VAGUE_1 ; si aucune ligne reelle ne la montre, SEMEE : la copie mise dans un autre
+    #   dossier dans le registre simule -- la ligne doit s'ecrire quand meme, avec l'etiquette de ses pieces de Hektor)
+    c5_pos, a_semer = None, None
+    for i in v1[240:640]:
         e, info, l = entree_vivante(i, "SIMULATION")
         c5_ = [a for a in e["transactions"] if a in info and copie(a, info)]
         hk = [a for a in e["transactions"] if a in info and not copie(a, info)]
-        if not c5_ or not hk or {info[a]["uuid"] for a in c5_} <= {info[a]["uuid"] for a in hk}:
+        if not c5_ or not hk:
             continue
-        d = juger_paquet([e], [r[A] for r in sheet.v], [r[AL] for r in sheet.v], reg, {}, exclus_b, set())[0]
-        if d["verdict"] == "A_ECRIRE":
-            c5_pos = e
+        if not ({info[a]["uuid"] for a in c5_} <= {info[a]["uuid"] for a in hk}):
+            c5_pos = e                                          # une ligne REELLE le montre : on la prend
             break
+        if a_semer is None:
+            a_semer = (e, c5_[0])
+    if c5_pos is None and a_semer:
+        c5_pos = a_semer[0]
+        uuid_force[a_semer[1]] = "22222222-2222-2222-2222-222222222222"
+        journal("   temoin positif C5 SEME sur %s (sa copie %d mise dans un autre dossier, dans le registre simule) -- "
+                "aucune ligne reelle ne le montre sur les pieces du protocole" % (c5_pos["id_unique"], a_semer[1]))
+    reg_sim = RegistreSimule(reg, forcee, confiance_forcee, uuid_force=uuid_force)
     if c5_pos:
+        d = juger_paquet([c5_pos], [r[A] for r in sheet.v], [r[AL] for r in sheet.v], reg_sim, {}, exclus_b, set())[0]
         ent.append(c5_pos); attendus[c5_pos["id_unique"]] = "A_ECRIRE"
-        journal("   temoin positif C5 : %s (une creation du Sheet dans un autre dossier ; elle doit s'ecrire)"
-                % c5_pos["id_unique"])
+        journal("   temoin positif C5 : %s (une creation du Sheet dans un autre dossier ; elle doit s'ecrire ; juge seul : "
+                "%s)" % (c5_pos["id_unique"], d["verdict"]))
     else:
         attendu(False, "temoin positif C5 : aucune ligne trouvee -- NON EPROUVE")
 
@@ -1283,6 +1462,35 @@ def simuler(reg: Registre, journal=print) -> int:
         except VerrouRefuse as e:
             attendu(sheet.appels["POST"] == 0 and not mem_c.t, "verrou « %s » : refuse, rien ecrit (%s)"
                     % (texte, str(e)[:70]))
+    # ════ SCENARIO D (son mot du 25/11) : « zero ligne ecrite contre le protocole, et tu t'arretes si ce n'est pas zero » ════
+    journal("SCENARIO D -- une ligne dont l'etiquette n'est pas celle du protocole : a blanc ROUGE, ecriture REFUSEE")
+    sheet = SheetMemoire(valeurs)
+    emp_dd = empreinte_colonne_a(sheet.lire_tout())
+    ent_d = [dict(e) for e in nominales[60:63]]
+    cible = ent_d[1]["id_unique"]
+    reg_d = RegistreSimule(reg, {}, None, arrivee_forcee={cible: "33333333-3333-3333-3333-333333333333"})
+    code_dp, rap_dp = derouler_ecriture(mode="a_blanc", nom="SIM_D", entrees=ent_d, sha_vague="c" * 64, sheet=sheet,
+                                        memoire=MemoireLocale(), reg=reg, sortie=sortie / "D", quand=quand,
+                                        journal=lambda t: None)
+    attendu(code_dp == 0 and rap_dp["a_ecrire"] == 3 and not rap_dp["contre_le_protocole"],
+            "temoin positif : sans la graine, les 3 lignes s'ecriraient (a ecrire %d, contre %d, code %s)"
+            % (rap_dp["a_ecrire"], len(rap_dp["contre_le_protocole"]), code_dp))
+    code_da, rap_da = derouler_ecriture(mode="a_blanc", nom="SIM_D", entrees=ent_d, sha_vague="c" * 64, sheet=sheet,
+                                        memoire=MemoireLocale(), reg=reg_d, sortie=sortie / "D", quand=quand,
+                                        journal=lambda t: None)
+    attendu(code_da == 1 and [x["id_unique"] for x in rap_da["contre_le_protocole"]] == [cible],
+            "a blanc : la ligne CONTRE le protocole est nommee, code %s (attendu 1) : %s"
+            % (code_da, rap_da["contre_le_protocole"]))
+    mem_d = MemoireLocale()
+    try:
+        derouler_ecriture(mode="ecrire", nom="SIM_D", entrees=ent_d, sha_vague="c" * 64, sheet=sheet, memoire=mem_d,
+                          reg=reg_d, sortie=sortie / "D", quand=quand, interrupteur="1", sha_donne="c" * 16,
+                          emp_donnee=emp_dd[:16], journal=lambda t: None)
+        attendu(False, "ecriture : une ligne CONTRE le protocole, et l'outil a LAISSE PASSER")
+    except VerrouRefuse as e:
+        attendu(sheet.appels["POST"] == 0 and not mem_d.t and empreinte_colonne_a(sheet.lire_tout()) == emp_dd,
+                "ecriture : REFUSEE en entier, rien ecrit ni dans le Sheet ni en memoire (%s)" % str(e)[:90])
+
     reel_tente = SheetReel()
     try:
         reel_tente.ecrire([(2, "x")])
@@ -1343,8 +1551,12 @@ def main() -> int:
         os.environ.pop(INTERRUPTEUR, None)       # .env ne l'arme jamais
 
     try:
-        reg = Registre(client_supabase())
-        reg.verifier_plafond()
+        vrai = Registre(client_supabase())
+        vrai.verifier_plafond()
+        # ⭐ SON MOT DU 25/11 : « ON SUIT LE PROTOCOLE » -- toutes les etapes jugent par SES pieces, plus par le gel
+        reg = RegistreProtocole(vrai)
+        print("le juge : le protocole, passage %d (image %s) -- %d lignes tranchees sur %d" % (
+            reg.passage, reg.image, reg.tranchees(), len(reg.v)))
         if args.etape == "preparer":
             return preparer(args, reg)
         if args.etape == "simuler":
@@ -1363,6 +1575,8 @@ def main() -> int:
                                           emp_donnee=getattr(args, "empreinte_colonne_a", None))
             ecrire_rapport(sortie, rap, "Colonne A, vague %s -- %s" % (nom, mode))
             print("LIGNES A ECRIRE : %d ; SAUTEES : %s" % (rap["a_ecrire"], rap["compte_raisons"]))
+            print("TEMOIN DU PROTOCOLE : %d ligne(s) CONTRE le protocole %s" % (
+                len(rap.get("contre_le_protocole", [])), rap.get("contre_le_protocole", [])[:5]))
             if mode == "a_blanc":
                 print("POUR ECRIRE (avec %s=1 a la commande) :" % INTERRUPTEUR)
                 print("   --empreinte-vague %s --empreinte-colonne-a %s" % (sha[:16], rap["empreinte_colonne_a_avant"][:16]))
