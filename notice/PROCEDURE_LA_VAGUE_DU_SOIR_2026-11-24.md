@@ -2064,3 +2064,72 @@ avec les entrées du 81 remises, sur une copie (`prepa_25_11/rejeu_81_juge_v23_r
   change pas (c'est une règle, et ici elle ne touche que 7W7XUBPO).
 
 ⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de passage officiel, pas de push.
+
+### 3741 sortie de ses neuf à part ; ses deux cases de la ligne 286 simulées sur copie ; ce que devient D2024-0306 (26/11, nuit) — RIEN ÉCRIT
+
+> « HUY49KEC : oui, sors 3741 de mes neuf pièces à part. [...] La raison de la mise à part a disparu. » ; « 9Q0FHAKK :
+> ⛔ NE touche PAS à la garde. Le défaut est dans mon classeur. [...] Je corrige mes deux cases -- mandat 17010, prix
+> 460 000. Dis-moi d'abord [...] Mesure-le sur une copie et montre-moi les verdicts qui bougent. » ; « je ne veux pas
+> d'un dossier vide dans le registre. »
+
+Les refus du 11-12/11 : **il confirme 1 202** (1 185 le 11 et 17 le 12). Ses 4 offres d'écart venaient de son filtre,
+qui prenait aussi le 10/11 (3 offres) et le 16/11 (1). C'est un chantier à part, et on n'y touche pas.
+
+**① 3741 sort de ses neuf pièces à part (juge v23.1).**
+- Elle passe dans SORTIES_DES_20_PAR_DECISION et dans SES_DECISIONS, avec ses mots. Il en reste HUIT à part.
+- R28 la donne à HUY49KEC, comme il l'a demandé : la décision ne donne pas la pièce, c'est la règle qui le fait.
+
+**② Les deux rejeux, sur des copies du socle, avec les entrées du 81 remises.**
+- **Le rejeu A** prend l'image du 81 telle quelle (son Sheet d'aujourd'hui). Il change 5 lignes :
+  - les 4 lignes de R27 ;
+  - HUY49KEC, qui devient TRANCHÉE avec D2018-0476 (pièces 3741 et 1001587).
+  - 9Q0FHAKK attend toujours : R29 s'abstient, sa garde tient.
+- **Le rejeu B** prend la même image, avec ses deux cases de la ligne 286 corrigées par
+  `simuler_ses_deux_cases_de_9q0fhakk_2026-11-26.py` (mandat 17253 → 17010, prix 112 800 → 460 000). Le registre et le
+  gel restent ceux du 81, octet pour octet, et la copie est rangée hors de `protocole/images`. Il change 7 lignes : les
+  5 du rejeu A, plus deux :
+  - **9Q0FHAKK** passe du bien 5617 au bien 8395, par son mandat 17010, sans aucune règle. Elle devient TRANCHÉE avec les
+    pièces 3647, 3648 et 3650, et l'étiquette « NEUVE:3647 », c'est-à-dire **D2024-0511** aujourd'hui.
+  - **7W7XUBPO** passe des pièces 2160 et 2161 à 2160, 2161 et 2162 : la vente de PAGÈS EYRAUD, prouvée par sa case
+    « Vente Prévue » du 22/01/2025. **Son étiquette ne change pas** (D2024-0357, déjà écrite en colonne A, ligne 245).
+- **Ses trois questions :**
+  - 9Q0FHAKK sort-elle du bien 5617 toute seule ? **Oui**, par le mandat.
+  - La vente revient-elle à 7W7XUBPO sans que son étiquette change ? **Oui.**
+  - R29 travaille-t-elle sans franchir de garde ? **Elle n'a même plus à jouer.** Sur le bon bien, trois dates au jour
+    exact suffisent : le compromis 3647 (11/09/2024), l'offre 3648 de POTTIER (23/08/2024) et la vente 3650 (22/01/2025,
+    sa case « Vente Fixée »). La garde du déjà-rendu nomme les deux mêmes biens qu'à chaque passage (25921 et 37243).
+  - 427UDDSF ne bouge pas : D2024-0278, pièces 3646 et 3649.
+- **Les deux lignes qui ne changent que dans le texte de leur preuve :** YRUF0S9H et O6R10ZQA (R27).
+- **Les témoins : 825 dans chaque rejeu, et les mêmes 6 changements dans A et dans B.**
+  - Les deux jumelles passent à l'attendu de R27 : accord.
+  - coupes_29 : l'écart de 3308P0UX devient une attente.
+  - a_part_20 : 3741 n'est plus attendue « à personne ».
+  - ses_decisions : HUY49KEC reçoit 3741, en accord.
+  - ⚠ v3 : HUY49KEC passe d'une attente à un **écart**, ce qui en fait 13 au lieu de 12. La V3 du 22/11 attendait sa
+    copie seule, puisque 3741 était alors à part. C'est la même famille que ses onze pièces levées le 24/11 (PYG8JZ0C,
+    PCDZXTIY, RGCEC677…), qui figurent déjà parmi les 12 écarts connus. Le témoin reste tel quel, et cet écart est nommé.
+- Le vrai socle est intact (b23e2b3a, 07:26:47).
+- ⚠ Le passage officiel devra se faire sur une image **prise après sa correction** : le juge ne lit que l'image.
+
+**③ D2024-0306 : il ne restera pas de dossier vide.**
+- **Un dossier, dans le registre, n'est pas une ligne d'une table.** C'est l'étiquette que portent ses pièces
+  (app_affaire_ledger). Les numéros viennent d'un compteur qui, d'une nuit à l'autre, ne recule pas : un numéro rendu
+  reste brûlé et n'est pas redonné.
+- **Son histoire :** D2024-0306 n'a jamais porté que l'offre 3648 de POTTIER.
+  - Le 12/11, les étiquettes ont été posées trois fois depuis zéro (11:38, 14:40, 22:08 UTC), et ce numéro a changé de
+    dossier à chaque fois. Depuis la pose de 22:08, il appartient à 3648.
+  - Le chaînage n'a jamais relié cette offre à la chaîne de SOUCHON.
+- **Si le passage officiel puis la vague réalisent le verdict de 9Q0FHAKK** (3648 rejoint 3647 et 3650), la pose fait une
+  FUSION :
+  - la chaîne garde l'étiquette de sa plus petite pièce (3647, donc D2024-0511) ;
+  - le journal des étiquettes écrit que D2024-0511 absorbe D2024-0306 ;
+  - D2024-0306 n'est alors plus porté par aucune pièce. Il ne reste pas vide : il disparaît, son numéro reste brûlé,
+    et sa trace reste dans le journal (sa pose du 12/11, puis la fusion).
+- **Rien ne s'appuie sur lui :** 0 case de la colonne A, 0 avis du classeur, 0 part d'honoraires sur la chaîne 3648.
+  Ce qui suit l'offre 3648 (sa partie, 1 ligne ; ses relations de contact, 2 lignes) est attaché à la pièce, pas au
+  dossier.
+- ⚠ L'offre 3648 est l'une de nos refusées du 11/11 : elle avait été acceptée le 23/08/2024, puis l'affaire a été vendue.
+  Cela relève du chantier à part, et on n'y touche pas.
+
+⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de passage officiel, pas de push. ⏰ Rien n'est mesuré entre
+04:00 et 07:30. Demain matin, avant tout le reste : `temoin_de_la_nuit_2026-11-25.py comparer`.

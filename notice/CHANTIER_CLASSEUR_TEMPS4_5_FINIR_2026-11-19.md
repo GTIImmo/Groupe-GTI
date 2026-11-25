@@ -6020,6 +6020,21 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   `notice/CLASSEUR_NOS_REFUS_DES_11_12_11_LES_OFFRES_2026-11-25.csv`. Chantier a part, rien lance.
 - **A sa decision** : sortir 3741 de ses neuf ; la garde de R29 (une ligne rendue peut gagner une piece de son propre
   dossier, etiquette inchangee).
+
+### 20.70 3741 sortie de ses neuf a part ; ses deux cases de la ligne 286 simulees sur copie ; D2024-0306 (26/11, nuit)
+
+- **Refus du 11-12/11** : il confirme 1 202 (1 185 le 11, 17 le 12) ; ses 4 d'ecart = son filtre (10/11 : 3, 16/11 : 1).
+- **3741** : sortie de ses neuf a part (son mot, juge v23.1) -- R28 la donne a HUY49KEC, D2018-0476. Il en reste HUIT.
+- **Rejeu A** (son Sheet d'aujourd'hui) : 5 lignes changent (R27 x 4 + HUY49KEC) ; 9Q0FHAKK attend, R29 s'abstient.
+- **Rejeu B** (ligne 286 : mandat 17010, prix 460 000, simulee par simuler_ses_deux_cases_de_9q0fhakk_2026-11-26.py) :
+  7 lignes -- + 9Q0FHAKK, bien 5617 -> 8395 par le mandat, TRANCHEE 3647 3648 3650 -> D2024-0511 par trois dates au jour ;
+  + 7W7XUBPO gagne 2162 (sa « Vente Prevue »), etiquette D2024-0357 INCHANGEE. R29 n'a plus a jouer ; aucune garde franchie.
+- **Temoins** : 825 ; 6 changements, les memes dans A et B -- dont v3 HUY49KEC attente -> ECART (la V3 du 22/11 attendait
+  3741 a part : la famille de ses onze levees du 24/11, deja parmi les 12 ecarts connus).
+- **D2024-0306** : un dossier est l'etiquette de ses pieces ; il n'a jamais porte que 3648 (pose du 12/11, 22:08 UTC). Si
+  le verdict de 9Q0FHAKK est realise : FUSION dans D2024-0511, D2024-0306 n'est plus porte par aucune piece (pas de dossier
+  vide : il disparait, numero brule, trace au journal). Rien ne s'appuie sur lui (colonne A 0, avis 0, parts 0).
+- **Ensuite** : sa correction dans le Sheet, puis une image NEUVE pour le passage officiel.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

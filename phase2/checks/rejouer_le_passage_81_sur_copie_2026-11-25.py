@@ -66,6 +66,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("copie")
     ap.add_argument("--entrees-de-81", action="store_true")
+    # 26/11 : une image SIMULEE (ses cases corrigees, simuler_ses_deux_cases_de_9q0fhakk_2026-11-26.py) a la place de
+    #   celle du 81 -- le verdict est compare au 81 ; l'etat du 81 n'est alors JAMAIS ecrit comme reconstitue
+    ap.add_argument("--image", default=None)
     args = ap.parse_args()
     copie_dir = Path(args.copie)
     copie_dir.mkdir(parents=True, exist_ok=False)
@@ -118,9 +121,13 @@ def main() -> int:
             P._EXCLUES_E.update(e81)
             print("ENTREES DU 81 REMISES : liste E de la sauvegarde de 09:02 (avant la vague) = %s ; aujourd'hui = %s" % (
                 sorted(e81), sorted(liste_e(P.RACINE / "phase2" / "sync" / "affaire_ledger.py"))))
-        I = P.Image(P.IMAGES / image)
-        code = P.etape_passage(I, "rejeu du passage 81 SUR COPIE%s" % (" -- entrees du 81 remises" if args.entrees_de_81
-                                                                      else " -- entrees d'aujourd'hui"), "bien")
+        if args.image:
+            assert P.IMAGES.resolve() not in Path(args.image).resolve().parents, "une image simulee hors de protocole/images"
+            print("⚠ IMAGE SIMULEE : %s" % args.image)
+        I = P.Image(Path(args.image) if args.image else P.IMAGES / image)
+        code = P.etape_passage(I, "rejeu du passage 81 SUR COPIE%s%s" % (
+            " -- entrees du 81 remises" if args.entrees_de_81 else " -- entrees d'aujourd'hui",
+            " -- IMAGE SIMULEE %s" % Path(args.image).name if args.image else ""), "bien")
     finally:
         os.chmod(VRAI, stat.S_IREAD | stat.S_IWRITE)
     c = sqlite3.connect((copie_dir / "socle.sqlite").as_posix())
@@ -143,7 +150,7 @@ def main() -> int:
     apres = (VRAI.stat().st_mtime, emp(VRAI))
     print("le VRAI socle : date et empreinte %s" % ("INCHANGEES" if apres == avant else "⛔ CHANGEES"))
     zero = not any(diff.values()) and set(a) == set(b)
-    if args.entrees_de_81 and zero and apres == avant:
+    if args.entrees_de_81 and zero and apres == avant and not args.image:
         sortie = VRAI_DOSSIER / "entrees_passage_81.json"
         sortie.write_text(json.dumps({
             "passage": 81, "image": image, "code": code81, "entrees": ent["entrees"],

@@ -101,7 +101,8 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = ("v23 -- 25/11 (soir) : R27, R28, R29 VALIDEES par son accord (« Oui, les trois ») -- R27 la meme affaire sur "
+VERSION = ("v23.1 -- 25/11 (nuit) : 3741 SORTIE de ses neuf a part (son mot : « la raison de la mise a part a disparu ») "
+           "-- v23, 25/11 (soir) : R27, R28, R29 VALIDEES par son accord (« Oui, les trois ») -- R27 la meme affaire sur "
            "deux lignes, R28 un mandat une seule vente (dans le motif COPIE_SEULE seulement), R29 la ligne suit la vente de "
            "sa commission (un fait d'epoque, jamais le mot « refusee ») ; v22 : l'empreinte des entrees vivantes")
 
@@ -193,7 +194,14 @@ for _a, (_ls, _t) in EN_SUSPENS_PAR_SON_DOUTE.items():
 #   ces onze-la n'y sont plus. » -- la liste source (SRC_V3_CALCUL, « a20 ») ne change pas : elle reste le temoin.
 SORTIES_DES_20_PAR_DECISION = {4126: "P252U1JH", 4327: "PYG8JZ0C", 4533: "PCDZXTIY", 4542: "RGCEC677", 4560: "QV5AYD2K",
                                4621: "TND2I31B", 4669: "GYGF5F1X", 7710: "9DK01H85", 20088: "5QE9107L",
-                               21520: "d2108609", 14110: None}
+                               21520: "d2108609", 14110: None,
+                               # ⭐ SON MOT DU 25/11 AU SOIR (apres le rejeu v23) : « HUY49KEC : oui, sors 3741 de mes
+                               #   neuf pieces a part. [...] « date du 23/11/2018 sur aucune case, honoraires inconnus ».
+                               #   Les honoraires sont maintenant connus, ils viennent de Hektor et non de nos recopies :
+                               #   5 000 euros, exactement ma Commission TTC. La raison de la mise a part a disparu.
+                               #   Sors-la, et laisse R28 lui donner D2018-0476. » -- R28 la donne (pas une decision de
+                               #   piece) ; il en reste HUIT a part
+                               3741: "HUY49KEC"}
 
 # ⛔ LES REGLES PROPOSEES -- jamais appliquees sans son mot. Un passage lance avec --variantes X,Y est marque
 #   « VARIANTE NON VALIDEE » : il sert a mesurer ce qu'une regle changerait (comparer), rien d'autre.
@@ -606,6 +614,12 @@ SES_DECISIONS = {
         "source": SA_DECISION_39845,
         "remplace": "A_SA_DECISION (son mot du 22/11, point 4) -- et le temoin a_sa_decision",
         "lignes": {"6FQO29C8": [19131, 19133], "V3FO5NDA": [19132]}},
+    "3741 sortie de ses neuf a part (25/11 au soir)": {
+        "source": "son mot du 25/11 au soir : « HUY49KEC : oui, sors 3741 de mes neuf pieces a part [...] La raison de la "
+                  "mise a part a disparu. Sors-la, et laisse R28 lui donner D2018-0476. »",
+        "remplace": "sa mise a part du 21/11 (a20 : « date 2018-11-23 sur aucune case, honoraires inconnus ») -- le temoin "
+                    "a_part_20 ne l'attend plus « a personne »",
+        "lignes": {"HUY49KEC": [3741]}},
 }
 ATTENDU_TEMOINS = {"v3_lignes": 456, "v3_morceau": 431, "v3_a_part": 20, "v3_attend_avec_sa_ligne": 3,
                    "v3_exception_nommee": 2, "coupes_132": 132, "lignes_132": 274, "coupes_29": 29, "lignes_29": 57,
