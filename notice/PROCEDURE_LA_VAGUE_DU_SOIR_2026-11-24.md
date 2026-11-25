@@ -647,3 +647,96 @@ sont identiques à ba4992c8. ⛔ **Il attend son accord** : celui de 08:0x porta
 **La leçon.** Une preuve qui compare « avant » et « après » doit lire l'« avant » AVANT d'écrire. Et une remise doit être
 prévue pour la panne PENDANT le geste, pas seulement après. L'essai à blanc ne pouvait voir ni l'un ni l'autre : il écrivait
 ailleurs. **Un chemin de geste s'éprouve sur des copies EN MODE GESTE, pas seulement à blanc.**
+
+---
+
+## ⭐ LA VAGUE, JOUÉE LE 25/11 DE 09:02 À 09:07:54 (son accord sur le manifeste e65ea11d)
+
+**Les essais :**
+- **08:09** : arrêté à l'étape 2 par la commande (voir plus haut), remis ;
+- **08:47** : la garde horaire **refuse** (Health Monitor à 08:48, Relances Email à 09:00), code 10, rien touché ;
+- **09:02:04** : la garde accepte ; les étapes 0 à 8 passent ; code 0 ; 349 s.
+
+**Le fichier posé**, en chemin complet :
+`C:\Hektor\chantier_classeur_q6_cache\protocole_a_blanc_retrait_e\brouillon_detachements_protocole_passage_82.csv` → `C:\Hektor\Projet\phase2\sync\detachements_manuels.csv`.
+- 636 lignes, md5 051aee25 (avec le retrait de E ; celui à 632 lignes est dans `protocole\`) ;
+- le module : 10 lignes en moins, 0 ajoutée (md5 1f53b03f) ;
+- `.env` : `APP_CHAINAGE_DETACHEMENTS=1`, `APP_CHAINAGE_GARDE_G2=0`, **posés en dernier**.
+
+**Les durées, en secondes :** gardes 3, sauvegardes 1, pose 0, doublure 80, **point de non-retour 163**, chaînage et poussée
+96, contrôle 0, A2+A1+A3 2, répartition 3. La fenêtre 5 → 7 a duré **98 s**.
+
+**Ce que chaque étape a rendu :**
+- **3 — la doublure :** 31 375 lignes en 78 s (119 appels), comme au run.
+- **4 — le point de non-retour :** **0 écart sur 31 375 pièces**, 11 590 chaînes.
+- **5 — la poussée :**
+  - les étiquettes : pose 0, propagation 0, **fusion 231 dossiers / 250 lignes** (le cri attendu), **scission 295 / 612** ;
+  - 31 375 lignes redescendues, 0 sans chaîne.
+- **6 — le contrôle :** **0 écart** entre Supabase et le rejeu du matin.
+- **7 — A2, A1 et A3 :**
+  - les gardes d'A2 passent (480 membres, 272 parts, les 93 chaînes nommées) ;
+  - A2 recopie 199 parts, en met 143 de côté, en complète 1 ; 343 lignes au journal ; **empreinte d'après f4e1feb6 =
+    l'exigée** ;
+  - A1 rafraîchit 107 reflets, 0 décollé ; A3 en rafraîchit 269, 0 faux ;
+  - la répétition d'A2 : journal 343, parts du lot 200, mises de côté 143, 0 vente réglée sans part, **0 orpheline**,
+    membres comme le rejeu, f4e1feb6.
+- **8 — la répartition :**
+  - le calcul local est identique (16 122) ; 7 419 lignes envoyées, 4 352 dossiers à jour ;
+  - la purge : **0 orpheline gardée (26 ce matin), 0 en conflit (13 ce matin)** ;
+  - la poussée : **3 706 protégés, 0 refusé, ⚠ 5 lignes écrites dans 3 dossiers**.
+
+**La mesure d'après**, en lecture seule (`vague_mesure_apres_2026-11-25.py`, contre les sauvegardes de 09:02) :
+- **798 pièces** ont changé de chaîne, **0 écart** au rejeu du matin ;
+- **797 pièces** ont changé d'étiquette, **exactement comme prévu** : 185 vers une existante, 612 vers une neuve, 295
+  groupes → 295 étiquettes neuves, 0 éclaté. La liste est dans `notice/LA_VAGUE_DU_25_11_LES_PIECES_QUI_ONT_BOUGE.csv` (798
+  pièces : chaîne et étiquette avant → après, la prévision, le verdict) ;
+- **le journal des étiquettes** passe de 11 664 à 12 208 : 544 lignes écrites ce matin (fusion 249, scission 295) ;
+- **le journal du réalignement** passe de 80 à 799 (a2 343, a1 107, a3 269) ; la mise de côté de 14 à 157 ;
+- **les parts orphelines : 0** (26 parts sur 13 chaînes ce matin) ; ventes réglées sans part : 0 ; notes et conditions au
+  reflet faux : 0 ;
+- **la répartition :** 17 967 parts. L'empreinte valait f4e1feb6 après A2 ; elle vaut **12695d1f** après l'étape 8.
+
+### ⚠ Ce que l'étape 8 a fait autrement que je l'avais annoncé : 3 dossiers écrits
+
+J'avais dit « la conversion ordinaire, sous le verrou ». Elle a écrit 5 lignes dans 3 dossiers, contre 0 les nuits
+précédentes :
+- **3647** (une chaîne née de la vague : compromis 3647 et vente 3650 non réglée) : **aucune ligne n'y arrive.** La nuit y
+  pose la supposition de Hektor (GENTES 50/50), comme sur toute chaîne sans ligne. C'est la conversion ordinaire.
+- **27136** (une offre et une vente non réglée), **une des 42 nommées** : **aucune ligne n'y arrive** (IEYXREWQ est sur
+  27134, une annulée). A2 avait mis de côté ses parts du classeur (COUDERT 50/50, du 13/11). Vide, elle n'est plus protégée,
+  et la nuit l'a remplie comme toute chaîne sans ligne (HERITIER 50/50). Rien n'est perdu : COUDERT est dans la mise de côté.
+- **⛔ 8016** (compromis 8016 et **vente réglée 8019, 27/03/2019**) : **SXJDHXKF y arrive**, ROMERA 100 au Sheet.
+  - Après A2, elle portait ROMERA 50/50 en supposition de Hektor : **juste**.
+  - L'étape 8 a recalculé la chaîne, dont la vague avait changé la composition, et n'y a laissé que la **sortie ROMERA 50** :
+    **fausse, à moitié**.
+
+**La cause : ma règle A2, « les mêmes parts y vivent déjà ».** Elle comparait les **valeurs** sans l'**origine**. Pour
+8019 → 8016, les parts de la cible étaient des suppositions de Hektor, non protégées ; les parts du classeur de 8019 (ROMERA
+entrée 50 + sortie 50) ont été mises de côté. C'est **exactement sa leçon du 24/11 : l'origine est le verrou.** Je l'avais
+écrite, et je ne l'ai pas appliquée à cette règle.
+
+**La mesure des 11 chaînes « mêmes parts » :** 10 portent les parts du classeur (protégées, du 13/11) et n'ont pas bougé ;
+**seule 8016** portait une supposition. **Le défaut tient en une ligne, SXJDHXKF.**
+
+**Le remède, à son accord, rien n'est fait.** Sur 8016 :
+- la part de la nuit (sortie ROMERA 50, `hektor_partage_suppose`) est mise de côté (règle 6) ;
+- les parts du classeur de 8019 sont recopiées depuis la mise de côté : ROMERA entrée 50 + sortie 50, `classeur_reconstitue`
+  (protégées) ;
+- au journal, avec la ligne SXJDHXKF.
+
+Sans remède, la nuit de 04:00 récrira 8016 à l'identique (la moitié) : rien n'empire, mais rien ne se répare.
+
+### ⛔ RÈGLE (son mot du 25/11) : L'INTERRUPTEUR SE POSE EN DERNIER
+
+> « L'ORDRE DE TES ÉTAPES (fichier → module → .env en DERNIER) t'a protégée. Garde-le, et écris-le dans la procédure comme
+> une règle. »
+
+**La règle.** Dans toute pose qui change la nuit, l'ordre est :
+1. les fichiers que le code lit ;
+2. le code ;
+3. **l'interrupteur, EN DERNIER.**
+
+Une pose interrompue avant la dernière marche laisse un fichier **inerte** : la nuit ne le lit pas. Le 08:09 l'a prouvé.
+
+**Sa sœur, qui vaut pour tout le projet :** un essai à blanc ne prouve pas un chemin de geste, parce qu'il travaille sur une
+copie. Le chemin de geste s'éprouve **EN MODE GESTE, sur des copies, avec des leurres**.

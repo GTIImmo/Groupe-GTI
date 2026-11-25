@@ -5763,6 +5763,21 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   pose, pour toute erreur, et jamais apres le debut de l'etape 5.
 - **Eprouvee EN MODE GESTE sur des copies** (4 cas verts), puis a blanc 0 a 4 (0 ecart). Le nouveau manifeste
   e65ea11dd4495daa2411c131f058d973 attend son accord.
+### 20.51 ⭐ LA VAGUE EST JOUEE (25/11, 09:02 -> 09:07:54, manifeste e65ea11d) ; une ligne cassee par l'etape 8
+
+- **Les essais :** 08:47 refuse par la garde horaire (rien touche) ; a 09:02 les etapes 0 a 8 passent, code 0, 349 s ; la
+  fenetre 5 -> 7 a dure 98 s.
+- **Le point de non-retour et le controle :** 0 ecart sur 31 375 pieces. 798 pieces changent de chaine (= le rejeu) ; 797
+  changent d'etiquette, EXACTEMENT comme prevu (185 + 612 ; 295 groupes neufs ; fusion 231 / scission 295).
+- **A2, A1 et A3 :** A2 a f4e1feb6, l'empreinte exigee ; A1 107, A3 269. Orphelines **0** (26 ce matin) ; ventes reglees sans
+  part 0 ; reflets faux 0. Journal 799, mise de cote 157.
+- **⚠ L'etape 8 a ecrit 3 dossiers (5 lignes)** : 3647 et 27136 sont sans ligne (la conversion ordinaire ; COUDERT de 27136
+  est dans la mise de cote). **⛔ 8016 : SXJDHXKF (vente reglee, ROMERA 100) n'y porte plus que la sortie ROMERA 50.** La
+  cause est ma regle A2 « memes parts », qui comparait les valeurs sans l'ORIGINE : sa lecon du 24/11. Des 11 chaines
+  « memes parts », seule 8016 portait une supposition.
+- **Le remede, A SON ACCORD :** mettre de cote la part de la nuit, puis recopier les parts du classeur de 8019 (ROMERA 50/50,
+  dans la mise de cote) sur 8016.
+- **La regle ecrite dans la procedure :** l'interrupteur se pose EN DERNIER.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
