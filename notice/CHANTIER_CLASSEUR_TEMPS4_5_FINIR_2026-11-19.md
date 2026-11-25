@@ -5884,6 +5884,20 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   touchee ; ligne_sans_lien : meme defaut, 71, table des lignes perimee de 8) ; le protocole lui-meme (preuve R9 : ne pas
   le reecrire en place). Valeurs posees une fois depuis le gel : 0 mal placee sur les 256 delies ; 47 JAMAIS posees sur les
   108 relies (17 ventes reglees sur des chaines non reglees, 1 deja reglee, 29 dates dont 6U5DQQ4J ecartee par lui).
+
+### 20.59 La vague1c ECRITE (25/11 14:44, son accord) ; la sentinelle avec le protocole : 73 ; les 47 rangees, rien pose
+
+- **Ecrite** : 50/50, 0 sautee, 0 contre le protocole, criteres 1-6 verts (sauvegarde 2026-11-25_144420_vague1c_ECRIRE).
+  Ma relecture independante : 100 cases A = les deux vagues ; vague1c 50/50 etiquette du protocole ; vague1a intacte ;
+  ses 4 doubles vides. ARRET jusqu'a son oeil.
+- **Sentinelle « lignes sans lien »** : 71 aujourd'hui, a tort sur 26 (12 rattachees par le protocole, 14 sans piece mais
+  reliees par le gel) ; par le protocole 73 = 58 « rien a etiqueter » + 15 impossibles. Proposee : compter les 15, seuil 15
+  (table du verdict chez Supabase + vue + table des lignes +8) -- A SON ACCORD, rien fait.
+- **Les 47** (rien pose, `les_47_valeurs_jamais_posees_2026-11-25.py`) : le registre est MUET, pas en desaccord. 18 ventes
+  reglees (162 000 EUR TTC) : 8 concordent, 7 vraies dont seule la case Prix du Sheet est fautive (MQ6H8TVQ sans facture),
+  2 ecarts d'honoraires (df0ce30c, 78bb247a), 1 dossier deja regle (G8YSAI5Z). 29 dates : 23 posables, 1 double PAOLONE,
+  3 anterieures, 2 ecartees par lui.
+- **Regle gravee** (sa demande) : une preuve du juge ne se reecrit pas -- on fait passer ses lecteurs au verdict.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

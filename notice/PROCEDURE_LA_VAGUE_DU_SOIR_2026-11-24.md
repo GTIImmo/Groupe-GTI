@@ -1359,3 +1359,80 @@ nominales dont la case A était vide.
   - poser depuis le protocole les 47 valeurs qui manquent, moins les écartées.
 
 **⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 50 de la vague1a ne sont pas touchées.
+
+### La vague1c ÉCRITE (25/11, 14:44, son accord) ; la sentinelle avec le protocole ; les 47 rangées, rien posé
+
+> « ⭐ OUI, ÉCRIS LA VAGUE1C. Empreintes 097355f07e338848 et 2b60fa4b312a7bc1. [...] ⛔ Puis tu t'arrêtes, je regarde mon
+> Sheet, et on continue. »
+
+**L'écriture.** L'interrupteur a été donné à la commande seule : il n'est dans aucun `.env`, vérifié avant.
+- **Le résultat :** sortie 0 ; **50 écrites, 0 sautée, 0 contre le protocole.**
+- **Les 6 critères de l'outil sont verts**, dont le nouveau ⑥, « zéro ligne écrite contre le protocole ».
+- **La sauvegarde et le rapport** sont dans `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_144420_vague1c_ECRIRE`.
+
+**Ma relecture indépendante.** Le Sheet a été relu par `apparier_classeur`, le protocole par son socle, et les étiquettes
+par SQL : aucun de ces chemins ne passe par l'outil.
+- 4 802 lignes ; **100 cases A remplies, exactement les deux vagues** ; 0 hors des vagues ; 0 ID en double ; 0 étiquette
+  sur deux lignes.
+- **La vague1c : 50 sur 50.** Chaque ligne est tranchée, et sa case A est à la fois le dossier de SES pièces, l'étiquette
+  à l'arrivée et l'étiquette prévue.
+- **La vague1a est toujours en place**, 50 sur 50.
+- Les lignes sont aux mêmes places qu'à la préparation (lignes 2 à 101).
+- **Ses 3 lignes que le gel bloquait** sont écrites : LPBAZ1D4 (ligne 21), FYC1KCHQ (ligne 50) et I847SPN3 (ligne 67).
+- **Ses 4 doubles sont toujours vides.**
+- ⛔ **ARRÊT :** la vague suivante attend qu'il ait regardé son Sheet.
+
+**La sentinelle `data.classeur_ligne_sans_lien`, avec le protocole : 73 et non 52.**
+- **Aujourd'hui elle compte 71, mais à tort sur 26 lignes :**
+  - **12 lignes qu'elle compte et que le protocole rattache :** ses 5 rattachements, 6FQO29C8, 4G2UHO35, ZZ5WKMWM,
+    I3TFR2KG, D9MMB7OU, YRUF0S9H et Z6P7KE5R ;
+  - **14 lignes qu'elle ne compte pas,** parce que le gel les relie, alors que le protocole ne leur donne aucune pièce ;
+  - et sa table des lignes ignore les 8 lignes les plus récentes, toutes tranchées.
+- **Par le protocole, 73 lignes du Sheet n'ont aucune pièce :**
+  - **58 « rien à étiqueter »** : c'est un verdict du protocole, ces lignes sont vides à juste titre ;
+  - **15 impossibles** : 3QZ4DAD1, 3THZJOOG, 6684bcf1, 9B7U8221, 9Q0FHAKK, BR8ZTN5F, C0HXVVCW, HUY49KEC, M2G1Z1K8,
+    P252U1JH, PEE1XTR8, PPIM4947, SHN6RKDI, XBR8QD6L et d2108609.
+- **⇒** Avec un seuil de 92, elle ne crierait jamais. **La proposition :**
+  - déclarer les 58 « rien à étiqueter », car ce verdict est une décision ;
+  - compter les 15, **avec un seuil de 15**, qui doit baisser à mesure qu'il tranche les impossibles.
+- **La réparation demandera trois gestes en base ou dans le moniteur, à son accord. Rien n'est fait :**
+  - poser le verdict du protocole dans une table chez Supabase ;
+  - redéfinir la vue pour qu'elle lise cette table ;
+  - remettre à jour la table des lignes (+8) et le seuil dans `check_gti_health.py`.
+
+**Les 47 valeurs jamais posées, rangées par ce qu'elles valent. ⛔ RIEN N'EST POSÉ.**
+- **L'outil :** `phase2/checks/les_47_valeurs_jamais_posees_2026-11-25.py`, en lecture seule. **La liste :**
+  `notice/CLASSEUR_LES_47_VALEURS_JAMAIS_POSEES_2026-11-25.csv`.
+- **Le registre n'est pas en désaccord avec le Sheet : il est MUET.** La valeur n'a jamais été posée, parce que le gel ne
+  reliait pas la pièce à sa ligne. Aucun des deux ne « se trompe » sur le règlement.
+- **Les ventes réglées : 17 sur des dossiers non réglés, plus 1 sur un dossier déjà réglé, soit 162 000 € TTC de
+  commissions.**
+  - **Les preuves lues pour chacune :**
+    - au Sheet : l'état, la date de règlement, la facture, la Commission TTC et le Prix ;
+    - chez Hektor : la pièce de vente, sa date, son montant et ses honoraires.
+  - **Sur les 18, la vente existe chez Hektor et elle est datée AVANT le règlement.** Les honoraires de Hektor sont égaux
+    à la Commission TTC sur 16 lignes, et 17 lignes ont un numéro de facture.
+  - **8 vraies ventes réglées, où tout concorde :**
+    - a6d41ca1 (16 000) ; 8f3a4326 (14 000) ; a56ce827 (12 000) ; 84c91bb8 (11 000) ;
+    - AYIHPHF5 (7 000) ; d9a0630c (7 000) ; ef08b63a (7 000) ; LWZL8V5M (2 000).
+  - **7 vraies ventes réglées, dont seule la case « Prix » du Sheet est fautive** (« NON TROUVÉ » ou « 42 »). Les
+    honoraires, la facture et les dates concordent :
+    - QXDW8EQA (39 000, vente de 1 358 840 €) ; EJN79TJ1 (13 000) ; 2U5QPKRC (6 800) ; 6FQO29C8 (6 000) ;
+    - I3TFR2KG (6 000) ; 91IHSGNC (4 900) ;
+    - MQ6H8TVQ (1 000), **sans numéro de facture au Sheet.**
+  - **2 avec un écart d'honoraires :**
+    - df0ce30c (5 000 au Sheet, **0 chez Hektor**) ;
+    - 78bb247a (2 500 au Sheet, 2 700 chez Hektor).
+  - **1 sur un dossier DÉJÀ réglé par une autre pièce :** G8YSAI5Z (1 800, D2025-0035). Ce serait un second règlement
+    sur le même dossier.
+- **Les 29 dates d'annulation :**
+  - **23 posables selon sa règle** (la date du Sheet sur SON compromis) ;
+  - 1 qui attend sa décision : O6R10ZQA, son double PAOLONE ;
+  - **3 annulées AVANT leur compromis** (LKBO1TOH, 87QOXR64, 8NZ6V6XB) : sa règle les écarte ;
+  - 2 qu'il a déjà écartées (S3HOG6UL, 6U5DQQ4J).
+- **À traiter quand la colonne A sera finie,** c'est son mot : le dernier morceau du chantier.
+
+**La règle est gravée dans la mémoire.** Une source que le juge lit comme PREUVE ne se réécrit pas avec son verdict : on
+fait passer ses LECTEURS au verdict (le fichier `une-preuve-du-juge-ne-se-reecrit-pas-on-fait-passer-ses-lecteurs.md`).
+
+**⛔ Rien chez Hektor, pas de push.** Le gel est intact.
