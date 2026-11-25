@@ -1005,3 +1005,110 @@ montant ». ⬜ **Rien n'est décidé** : la manière de représenter la part d'
   - Elle porte la chaîne, le dossier, l'ID, la ligne, ce que dit le Sheet, l'apporteur, son pourcentage, la commission
     TTC, sa part, la `commission_agence` du registre, les parts d'aujourd'hui, le règlement et la facture.
   - La supposition de 1550 y est écrite « un compte d'administration ».
+
+### ⛔ Les trous de la vague1a, et le classement refait sur l'état d'aujourd'hui (25/11, après-midi)
+
+> « ⛔ ARRÊTE LES VAGUES, J'AI REGARDÉ MON SHEET ET J'AI VU LES TROUS. Entre mes lignes 4 et 70 il y a 17 cases vides [...]
+> ELLES SONT ÉCARTÉES PAR TON CLASSEMENT DU 19/11, QUI EST D'AVANT LA VAGUE [...] RECLASSE SUR L'ÉTAT D'AUJOURD'HUI. »
+> Et : « Les 50 déjà écrites sont JUSTES [...] On ne touche pas à celles-là. »
+
+**La cause, et elle est à moi.** L'étape `preparer` de l'outil choisit ses lignes dans un fichier de classement, par
+défaut celui du 19/11 (`TEMPS5_Q8_...`). Ce fichier était d'avant la vague, et je l'ai réutilisé sans le refaire. Le juge
+de l'outil relit pourtant tout à l'instant de l'écriture. Mais une ligne que le classement n'a pas choisie, le juge ne la
+voit jamais : de là viennent les trous.
+
+**Le classement neuf** (`phase2/checks/reclasser_colonne_a_apres_la_vague_2026-11-25.py`, en lecture seule).
+- **Les règles sont les mêmes que le 19/11, dans le même ordre.** La première raison qui concerne une ligne la range.
+- **Trois changements, que je nomme :**
+  - **PATCH_V2 et CETTE_NUIT n'existent plus.** Un témoin le prouve : le gel du jour porte les 78 ajouts du patch V2 et
+    aucun de ses 45 retraits.
+  - **« Plusieurs dossiers » et « étiquette partagée » se lisent comme l'outil les juge à l'écriture**, sur les pièces
+    effectives : c'est sa règle C5 du 19/11, où une création du Sheet ne décide pas de l'étiquette.
+  - **Les cases EN_ATTENTE et AUDIT_NON_JUSTE ne sont pas levées.** Elles sont relues dans les mêmes fichiers que le
+    19/11, car elles viennent de ses décisions et de l'audit.
+- **Trois états, pour isoler ce que la vague a fait :**
+  - **S0** est le 19/11, celui de ses nombres ;
+  - **S1** applique les règles d'aujourd'hui aux chaînes d'AVANT la vague (l'image de 07:26) ;
+  - **S2** les applique aux étiquettes d'aujourd'hui.
+  - Le passage de S1 à S2, c'est la vague et rien d'autre, puisque le gel est le même.
+- **Les témoins sont tous verts :**
+  - une étiquette correspond à un dossier, avec 0 écart ;
+  - mesurer par les chaînes ou par les étiquettes donne les mêmes cases, avec 0 écart ;
+  - les 50 lignes écrites sont rangées VAGUE_1 si l'on ignore leur case A, et elles portent bien l'étiquette du jour (50
+    sur 50) ;
+  - la VAGUE_1 a 4 478 lignes et 4 478 étiquettes distinctes ;
+  - l'à blanc de l'outil, qui est un juge indépendant, met en « à écrire » les 50 lignes de la vague neuve.
+
+**① Le classement d'aujourd'hui, sur les 4 802 lignes du Sheet.**
+- **Ce qui est fait ou à faire :**
+  - 50 lignes déjà écrites ;
+  - **4 478 lignes en VAGUE_1**, dont 17 qu'il a sorties par ses décisions du 20/11 (9 de B, 8 des 19) : l'outil les
+    refuse. Il reste donc **4 461 lignes écrivables**.
+- **274 lignes restent écartées :**
+  - 79 SANS_LIEN, qui n'ont rien à écrire (dont 5 lignes nées depuis le 19/11) ;
+  - 47 AUDIT_NON_JUSTE ;
+  - 45 GEL_SEUL ;
+  - 42 PLUSIEURS_DOSSIERS ;
+  - 23 EN_ATTENTE ;
+  - 20 LIEN_A_VALIDER ;
+  - 18 ETIQUETTE_PARTAGEE.
+- **Le compte se boucle :** 50 + 4 461 + 17 + 274 = 4 802.
+- **Ce ne sont donc pas 48 lignes qui restent bloquées.** Le 48 ne compte que les lignes à plusieurs étiquettes.
+  - Les autres raisons ne dépendent pas de la vague : pas de lien, une décision, l'audit, un lien qui ne tient qu'au gel.
+  - Le « 4 670 sur 4 723 » de son contrôleur est mon « 53 par toutes les pièces » : 4 723 − 53 = 4 670. Par les pièces
+    effectives (la lecture de l'outil), c'est 48.
+
+**② Ce qui sort de sa case** (du 19/11 à maintenant, et entre parenthèses la part de la vague seule).
+- **Sur les 307 « étiquette partagée », 271 passent en VAGUE_1, et la vague en libère 271.**
+  - Restent 9 « partagée », 11 « plusieurs », 10 « lien à valider », 5 « audit » et 1 « gel seul ».
+- **Sur les 233 « plusieurs dossiers », 175 passent en VAGUE_1, dont 97 par la vague.**
+  - Les 78 autres sont libérées avant la vague, par le patch V2 et la règle des pièces effectives.
+  - Restent 21 « plusieurs », 20 « gel seul », 8 « partagée », 7 « lien » et 2 « audit ».
+- **Sur les 112 « lien à valider », 96 passent en VAGUE_1, et la vague n'y est pour rien** : c'est le patch de confiance
+  du 22/11.
+- **Ne bougent pas :** SANS_LIEN (74), EN_ATTENTE (23), AUDIT_NON_JUSTE (28) et GEL_SEUL (23).
+- **Dans l'autre sens, 11 lignes en VAGUE_1 le 19/11 sont bloquées aujourd'hui** (10 « plusieurs », 1 « partagée »).
+- **La vague seule libère 377 lignes et en bloque 19.**
+  - Elle libère 297 « partagée » et 80 « plusieurs ».
+  - Les 19 bloquées sont 10 « plusieurs » et 9 « partagée ». La vague a coupé une chaîne entre les pièces de la ligne, ou
+    l'a laissée avec une autre ligne. Elles sont nommées dans le CSV (case_avant_la_vague = VAGUE_1, case_25_11 autre).
+- **Le compte :** 3 997 − 11 + 542 = 4 528 lignes, soit les 4 478 et les 50 écrites.
+
+**Les 17 trous de ses lignes 4 à 70.**
+- **14 trous sont maintenant en VAGUE_1, et l'à blanc les met « à écrire ».**
+- **3 trous restent bloqués :**
+  - **LPBAZ1D4** (ligne 21, Annulée), PLUSIEURS_DOSSIERS : le compromis annulé 14006 est dans D2025-0219, l'offre refusée
+    14008 dans D2025-0365. La vague n'y a rien changé.
+  - **FYC1KCHQ** (ligne 50, Annulée), GEL_SEUL : le compromis 14010 a la date 0000-00-00, et l'offre 1001435 est une copie
+    du Sheet. Aucune colonne indépendante ne retrouve le dossier sur la ligne : le lien ne tient qu'au gel.
+  - **I847SPN3** (ligne 67, Offre d'achat), PLUSIEURS_DOSSIERS : trois pièces dans trois dossiers. Le compromis annulé
+    3698 est dans D2022-0377, l'offre acceptée 3700 dans D2022-0626, et la vente 3701 du 21/03/2025 dans D2025-0092.
+
+**③ Ses 4 ventes réglées sont toutes les 4 écrivables.** L'à blanc les met « à écrire ».
+- **OAQDRTNC** (ligne 12, D2025-0512) était « partagée » le 19/11.
+  - Sa chaîne 25626 portait aussi le compromis 25626, relié à la ligne 44ZVGG8Q.
+  - **La vague les a séparées :** 25627, 25628 et 25629 forment leur propre dossier, et 44ZVGG8Q garde 25626.
+- **USL9H5AJ** (ligne 61, D2025-0500) suit le même chemin : la chaîne 2357 était partagée avec 515UT1WG, et la vague a
+  séparé 2358, 2359 et 2360.
+- **E1QEDCAG** (ligne 51, D2025-0199) et **95WH4KUS** (ligne 68, D2025-0090) étaient « lien à valider » le 19/11.
+  - Leurs liens sont « sûre » depuis le patch de confiance.
+  - **Elles étaient écrivables avant même la vague.** Seul le vieux classement les a laissées dehors.
+
+**④ La vague neuve, vague1b, n'est PAS écrite.**
+- **Le fichier :** `notice/CLASSEUR_VAGUE_vague1b_2026-11-25.csv`.
+  - Ce sont les 50 premières lignes de la VAGUE_1 neuve dans l'ordre du Sheet, sans ses décisions du 20/11.
+  - Elle a été préparée par `preparer --source notice/CLASSEMENT_COLONNE_A_APRES_LA_VAGUE_2026-11-25.csv --colonne-case
+    case_25_11 --case VAGUE_1 --ids ...`. Le code de l'outil n'a pas été modifié.
+- **Son contenu :**
+  - les lignes 2 et 3, qui sont au-dessus de sa plage de lignes et étaient elles aussi vides ;
+  - 14 de ses 17 trous ;
+  - puis les lignes 71 à 105.
+  - Selon leur case du 19/11 : 31 VAGUE_1, 11 PLUSIEURS, 4 LIEN et 4 PARTAGÉE.
+- **L'à blanc :** 50 à écrire, 0 sautée. L'empreinte de la vague est **9a94fb89e66a4db4**, celle de la colonne A
+  **2b60fa4b312a7bc1**. Rapport : `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_121342_vague1b_A_BLANC`.
+- **Le bon à lire**, avec la ligne, l'ID, le dossier, la case du 19/11, l'état et l'acquéreur, est dans
+  `notice/CLASSEUR_VAGUE_vague1b_2026-11-25_LE_BON_A_LIRE.txt`. Il est local seulement (ignoré par git).
+- **⚠ Un piège nommé :** le défaut de `preparer --source` pointe toujours vers le classement du 19/11. Toute vague
+  suivante doit passer `--source` et `--colonne-case case_25_11`. Changer ce défaut toucherait le code de l'outil :
+  c'est à son mot.
+- **⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 50 de la vague1a ne sont pas touchées.

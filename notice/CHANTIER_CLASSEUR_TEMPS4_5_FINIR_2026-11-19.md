@@ -5835,6 +5835,20 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   `commission_agence` = la part HT de l'apporteur sur 18 des 20, mais ce rapport n'est pas propre aux apporteurs (un reflet,
   pas une cle). Liste : `CLASSEUR_LES_21_VENTES_REGLEES_SUR_UNE_SUPPOSITION_ET_LEURS_APPORTEURS_2026-11-25.csv`.
 - **Rien d'autre** : pas de 51e ligne, rien chez Hektor, pas de push. La vague suivante attend son oeil sur le Sheet.
+
+### 20.56 Les trous de la vague1a : le classement du 19/11 etait d'avant la vague ; reclasse ; vague1b prete (25/11)
+
+- **Sa lecture du Sheet** : 17 cases vides entre ses lignes 4 et 70 (12 annulees, 4 ventes reglees, 1 offre). **Cause, a
+  moi** : `preparer` choisit dans le classement du 19/11 (d'avant la vague), et le juge ne voit jamais une ligne non choisie.
+- **Le classement neuf** (`reclasser_colonne_a_apres_la_vague_2026-11-25.py`, lecture seule, temoins verts) : 4 802 lignes
+  = 50 ecrites + 4 461 ecrivables + 17 sorties par ses decisions du 20/11 + 274 ecartees (79 sans lien, 47 audit, 45 gel
+  seul, 42 plusieurs, 23 en attente, 20 lien, 18 partagee). `notice/CLASSEMENT_COLONNE_A_APRES_LA_VAGUE_2026-11-25.csv`.
+- **Ce qui sort** : 271 des 307 « partagee » (toutes par la vague), 175 des 233 « plusieurs » (97 par la vague), 96 des 112
+  « lien » (le patch de confiance). La vague seule : 377 liberees, 19 bloquees (nommees).
+- **Ses 4 ventes reglees** : ecrivables toutes les 4 (OAQDRTNC et USL9H5AJ separees par la vague ; E1QEDCAG et 95WH4KUS
+  liberees par le patch de confiance, deja avant la vague). 3 trous restent : LPBAZ1D4, FYC1KCHQ, I847SPN3.
+- **vague1b** (50, a blanc 50/0, vague 9a94fb89e66a4db4, colonne A 2b60fa4b312a7bc1) : A SON ACCORD. Le defaut de
+  `--source` reste le 19/11 : le passer a chaque vague (ou changer le defaut, a son mot).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
