@@ -5794,6 +5794,17 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   (2U5QPKRC, 58I5AO17, 8ATXF2EZ, 91IHSGNC, EJN79TJ1, ESMCO1NC, I3TFR2KG, J6RGX0CQ, JL8GV7RQ, LUX9SDIL, MDOXOBIC, S8BKB6FL).
 - **Le temoin de demain :** `temoin_de_la_nuit_2026-11-25.py`, photo a 09:28 (avant le remede ; a reprendre apres s'il est
   pose).
+### 20.53 Le remede de 8016 et les 4 dates poses en UN geste ; deux reserves rayees (25/11, son accord)
+
+- **Le remede de 8016 :** ROMERA 50/50 du classeur, PROTEGEE, empreinte 1dccc512 = l'exigee ; la part de la nuit en mise de
+  cote.
+- **Les 4 dates** (compte dit avant de poser) : 27195 = 2025-05-20, 4385 = 2022-11-22, 27134 = 2024-02-01, 16377 =
+  2021-01-21 ; empreinte ce7e070a = l'exigee. Nommees sans ecrire : S3HOG6UL et 6U5DQQ4J (anterieures), T2GZOY5O (jumelle en
+  reserve).
+- **RAYEES, verifiees par les noms :** a5cb141f (6172 = DELAVAUD + RONDEAU) et JRE23R1G (27135 = COUDERT des deux cotes).
+- **Le balayage :** aucun autre endroit sans l'origine (le remede et les dates compris).
+- **Le temoin de demain :** photo reprise a 10:01 apres le geste ; la question « 8016 protegee du run ? » est ajoutee. L'ecart
+  des 42 au 24/11 est PROUVE du aux seuls gestes accordes du 25/11 (072b3cb3 retrouvee).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

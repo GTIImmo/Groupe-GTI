@@ -95,6 +95,13 @@ def main() -> int:
     print("   le chainage de la vague : %d pieces de la photo ont change de CHAINE %s ; %d d'ETIQUETTE %s -> %s" % (
         len(ch), ch[:10], len(lb), lb[:10], "TENU" if not ch and not lb else "⛔ A LIRE"))
     print("   pieces neuves cette nuit : %d %s ; pieces disparues : %d %s" % (len(neuves), neuves[:10], len(parties), parties[:10]))
+    # ⭐ SON MOT DU 25/11 : « et 8016 est-il protege du run ? » -- ses parts, avant et apres la nuit, et le verrou (une part
+    #   hors hektor% : l'absorbeur n'y touche pas)
+    p8a = sorted((r[1], r[4], r[5], r[6]) for r in av["parts"] if r[0] == 8016)
+    p8b = sorted((r[1], r[4], r[5], r[6]) for r in m["parts"] if r[0] == 8016)
+    prot = any(not str(r[3]).startswith("hektor") for r in p8b)
+    print("   8016 (SXJDHXKF, vente reglee ROMERA 100) : %s -> %s ; protegee %s -> %s" % (
+        p8a, p8b, prot, "TENU" if p8a == p8b and prot else "⛔ A LIRE"))
     for k in REFLETS:
         print("   reflets des %-12s %s -> %s %s" % (k, av["reflets"][k][:8], m["reflets"][k][:8],
                                                   "TENU" if av["reflets"][k] == m["reflets"][k] else "⛔ CHANGE"))
@@ -103,8 +110,12 @@ def main() -> int:
         cible0 = k in ("orphelines", "ventes reglees sans part")
         print("   %-28s %s -> %s %s" % (k, av["comptes"][k], m["comptes"][k],
                                        ("TENU" if bon else "⛔ CHANGE") + (" (attendu 0)" if cible0 else "")))
+    # la photo contre maintenant (la nuit a-t-elle touche ces gestes ?) ; l'ecart a l'empreinte du 24/11 est DIT a part :
+    #   le 25/11, des gestes accordes ont touche des pieces des 42 (A3 : des reflets de notes ; les dates sur 27195 et 27134)
     for k, (att, _q) in T24.EMPREINTES.items():
-        print("   geste du 24/11 %-52s %s" % (k[:52], "TENU" if m["gestes_24_11"][k] == att else "⛔ CHANGE"))
+        print("   geste du 24/11 %-52s %s%s" % (k[:52], "TENU" if m["gestes_24_11"][k] == av["gestes_24_11"][k] else "⛔ CHANGE",
+                                              "" if av["gestes_24_11"][k] == att else
+                                              " (≠ du 24/11 depuis les gestes accordes du 25/11 : A3, les dates)"))
     print()
     print("② CE QUI A BOUGE AILLEURS -- tout le registre des parts")
 

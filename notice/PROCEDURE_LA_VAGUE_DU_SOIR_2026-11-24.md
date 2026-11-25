@@ -811,3 +811,57 @@ n'est fait.
 - 17 967 parts (12695d1f), 31 375 pièces, 0 orpheline, 0 vente réglée sans part, journal 799, mise de côté 157, 11 605
   étiquettes ;
 - si le remède est posé, la photo sera reprise juste après.
+
+### Le remède de 8016 et les 4 dates d'annulation : UN SEUL GESTE (25/11, 10:0x, son accord)
+
+> « ⭐ VAS-Y, POSE LE REMÈDE DE 8016 [...] ⭐ ET DANS LE MÊME GESTE, POSE LES DATES D'ANNULATION QUI RESTENT -- ma règle : la
+> date du Sheet sur SON compromis quand il n'en a pas. Dis-moi combien exactement avant de poser. Les 2 antérieures restent
+> écartées. ⛔ UN SEUL GESTE, UN SEUL COMPTE RENDU. »
+
+**Le compte, mesuré avant de poser (après la vague) : 4 dates.**
+- Les 6 compromis du 24/11 sont toujours ANNULÉS SANS DATE ; moins les 2 antérieures, il en reste 4.
+- Les dates sont relues dans le Sheet du jour :
+  - **TR42PT5H** → 27195 : 20/05/2025 ;
+  - **U0GQ3KTO** → 4385 : 22/11/2022 ;
+  - **IEYXREWQ** → 27134 : 01/02/2024 ;
+  - **R0JRVFDC** → 16377 : 21/01/2021.
+- **NOMMÉES au journal, rien écrit :**
+  - S3HOG6UL (17387) et 6U5DQQ4J (24450), antérieures au compromis, écartées par sa décision ;
+  - T2GZOY5O (20073), jumelle en réserve ; O6R10ZQA est la bonne, et son 21/09/2021 est déjà sur 20073.
+- **Le patch** (`dates_annulation_generer_patch_2026-11-25.py`, md5 46c9d67a) :
+  - les gardes : 4 compromis annulés sans date, et les 7 lignes telles que lues ;
+  - une sauvegarde datée, et le journal avec la place, la ligne d'origine et l'ancienne valeur ;
+  - le geste ne touche QUE les cases vides de la ligne « POSER » ;
+  - les contrôles : les 3 nommées et toutes les autres colonnes intactes ; l'empreinte d'après **ce7e070a** est exigée.
+- **L'essai à blanc était VERT** (l'inverse rend 4011dda9).
+
+**Le geste** (`poser_remede_8016_et_dates_2026-11-25.py`, par la connexion de la commande). Il vérifie l'empreinte de chaque
+fichier (eccc92b6, 46c9d67a) avant d'envoyer, puis joue les deux patchs et leurs deux répétitions. Résultat : **VERT**.
+- **8016** porte entrée SOLANGE ROMERA 50 + sortie SOLANGE ROMERA 50, `classeur_reconstitue` : **PROTÉGÉE**. La part de la
+  nuit est en mise de côté (1) ; journal 3 ; 0 orpheline ; 0 vente réglée sans part ; empreinte **1dccc512** = l'exigée.
+- **Les dates :** 27195 = 2025-05-20, 4385 = 2022-11-22, 27134 = 2024-02-01, 16377 = 2021-01-21. 17387 et 24450 restent
+  sans date, 20073 = 2021-09-21 ; journal 7 ; empreinte **ce7e070a** = l'exigée.
+
+**Ses deux réserves tombées avec la vague, vérifiées par les noms et RAYÉES :**
+- **a5cb141f** (RONDEAU 50 / DELAVAUD 50) : la chaîne 6172 porte DELAVAUD + RONDEAU, du classeur ;
+- **JRE23R1G** (COUDERT 100) : la chaîne 27135, une des 13 renées de la vague, porte COUDERT des deux côtés, du classeur.
+
+**Le balayage « sans l'origine », redit avec les deux patchs de ce geste.** Il a été fait et mesuré AVANT, plus haut :
+- A2 ① : 1 seule chaîne (8016) ; ② 0 ; ③ 0 ; ④ 0 recopie hektor ; ⑤ 22979 mixte, protégée ; ⑥ jamais joué ;
+- A1 et A3 : que du classeur ;
+- **le remède de 8016 :** chaque garde et chaque contrôle porte l'origine ;
+- **le patch des dates :** il ne compare aucune part. Il n'écrit que sur une case VIDE, et toute autre colonne est
+  contrôlée.
+
+**⇒ aucun autre endroit.** Les 12 ventes réglées justes sur des suppositions restent nommées, à sa décision, sans cause
+dans A2.
+
+**Le témoin de demain** (`temoin_de_la_nuit_2026-11-25.py`) :
+- **sa photo est reprise à 10:01, APRÈS ce geste** : 17 968 parts (1dccc512), 0 orpheline, 0 vente réglée sans part,
+  journal 809, mise de côté 158, 11 605 étiquettes ;
+- **il dira :** la vague a-t-elle tenu (chaînes et étiquettes de chaque pièce) ? les orphelines sont-elles restées à 0 ?
+  **8016 est-il protégé du run ?** Et il dira ce que la nuit a réécrit ailleurs ;
+- **éprouvé contre lui-même :** tout TENU, et le comparateur voit une part retouchée exprès ;
+- **corrigé :** il comparait les 4 gestes du 24/11 à leur empreinte de ce jour-là. Celle des 42 avait changé par les gestes
+  accordés du 25/11 (A3 sur des reflets de notes, les dates sur 27195 et 27134). **PROUVÉ :** en retirant ces deux effets
+  par leurs sauvegardes, l'empreinte redonne exactement **072b3cb3**. Il compare désormais la photo à maintenant.
