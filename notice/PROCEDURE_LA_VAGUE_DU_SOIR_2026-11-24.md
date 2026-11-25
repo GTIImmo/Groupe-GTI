@@ -1986,3 +1986,81 @@ mandat, honoraires, acquéreurs et journal des offres, jamais nos recopies de so
 **La suite, à son accord :** poser R27 (sans le gel), R28 (dans son motif seulement) et R29 dans le juge, pour le prochain
 passage officiel. On attendrait alors 5 étiquettes de plus : PEE1XTR8, O6R10ZQA, YRUF0S9H, HUY49KEC et 9Q0FHAKK.
 ⛔ Rien n'est écrit, rien chez Hektor, pas de push.
+
+### R27, R28, R29 posées dans le juge (v23), éprouvées sur une copie du passage 81 — et les refus du 11-12/11 comptés (25-26/11) — RIEN ÉCRIT
+
+> « Oui, les trois -- avec une réserve sur R29. [...] R29 : ⛔ change le mot « refusée », il ne prouve rien [...] réécris
+> la condition avec un fait d'époque [...] Puis pose les trois. » ; « Et dis-moi, séparément : sur ces 1 206 refus du 11
+> et 12 novembre, combien viennent de nous ? »
+
+Le juge passe en v23 (`phase2/checks/protocole_classeur.py`, code dbda6f7a, empreinte du juge 810c9cfb). Les trois
+règles sont dans REGLES_VALIDEES, avec ses mots pour source. L'épreuve : `rejouer_le_passage_81_sur_copie_2026-11-25.py`
+avec les entrées du 81 remises, sur une copie (`prepa_25_11/rejeu_81_juge_v23_r27_r28_r29`). Le vrai socle n'a pas bougé
+(b23e2b3a, 07:26:47), et aucun passage officiel n'a été lancé.
+
+**① R27 joue juste : 4 verdicts changent sur 4 802, exactement ceux qui étaient attendus.**
+- **PEE1XTR8** : de « deux lignes, un dossier » à **TRANCHÉE, D2021-0331**, par le critère ① (la vente 26022 n'est prouvée
+  qu'à elle).
+- **9B7U8221** : rien à étiqueter. C'est une autre tentative du même acquéreur, SABOT.
+- **3308P0UX** : de tranchée à rien à étiqueter (doublon). **YRUF0S9H** garde D2022-0644 par le critère ④ : la plus
+  ancienne annulation, une convention et non une preuve.
+- **T2GZOY5O** : de tranchée à rien à étiqueter (doublon). **O6R10ZQA** garde D2021-0797 par le critère ②.
+- YRUF0S9H et O6R10ZQA ne changent que dans le texte de leur preuve : R27 y remplace l'exception nommée. Leurs pièces et
+  leur étiquette restent les mêmes.
+- DEBARD reste une exception nommée : sa commission est de 4 700 contre 0.
+- Le critère ③ ignore nos refus de masse des 11 et 12/11/2026.
+
+**② R28 est posée, mais elle ne prend RIEN : 3741 est l'une de ses neuf pièces gardées à part.**
+- Il les a mises à part le 21/11, et l'a redit le 24/11 : « les NEUF autres restent à part ».
+- ⛔ **Ma mesure de R28 ne l'avait pas vu.** Elle tournait hors du juge, sans ses gardes. Le juge, lui, ne donne jamais une
+  de ses pièces à part, comme pour R9, R19 et R25.
+- Tout le motif « copie seule » est fait de ses pièces à part (3741, 28116, 26613), ou de lignes sans vente (BR8ZTN5F).
+- **Simulé en mémoire, sans rien écrire :** si 3741 sortait de ses neuf, R28 la donnerait à HUY49KEC (D2018-0476), et
+  aucune autre ligne ne bougerait.
+
+**③ R29 est posée, mais sa garde du déjà-rendu l'a arrêtée sur 9Q0FHAKK.**
+- **Ce qui bougerait :** sur le bien 5617, la vente 2162 (EYRAUD PAGÈS, 22/01/2025, honoraires 7 800 €, égaux à la
+  commission de 7W7XUBPO) tombe le même jour que la case « Vente Fixée » de **deux** lignes, 7W7XUBPO et 9Q0FHAKK.
+  - Tant que 9Q0FHAKK est sur ce bien, la preuve par la date désigne deux acheteurs, et la vente reste à part.
+  - Si 9Q0FHAKK s'en va, la vente rejoint 7W7XUBPO, qui est déjà rendue.
+- **Pour 7W7XUBPO :** son étiquette ne change pas (D2024-0357, déjà écrite en colonne A, vague1d). Seule sa liste de
+  pièces gagne sa propre vente.
+- ⛔ **Ma mesure de R29 ne l'avait pas vu non plus.**
+- **Simulé en mémoire, sans rien écrire :** si sa garde acceptait ce gain, 9Q0FHAKK prendrait 3647, 3648 et 3650, et
+  irait à D2024-0511.
+  - 427UDDSF ne bougerait pas.
+  - ⚠ L'offre 3648 de POTTIER quitterait son dossier D2024-0306, qui ne garderait alors aucune pièce.
+- **R29 ne lit jamais l'état d'une offre.** Le bien est trouvé par un fait d'époque : la 1re proposition de l'offre de
+  POTTIER, au jour de la case « Offre Achat ».
+
+**④ Les témoins : 825 de chaque côté, 3 changent, et tous sont nommés.**
+- Les deux paires de jumelles passent à l'attendu de R27, que son accord a écrit dans le code (VIALLARD → YRUF0S9H,
+  PAOLONE → O6R10ZQA). Les deux sont en accord.
+- coupes_29 : l'ancien écart de 3308P0UX devient une attente. Sa coupe du 20/11 lui donnait 4480 et 4483, alors que le 81
+  ne lui donnait que 4483 ; c'est désormais YRUF0S9H qui porte.
+- Les 5 dossiers que ces règles poseraient (D2021-0331, D2022-0644, D2021-0797, D2018-0476 et D2024-0511) ne sont dans
+  aucune vague écrite.
+
+**⑤ Les refus datés du 11 et du 12/11/2026 : 1 202, et tous viennent de nous.**
+- L'outil de comptage : `phase2/checks/compter_nos_refus_des_11_12_11_2026-11-25.py`, en lecture seule.
+- **Par origine :**
+  - rattrapage_cascade_annulation : 661 ;
+  - enqueue_refus_offres_mortes_lot : 523 ;
+  - enqueue_fermeture_dossiers_impossibles : 17 ;
+  - cascade_annulation_compromis : 1 ;
+  - **aucune offre n'a été refusée sans un de nos travaux.**
+- **Avant le refus :** 1 196 avaient été acceptées (1 194 juste avant le refus), et 6 ne l'avaient jamais été.
+- **Aujourd'hui :** 1 183 sont encore refusées ; 19 ont été remises acceptées par nous le 12/11.
+- **Le témoin :** 1 137 offres portent un refus d'une autre date. Total : 2 339.
+- **Contre ses chiffres :** il compte 1 206 et 1 133, soit le même total de 2 339. 4 offres changent donc de côté selon la
+  définition, et je ne sais pas encore laquelle. Il compte aussi 1 181 offres acceptées avant le refus, contre mes 1 196.
+- **La liste des 1 202 numéros, sans aucun nom,** pour que son contrôleur fasse la différence :
+  `notice/CLASSEUR_NOS_REFUS_DES_11_12_11_LES_OFFRES_2026-11-25.csv`.
+- **C'est un chantier à part. Rien n'y est lancé.**
+
+**À sa décision :**
+- sortir 3741 de ses neuf pièces à part ;
+- accepter, dans la garde de R29, qu'une ligne déjà rendue gagne une pièce de son propre dossier quand son étiquette ne
+  change pas (c'est une règle, et ici elle ne touche que 7W7XUBPO).
+
+⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de passage officiel, pas de push.

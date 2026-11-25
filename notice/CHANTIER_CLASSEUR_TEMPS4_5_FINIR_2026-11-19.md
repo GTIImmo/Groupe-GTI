@@ -5999,6 +5999,27 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   R28 reste dans son motif.
 - **R29** : ne touche QUE 9Q0FHAKK -> D2024-0511 (3THZJOOG et P252U1JH : vente deja tenue ; 9B7U8221 : meme nom, c'est R27).
 - **A son accord** : poser R27, R28, R29 dans le juge pour le passage officiel (5 etiquettes de plus attendues).
+
+### 20.69 R27, R28, R29 posees dans le juge (v23) et eprouvees sur copie ; les refus du 11-12/11 comptes (25-26/11)
+
+- **Le juge v23** (code dbda6f7a, empreinte 810c9cfb) ; rejeu du 81 sur copie, entrees du 81 remises
+  (`prepa_25_11/rejeu_81_juge_v23_r27_r28_r29`) ; vrai socle intact (b23e2b3a, 07:26:47) ; aucun passage officiel.
+- **R27** : 4 verdicts changent sur 4 802, ceux attendus -- PEE1XTR8 tranchee D2021-0331 (critere ①) ; 9B7U8221, 3308P0UX,
+  T2GZOY5O rien a etiqueter ; YRUF0S9H (D2022-0644, ④) et O6R10ZQA (D2021-0797, ②) : preuve seule changee. DEBARD reste
+  nommee.
+- **R28** : posee, ne prend RIEN -- 3741 est une de SES neuf a part (21/11, redit le 24/11). ⛔ Ma mesure ne l'avait pas
+  vu. Simule : 3741 sortie -> HUY49KEC D2018-0476, rien d'autre.
+- **R29** : posee, ARRETEE par sa garde -- partir de 5617 ferait gagner a 7W7XUBPO (rendue, D2024-0357 en colonne A) sa
+  vente 2162, a part tant que 9Q0FHAKK partage sa « Vente Fixee » du 22/01/2025. ⛔ Ma mesure ne l'avait pas vu. Simule :
+  garde levee -> 9Q0FHAKK 3647 3648 3650 -> D2024-0511 ; 427UDDSF inchangee ; ⚠ D2024-0306 (offre 3648) se viderait.
+- **Temoins** : 825 / 825 ; 3 changent, nommes (les 2 jumelles a l'attendu R27, accord ; coupes_29 3308P0UX : ecart ->
+  attente).
+- **Les refus du 11-12/11/2026** : 1 202, TOUS par nos travaux (661 rattrapage_cascade_annulation, 523
+  enqueue_refus_offres_mortes_lot, 17 enqueue_fermeture_dossiers_impossibles, 1 cascade_annulation_compromis) ; 1 196
+  acceptees avant ; 1 183 encore refusees, 19 remises acceptees ; temoin 1 137 (total 2 339, le sien aussi) ; la liste :
+  `notice/CLASSEUR_NOS_REFUS_DES_11_12_11_LES_OFFRES_2026-11-25.csv`. Chantier a part, rien lance.
+- **A sa decision** : sortir 3741 de ses neuf ; la garde de R29 (une ligne rendue peut gagner une piece de son propre
+  dossier, etiquette inchangee).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

@@ -58,6 +58,10 @@ v3.2 (23/11, son mot (12) : « trancher les 44 », pas desserrer le verrou) : la
 v4 (23/11, son message : « Ensuite R8, puis R7c, puis le passage, PUIS le rejeu exact ») : R8 et R7c VALIDEES
   (REGLES_VALIDEES). R8 : un bien sans aucune piece -> RIEN_A_ETIQUETER, hors du reste a vider ; sauf si la triple
   preuve (date exacte + honoraires + vendeur) trouve son affaire sur UN autre bien -> AFFAIRE_SUR_UN_AUTRE_BIEN.
+v23 (25/11 soir, son accord « Oui, les trois -- avec une reserve sur R29 ») : R27, R28, R29 VALIDEES (REGLES_VALIDEES).
+  R27 departage deux lignes d'une meme affaire (meme Mandat, Acquereur, Commission) -- elle remplace l'exception nommee
+  de VIALLARD et de PAOLONE ; R28 ne joue que dans le motif COPIE_SEULE ; R29 joue APRES tous les verdicts (comme R16),
+  sous sa propre garde du deja-rendu, et ne lit jamais l'etat d'une offre (nos 1 202 refus des 11-12/11/2026).
 
 LES EPREUVES (le plan du 22/11, notice/PROTOCOLE_TOUTES_LES_LIGNES_PLAN_AVIS_DELAI_2026-11-22.md). Version 0 de ce
 22/11 : E1 et E2 sont codees ; une ligne qui les passe recoit le motif declare `E3_A_CODER` -- le compte boucle des la
@@ -97,8 +101,9 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = ("v22 -- 25/11 : l'empreinte du juge couvre ses entrees vivantes (liste E, ses 20 a part, mandants R16) ; le "
-           "socle interdit au rejeu sur copie -- AUCUNE regle de jugement changee (v21 : ses quatre reponses du 24/11)")
+VERSION = ("v23 -- 25/11 (soir) : R27, R28, R29 VALIDEES par son accord (« Oui, les trois ») -- R27 la meme affaire sur "
+           "deux lignes, R28 un mandat une seule vente (dans le motif COPIE_SEULE seulement), R29 la ligne suit la vente de "
+           "sa commission (un fait d'epoque, jamais le mot « refusee ») ; v22 : l'empreinte des entrees vivantes")
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -299,7 +304,48 @@ REGLES_VALIDEES = {
             'son message du 23/11 au soir (« tranche seul ») -- passage 70 contre 69 : 1 verdict (5C80H7ZF : AUCUNE_PIECE_PROUVEE -> RIEN_A_ETIQUETER ; sa seule piece libre, la vente 22191, suit le compromis 22189 de 6VSA6EOZ), 0 verdict rendu, temoins identiques'),
     "R25": ("L'ELIMINATION PAR LES HONORAIRES : une vraie piece a part dont le prix ne colle a aucune ligne, mais dont les honoraires sont la Commission de PLUSIEURS lignes, va a la SEULE qui ne tient aucune vraie piece de son genre, quand toutes les autres tiennent deja la leur aux memes honoraires ; jamais une de SES 20 a part ; sous la garde du deja-rendu (temoin : 46 / 0, abstention 18)",
             'son message du 23/11 au soir (« tranche seul ») -- passage 72 contre 71 : 1 ligne (SYA8MH79, D2024-0458), 0 verdict rendu, temoins identiques (788 / 788)'),
+    # ⭐ SES TROIS REGLES DU 25/11 AU SOIR -- mesurees par phase2/checks/mesurer_r27_r28_r29_2026-11-25.py (les champs de
+    #   HEKTOR seulement, jamais nos recopies de son Sheet), puis acceptees : « Oui, les trois -- avec une reserve sur R29 »
+    "R27": ("LA MEME AFFAIRE SUR DEUX LIGNES : deux lignes qui tombent dans le MEME dossier avec le meme Mandat, le meme "
+            "Acquereur et la meme Commission TTC sont UNE affaire (une double saisie, ou deux tentatives du meme acheteur) : "
+            "une seule porte l'etiquette, l'autre n'a rien a etiqueter. Celle qui porte, au premier critere qui tranche : "
+            "① la ligne qui prouve la VENTE du dossier ; ② la ligne dont la date d'annulation est deja posee sur le "
+            "compromis du dossier ; ③ la ligne dont la date d'annulation est prouvee par le journal de Hektor (refus d'une "
+            "offre, annulation d'un compromis -- jamais nos refus des 11-12/11/2026) ; ④ sans argent en jeu (aucune vente, "
+            "deux lignes annulees), la plus ancienne date d'annulation (une CONVENTION, pas une preuve). Ni le gel, ni le "
+            "nom ne departagent. Elle ne prend jamais une paire de R13, et elle remplace l'exception nommee des jumelles "
+            "VIALLARD et PAOLONE (DEBARD n'a pas la meme commission : elle reste nommee)",
+            "son accord du 25/11 au soir : « R27 : d'accord [...] y compris le fait que VIALLARD aille a YRUF0S9H » -- "
+            "et, avant : « d'accord sur tes deux premiers criteres [...] pas ton troisieme critere, celui du gel »"),
+    "R28": ("UN MANDAT, UNE SEULE VENTE -- DANS LE MOTIF COPIE_SEULE SEULEMENT : une ligne dont le morceau ne tient que des "
+            "copies C5 recoit la vente Hektor de son Mandat au Sheet quand ce mandat ne porte qu'UNE vente chez Hektor (553 "
+            "mandats sur 6 218 en portent plusieurs : Hektor recycle ses numeros), que cette vente est sur son bien et a "
+            "part (personne ne la tient), que ses honoraires chez Hektor sont la Commission TTC de la ligne, et qu'elle est "
+            "au nom de son Acquereur ; jamais une de SES 20 a part. Aucun nombre de jours. ⛔ Hors de son motif le verrou "
+            "prendrait 3 autres lignes (la paire de R27, 5C80H7ZF) : il n'y joue pas",
+            "son accord du 25/11 au soir : « R28 : d'accord [...] Garde-la enfermee dans son motif » -- et, avant : « je ne "
+            "veux pas fixer un nombre de jours [...] un seul mandat, une seule vente »"),
+    "R29": ("LA LIGNE SUIT LA VENTE DE SA COMMISSION : une ligne non tranchee dont le nom note est celui d'une offre Hektor "
+            "PROPOSEE le jour de sa case « Offre Achat » (un fait d'epoque : la 1re proposition de son journal, l'etat de "
+            "l'offre n'est jamais lu), sur une annonce dont le mandat ne porte qu'UNE vente, quand les honoraires de cette "
+            "vente sont la Commission TTC de la ligne, que la vente est au nom d'un AUTRE acquereur et que personne ne la "
+            "tient a la fin du passage : la ligne est sur le bien de cette vente et la recoit. Elle joue APRES tous les "
+            "verdicts, sous la garde du deja-rendu (aucune ligne tranchee de l'un ou l'autre bien ne doit bouger)",
+            "son accord du 25/11 au soir : « R29 : ⛔ change le mot « refusee », il ne prouve rien [...] 1 206 offres portent "
+            "un refus date du 11 ou du 12 novembre 2026 [...] reecris la condition avec un fait d'epoque [...] Puis pose les "
+            "trois. » -- ma mesure : ces refus sont les NOTRES (1 202 sur 1 202 portent un de nos travaux de refus)"),
 }
+# R27 : les deux paires de jumelles qu'elle tranche, et la ligne qui porte -- SON accord, ecrit ici pour que le temoin le
+#   redise (« y compris le fait que VIALLARD aille a YRUF0S9H ») ; PAOLONE : O6R10ZQA, la date posee (critere ②)
+SON_ACCORD_R27 = {"VIALLARD": "YRUF0S9H", "PAOLONE": "O6R10ZQA"}
+# R27 ③ : nos refus de masse des 11 et 12/11/2026 ne prouvent aucune date d'epoque (sa reserve du 25/11 : « le mot
+#   refusee ne prouve rien » -- 1 202 offres refusees ces deux jours, toutes par nos travaux)
+NOS_REFUS_DE_MASSE = {"2026-11-11", "2026-11-12"}
+# R29 : les ventes qu'elle donne (piece -> (ligne, preuve)), posees par la passe d'apres les verdicts ; ses abstentions ;
+#   et les lignes qu'elle a deplacees (ligne -> (ses anciens biens, le bien de la vente)), remises au passage suivant
+DONNEE_PAR_R29: dict = {}
+R29_ABSTENUES: dict = {}
+R29_DEPLACEES: dict = {}
 VARIANTES = {
     "R4": "une piece A PART (sans preuve) ne peut jamais rejoindre plus tard un dossier dont elle deviendrait la plus "
           "petite (sa regle R4 du 20/11) -- elle ne retient donc pas la ligne au verrou E7",
@@ -350,7 +396,8 @@ SUSPENDUES: set = set()
 # LA GARDE DU DEJA-RENDU, BIEN PAR BIEN (23/11, son message : « verifie qu'aucun verdict rendu ne bouge ») : une regle de
 #   cette liste ne joue sur un bien que si AUCUNE ligne tranchee SANS elle n'y change (ni etiquette, ni pieces) AVEC elle.
 #   Sinon le bien est juge sans elle, et il est NOMME (GARDE_DEJA_RENDU) -- R15 avait echoue la-dessus le 23/11.
-REGLES_GARDEES = {"R22", "R25"}
+#   R28 (25/11) y entre : elle donne une vente, et ne doit faire bouger aucune ligne deja tranchee de son bien
+REGLES_GARDEES = {"R22", "R25", "R28"}
 GARDE_DEJA_RENDU: dict = {}
 
 
@@ -1528,6 +1575,290 @@ def nombre_case(s) -> int | None:
         return None
 
 
+# ═══════════════════════════════ R27, R28, R29 (son accord du 25/11 au soir) ═══════════════════════════════════════
+#   Les champs de HEKTOR seulement : numero_mandat, honoraires_entree, les acquereurs, le journal des offres
+#   (propositions_json) -- jamais nos recopies de son Sheet (vente_reglee_app, numero_facture_app : circulaires).
+STOP_NOMS_R27 = {"NAN", "MME", "MR", "MLLE", "ET", "SCI", "SOCIETE", "SOCIÉTÉ", "LES", "DES", "EPOUX", "ÉPOUX", "INDIVISION"}
+
+
+def noms_texte(t) -> set:
+    """Les noms d'un texte (une case « Acquereur », un nom chez Hektor) -- la meme lecture que la mesure du 25/11."""
+    return {x for x in re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü'\-]{2,}", str(t or "").upper()) if x not in STOP_NOMS_R27}
+
+
+def noms_acquereurs_hektor(p: dict) -> set:
+    out = set()
+    for t in (p.get("acquereurs_json"), p.get("acquereur_json")):
+        try:
+            x = json.loads(t) if t else None
+        except (TypeError, ValueError):
+            x = None
+        for y in (x if isinstance(x, list) else [x] if isinstance(x, dict) else []):
+            if isinstance(y, dict):
+                out |= noms_texte(y.get("nom"))
+    return out
+
+
+def honoraires_hektor(p: dict) -> float | None:
+    try:
+        return float(p.get("honoraires_entree")) if p.get("honoraires_entree") not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def evenements_hektor(p: dict) -> list[dict]:
+    """Le journal d'une offre chez Hektor (propositions_json) : proposition, accepte, refus..."""
+    try:
+        pj = json.loads(p.get("propositions_json") or "[]")
+    except (TypeError, ValueError):
+        return []
+    out = []
+    for x in pj if isinstance(pj, list) else [pj]:
+        for y in (x if isinstance(x, list) else [x]):
+            if isinstance(y, dict):
+                out.append(y)
+    return out
+
+
+def premiere_proposition(p: dict):
+    """R29, LE FAIT D'EPOQUE : le jour de la 1re proposition de l'offre (son journal), sinon sa date -- jamais son etat."""
+    for e in evenements_hektor(p):
+        if e.get("type") == "proposition" and e.get("date"):
+            return K.d_reg(str(e["date"]))
+    return K.d_reg(str(p.get("date") or ""))
+
+
+def ventes_hektor_par_mandat(I: Image) -> dict:
+    """R28 et R29 : les VRAIES ventes de Hektor (jamais une copie), par numero de mandat -- tout le registre de l'image."""
+    if not hasattr(I, "_ventes_par_mandat"):
+        vm = defaultdict(list)
+        for a, p in sorted(I.pieces.items()):
+            m = str(p.get("numero_mandat") or "").strip()
+            if p.get("kind") == "vente" and I.nature[a] == PC.VRAIE and m:
+                vm[m].append(a)
+        I._ventes_par_mandat = vm
+    return I._ventes_par_mandat
+
+
+def regle_r27(I: Image, gl, ids: list, r: dict) -> tuple | None:
+    """R27 : (la ligne qui porte, l'autre, le critere, la preuve) quand les deux lignes du morceau sont la meme affaire --
+    meme Mandat, meme Acquereur, meme Commission TTC au Sheet ; None sinon (elles restent au verrou E8, nommees)."""
+    D = I.D
+    if len(gl) != 2:
+        return None
+    x, y = sorted(gl)
+    m_ = D.case(x, "Mandat").strip()
+    if not m_ or m_ != D.case(y, "Mandat").strip():
+        return None
+    n_ = noms_texte(D.case(x, "Acquéreur"))
+    if not n_ or n_ != noms_texte(D.case(y, "Acquéreur")):
+        return None
+    c_ = nombre_case(D.case(x, "Commission TTC"))
+    if c_ is None or c_ != nombre_case(D.case(y, "Commission TTC")):
+        return None
+    vraies = [a for a in ids if a in D.REG and I.nature[a] == PC.VRAIE]
+    ventes = [a for a in vraies if D.REG[a]["genre"] == "vente"]
+    ann = {j: K.d_sheet(D.case(j, "Annulée")) for j in (x, y)}
+
+    def rend(porteur, critere, quoi):
+        autre = y if porteur == x else x
+        return porteur, autre, critere, ("meme Mandat %s, meme Acquereur %s, meme Commission %s -- %s porte par le critere "
+                                         "%s : %s" % (m_, " ".join(sorted(n_)), c_, porteur, critere, quoi))
+    # ① la vente du dossier : la ligne qui la prouve (de l'argent est en jeu : sans preuve unique, rien n'est tranche)
+    if ventes:
+        pr = sorted({j for a in ventes for j in r["va"].get(a, frozenset()) if j in gl})
+        if len(pr) == 1:
+            return rend(pr[0], "①", "la vente %s est prouvee a elle seule (%s)" % (
+                " ".join(map(str, ventes)), "; ".join(r["preuve"].get(a, "") for a in ventes)))
+        return None
+    # ② la date d'annulation deja posee sur le compromis du dossier
+    posees = {K.d_reg(str(I.pieces[a].get("date_annulation_app") or "")) for a in vraies
+              if D.REG[a]["genre"] == "compromis" and I.pieces[a].get("date_annulation_app")} - {None}
+    p2 = sorted(j for j, d in ann.items() if d and d in posees)
+    if len(p2) == 1:
+        return rend(p2[0], "②", "son annulation du %s est deja posee sur le compromis du dossier" % ann[p2[0]])
+    # ③ la date que prouve le journal de Hektor -- jamais nos refus de masse des 11-12/11/2026
+    jh = {K.d_reg(str(e.get("date") or "")) for a in vraies for e in evenements_hektor(I.pieces[a])
+          if e.get("type") in ("refus", "annulation") and str(e.get("date") or "")[:10] not in NOS_REFUS_DE_MASSE} - {None}
+    p3 = sorted(j for j, d in ann.items() if d and d in jh)
+    if len(p3) == 1:
+        return rend(p3[0], "③", "son annulation du %s est prouvee par le journal de Hektor" % ann[p3[0]])
+    # ④ sans argent en jeu : la plus ancienne date d'annulation -- une CONVENTION, pas une preuve
+    sans_argent = all(D.case(j, "Etat Actuel").strip() == "Annulée" and ann[j] and not D.case(j, "Vente Réglée").strip()
+                      for j in (x, y))
+    if sans_argent and ann[x] != ann[y]:
+        p4 = min((x, y), key=lambda j: ann[j])
+        return rend(p4, "④", "aucune vente, deux lignes annulees : la plus ancienne annulation (%s contre %s) -- une "
+                             "convention, pas une preuve ; le journal de Hektor ne departage pas" % (
+                                 ann[p4], ann[y if p4 == x else x]))
+    return None
+
+
+def regle_r28(I: Image, b: str, r: dict) -> dict:
+    """R28, DANS LE MOTIF COPIE_SEULE SEULEMENT : piece -> (ligne, preuve) pour la vente Hektor du Mandat de la ligne."""
+    D, out = I.D, {}
+    for gl, ids_ in r["morceaux"].items():
+        if len(gl) != 1 or any(I.nature[a] == PC.VRAIE for a in ids_):
+            continue                                   # hors du motif COPIE_SEULE : R28 ne joue pas
+        (i,) = tuple(gl)
+        m_ = D.case(i, "Mandat").strip()
+        vs = ventes_hektor_par_mandat(I).get(m_, [])
+        if len(vs) != 1:
+            continue
+        v = vs[0]
+        if D.REG.get(v, {}).get("bien") != b or v not in r["apart"] or v in A_PART_PAR_DECISION or v in les_20_a_part():
+            continue
+        h, c_ = honoraires_hektor(I.pieces[v]), nombre_case(D.case(i, "Commission TTC"))
+        if h is None or c_ is None or abs(h - c_) >= 1:
+            continue
+        na = noms_acquereurs_hektor(I.pieces[v]) & noms_texte(D.case(i, "Acquéreur"))
+        if not na:
+            continue
+        vm = ventes_hektor_par_mandat(I)
+        out[v] = (i, "REGLE R28 (son accord du 25/11) : la seule vente Hektor du mandat %s (%d mandats sur %d en portent "
+                     "plusieurs, pas celui-la) -- honoraires Hektor %s = sa Commission TTC %s, acquereur %s ; sa ligne ne "
+                     "tenait que des copies C5" % (m_, sum(1 for l_ in vm.values() if len(l_) > 1), len(vm), int(h), c_,
+                                                   " ".join(sorted(na))))
+    return out
+
+
+def r29_candidat(I: Image, i: str, tenues: set) -> tuple | None:
+    """R29 : (la vente, son bien, la preuve) pour une ligne non tranchee -- ou None. Toutes ses conditions sont requises."""
+    D = I.D
+    nm = noms_texte(D.case(i, "Acquéreur"))
+    jo = K.d_sheet(D.case(i, "Offre Achat"))
+    if not nm or not jo:
+        return None
+    c_ = nombre_case(D.case(i, "Commission TTC"))
+    if c_ is None:
+        return None
+    if not hasattr(I, "_offres_r29"):
+        I._offres_r29 = [(a, p) for a, p in sorted(I.pieces.items()) if p.get("kind") == "offre" and I.nature[a] == PC.VRAIE]
+        I._mandats_annonce = defaultdict(set)
+        for a, p in I.pieces.items():
+            m_ = str(p.get("numero_mandat") or "").strip()
+            if m_ and p.get("hektor_annonce_id") is not None:
+                I._mandats_annonce[p["hektor_annonce_id"]].add(m_)
+    trouve = {}
+    for a, p in I._offres_r29:
+        if not (noms_acquereurs_hektor(p) & nm) or premiere_proposition(p) != jo:
+            continue
+        ms = I._mandats_annonce.get(p.get("hektor_annonce_id"), set())
+        vs = sorted({v for m_ in ms for v in ventes_hektor_par_mandat(I).get(m_, [])})
+        if len(vs) != 1:
+            continue
+        v = vs[0]
+        h = honoraires_hektor(I.pieces[v])
+        if h is None or abs(h - c_) >= 1 or (noms_acquereurs_hektor(I.pieces[v]) & nm) or v in tenues:
+            continue
+        if not D.REG.get(v, {}).get("bien"):
+            continue
+        trouve[v] = (a, sorted(ms))
+    if len(trouve) != 1:
+        return None
+    (v, (a, ms)), = trouve.items()
+    pv = I.pieces[v]
+    return v, D.REG[v]["bien"], (
+        "REGLE R29 (son accord du 25/11) : son nom %s est celui de l'offre %d, PROPOSEE le %s (sa case « Offre Achat » ; "
+        "l'etat de l'offre n'est pas lu) sur l'annonce %s, mandat %s -- la seule vente de ce mandat est %d (%s, honoraires "
+        "Hektor %d = sa Commission TTC %d), au nom d'un AUTRE acquereur (%s), tenue par personne ; son Mandat au Sheet "
+        "(%s) nommait un autre bien" % (" ".join(sorted(nm)), a, jo, I.pieces[a].get("hektor_annonce_id"), "+".join(ms), v,
+                                       pv.get("date") and str(pv["date"])[:10], int(honoraires_hektor(pv)), c_,
+                                       " ".join(sorted(noms_acquereurs_hektor(pv))), D.case(i, "Mandat").strip()))
+
+
+def r29_remettre(I: Image) -> None:
+    """Remet sur leurs anciens biens les lignes qu'un passage precedent (meme processus, meme image) a deplacees."""
+    D = I.D
+    for i, (anciens, tb) in list(R29_DEPLACEES.items()):
+        if getattr(I, "_r29_deplacees_ici", None) is not R29_DEPLACEES:
+            break                                      # une autre image : elle n'a rien deplace ici
+        D.lignes_bien[tb].discard(i)
+        D.rattache_par.get((tb, i), set()).discard("R29")
+        for b_ in anciens:
+            D.lignes_bien[b_].add(i)
+        I.biens_de_ligne[i] = set(anciens)
+    R29_DEPLACEES.clear()
+    DONNEE_PAR_R29.clear()
+    R29_ABSTENUES.clear()
+
+
+def r29_apres_les_verdicts(I: Image, rangs: list, par_bien: dict, perimetre: str) -> list:
+    """R29 joue APRES tous les verdicts (comme R16) : les pieces tenues sont alors connues. Pour chaque ligne prise, elle
+    passe sur le bien de la vente, qui lui est donnee ; ses deux biens sont rejuges, SOUS LA GARDE DU DEJA-RENDU : une
+    ligne tranchee qui bougerait (verdict, etiquette, pieces), ou la ligne qui ne serait pas tranchee avec la vente -> rien
+    ne change, et la ligne est nommee dans R29_ABSTENUES."""
+    D = I.D
+    tenues = {a for x in rangs for a in (x.get("pieces") or [])} | set(PIECE_DONNEE_PAR_DECISION)
+    par_id = {x["id_unique"]: k for k, x in enumerate(rangs)}
+    decisions = set(RIEN_A_ETIQUETER_PAR_DECISION) | set(DOUBLON_PAR_DECISION) | set(LIGNE_SUR_LE_BIEN_PAR_DECISION)
+    for k in range(len(rangs)):
+        x = rangs[k]
+        i = x["id_unique"]
+        if x["verdict"] == "TRANCHEE" or i.startswith("#") or i in decisions or x.get("motif") in ("ID_EN_DOUBLE",
+                                                                                                    "A_SA_DECISION") \
+                or (x.get("motif") == "RIEN_A_ETIQUETER" and str(x.get("motif_texte") or "").startswith("REGLE R27")):
+            continue
+        c = r29_candidat(I, i, tenues)
+        if not c:
+            continue
+        v, tb, texte = c
+        anciens = set(I.biens_de_ligne.get(i, set()))
+        sauve = (dict(MISES_DE_COTE), dict(GARDE_DEJA_RENDU))
+
+        def defaire(pourquoi):
+            for b_ in anciens:
+                D.lignes_bien[b_].add(i)
+            if tb not in anciens:
+                D.lignes_bien[tb].discard(i)
+                D.rattache_par.get((tb, i), set()).discard("R29")
+            I.biens_de_ligne[i] = set(anciens)
+            DONNEE_PAR_R29.pop(v, None)
+            MISES_DE_COTE.clear()
+            MISES_DE_COTE.update(sauve[0])
+            GARDE_DEJA_RENDU.clear()
+            GARDE_DEJA_RENDU.update(sauve[1])
+            R29_ABSTENUES[i] = {"vente": v, "bien": tb, "pourquoi": pourquoi}
+        for b_ in anciens:
+            D.lignes_bien[b_].discard(i)
+        D.lignes_bien[tb].add(i)
+        D.rattache_par[(tb, i)].add("R29")
+        I.biens_de_ligne[i] = {tb}
+        DONNEE_PAR_R29[v] = (i, texte)
+        if juger_ligne(I, i, I.sheet["par_id"][i][0]) is not None:
+            defaire("la ligne ne passe pas E1/E2 sur le bien %s" % tb)
+            continue
+        neufs = {}
+        for b_ in sorted(anciens | {tb}):
+            a_j = set(par_bien.get(b_, set())) - {i}
+            if b_ == tb:
+                a_j.add(i)
+            if a_j:
+                neufs.update({o["id_unique"]: o for o in juger_bien_garde(I, b_, a_j, perimetre)})
+        bouge = sorted(j for j, o in neufs.items() if j != i and j in par_id and rangs[par_id[j]]["verdict"] == "TRANCHEE"
+                       and (o["verdict"], o.get("etiquette"), o.get("pieces")) != (
+                           rangs[par_id[j]]["verdict"], rangs[par_id[j]].get("etiquette"), rangs[par_id[j]].get("pieces")))
+        o_i = neufs.get(i)
+        if bouge or not o_i or o_i["verdict"] != "TRANCHEE" or v not in (o_i.get("pieces") or []):
+            defaire("GARDE DU DEJA-RENDU : %s" % ("lignes tranchees qui bougeraient %s" % bouge if bouge else
+                                                   "la ligne ne serait pas tranchee avec la vente (%s)" % (
+                                                       (o_i or {}).get("motif") or (o_i or {}).get("verdict"))))
+            continue
+        o_i["preuves"] = list(o_i.get("preuves") or []) + ["son bien %s par la REGLE R29 (son accord du 25/11) -- ecarte : "
+                                                            "%s (son Mandat au Sheet)" % (tb, "+".join(sorted(anciens)) or
+                                                                                         "aucun")]
+        for j, o in neufs.items():
+            if j in par_id:
+                rangs[par_id[j]] = o
+        for b_ in anciens:
+            par_bien.get(b_, set()).discard(i)
+        par_bien.setdefault(tb, set()).add(i)
+        tenues |= set(o_i.get("pieces") or [])
+        R29_DEPLACEES[i] = (set(anciens), tb)
+        I._r29_deplacees_ici = R29_DEPLACEES
+    return rangs
+
+
 def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
     """E3 a E9 sur UN BIEN ENTIER : la coupe (K.couper_le_bien, les regles deja validees), puis pour chaque ligne :
     ses pieces, son verrou des deux lignes (E8), son verrou permanent (E7), son etiquette (la pose de nuit simulee)."""
@@ -1548,6 +1879,9 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
     if joue("B3B") and 14033 in a_part_dec:         # 14033 : l'option B (variante, mesure seulement)
         del a_part_dec[14033]
         donnee[14033] = ("ea6a28a7", "VARIANTE B3B (mesure) : a DONNADIEU -- prix 140 500 et commission 9 500")
+    for a_, (l_, t_) in DONNEE_PAR_R29.items():      # R29 (25/11) : la vente que sa passe d'apres les verdicts donne
+        if a_ in S:
+            donnee[a_] = (l_, t_)
     r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     if joue("R12"):
         # VARIANTE R12 (proposee le 23/11) : le gel departage une preuve qui designe plusieurs lignes
@@ -1592,6 +1926,12 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         r25 = regle_r25(I, b, lignes_b, r)
         if r25:
             donnee.update(r25)
+            r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
+    if joue("R28"):
+        # R28 (25/11) : un mandat, une seule vente -- DANS LE MOTIF COPIE_SEULE seulement, sous la garde du deja-rendu
+        r28 = regle_r28(I, b, r)
+        if r28:
+            donnee.update(r28)
             r = K.couper_le_bien(D, b, lignes_b, S, X, a_part_dec, donnee)
     # VARIANTE R7a (proposee, jamais appliquee sans son mot) : la piece a part plus petite DEJA dans le dossier de toute
     #   la ligne, possible pour elle seule -- on ne coupe pas le dossier entre elles (elle reste a part, jamais donnee)
@@ -1773,7 +2113,20 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
             out.append(attente("RIEN_A_ETIQUETER", "REGLE R13 : la jumelle annulee de %s -- meme Prix, meme date d'offre, "
                                                    "sans gel sur ce dossier : la meme affaire ecrite deux fois" % jum[0]))
             continue
-        if len(gl) > 1 and not exc and not (jum and i == jum[0]):
+        # R27 (25/11) : la meme affaire sur deux lignes -- jamais une paire de R13 ; elle remplace l'exception nommee
+        r27 = regle_r27(I, gl, ids, r) if (len(gl) == 2 and not jum and joue("R27")) else None
+        if r27:
+            porteur, autre, critere, quoi = r27
+            if i != porteur:
+                out.append(attente("RIEN_A_ETIQUETER", "REGLE R27 (son accord du 25/11) : la meme affaire que %s (%s) -- "
+                                                       "celle-ci n'a rien a etiqueter (%s)%s" % (
+                                                           porteur, quoi, "doublon" if K.d_sheet(D.case(i, "Offre Achat"))
+                                                           == K.d_sheet(D.case(porteur, "Offre Achat"))
+                                                           else "une autre tentative du meme acquereur",
+                                                           " ; elle remplace l'exception nommee %s" % exc if exc else "")))
+                continue
+            exc = None
+        if len(gl) > 1 and not exc and not r27 and not (jum and i == jum[0]):
             pourquoi_ = pas_jumelle_pourquoi(I, gl) if len(gl) == 2 else ""
             out.append(attente("DEUX_LIGNES_UN_DOSSIER", "avec %s ; morceau %s%s" % ("+".join(sorted(gl - {i})), ids,
                                                                                     pourquoi_)))
@@ -1842,6 +2195,9 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
                 "%d" % a for a in deja[gl]))
         if exc:
             preuves.append("exception nommee : %s -- %s" % (exc, "+".join(sorted(gl))))
+        if r27:
+            preuves.append("REGLE R27 (son accord du 25/11) : la meme affaire que %s, qui n'a rien a etiqueter -- %s"
+                           % (r27[1], r27[3]))
         if len(I.biens_de_ligne.get(i, set())) > 1:
             autre = sorted(I.biens_de_ligne[i] - {b})
             preuves.append("son bien %s par la regle P1 (gel + mandat) ; ecarte : %s (product_ref seul) -- %s"
@@ -1887,6 +2243,8 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
     VARIANTES_ACTIVES.update(variantes or ())
     MISES_DE_COTE.clear()
     GARDE_DEJA_RENDU.clear()
+    # R29 : un passage precedent sur la MEME image a deplace des lignes -- on les remet, et la 1re passe juge sans R29
+    r29_remettre(I)
     if VARIANTES_ACTIVES - set(VARIANTES):
         raise SystemExit("⛔ variante inconnue : %s" % sorted(VARIANTES_ACTIVES - set(VARIANTES)))
     if VARIANTES_ACTIVES:
@@ -1917,6 +2275,14 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
     for x in I.sheet["sans_id"]:
         rangs.append({"id_unique": "#%d" % x["num"], "num": x["num"], "biens": [], "verdict": "ATTENTE",
                       "motif": "SANS_ID_UNIQUE", "motif_texte": MOTIFS["SANS_ID_UNIQUE"][1], "epreuve": "E1"})
+    # R29 (validee le 25/11 au soir) : APRES tous les verdicts, AVANT R16 -- sous sa propre garde du deja-rendu
+    if joue("R29"):
+        rangs = r29_apres_les_verdicts(I, rangs, par_bien, perimetre)
+        if DONNEE_PAR_R29 or R29_ABSTENUES:
+            dire("   R29 : %d ligne(s) suivent la vente de leur commission : %s ; abstenues par sa garde : %s" % (
+                len(DONNEE_PAR_R29), " . ".join("%s <- %d" % (l_, v_) for v_, (l_, _t) in sorted(DONNEE_PAR_R29.items()))
+                or "aucune", " . ".join("%s (%s)" % (i_, x_["pourquoi"]) for i_, x_ in sorted(R29_ABSTENUES.items()))
+                or "aucune"))
     # R16 (validee le 23/11) : APRES tous les verdicts -- les pieces tenues sont alors connues ; elle ne touche que SANS_BIEN
     if joue("R16"):
         tenues = {a for r in rangs for a in (r.get("pieces") or [])} | set(PIECE_DONNEE_PAR_DECISION)
@@ -2265,6 +2631,14 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
         if set(j["lignes"]) <= remplacees:     # DEBARD : sa decision du 24/11 en fait DEUX affaires (SES_DECISIONS)
             continue
         vs = [V.get(i) for i in j["lignes"]]
+        if j.get("nom") in SON_ACCORD_R27 and joue("R27") and not any(v is None for v in vs):
+            # SON ACCORD DU 25/11 (R27) remplace la convention des jumelles : une seule porte, l'autre n'a rien a etiqueter
+            p_ = SON_ACCORD_R27[j["nom"]]
+            o_ = next(i for i in j["lignes"] if i != p_)
+            ok_ = V[p_][0] == "TRANCHEE" and V[o_][2] == "RIEN_A_ETIQUETER"
+            noter("jumelles", "+".join(j["lignes"]), "R27 : %s porte, %s rien a etiqueter" % (p_, o_),
+                  "%s %s / %s %s" % (p_, V[p_][2] or V[p_][0], o_, V[o_][2] or V[o_][0]), int(not ok_))
+            continue
         if any(v is None for v in vs):
             noter("jumelles", "+".join(j["lignes"]), "les deux lignes", "une ligne ABSENTE DU SHEET", 1)
         elif all(v[0] == "TRANCHEE" for v in vs):

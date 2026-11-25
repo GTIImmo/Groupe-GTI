@@ -164,8 +164,13 @@ def main() -> int:
           % (len(att) - len(cs), len(jum), jum))
 
     # ── ③ R29 : la ligne suit la vente qui porte sa commission, meme si le nom note est celui d'un acquereur REFUSE ──
-    print("\n③ R29 -- une ligne suit la vente de sa commission, quand son nom est celui d'un acquereur REFUSE")
-    offres_ref = [a for a, r in R.items() if r["genre"] == "offre" and r["etat"] == "refused" and not copie(a)]
+    print("\n③ R29 -- une ligne suit la vente de sa commission : son nom est celui d'une OFFRE proposee au jour de son « Offre "
+          "Achat » (etat de l'offre NON lu), la vente est d'un AUTRE acquereur")
+    # ⛔ SON MOT DU 25/11 (soir) : « change le mot « refusee », il ne prouve rien » -- 1 202 refus du 11-12/11/2026 sont
+    #   NOTRE geste (POTTIER : acceptee le 23/08/2024, refusee le 11/11/2026 par rattrapage_cascade_annulation). Le bien
+    #   est trouve par un FAIT D'EPOQUE : la 1re proposition de l'offre, au jour de l'« Offre Achat » de la ligne, quel
+    #   que soit l'etat de l'offre aujourd'hui.
+    offres_ref = [a for a, r in R.items() if r["genre"] == "offre" and not copie(a)]
     prises = []
     for i in att:
         nm = noms(case(i, "Acquéreur"))
@@ -178,8 +183,8 @@ def main() -> int:
                   str(r["mandat"] or "").strip()}
             vs = sorted({v for m in ms for v in par_mandat.get(m, [])})
             if len(vs) != 1:
-                print("   %s : offre refusee %s (%s, %s) -> mandat(s) %s : %d vente(s) -- pas de verrou" % (
-                    i, a, sorted(acq_noms(a)), jour_offre(a), sorted(ms), len(vs)))
+                print("   %s : offre %s (%s, %s, etat %s) -> mandat(s) %s : %d vente(s) -- pas de verrou" % (
+                    i, a, sorted(acq_noms(a)), jour_offre(a), R[a]["etat"], sorted(ms), len(vs)))
                 continue
             v = vs[0]
             h, c = nombre(R[v]["hon"]), nombre(case(i, "Commission TTC"))
@@ -187,9 +192,9 @@ def main() -> int:
             autre_acq = not (acq_noms(v) & nm)
             deja = sorted(tenues.get(v, set()) - {i})
             ok = okh and autre_acq and not deja
-            print("   %s (ligne %s, %s, mandat du Sheet %s) : son nom %s = l'offre REFUSEE %s du %s (annonce %s, mandat %s) -> "
+            print("   %s (ligne %s, %s, mandat du Sheet %s) : son nom %s = l'offre %s (etat aujourd'hui %s) proposee le %s (annonce %s, mandat %s) -> "
                   "LA vente %s (%s, acquereur %s, honoraires %s / Commission %s) %s%s" % (
-                      i, img["par_id"][i][0]["num"], case(i, "Etat Actuel"), case(i, "Mandat"), sorted(nm), a,
+                      i, img["par_id"][i][0]["num"], case(i, "Etat Actuel"), case(i, "Mandat"), sorted(nm), a, R[a]["etat"],
                       jour_offre(a), R[a]["annonce"], sorted(ms), v, R[v]["numero"], sorted(acq_noms(v)), h, c,
                       "-> PRISE" if ok else "-> non", " ; ⛔ deja tenue par %s" % deja if deja else ""))
             if ok:
