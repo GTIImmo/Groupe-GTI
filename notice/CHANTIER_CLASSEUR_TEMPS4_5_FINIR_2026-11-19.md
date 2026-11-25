@@ -5962,6 +5962,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - **vague1f** : 2 125 lignes, a blanc 2125/0, 0 contre (vague 47dc1d66d067d7b8, colonne A 97800fd45bbde9da) ; ma verification
   2 125/2 125, distinctes, 0 parmi les 2 600 ; ses 28 dedans. Apres elle : 4 725 cases, 78 vides (74 non tranchees, 4
   doubles). A SON ACCORD.
+
+### 20.66 LA COLONNE A EST FINIE : vague1f ecrite (2 125, 25/11 20:38, son accord) ; 4 725 cases, 4 725 etiquettes distinctes
+
+- **Ecrite** : 22 paquets relus, 2 125/2 125, 0 contre le protocole, criteres 1-6 verts (sauvegarde
+  2026-11-25_203804_vague1f_ECRIRE). **Relue** : 2 125/2 125 etiquette = dossier de SES pieces du protocole, 2 125 dossiers
+  distincts ; ses 28 decisions levees dedans.
+- **La colonne** : 4 725 cases = 50 + 50 + 500 + 2 000 + 2 125, toutes distinctes, 0 hors vague ; 78 vides = 74 non
+  tranchees + 4 doubles ; 4 725 + 74 + 4 = 4 803.
+- **Restent, a son mot** : les doubles, le passage officiel (74 non tranchees, dont les 2 de la liste E et a360d9e3),
+  9Q0FHAKK, les 47 (+2), la sentinelle.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

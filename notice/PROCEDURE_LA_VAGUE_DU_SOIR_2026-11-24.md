@@ -1757,3 +1757,41 @@ l'étiquette du 81, est seule sur son dossier, et son étiquette n'est pas déj�
 - **Le bon à lire :** `notice/CLASSEUR_VAGUE_vague1f_2026-11-25_LE_BON_A_LIRE.txt` (local seulement).
 
 **⛔ Rien n'est écrit : la vague attend son accord sur ces deux empreintes.** Rien chez Hektor, pas de push.
+
+### ⭐ LA COLONNE A EST FINIE : la vague1f ÉCRITE (2 125, 25/11, 20:38, son accord) — 4 725 cases
+
+> « Oui, écris-la. [...] Donne-moi les deux chiffres à la fin : le nombre d'étiquettes écrites, et le total de cases
+> remplies dans la colonne. »
+
+**L'écriture.** L'interrupteur a été donné à la commande seule (aucun `.env`). Il était 20:38, hors de la fenêtre de nuit.
+- **Le résultat :** sortie 0 ; 22 paquets, chacun relu juste après son écriture ; **2 125 écrites, 0 sautée, 0 contre le
+  protocole.**
+- **Les 6 critères de l'outil sont verts.**
+- **La sauvegarde :** `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_203804_vague1f_ECRIRE`.
+
+**Ses deux chiffres, relus par un autre chemin** (`relire_la_colonne_a_contre_le_protocole_2026-11-25.py` : le Sheet relu,
+le socle du protocole, SQL direct).
+- **① Étiquettes écrites par la vague1f : 2 125.**
+  - 2 125 sur 2 125 sont égales au dossier de leurs pièces du protocole (et à la case A, à l'étiquette à l'arrivée et à
+    celle du fichier) ;
+  - 2 125 dossiers distincts, 0 à plusieurs dossiers, 1 191 ventes réglées ;
+  - ses 28 décisions levées en font partie, 8NZ6V6XB compris.
+- **② Cases remplies dans la colonne : 4 725**, soit 50 + 50 + 500 + 2 000 + 2 125.
+  - **4 725 étiquettes, toutes différentes** ;
+  - 0 case hors des vagues, 0 manquante ;
+  - chaque vague est encore juste à 100 % sur sa propre ligne.
+- **Les 78 cases vides,** comme prévu :
+  - 74 lignes que le protocole n'a pas tranchées, dont P252U1JH, d2108609, 9Q0FHAKK et la ligne neuve a360d9e3 ;
+  - ses 4 doubles de saisie.
+  - Aucune ligne non tranchée n'a sa case remplie.
+- **Le compte boucle :** 4 725 + 74 + 4 = 4 803, c'est-à-dire ses 4 802 lignes plus la ligne neuve.
+
+**Ce qui reste, à son mot, et rien n'en est fait :**
+- ses 4 doubles (VIALLARD et PAOLONE) ;
+- les 74 lignes non tranchées : un passage officiel du protocole plus tard, « avec les autres restes », dont P252U1JH et
+  d2108609 (la liste E) et la ligne neuve ;
+- 9Q0FHAKK : le rattachement proposé à 3647 et 3650 ;
+- les 47 valeurs jamais posées, plus les 2 de 9Q0FHAKK ;
+- la sentinelle « lignes sans lien » (compter les 15 impossibles, seuil 15).
+
+**⛔ Rien chez Hektor, pas de push.**
