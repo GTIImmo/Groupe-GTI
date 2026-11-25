@@ -42,6 +42,8 @@ ap.add_argument("--passage", type=int, required=True)
 ap.add_argument("--csv", action="store_true")
 ap.add_argument("--r26", action="store_true", help="l'etat d'arrivee avec R26 a blanc")
 ap.add_argument("--export-a2", default="", help="ecrit A2 v3 en JSON (pour le patch par pieces de la vague du soir)")
+ap.add_argument("--familles", action="store_true",
+                help="25/11 (son mot) : chaque endroit ou A2 compare des parts SANS LEUR ORIGINE, et l'origine reelle en jeu")
 ap.add_argument("--retrait-e", action="store_true",
                 help="l'etat d'arrivee de LA VAGUE ENTIERE : R26 + le retrait de 4126 et 21520 (le dossier a blanc du "
                      "retrait : sa copie du socle, son module retouche, son brouillon et ses rejeux)")
@@ -214,6 +216,7 @@ def remede(garde, echange, sans_annulee=False):
     prevu = {s: [dict(r) for r in rows] for s, rows in REP.items() if s not in part_toutes}
     recopies, mises, conflits, completees, decisions = [], [], [], [], []
     refus_annulee = []
+    egales, memes = [], []        # 25/11 : les comparaisons « valeurs egales » (sans l'origine), notees pour --familles
     for s in sorted(possede):
         L_ = possede[s]
         for t in sorted({cible_de[i] for i in L_} - {s, None}):
@@ -223,6 +226,7 @@ def remede(garde, echange, sans_annulee=False):
                 continue
             cur = prevu.get(t, [])
             if cur and sig_rows(cur) == sig_rows(REP[s]):
+                egales.append((s, t, Lt))
                 continue
             if cur:
                 conflits.append((s, t, Lt, lis(sig_rows(cur))))
@@ -239,6 +243,7 @@ def remede(garde, echange, sans_annulee=False):
         t = chE.get(s)
         cur = prevu.get(t, []) if t is not None else None
         if t is not None and cur and sig_rows(cur) == sig_rows(rows):
+            memes.append((s, t))
             mises.extend(dict(r, ancienne_chaine=s, lignes="-") for r in rows)
             prevu.pop(s, None)
         elif t is not None and not cur:
@@ -291,7 +296,7 @@ def remede(garde, echange, sans_annulee=False):
                     echanges.append("%s (chaine %s) <-> %s (chaine %s)" % (i, ti, j, tj))
     return {"prevu": prevu, "recopies": recopies, "mises": mises, "conflits": conflits, "completees": completees,
             "decisions": decisions, "en_conflit": en_conflit, "gardees": gardees, "echanges": echanges,
-            "refus_annulee": refus_annulee}
+            "refus_annulee": refus_annulee, "egales": egales, "memes": memes}
 
 
 R1 = remede(False, False)
@@ -478,6 +483,48 @@ gagne = {e["id_unique"] for e in APRES if e["verdict"] == "JUSTE"} - {e["id_uniq
 perdu = {e["id_unique"] for e in SANS if e["verdict"] == "JUSTE"} - {e["id_unique"] for e in APRES if e["verdict"] == "JUSTE"}
 dire("   le remede rend juste %d lignes ; ⛔ il en rend FAUSSES %d %s" % (len(gagne), len(perdu),
                                                                      " ".join(sorted(perdu)[:20])))
+
+if arg.familles:
+    # ⛔ SON MOT DU 25/11 : « TA CAUSE EST-ELLE AILLEURS ? [...] combien d'AUTRES endroits de A1, A2, A3 et du remede comparent
+    #   des parts [...] sans regarder l'origine ? » -- sig_rows = (cote, negociateur, pourcentage) : NI l'origine NI le rang.
+    #   Pour chaque endroit d'A2 qui DECIDE sur une egalite de valeurs : ce qu'il a decide, et l'ORIGINE des parts en jeu.
+    org = lambda rows: "+".join(sorted({str(r.get("origine")) for r in rows})) or "AUCUNE"
+    hk = lambda rows: bool(rows) and all(str(r.get("origine") or "").startswith("hektor") for r in rows)
+    dire()
+    dire("LES FAMILLES « SANS L'ORIGINE » (A2 v3, passage %d)" % arg.passage)
+    e_ = R3["egales"]
+    dire("   ① recopie SAUTEE parce que la cible porte DEJA des parts de memes valeurs (l. 225) : %d paire(s) ; la cible ne "
+         "porte que des suppositions (hektor%%) : %d %s" % (len(e_), sum(hk(prevu.get(t_, REP.get(t_, []))) for _s, t_, _l in e_),
+                                                           [(s_, t_, l_, org(REP.get(s_, [])), org(REP.get(t_, []))) for s_, t_, l_ in e_
+                                                            if hk(REP.get(t_, []))][:20]))
+    m_ = R3["memes"]
+    dire("   ② « les MEMES parts y vivent deja » (l. 241) : %d chaine(s) ; la cible ne porte que des suppositions : %d %s" % (
+        len(m_), sum(hk(REP.get(t_, [])) for _s, t_ in m_), [(s_, t_, org(REP.get(t_, []))) for s_, t_ in m_ if hk(REP.get(t_, []))]))
+    g_ = sorted(R3["gardees"])
+    dire("   ③ la GARDE v2 (l. 198 : une ligne qui arrive « reconnait » les parts) : %d chaine(s) gardees ; leurs parts ne sont que "
+         "des suppositions : %d %s" % (len(g_), sum(hk(REP.get(c_, [])) for c_ in g_), [(c_, org(REP.get(c_, []))) for c_ in g_
+                                                                                        if hk(REP.get(c_, []))]))
+    po_ = sorted(s_ for s_ in possede if hk(REP.get(s_, [])))
+    rec_hk = [x for x in recopies if str(x.get("origine") or "").startswith("hektor")]
+    dire("   ④ « POSSEDE » (l. 189/194 : la ligne reconnait les parts de sa chaine d'aujourd'hui) : %d chaine(s) possedees ne portent "
+         "que des suppositions ; parts RECOPIEES d'origine hektor%% : %d" % (len(po_), len(rec_hk)))
+    # ⑤ les lignes « justes » a l'arrivee, mais SUR des suppositions (rien ne les protege de la nuit)
+    fr = defaultdict(list)
+    for i in sorted(T):
+        if not any(D.case(i, "Négociateur %d" % k).strip() for k in (1, 2, 3)):
+            continue
+        t_ = cible_de.get(i)
+        rows_ = prevu.get(t_, []) if t_ in mE else []
+        if rows_ and sig_de(i, rows_) == sig_rows(rows_) and hk(rows_):
+            change_ = set(mE.get(t_, set())) != set(mA.get(t_, set())) if t_ in mA else True
+            fr["composition CHANGEE par la vague" if change_ else "composition inchangee"].append(i)
+    dire("   ⑤ lignes JUSTES a l'arrivee mais SUR DES SUPPOSITIONS (non protegees) : %s" % {k: len(v) for k, v in fr.items()})
+    dire("      dont la composition a change a la vague (la nuit les recalcule) : %s" % fr.get(
+        "composition CHANGEE par la vague", [])[:40])
+    for i in fr.get("composition inchangee", []):
+        t_ = cible_de.get(i)
+        dire("      composition inchangee : %s (%s, %s) -> chaine %s : %s" % (
+            i, D.case(i, "Etat Actuel"), sheet_txt(i), t_, lis(sig_rows(prevu.get(t_, [])))))
 
 if arg.export_a2:
     # ⭐ LA VAGUE DU SOIR (C, valide le 24/11) : A2 v3 exporte pour le patch PAR PIECES -- ses cibles sont des chaines

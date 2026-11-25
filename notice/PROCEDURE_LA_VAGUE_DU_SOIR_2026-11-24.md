@@ -740,3 +740,74 @@ Une pose interrompue avant la dernière marche laisse un fichier **inerte** : la
 
 **Sa sœur, qui vaut pour tout le projet :** un essai à blanc ne prouve pas un chemin de geste, parce qu'il travaille sur une
 copie. Le chemin de geste s'éprouve **EN MODE GESTE, sur des copies, avec des leurres**.
+
+### Son mot du 25/11 : le remède de 8016, et « ta cause est-elle ailleurs ? »
+
+> « ⭐ (a) FABRIQUE LE REMÈDE DE 8016 MAINTENANT, avec son essai à blanc, et montre-le-moi avant de poser [...] ⛔ ET LA VRAIE
+> QUESTION [...] : TA CAUSE EST-ELLE AILLEURS ? [...] combien d'AUTRES endroits de A1, A2, A3 et du remède comparent des
+> parts, des notes ou des reflets sans regarder l'origine ? Nomme-les-moi, même si la réponse est « aucun » -- mais dis-le
+> après avoir cherché, pas avant. »
+
+Son contrôleur a vérifié de son côté :
+- 4 chaînes de la base ont une somme qui n'est pas 100, et une seule porte une vente réglée : 8016 ;
+- idem pour les chaînes à un seul côté ;
+- 0 vente réglée sans part.
+
+**Le remède de 8016**, généré par `remede_8016_generer_patch_2026-11-25.py`. Les fichiers sont
+`supabase/patch_remede_8016_2026-11-25.sql` (md5 eccc92b6), `_A_BLANC`, `_INVERSE` et `_REPETITION`.
+- **Les gardes portent toutes l'ORIGINE :**
+  - G1 : 8016 a exactement les membres 8016 et 8019 ;
+  - G2 : sa seule part est celle de la nuit (sortie, 195, Solange ROMERA, 50, `hektor_partage_suppose`, `conversion`) ;
+  - G3 : la mise de côté d'A2 porte exactement les deux parts du classeur de 8019 (id 645 et 644 : entrée et sortie,
+    SOLANGE ROMERA 50, `classeur_reconstitue`).
+- **Le geste :**
+  - une sauvegarde datée ;
+  - le journal (lot `remede_8016_2026-11-25`, 3 lignes, ligne d'origine SXJDHXKF) ;
+  - la part de la nuit mise de côté, entière, puis retirée ;
+  - les deux parts du classeur recopiées depuis la mise de côté, où elles restent comme trace d'A2.
+- **Les contrôles :**
+  - 8016 = ROMERA entrée 50 + sortie 50 du classeur, somme 100, **PROTÉGÉE** (une part hors `hektor%`) ;
+  - la part de la nuit est en mise de côté, entière ; 0 orpheline ; 0 vente réglée sans part ; 17 967 + 1 parts ;
+  - l'**empreinte d'après 1dccc51297c54a99e38294756d790fc3** est exigée.
+- **L'essai à blanc**, par le canal de la commande, est **VERT** : 17 967 parts (12695d1f) → 17 968, 8016 = entrée SOLANGE
+  ROMERA 50 classeur + sortie SOLANGE ROMERA 50 classeur, empreinte 1dccc512 → l'inverse rend l'état d'avant. Rien n'est
+  resté.
+- **⛔ Il n'est PAS posé** : il attend son accord.
+
+**Le balayage de la famille.** `sig_rows`, la signature avec laquelle A2 compare des parts, ne porte que (côté,
+négociateur, pourcentage) : **ni l'origine, ni le rang, ni le nom**. Chaque endroit a été mesuré sur l'état du matin, avec
+`--familles` (temps 2) et des lectures chez Supabase.
+- **A2 ①, recopie sautée quand la cible porte des valeurs égales (l. 225) :** 7 paires, dont **1 seule** où la cible ne
+  portait que des suppositions : **8019 → 8016 (SXJDHXKF)**. C'est le défaut.
+- **A2 ②, « les mêmes parts y vivent déjà » (l. 241) :** 10 chaînes, 0 sur des suppositions (toutes du classeur, du 13/11).
+- **A2 ③, la garde v2, quand une ligne qui arrive « reconnaît » les parts (l. 198) :** 13 chaînes, 0 sur des suppositions.
+- **A2 ④, « possède » (l. 189/194) :** 12 chaînes possédées ne portent que des suppositions, mais 0 part d'origine Hektor
+  n'a été recopiée. Ces lignes restent sur leur chaîne.
+- **A2 ⑤, la complétée de NRZVKH85 (l. 258) :** 22979 est **mixte** (entrée FERNANDEZ en supposition + sortie du
+  classeur), donc **protégée**, la supposition y est figée. Exposition 0.
+- **A2 ⑥, l'échange (l. 272/281) :** jamais joué.
+- **A2 ⑦, le jugement de justesse (le témoin de fin) :** il compare les valeurs, et c'est une mesure, pas une décision.
+- **Le générateur A2, la preuve « mêmes parts » :** même signature sans l'origine ; 0 sur des suppositions aujourd'hui.
+- **Le patch A2 (SQL) :** ses gardes et contrôles portent l'origine (l'empreinte G2, la recopie, la mise de côté, « hors du
+  lot intactes »).
+- **A1 :** le reflet est recalculé sans regarder l'origine de la ligne d'avis. Les 2 588 avis sont tous d'origine classeur, et
+  les 107 rafraîchis aussi : **exposition 0**.
+- **A3 :** les reflets sont recalculés sans regarder l'origine de la note ou de la condition. Les 269 rafraîchis sont tous
+  classeur : **0 des 9 notes saisies, 0 des 5 conditions saisies**.
+- **Le remède de 8016 :** chaque garde et chaque contrôle porte l'origine.
+
+**⇒ Le défaut tient en UNE chaîne, 8016**, ce que son contrôleur a trouvé par un autre chemin (les sommes).
+
+**⚠ À nommer, sans cause dans A2 :** 12 **ventes réglées** sont **justes aujourd'hui sur des suppositions de Hektor** (non
+protégées), et la vague n'a pas changé leur composition. Si Hektor change, la nuit suivra Hektor :
+- 2U5QPKRC (VALLA J, chaîne 17769) · 58I5AO17 (DAUDET, 7908) · 8ATXF2EZ (VALLA J, 19152) · 91IHSGNC (CHAMPAGNAC, 4781) ;
+- EJN79TJ1 (BRAVARD, 27712) · ESMCO1NC (DELVAUX, 6588) · I3TFR2KG (BILLIG, 24618) · J6RGX0CQ (CHAMPAGNAC, 4928) ;
+- JL8GV7RQ (SABATIER, 15169) · LUX9SDIL (DESOUSA, 14119) · MDOXOBIC (GENTES, 2163) · S8BKB6FL (JORAND, 4412).
+
+Les protéger, c'est-à-dire recopier leurs mêmes valeurs en `classeur_reconstitue`, est une décision qui lui revient. Rien
+n'est fait.
+
+**Le témoin de demain** (`temoin_de_la_nuit_2026-11-25.py`) a pris sa photo le 25/11 à 09:28, AVANT le remède :
+- 17 967 parts (12695d1f), 31 375 pièces, 0 orpheline, 0 vente réglée sans part, journal 799, mise de côté 157, 11 605
+  étiquettes ;
+- si le remède est posé, la photo sera reprise juste après.

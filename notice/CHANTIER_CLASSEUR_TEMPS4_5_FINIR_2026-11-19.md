@@ -5778,6 +5778,22 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - **Le remede, A SON ACCORD :** mettre de cote la part de la nuit, puis recopier les parts du classeur de 8019 (ROMERA 50/50,
   dans la mise de cote) sur 8016.
 - **La regle ecrite dans la procedure :** l'interrupteur se pose EN DERNIER.
+### 20.52 Le remede de 8016 fabrique (a blanc VERT) ; la famille « sans l'origine » balayee : 1 seule chaine (25/11)
+
+- **Le remede de 8016** (eccc92b6) : ses gardes portent toutes l'origine ; la part de la nuit est mise de cote, et les parts
+  du classeur de 8019 sont recopiees depuis la mise de cote, PROTEGEES ; empreinte d'apres 1dccc512. L'essai a blanc est
+  VERT, rien n'est reste. **Pas pose : a son accord.**
+- **Le balayage :** `sig_rows` = (cote, negociateur, pourcentage), sans l'origine. Les endroits mesures :
+  - A2 ① (recopie sautee) : 7 paires, dont 1 sur des suppositions = 8016 ;
+  - A2 ② « memes parts » : 10, 0 ; ③ la garde v2 : 13, 0 ; ④ « possede » : 0 recopie hektor ;
+  - ⑤ NRZVKH85 (22979) : mixte, donc protegee ; ⑥ l'echange : jamais joue ;
+  - A1 : 2 588 avis tous classeur ; A3 : 269 tous classeur, 0 saisie touchee ;
+  - le remede : avec l'origine.
+  **=> 8016 seule.**
+- **A nommer pour lui, sans cause dans A2 :** 12 ventes reglees justes sur des suppositions de Hektor, non protegees
+  (2U5QPKRC, 58I5AO17, 8ATXF2EZ, 91IHSGNC, EJN79TJ1, ESMCO1NC, I3TFR2KG, J6RGX0CQ, JL8GV7RQ, LUX9SDIL, MDOXOBIC, S8BKB6FL).
+- **Le temoin de demain :** `temoin_de_la_nuit_2026-11-25.py`, photo a 09:28 (avant le remede ; a reprendre apres s'il est
+  pose).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
