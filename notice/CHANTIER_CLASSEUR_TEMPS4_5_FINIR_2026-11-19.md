@@ -5972,6 +5972,22 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   tranchees + 4 doubles ; 4 725 + 74 + 4 = 4 803.
 - **Restent, a son mot** : les doubles, le passage officiel (74 non tranchees, dont les 2 de la liste E et a360d9e3),
   9Q0FHAKK, les 47 (+2), la sentinelle.
+
+### 20.67 Les trois petits blocages et la methode des 47 (25/11, soir) -- R27 et R28 PROPOSEES, rien ecrit
+
+- **R27 « deux lignes, un dossier »** (meme Mandat, Acquereur, Commission) : l'etiquette a la ligne qui prouve la vente,
+  sinon celle dont l'annulation est deja posee, sinon celle que le gel tient ; l'autre « rien a etiqueter ». VIALLARD ->
+  3308P0UX, PAOLONE -> O6R10ZQA, PEE1XTR8 (deux TENTATIVES du meme acheteur, pas une saisie double) -> PEE1XTR8. Jumeaux :
+  ces 3 paires seulement.
+- **R28 « copie seule »** : la vraie vente de la chaine de la copie concorde par des champs de HEKTOR (mandat, acquereur,
+  honoraires, date a N jours) -- pas la facture ni le reglement (notre recopie du Sheet : circulaire). HUY49KEC : 7 jours
+  d'ecart (sa ligne dit 16/11/2018 partout) ; debloque 1 ligne sur les 4.
+- **9Q0FHAKK** : Hektor ne nomme que SOUCHON Christine (compromis et vente) ; POTTIER Dominique n'a qu'une offre refusee
+  du 23/08/2024, sur cette seule annonce ; pas de couple chez Hektor ; annonce 8395 modifiee le 22/02/2026. GGTI00003842 :
+  jamais recopiee (ligne non reliee) ; 3843 n'est qu'une mention dans la case de P3CSA1R7.
+- **Les 47** : 47 cases encore vides ; 0 vente sans part ; 5 chaines a parts supposees seulement. Methode du geste des
+  dates du 25/11 (gardes, sauvegarde, journal, cases vides seulement, a blanc sur copie, repetition, inverse, temoin de
+  nuit) ; ordre propose : 8 concordantes, 7 « Prix », 23 dates ; le reste a lui.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

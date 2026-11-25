@@ -1795,3 +1795,130 @@ le socle du protocole, SQL direct).
 - la sentinelle « lignes sans lien » (compter les 15 impossibles, seuil 15).
 
 **⛔ Rien chez Hektor, pas de push.**
+
+### Les trois petits blocages et la méthode des 47 (25/11, soir) — RIEN ÉCRIT, deux règles PROPOSÉES
+
+> « On continue par les trois petits blocages, puis les 47 valeurs. [...] Propose-moi donc UNE règle [...] Je tranche
+> ensuite. [...] N'écris rien. [...] je veux voir ta méthode avant qu'on y touche. »
+
+L'outil de mesure : `phase2/checks/mesurer_trois_blocages_et_les_47_2026-11-25.py`, en lecture seule. Il lit le socle du
+protocole (passage 81), le registre, le gel, le miroir local de la nuit et l'image du Sheet.
+
+**① Une règle pour les deux lignes sur un même dossier (R27 proposée).**
+- **Ce que montre la mesure, paire par paire :**
+  - **VIALLARD** (3308P0UX, ligne 3785 ; YRUF0S9H, ligne 3796 ; D2022-0644). Le mandat, l'acquéreur, la commission
+    (6 100), le prix et l'offre (02/02/2022) sont identiques. Seule la date d'annulation diffère : 22/05 contre 22/04/2022.
+    Le dossier ne tient que l'offre 4483. Le gel la donne à 3308P0UX ; YRUF0S9H n'a aucun lien. C'est bien la même affaire
+    saisie deux fois.
+  - **PAOLONE** (T2GZOY5O, ligne 3856 ; O6R10ZQA, ligne 3887 ; D2021-0797). Tout est identique, sauf l'annulation :
+    21/11 contre 21/09/2021. Or le compromis 20073 porte DÉJÀ le 21/09/2021, celui d'O6R10ZQA, que sa décision du 24/11 a
+    dit « la bonne ». Même affaire saisie deux fois.
+  - **PEE1XTR8** (ligne 1495, vente réglée) **et 9B7U8221** (ligne 3845, annulée), D2021-0331. Le mandat (13502),
+    l'acquéreur (SABOT), le prix (58 000) et la commission (5 700) sont identiques.
+    - **⚠ Ce n'est pas une saisie double : ce sont deux TENTATIVES du même acheteur.** Leurs pièces sont distinctes,
+      chacune prouvée par sa propre ligne :
+      - 9B7U8221 a l'offre 26020 du 25/05/2021 (refusée) et le compromis 26019 annulé le 01/12/2021 ;
+      - PEE1XTR8 a l'offre 26021 du 15/12/2021 (acceptée), le compromis 26018 du 22/12/2021 et la vente 26022 du
+        18/05/2022.
+    - Le chaînage les a réunies dans une seule chaîne.
+    - R13 ne les prenait pas, parce que les dates d'offre diffèrent.
+- **La règle R27 proposée : « deux lignes, un dossier ».**
+  - **Elle s'applique quand** deux lignes tombent sur le même dossier ET disent la même affaire : même Mandat, même
+    Acquéreur, même Commission TTC. Si l'une de ces trois colonnes diffère, ce sont deux affaires, et la paire reste en
+    attente, nommée pour lui.
+  - **Elle donne l'étiquette à UNE ligne, par trois critères dans l'ordre :**
+    - ① **l'argent :** si le dossier tient une vente, la ligne dont la vente fixée (ou l'état « Vente réglée ») prouve
+      cette vente → **PEE1XTR8** ;
+    - ② **l'annulation déjà posée :** sinon, la ligne dont la date « Annulée » est déjà sur le compromis du dossier →
+      **O6R10ZQA** ;
+    - ③ **le gel :** sinon, la ligne que le gel tient déjà sur ce dossier, selon sa convention des jumelles du 20/11 (« celle
+      que le gel tient déjà ; l'autre sans étiquette ») → **3308P0UX**.
+    - Si aucun des trois critères ne tranche, la paire reste en attente, nommée pour lui.
+  - **L'autre ligne** reçoit le verdict « rien à étiqueter : doublon (ou première tentative) de X ». Elle reste vide.
+- **Ses jumeaux : la règle ne touche que ces 3 paires.** Sur tout le passage, il n'y a que 2 dossiers tenus par deux lignes
+  tranchées, plus une seule paire en ATTENTE « deux lignes, un dossier ».
+- **Son effet :** 3 étiquettes débloquées, dont 5 700 € pour PEE1XTR8. 3 lignes restent vides et nommées : YRUF0S9H,
+  T2GZOY5O et 9B7U8221.
+- **Pour 9B7U8221, une autre voie existe :** couper sa tentative (26019 et 26020) dans un dossier à elle, comme la vague
+  l'a fait pour la décision B. Ce serait un geste de chaînage, donc à lui.
+- **Où elle se pose :** dans le juge, au prochain passage officiel, avec les autres restes. Le passage 81 reste la seule
+  référence d'ici là.
+
+**② HUY49KEC (ligne 3248, 5 000 €) et le motif « copie seule » (R28 proposée).**
+- **Ce que voit la mesure.** Sa seule pièce est la copie 1001587, dans la chaîne 3741. Cette chaîne tient la VRAIE vente
+  3741 de Hektor (annonce 8671) : acquéreur CANIVET Guillaume, mandat 2332, honoraires 5 000 €, datée du 23/11/2018.
+- **⚠ Deux nuances, à lui :**
+  - **La facture et la date de règlement de la vente 3741 sont NOTRE recopie de son Sheet** (posée le 16/11). Les prendre
+    pour preuve, c'est se prouver par sa propre copie, exactement ce que la règle interdit. Hektor ne connaît ni facture
+    ni règlement.
+  - **La date ne colle pas au jour près.** Sa ligne porte le 16/11/2018 dans TOUTES ses colonnes de date (offre,
+    compromis, vente prévue, vente fixée), alors que Hektor date la vente du 23/11/2018 : 7 jours d'écart.
+- **La règle R28 proposée.** Elle lève « copie seule » quand la chaîne de la copie tient une VRAIE vente de Hektor qui
+  concorde avec la ligne par des champs de HEKTOR :
+  - même mandat ;
+  - même acquéreur ;
+  - honoraires égaux à la Commission TTC ;
+  - et une date de vente à moins de N jours d'une date de la ligne. **N est à lui** : 7 jours suffisent pour HUY49KEC.
+  - La facture et le règlement ne comptent pas.
+- **Combien d'autres lignes elle débloquerait : aucune.** Le motif « copie seule » compte 4 lignes. Les 3 autres (BR8ZTN5F,
+  C0HXVVCW, SHN6RKDI) sont des annulées dont la chaîne de la copie ne tient aucune pièce de Hektor. Elle débloque donc 1
+  ligne, HUY49KEC.
+
+**③ 9Q0FHAKK : ce que Hektor sait de la vente.** C'est le miroir local de la nuit ; rien n'a été lu en direct chez Hektor.
+- **La vente 3650** (8654 chez Hektor) : datée du 22/01/2025, 460 000 €, honoraires 18 000 €.
+  - **Elle ne nomme qu'un acquéreur : SOUCHON Christine.**
+  - Les mandants sont CHABANON et LAFFONT, avec un mandat exclusif ouvert le 19/06/2024. Il n'y a ni apporteur ni
+    rétrocession.
+  - Le compromis 3647 (23328) est aussi au nom de SOUCHON : il date du 11/09/2024, avec un acte prévu le 11/12/2024.
+- **Les dates de modification :**
+  - Hektor ne date pas les modifications d'une vente ou d'un compromis (aucun champ dans ce qu'il nous rend). La vente est
+    vue chez nous depuis le 31/07/2026, et encore présente cette nuit.
+  - **L'annonce 8395 a été modifiée pour la dernière fois le 22/02/2026 à 12:19.**
+  - La fiche de POTTIER Dominique date du 12/09/2024 (Annemasse) ; celle de SOUCHON Christine du 26/03/2025 (St Victor sur
+    Loire).
+- **Le couple :** Hektor ne les relie PAS en couple. Aucun lien de couple n'existe entre les deux fiches.
+- **POTTIER ailleurs ?**
+  - POTTIER Dominique n'apparaît que sur l'annonce 8395, avec une seule offre, du 23/08/2024, refusée.
+  - Le seul autre POTTIER du registre est POTTIER Paloma : une vente de 2012 sur l'annonce 45299, absente des annonces
+    d'aujourd'hui. C'est une autre personne, et rien n'indique que ce soit le même bien.
+  - **⇒ Aucune autre annonce ne porte POTTIER sur ce bien.**
+- **Sa ligne (ligne 286), colonne par colonne :**
+  - acquéreur POTTIER ; offre du 23/08/2024, qui est celle de POTTIER ;
+  - compromis du 11/09/2024 et vente du 22/01/2025, qui sont ceux de SOUCHON ;
+  - réglée le 24/01/2025, facture GGTI00003842 ;
+  - mandat 17253, qui est faux.
+- **Les factures :** le registre ne connaît aucune facture par lui-même. Celles qu'il porte sont nos recopies de son Sheet
+  (le 16/11).
+  - GGTI00003842 n'y est pas, parce que la ligne n'a jamais été reliée.
+  - GGTI00003843 n'est pas une facture à part : elle est citée dans la case facture de P3CSA1R7 (« apporteur 10 % [...]
+    déjà déduit »), que nous avons recopiée sur la vente 2393.
+
+**④ La méthode des 47 (+2), pour qu'il la lise avant tout geste.**
+- **La mesure d'aujourd'hui :** les 47 cases cibles sont toujours VIDES. Les 18 ventes ont toutes des parts : 0 vente
+  réglée sans part, donc le moniteur ne criera pas. Mais **5 de ces chaînes n'ont que des parts supposées par la nuit**
+  (`hektor%`) : EJN79TJ1, 2U5QPKRC, I3TFR2KG, 91IHSGNC et MQ6H8TVQ. Les poser réglées les ferait entrer dans les ventes
+  réglées sur supposition. Recopier d'abord leurs parts du classeur, comme A2, serait sa décision.
+- **La méthode, sur le modèle du geste des 4 dates du 25/11 :**
+  - **Un fichier source par famille,** avec la pièce cible et sa preuve, la colonne (`vente_reglee_app` et
+    `numero_facture_app` ; `date_annulation_app`) et la valeur prise mot pour mot dans le Sheet (la date au format ISO,
+    selon sa règle).
+  - **Les gardes du patch :** la case cible encore VIDE ; la pièce encore dans le dossier attendu ; la ligne encore
+    tranchée au 81 sur cette pièce. Si une seule garde tombe, rien de la famille n'est écrit.
+  - **La sauvegarde datée** des lignes touchées, et un journal : la place, la ligne d'origine, l'ancienne valeur.
+  - **Le patch n'écrit que des cases vides,** et exige l'empreinte d'après.
+  - **L'à blanc sur une copie** (begin … rollback), puis le geste par la connexion de la commande, puis la répétition en
+    lecture seule. L'inverse est prêt.
+  - **Le lendemain,** le témoin de la nuit : les colonnes `_app` ne sont pas écrasées par Hektor, mais on le prouve.
+- **L'ordre proposé :**
+  - 1) les 8 ventes réglées qui concordent ;
+  - 2) les 7 dont seul le Prix du Sheet est fautif ;
+  - 3) les 23 dates posables.
+  - **Restent à lui :**
+    - G8YSAI5Z (un 2e règlement sur un même dossier) ;
+    - les écarts d'honoraires de df0ce30c et de 78bb247a ;
+    - MQ6H8TVQ, qui n'a pas de facture ;
+    - les 3 dates antérieures au compromis ;
+    - O6R10ZQA, qui attend R27 ;
+    - les 2 valeurs de 9Q0FHAKK, qui attendent son choix d'acquéreur.
+
+**⛔ Rien n'est écrit, rien chez Hektor, pas de push.**
