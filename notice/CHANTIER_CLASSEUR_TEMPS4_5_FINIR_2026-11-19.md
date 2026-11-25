@@ -5849,6 +5849,26 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   liberees par le patch de confiance, deja avant la vague). 3 trous restent : LPBAZ1D4, FYC1KCHQ, I847SPN3.
 - **vague1b** (50, a blanc 50/0, vague 9a94fb89e66a4db4, colonne A 2b60fa4b312a7bc1) : A SON ACCORD. Le defaut de
   `--source` reste le 19/11 : le passer a chaque vague (ou changer le defaut, a son mot).
+
+### 20.57 L'ecrivain de la colonne A lit le GEL, pas le protocole : critere perime a deux etages ; garde de fraicheur posee (25/11)
+
+- **Sa question** : pourquoi l'ecrivain refuse 204 lignes tranchees par le protocole ? (`colonne_a_contre_le_verdict_du_
+  protocole_2026-11-25.py`, lecture seule ; ses 204/70 retrouves a l'identique.)
+- **Cause 1** : l'ecrivain lit le GEL (16/11 + V2), jamais les pieces du protocole ; la vague a pose dossiers et etiquettes
+  du protocole (4 729/4 729 tenues) mais pas ses liens (324 lignes : 256 delies, 108 relies). **Cause 2** : le classement
+  ajoute GEL_SEUL (juge 5 du 19/11), AUDIT_NON_JUSTE (audit du 18/11, avant V2), EN_ATTENTE (liste figee du 19/11), et
+  les confiances « a valider / bonne » du gel. **Seule raison vraie** : une etiquette = une ligne en A (2 doubles :
+  VIALLARD, PAOLONE -- a lui).
+- **Par le protocole : 4 725 ecrivables** (50 comprises) contre 4 511 (+214, pas +106) ; 4 697 sans ses 28 decisions du
+  20/11. Les 59, les 47, 19 des 20 « sans lien », 18 des 21 « en attente », 56 des 57 : ecrivables. 57 : 18 ventes
+  reglees au Sheet.
+- **Le danger inverse** : par le gel, 5 lignes s'ecriraient contre le protocole (8NZ6V6XB, ZV3QRSJG ; P252U1JH, 3THZJOOG,
+  3QZ4DAD1) -- aucune dans les 50 ni dans la vague1b (50/50 meme etiquette que le protocole).
+- **Garde posee** (`fraicheur_du_classement` dans `preparer`) : refus sans fiche, fiche perimee ou CSV retouche ; derniere
+  vague = derniere fusion/scission du journal des etiquettes. Eprouvee sur 4 cas. ⚠ `simuler` est perimee (9 rouges, avec
+  ou sans la garde : ses temoins tombent sur les 50 ecrites) -- a refaire avant toute ecriture.
+- **A lui** : l'ecrivain prend-il le verdict du protocole comme source (A), ou pose-t-on les liens du protocole dans le
+  gel (B) ? Puis ses 28 decisions du 20/11, les 2 doubles, KT0601S6.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

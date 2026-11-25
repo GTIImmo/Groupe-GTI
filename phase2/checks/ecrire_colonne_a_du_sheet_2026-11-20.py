@@ -928,7 +928,46 @@ def derouler_defaire(*, mode: str, nom: str, sheet, memoire, a_avant_de_la_vague
 
 
 # ═══════════════════════════════════════════ PREPARER ═══════════════════════════════════════════
+def fraicheur_du_classement(source: Path, client) -> str | None:
+    """⛔ SON MOT DU 25/11, apres les 17 trous de la vague1a : « que l'outil REFUSE de tourner si son classement est
+    plus vieux que la derniere vague ». (Le classement du 19/11 etait d'avant la vague : 750 lignes ecartees pour rien.)
+
+    Un classement porte sa FABRICATION dans <classement>.json, a cote de lui : {"fait_le": ISO avec fuseau,
+    "sha256": l'empreinte du CSV}. LA DERNIERE VAGUE = le dernier evenement qui RECOUPE les dossiers (fusion ou
+    scission) au journal des etiquettes, lu chez Supabase a l'instant -- la vague du 25/11 y a ecrit 249 fusions et
+    295 scissions ; une nuit qui fusionne compte aussi : un classement par dossier est perime des qu'un dossier bouge.
+    Rend None si le classement est plus jeune que la derniere vague, sinon la raison du refus."""
+    fiche = source.with_name(source.name + ".json")
+    if not fiche.exists():
+        return ("%s n'a pas de fiche de fabrication (%s) : sa date est inconnue, il peut etre d'avant la derniere "
+                "vague" % (source.name, fiche.name))
+    try:
+        f = json.loads(fiche.read_text(encoding="utf-8"))
+        fait_le = datetime.fromisoformat(f["fait_le"])
+    except (ValueError, KeyError, TypeError) as e:
+        return "la fiche %s est illisible (%s)" % (fiche.name, e)
+    if fait_le.tzinfo is None:
+        return "la fiche %s donne une heure sans fuseau (%s)" % (fiche.name, f["fait_le"])
+    if f.get("sha256") != sha256_fichier(source):
+        return "%s a change depuis sa fabrication (empreinte %s, fiche %s)" % (
+            source.name, sha256_fichier(source)[:16], str(f.get("sha256"))[:16])
+    r = client._request(method="GET", path="app_dossier_etiquette_journal", query={  # noqa: SLF001
+        "select": "quand,evenement", "evenement": "in.(fusion,scission)", "order": "quand.desc", "limit": "1"})
+    if not isinstance(r, list) or not r:
+        return "le journal des etiquettes n'a pas pu etre lu (reponse %r) : on ne sait pas quand est la derniere vague" % r
+    vague = datetime.fromisoformat(r[0]["quand"])
+    if fait_le <= vague:
+        return ("%s a ete fabrique le %s, AVANT la derniere vague (%s du %s) : il faut le refaire sur l'etat "
+                "d'aujourd'hui" % (source.name, fait_le.isoformat(timespec="seconds"), r[0]["evenement"],
+                                   vague.isoformat(timespec="seconds")))
+    return None
+
+
 def preparer(args, reg, journal=print) -> int:
+    refus_fraicheur = fraicheur_du_classement(Path(args.source), reg.c)
+    if refus_fraicheur:
+        journal("REFUS : %s" % refus_fraicheur)
+        return 3
     exclus_b = lire_hors_vague()
     with Path(args.source).open(encoding="utf-8-sig", newline="") as f:
         tete = f.readline()

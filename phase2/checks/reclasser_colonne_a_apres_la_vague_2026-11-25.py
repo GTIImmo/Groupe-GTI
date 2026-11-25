@@ -34,10 +34,12 @@ from __future__ import annotations
 import csv
 import hashlib
 import importlib.util
+import json
 import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
@@ -67,6 +69,9 @@ def charger(nom: str, fichier: str):
 
 
 def main() -> int:
+    # ⛔ SON MOT DU 25/11 : l'outil refuse un classement plus vieux que la derniere vague -> le classement porte sa
+    #   FABRICATION (fiche <csv>.json). L'heure est prise AVANT toute lecture : une vague pendant la mesure le perime.
+    debut = datetime.now(timezone.utc)
     echecs: list[str] = []
     juge = charger("juge_q5", "temps5_q5_les_48_a_juger_par_le_classeur_2026-11-19.py")
     outil = charger("outil_a", "ecrire_colonne_a_du_sheet_2026-11-20.py")
@@ -293,6 +298,13 @@ def main() -> int:
                         " ".join(map(str, s["ts"])), " ".join(s["autres"]),
                         exclus_b[i][0] if i in exclus_b else ""])
     print("\nCSV : %s" % SORTIE)
+    if not echecs:
+        fiche = SORTIE.with_name(SORTIE.name + ".json")
+        fiche.write_text(json.dumps({"fait_le": debut.isoformat(timespec="seconds"),
+                                     "sha256": hashlib.sha256(SORTIE.read_bytes()).hexdigest(),
+                                     "par": Path(__file__).name, "lignes": len(ids)}, ensure_ascii=False, indent=1),
+                         encoding="utf-8")
+        print("FICHE DE FABRICATION : %s (fait le %s)" % (fiche, debut.isoformat(timespec="seconds")))
     if echecs:
         print("⛔ TEMOIN(S) EN ECHEC : %s (code 2)" % echecs)
         return 2

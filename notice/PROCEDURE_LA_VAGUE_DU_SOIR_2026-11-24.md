@@ -1112,3 +1112,142 @@ voit jamais : de là viennent les trous.
   suivante doit passer `--source` et `--colonne-case case_25_11`. Changer ce défaut toucherait le code de l'outil :
   c'est à son mot.
 - **⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 50 de la vague1a ne sont pas touchées.
+
+### ⛔ Pourquoi l'écrivain de la colonne A n'accepte pas le verdict du protocole (25/11, après-midi)
+
+> « POURQUOI TON ÉCRIVAIN N'ACCEPTE-T-IL PAS LE VERDICT DU PROTOCOLE ? Le protocole est MON juge [...] Soit ton écrivain a
+> une RAISON [...] Soit il applique un critère PÉRIMÉ [...] MESURE-LE ET RÉPONDS-MOI, CAS PAR CAS. »
+
+**L'outil de mesure :** `phase2/checks/colonne_a_contre_le_verdict_du_protocole_2026-11-25.py`, en lecture seule.
+- **Le protocole y est lu tel qu'il est :** son socle, passage 81, sur l'image de la vague. Pour chaque ligne : TRANCHÉE
+  avec ses pièces, ses preuves et l'étiquette à l'arrivée, ou ATTENTE.
+- **Le croisement est reproduit à l'identique :** sur les 274 écartées, 204 sont tranchées et 70 ne le sont pas, avec la
+  même répartition par case que son contrôleur.
+- **La liste nommée :** `notice/COLONNE_A_LES_ECARTEES_CONTRE_LE_VERDICT_DU_PROTOCOLE_2026-11-25.csv`.
+
+**La réponse : un critère périmé, à deux étages, et une seule raison vraie.**
+- **① L'écrivain ne lit pas le protocole, il lit le GEL.**
+  - Le gel (`app_classeur_lien`) est la carte des liens du 16/11, corrigée par le patch V2 du 19/11.
+  - Le protocole a refait sa propre carte ligne → pièces, en gardant 12 539 liens, en en déliant 256 et en en reliant
+    108, sur 324 lignes.
+  - La vague a posé ses dossiers et ses étiquettes, mais **jamais ses liens** : le gel n'a pas bougé.
+  - **Les deux preuves :**
+    - l'étiquette à l'arrivée du protocole est l'étiquette d'aujourd'hui de ses pièces sur **4 729 lignes sur 4 729**
+      (les 268 « NEUVE » sont résolues par leur pièce) : la vague a réalisé le protocole ;
+    - mais le gel n'est égal aux pièces du protocole que sur 4 405 lignes. **324 lignes diffèrent.**
+- **② Le classement ajoute trois portes d'avant le protocole :**
+  - GEL_SEUL, qui est le juge ⑤ du 19/11 ;
+  - AUDIT_NON_JUSTE, qui est l'audit du 18/11 ;
+  - EN_ATTENTE, la liste figée le 19/11.
+  - L'écrivain refuse aussi les liens que le gel marque « à valider » ou « bonne ». Ces marques ont été posées entre le 16
+    et le 19/11 et n'ont jamais été mises à jour.
+- **③ La seule raison vraie : la colonne A ne porte une étiquette que sur UNE ligne.** C'est le critère 5 de l'outil, et
+  le protocole ne le vérifie pas.
+  - Il met deux doubles de saisie sur un même dossier : VIALLARD (3308P0UX et YRUF0S9H) et PAOLONE (T2GZOY5O et
+    O6R10ZQA).
+  - Laquelle porte l'étiquette ? C'est à lui de trancher.
+  - Les autres vérifications de l'écrivain servent à l'ÉCRITURE et restent nécessaires :
+    - la case A doit être vide ;
+    - l'ID doit être présent, une seule fois ;
+    - l'étiquette du jour doit être celle qui était prévue ;
+    - la mémoire doit être cohérente ;
+    - les trois verrous.
+
+**⚠ Le danger, dans l'autre sens.** En lisant le gel, l'écrivain écrirait 5 lignes contre le protocole :
+- **2 avec une autre étiquette que celle du protocole :**
+  - 8NZ6V6XB : le gel relie le compromis 11560, le protocole le compromis 11558 ;
+  - ZV3QRSJG : le gel relie 17136, le protocole 17131.
+- **3 que le protocole a laissées en ATTENTE :**
+  - P252U1JH et 3THZJOOG : un compromis sans date, sorti de la règle E par sa décision ;
+  - 3QZ4DAD1 : sa date tombe sur plusieurs acheteurs.
+- **Aucune n'est dans les 50 écrites, ni dans la vague1b.** La vague1b reste juste au regard du protocole : 50 sur 50,
+  avec la même étiquette.
+
+**Ce que donne la mesure en suivant le protocole : 4 725 lignes écrivables**, les 50 déjà écrites comprises, contre 4 511
+aujourd'hui. Cela fait **+214, et non +106.**
+- **Le calcul :** 4 511 − 3 non tranchées + 199 des 204 + KT0601S6 + 17 lignes VAGUE_1 que ses décisions du 20/11
+  excluent.
+- **Ses décisions du 20/11 :** 28 de ces 4 725 lignes en relèvent (9 de B, 19 des 19), et toutes sont tranchées par le
+  protocole. Si elles restent dehors, le total tombe à 4 697.
+
+**① Les 59 (40 GEL_SEUL et 19 LIEN_A_VALIDER) : elles sont toutes les 59 écrivables par le protocole.**
+- **Les preuves du protocole :**
+  - pour les 40 GEL_SEUL : R9 sur 10, R9b sur 13, R22 sur 3, R25 sur 1, R7b sur 1, et 13 par les colonnes de la ligne ;
+  - pour les 19 LIEN_A_VALIDER : 18 par les dates de la ligne, 1 par R7b/R7c.
+- **Exemple complet : FYC1KCHQ** (ligne 50, Annulée, l'un de ses trous). Elle est rangée GEL_SEUL.
+  - **Le gel :** compromis annulé 14010 et offre 1001435, tous deux « sûre », dans un seul dossier, D2024-0461.
+  - **Le protocole :** TRANCHÉE, étiquette a387b1d4, qui est bien l'étiquette d'aujourd'hui. Sa preuve sur 14010 : règle
+    R9, validée le 23/11. Le gel du 16/11 ne donne cette pièce qu'à cette ligne. Ses honoraires de 6 000 sont égaux à la
+    Commission TTC de la ligne, et aucune autre ligne n'a son prix et ses honoraires. L'offre 1001435 est une copie C5 de
+    la ligne : elle suit la ligne et ne décide pas.
+  - **Ce que l'écrivain exige en plus :** le juge ⑤ du 19/11 veut retrouver une pièce de deux façons.
+    - Avec une date : la date de la pièce doit être celle de la ligne, à un jour près, avec en plus le nom, le prix ou le
+      mandat.
+    - Sans date : la case du genre doit être vide, avec le mandat, le nom et le prix à 1 % près.
+    - Or le compromis est daté « 0000-00-00 », et la copie n'est jamais retenue. Ce juge ne connaît ni les honoraires ni
+      les règles du protocole.
+  - **⇒** Le juge de l'écriture, lui, l'accepterait. Seul le classement la refuse, avec un critère du 19/11.
+- **Exemple de LIEN_A_VALIDER : 7BPVD7K4** (ligne 504, Vente réglée).
+  - Le gel et le protocole ont les mêmes pièces (6434, 6435, 6437). Le protocole prouve chacune par une date de la ligne :
+    compromis du 07/03/2024, offre du 14/02/2024, vente fixée au 25/05/2024.
+  - L'écrivain la refuse seulement parce que le gel marque son lien « à valider ».
+
+**② Les 47 AUDIT_NON_JUSTE.**
+- **De quel audit :** l'« audit indépendant du classeur » du 18/11 (`AUDIT_INDEPENDANT_CLASSEUR_VERDICTS_2026-11-18.csv`,
+  350 lignes). Ses verdicts sur les 47 : FAUX 5, A_RATTACHER 23, PARTIEL 19.
+- **Ce qui s'est passé depuis :**
+  - Les 47 ont toutes été touchées par le patch V2 du 19/11, qui a été fait à partir de cet audit.
+  - Après le V2, le gel est ce que voulait l'audit sur 35 des 47.
+  - Le protocole a rejugé les 47. Il retrouve ce que voulait l'audit sur 32 lignes et pose ses propres pièces sur les 15
+    autres. Les 47 sont écrivables par le protocole.
+- **⇒ Ce n'est plus vrai aujourd'hui.** Le verdict « non juste » décrit le gel du 18/11, d'avant sa correction.
+
+**③ Les deux contradictions : c'est la lecture de l'écrivain qui est fausse.**
+- **Les 20 SANS_LIEN tranchées.** Le gel n'a aucun lien pour elles, le protocole en a.
+  - On y trouve **ses décisions des 23 et 24/11** :
+    - les 5 rattachements : 2U5QPKRC, EJN79TJ1, MQ6H8TVQ, QXDW8EQA et 91IHSGNC ;
+    - 6FQO29C8, pour le bien 39845 ;
+    - 4G2UHO35, pour 19814.
+  - Puis ZZ5WKMWM, I3TFR2KG, D9MMB7OU, YRUF0S9H et Z6P7KE5R.
+  - Enfin, **8 lignes nées après le 19/11** (les lignes 4801 à 4808, des offres de novembre 2026), que le gel n'a jamais
+    reliées.
+  - Ce sont les 108 liens neufs du protocole, jamais posés dans le gel. 7 sont des ventes réglées au Sheet.
+  - **19 sont écrivables.** La 20e est YRUF0S9H, le double VIALLARD.
+- **Les 21 EN_ATTENTE tranchées.**
+  - La liste EN_ATTENTE est figée au 19/11. Elle contient les questions de l'audit du 18/11, et les opérations du V2
+    marquées « SORTIE ».
+  - Le protocole les a tranchées depuis. Plusieurs questions portent sur une date ou sur un ménage, pas sur le dossier.
+  - **18 sont écrivables.** Les 3 autres sont des doubles : la paire PAOLONE, et 3308P0UX avec YRUF0S9H.
+
+**④ Les 57 « à plusieurs dossiers » (42 + 15) : par les pièces du protocole, chacune a UN seul dossier.**
+- **Pourquoi l'écrivain en voit plusieurs :** il voit 2 dossiers sur 41 lignes et 3 sur 1. Ce sont les pièces de trop du
+  gel, les 256 déliements que le protocole n'a jamais posés. Les 15 autres sont partagées par le gel.
+- **56 sont écrivables tout de suite.** KT0601S6 partage son dossier avec PPIM4947, que le protocole laisse en attente
+  (« sa date tombe sur plusieurs acheteurs ») : c'est à lui.
+- **Les ventes réglées : 18 au Sheet** (16 au registre). Ce sont HPNJ32UM, AOPBUAOJ, X2714E92, RF9KYWSY, SCYKLY77,
+  KT0601S6, NKUNH7SY, ZR13FV3K, 50LQ2VSA, SXJDHXKF (la ligne de 8016), 1cc703d9, c08ff7cb, a5cb141f, 1cf326f1, a8b6c8cc,
+  14853166, 38f13b81 et df0ce30c.
+- **Sur toutes les 204,** 63 sont des ventes réglées au Sheet.
+
+**Le piège de ce matin est traité : l'outil REFUSE un classement plus vieux que la dernière vague.**
+- **Le code :** `fraicheur_du_classement`, ajouté à `ecrire_colonne_a_du_sheet_2026-11-20.py` et appelé en tête de
+  `preparer`. Il n'y a aucune option pour passer outre.
+- **La règle :**
+  - un classement porte sa fiche de fabrication (`<csv>.json`, avec son heure et son sha256) ;
+  - la dernière vague est le dernier événement qui recoupe les dossiers (fusion ou scission) au journal des étiquettes,
+    lu à l'instant chez Supabase. Aujourd'hui, c'est 09:07:40. Une nuit qui fusionne compte aussi.
+  - L'outil refuse un classement sans fiche, un classement modifié depuis sa fiche, ou un classement fait avant la
+    dernière vague.
+- **L'épreuve, sur 4 cas :**
+  - le classement du 19/11, sans fiche : REFUS ;
+  - le classement neuf avec sa fiche : il passe ;
+  - une fiche datée de 08:00 UTC, avant la vague : REFUS ;
+  - un classement retouché après sa fiche : REFUS.
+- **Le classement neuf a été refait avec sa fiche**, à 13:47 heure de Paris. Il est identique, octet pour octet, à celui
+  de midi.
+- **⚠ L'épreuve de l'outil (`simuler`) est périmée elle aussi.** Elle donne 9 rouges, avec ou sans ma garde : la même
+  liste, vérifiée en rejouant l'outil d'avant ma modification. Elle sème ses témoins sur les premières lignes VAGUE_1 du
+  19/11, qui sont aujourd'hui les 50 écrites. **Elle est à refaire avant toute nouvelle écriture.**
+
+**⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 50 de la vague1a ne sont pas touchées. La
+vague1b attend.
