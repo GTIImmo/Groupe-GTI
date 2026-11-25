@@ -1557,3 +1557,33 @@ rejeu :**
 
 **⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 47 valeurs restent rangées, sans rien poser. La
 sentinelle viendra après la colonne A.
+
+### La vague1d ÉCRITE : 500 lignes (25/11, 15:33, son accord) ; les 500 relues contre le protocole ; 600 cases — arrêt
+
+> « ⭐ VAS-Y, ÉCRIS LA VAGUE1D. Empreintes a766058b78083c2a et 8c7f1f6afe33a075. [...] FAIS-LE TOI, ET RENDS-MOI LE CHIFFRE :
+> sur les 500, combien ont leur étiquette ÉGALE au dossier de leurs pièces du protocole, et combien de dossiers distincts.
+> [...] je veux les 500, pas 125. ⛔ Et tu t'arrêtes après. »
+
+**L'écriture.** L'interrupteur a été donné à la commande seule : il n'est dans aucun `.env`, vérifié avant. L'heure était
+15:33, hors de la fenêtre de la nuit.
+- **Le résultat :** sortie 0 ; 5 paquets de 100, chacun relu juste après son écriture (100 sur 100 à chaque fois) ;
+  **500 écrites, 0 sautée, 0 contre le protocole.**
+- **Les 6 critères de l'outil sont verts.**
+- **La sauvegarde et le rapport :** `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_153343_vague1d_ECRIRE`.
+
+**Sa demande : les 500 relues une par une contre le protocole, par un autre chemin que l'écrivain.**
+- **L'outil :** `phase2/checks/relire_la_colonne_a_contre_le_protocole_2026-11-25.py`, en lecture seule. Il lit le Sheet
+  par `apparier_classeur`, le verdict par le socle (passage 81) et les étiquettes par SQL direct.
+- **Pour chaque ligne, il exige :**
+  - qu'elle soit tranchée ;
+  - que le dossier de SES pièces (effectives) soit à la fois la case A, l'étiquette à l'arrivée et l'étiquette du fichier.
+- **La vague1d : 500 lignes justes sur 500, 0 fausse, 500 dossiers distincts, 0 à plusieurs dossiers.** Elle compte 489
+  ventes réglées au Sheet, et toutes ses lignes sont à leur place de la préparation.
+- **La vague1a et la vague1c :** toujours 50 sur 50 chacune, 50 dossiers distincts chacune.
+- **La colonne entière :**
+  - **600 cases A remplies, exactement les trois vagues** ;
+  - 0 case hors des vagues, 0 manquante, 0 étiquette sur deux lignes ;
+  - 0 ligne non tranchée par le protocole dont la case est remplie ;
+  - ses 4 doubles, P252U1JH et d2108609 sont VIDES.
+
+**⛔ ARRÊT :** 600 lignes sont écrites. La suite attend qu'il ait regardé son Sheet. Rien chez Hektor, pas de push.

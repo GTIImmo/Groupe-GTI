@@ -5925,6 +5925,15 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   regle changee (preuve ci-dessus) ; l'empreinte bouge avec la liste E (d34413f8 vs 271df49b).
 - **Rejeu sur copie** : verrou a deux etages (le juge refuse le vrai socle ; le fichier en lecture seule), temoins a chaque
   rejeu ; vrai socle b23e2b3a / 07:26:47 inchange.
+
+### 20.62 La vague1d ECRITE (500, 25/11 15:33, son accord) ; les 500 relues contre le protocole ; 600 cases -- arret
+
+- **Ecrite** : 5 paquets de 100 relus chacun, 500/500, 0 sautee, 0 contre le protocole, criteres 1-6 verts (sauvegarde
+  2026-11-25_153343_vague1d_ECRIRE).
+- **Relue par un autre chemin** (`relire_la_colonne_a_contre_le_protocole_2026-11-25.py`) : 500/500 etiquette = dossier de
+  SES pieces du protocole (= case A = arrivee = prevue), 500 dossiers distincts, 0 a plusieurs dossiers, 489 ventes
+  reglees ; vague1a et vague1c 50/50 ; 600 cases = les trois vagues, 0 hors, 0 sur deux lignes, 0 non tranchee remplie ;
+  ses doubles et les 2 de la liste E vides. ARRET jusqu'a son oeil.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
