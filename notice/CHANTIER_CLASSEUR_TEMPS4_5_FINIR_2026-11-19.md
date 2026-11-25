@@ -5988,6 +5988,17 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - **Les 47** : 47 cases encore vides ; 0 vente sans part ; 5 chaines a parts supposees seulement. Methode du geste des
   dates du 25/11 (gardes, sauvegarde, journal, cases vides seulement, a blanc sur copie, repetition, inverse, temoin de
   nuit) ; ordre propose : 8 concordantes, 7 « Prix », 23 dates ; le reste a lui.
+
+### 20.68 R27 sans le gel, R28 « un mandat une vente », R29 « la ligne suit la vente de sa commission » : les chiffres (25/11)
+
+- **R27** : 3e critere = la date d'annulation prouvee par le journal de Hektor ; a defaut, sans argent en jeu, la plus
+  ancienne (convention). VIALLARD -> YRUF0S9H (Hektor ne departage pas : refus le 02/02/2022) ; PAOLONE -> O6R10ZQA ;
+  PEE1XTR8 -> PEE1XTR8.
+- **R28** : 553 mandats a plusieurs ventes (1 142 ventes) sur 6 218 ; la forme sans jours debloque HUY49KEC et AUCUNE
+  autre ; hors de son motif le verrou prendrait 3 lignes (la paire de R27 et 5C80H7ZF, rien a etiqueter par R11/R24) :
+  R28 reste dans son motif.
+- **R29** : ne touche QUE 9Q0FHAKK -> D2024-0511 (3THZJOOG et P252U1JH : vente deja tenue ; 9B7U8221 : meme nom, c'est R27).
+- **A son accord** : poser R27, R28, R29 dans le juge pour le passage officiel (5 etiquettes de plus attendues).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

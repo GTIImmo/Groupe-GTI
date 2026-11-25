@@ -1922,3 +1922,67 @@ protocole (passage 81), le registre, le gel, le miroir local de la nuit et l'ima
     - les 2 valeurs de 9Q0FHAKK, qui attendent son choix d'acquéreur.
 
 **⛔ Rien n'est écrit, rien chez Hektor, pas de push.**
+
+### R27 sans le gel, R28 « un mandat, une seule vente », R29 « la ligne suit la vente de sa commission » : les trois chiffres (25/11, soir) — RIEN ÉCRIT
+
+> « R27 [...] pas ton troisième critère, celui du gel [...] R28 [...] je ne veux pas fixer un nombre de jours [...] Dis-moi
+> combien de mandats portent plusieurs ventes [...] 9Q0FHAKK : je tranche SOUCHON. L'étiquette est D2024-0511. [...] Fais-en
+> une règle, pas un cas [...] Rien n'est écrit tant que je n'ai pas vu ces trois chiffres. »
+
+L'outil de mesure : `phase2/checks/mesurer_r27_r28_r29_2026-11-25.py`, en lecture seule. Il ne lit que des champs de Hektor :
+mandat, honoraires, acquéreurs et journal des offres, jamais nos recopies de son Sheet.
+
+**① R27, le 3e critère sans le gel.** Il ne sert que pour deux lignes ANNULÉES, quand le dossier ne tient aucune vente.
+- **VIALLARD :**
+  - 3308P0UX est annulée le 22/05/2022, YRUF0S9H le 22/04/2022 ;
+  - le dossier ne tient que l'offre 4483 ;
+  - **le journal de Hektor ne départage pas** : l'offre y est proposée et refusée le même jour, le 02/02/2022 ;
+  - aucune date d'annulation n'est déjà posée.
+- **La proposition :**
+  - ③ **la date d'annulation que prouve le journal de Hektor** (le refus de l'offre, ou l'annulation du compromis). C'est
+    une preuve ; ici, elle ne tranche pas ;
+  - ④ **à défaut, et seulement quand aucun euro n'est en jeu, la plus ancienne date d'annulation.** C'est une
+    convention, et non une preuve.
+- **Ce que cela donne :**
+  - VIALLARD → **YRUF0S9H** porte D2022-0644, et 3308P0UX reste vide (doublon). C'est l'inverse du choix du gel ;
+  - PAOLONE ne change pas : O6R10ZQA par le critère ②, et le ④ dit la même chose ;
+  - PEE1XTR8 garde ses 5 700 € par le critère ①.
+
+**② R28, le verrou « un mandat, une seule vente ».**
+- **Les mandats chez Hektor** (sans les copies) : 9 288 ventes réparties sur 6 218 mandats.
+  - **553 mandats portent plusieurs ventes**, soit 1 142 ventes : 517 en ont 2, et 36 en ont 3.
+  - Les ventes d'un même mandat ont souvent des années d'écart (2012 et 2023, par exemple) : Hektor recycle ses numéros
+    de mandat.
+  - 5 665 mandats ne portent qu'une seule vente.
+  - 2 481 ventes n'ont pas de numéro de mandat : le verrou ne les prend jamais.
+- **La forme sans jours :** un seul mandat, une seule vente dessus, les honoraires de Hektor égaux à la Commission TTC, le
+  même acquéreur. La date ne sert que si le mandat porte plusieurs ventes.
+  - **Elle débloque HUY49KEC** (vente 3741, D2018-0476) **et AUCUNE autre ligne.** Les 3 autres « copies seules » restent
+    bloquées :
+    - BR8ZTN5F : aucune vente sur son mandat ;
+    - C0HXVVCW : la vente de son mandat est d'un autre acquéreur, et déjà tenue par 9a09e537 ;
+    - SHN6RKDI : même chose, la vente est tenue par CC8TJTBR.
+- **⚠ Le témoin de portée : R28 doit rester limitée à son motif.** Hors de lui, le verrou prendrait 3 autres lignes en
+  attente :
+  - PEE1XTR8 et 9B7U8221, qui réclament toutes les deux la même vente : c'est la paire de R27 ;
+  - 5C80H7ZF, une première tentative de PRADIER (annulée le 20/06/2020). Sa vente du 15/01/2021 appartient à 6VSA6EOZ,
+    et R11/R24 l'ont déjà dite « rien à étiqueter ».
+
+**③ R29, « une ligne suit la vente qui porte sa commission, même quand le nom noté est celui d'un acquéreur refusé ».**
+- **Ses conditions, toutes requises :**
+  - le nom noté par la ligne est celui d'une offre REFUSÉE chez Hektor, au jour de l'« Offre Achat » de la ligne ;
+  - le mandat de l'annonce de cette offre ne porte qu'UNE vente ;
+  - les honoraires de Hektor sur cette vente sont égaux à la Commission TTC de la ligne ;
+  - la vente est au nom d'un AUTRE acquéreur ;
+  - aucune autre ligne ne tient cette vente.
+- **Elle ne touche qu'UNE ligne : 9Q0FHAKK → la vente 3650, D2024-0511.**
+  - POTTIER est l'offre refusée du 23/08/2024, sur l'annonce 8395 (mandat 17010) ;
+  - la vente est celle de SOUCHON ;
+  - 18 000 € d'honoraires, égaux à la Commission TTC.
+- **Les 3 autres candidates sont écartées, chacune par une condition :**
+  - 3THZJOOG et P252U1JH : la vente est déjà tenue par une autre ligne (SUVPN4BH, FOZ6HZLK) ;
+  - 9B7U8221 : la vente est au MÊME nom (SABOT). C'est la paire de R27, pas un acquéreur refusé.
+
+**La suite, à son accord :** poser R27 (sans le gel), R28 (dans son motif seulement) et R29 dans le juge, pour le prochain
+passage officiel. On attendrait alors 5 étiquettes de plus : PEE1XTR8, O6R10ZQA, YRUF0S9H, HUY49KEC et 9Q0FHAKK.
+⛔ Rien n'est écrit, rien chez Hektor, pas de push.
