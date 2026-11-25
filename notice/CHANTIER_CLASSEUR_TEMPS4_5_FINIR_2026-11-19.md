@@ -5934,6 +5934,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   SES pieces du protocole (= case A = arrivee = prevue), 500 dossiers distincts, 0 a plusieurs dossiers, 489 ventes
   reglees ; vague1a et vague1c 50/50 ; 600 cases = les trois vagues, 0 hors, 0 sur deux lignes, 0 non tranchee remplie ;
   ses doubles et les 2 de la liste E vides. ARRET jusqu'a son oeil.
+
+### 20.63 Ses decisions du 20/11 au passage 81 (19/19 et 9/9) ; la vente de 9Q0FHAKK ; la vague de 2 000 prete (25/11)
+
+- **Les 19** : 19/19 tranchees, un dossier, seules, etiquette absente de A (5 avec vente reglee) ; l'inverse : 0.
+- **La decision B** : 9/9 ont l'etiquette de LEUR VENTE (la tentative ratee garde l'etiquette d'avant G2) : G2 sans objet.
+- **9Q0FHAKK** : sa vente est 3647 + 3650 (D2024-0511, annonce 8395, mandat 17010), tenue par personne ; l'offre 3648 (POTTIER,
+  23/08/2024) est l'offre de sa ligne, sa date du 11/11/2026 = notre geste. Le protocole cherchait sur le bien 5617 (mandat
+  17253 = l'affaire de 7W7XUBPO). Reparation proposee (rattachement par decision, passage officiel, 2 valeurs) : a lui.
+- **vague1e** (2 000) : a blanc 2000/0, 0 contre (vague 642d0fe875a76243, colonne A 80f0b162fa7dba57), lignes 605 a 2611,
+  1 998 ventes reglees ; 7 lignes de la plage dehors (6 de ses decisions, 1 non tranchee). A SON ACCORD.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

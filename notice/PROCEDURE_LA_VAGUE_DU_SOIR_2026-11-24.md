@@ -1587,3 +1587,84 @@ sentinelle viendra après la colonne A.
   - ses 4 doubles, P252U1JH et d2108609 sont VIDES.
 
 **⛔ ARRÊT :** 600 lignes sont écrites. La suite attend qu'il ait regardé son Sheet. Rien chez Hektor, pas de push.
+
+### Ses décisions du 20/11 au passage 81 ; la vente de 9Q0FHAKK ; la vague de 2 000 prête (25/11, soir) — RIEN ÉCRIT
+
+> « MA DÉCISION DU 20/11 SUR LES 19 EST DEVENUE INUTILE [...] MESURE D'ABORD, PUIS JE LÈVE [...] FAIS LE MÊME TEST SUR MES 9
+> DE LA DÉCISION B [...] 9Q0FHAKK : SA VENTE EXISTE [...] RIEN NE S'ÉCRIT SUR TOUT ÇA. Finis d'abord la colonne A [...] »
+
+L'outil de mesure : `phase2/checks/mesurer_ses_decisions_du_20_11_et_9q0fhakk_2026-11-25.py`, en lecture seule.
+
+**① Les 19 de sa décision du 20/11 : 19 sur 19 sont TRANCHÉES au passage 81.** Chacune a un seul dossier, porte
+l'étiquette du 81, est seule sur son dossier, et son étiquette n'est pas déjà dans la colonne A.
+- **5 portent une vente réglée :** TL9AFW0O (D2023-0585), RF9KYWSY (D2022-0672), 3250892d (D2025-0295), 87eb399e
+  (D2026-0033) et 0bc98552 (D2026-0049).
+  - Leurs pièces sont exactement celles qu'a vues son contrôleur : sans les doublons 21803/21805, 25699 et 998, et sans
+    les compromis de BELMONT (4370) et de SCIORTINO (24380).
+- **Les 14 autres** sont des annulées sans vente, chacune avec son propre dossier. Elles comprennent les 2 lignes que
+  BELMONT et SCIORTINO tiennent désormais : FWCFAN6O (4370) et 9KHYVR1M (24380).
+- **L'inverse : 0.**
+  - L'écrivain n'écrit que des cases VIDES : il n'écrase jamais.
+  - 0 étiquette des 19 n'est déjà dans la colonne A, et aucune n'est partagée avec une autre ligne tranchée.
+  - Les remettre dans une vague ne change donc l'étiquette d'aucune ligne déjà écrite.
+
+**② Les 9 de sa décision B : 9 sur 9 ont pour étiquette prévue celle de LEUR VENTE.**
+- **Le passage 81, après la vague, a fait ce que G2 devait faire :**
+  - chaque ligne tient sa vente, réglée : WG8CG5T2 → D2020-0638 (vente 22273), R9ANL92S → D2020-0615, SA7DWYEZ →
+    D2020-0660, ANHQ1PK7 → D2019-0655, MFMR0U6A → D2019-0665, V5NJER40 → D2019-0661, JBCC1KBT → D2019-0664, A6OS2TTJ →
+    D2019-0659, QL70KV8I → D2018-0537 ;
+  - la tentative ratée garde, de son côté, l'étiquette d'avant G2 (pour WG8CG5T2 : 22269 et 22272 sous aec7c50b).
+- **⇒ G2 n'a plus d'objet pour elles.**
+
+**③ 9Q0FHAKK (ligne 286, 18 000 €) : j'arrive au même endroit que lui, plus une pièce.**
+- **Le protocole l'a mise en ATTENTE** (AUCUNE_PIÈCE_PROUVÉE : « bien 5617 : 3 pièces jugées, aucune pour elle »). Il a
+  cherché sur le bien du mandat 17253, qui est l'annonce 5617 (VA31338) et une autre affaire :
+  - PAGÈS EYRAUD, offre du 04/10/2024 et compromis du 22/10/2024 ;
+  - vente réglée le 11/02/2025, facture GGTI00003900, 7 800 € ;
+  - cette affaire est tenue par 7W7XUBPO.
+- **Sa vente est sur l'annonce 8395 (VM68160, mandat 17010).** Quatre colonnes de sa ligne tombent au jour près sur ses
+  pièces :
+  - **l'offre du Sheet, 23/08/24,** est la proposition de l'offre **3648** (POTTIER, 460 000) ;
+  - **le compromis, 11/09/2024,** est le **3647** (SOUCHON, 460 000) ;
+  - **la vente fixée, 22/01/2025,** est la vente **3650** ;
+  - **la Commission TTC, 18 000 €,** est égale aux honoraires de 3647 et de 3650.
+- **3647 et 3650 forment la chaîne 3647 (D2024-0511), tenue par PERSONNE**, ni au 81 ni au gel.
+- **Ce qui ne colle pas :**
+  - le Mandat (17253) et le Prix (112 800) ;
+  - mais 112 800 figure sur **8 lignes** du Sheet : ce n'est pas un prix qui prouve.
+- **L'audit du 18/11 l'avait déjà vu :** A_RATTACHER, avec l'offre 3648, le compromis 3647 et la vente 3650, et une
+  question : « POTTIER et SOUCHON forment-ils le même ménage acquéreur ? ».
+- **La chaîne 3648 : c'est l'offre de SA ligne,** du 23/08/2024, au nom de POTTIER.
+  - La date du « 11/11/2026 » est celle de NOTRE geste des 11 et 12/11, qui a réécrit la colonne `date` de 1 205 offres.
+    Le protocole lit la vraie date dans les propositions.
+  - Elle est seule dans sa chaîne parce que son acquéreur (POTTIER) n'est pas celui du compromis et de la vente
+    (SOUCHON).
+- **La réparation proposée, à sa décision, RIEN FAIT :**
+  - une décision de rattachement dans le protocole, comme ses 5 du 23/11 : 9Q0FHAKK ← 3647 + 3650, étiquette D2024-0511.
+    L'offre 3648 reste « à part, sans effet sur l'étiquette », sauf s'il dit que POTTIER et SOUCHON sont un seul ménage ;
+  - puis un passage officiel, « plus tard, avec les autres restes » ;
+  - puis les 2 valeurs sur la vente 3650 : réglée le 24/01/2025, facture GGTI00003842.
+  - **⚠ Elles ne sont PAS dans mes 47.** Les 47 ne portent que sur des lignes tranchées, et 9Q0FHAKK ne l'est pas. Ce
+    seront la 48e et la 49e.
+  - Son Mandat au Sheet (17253 au lieu de 17010) est à corriger par lui : l'écrivain ne touche que la colonne A.
+
+**④ La vague de 2 000, vague1e : préparée, PAS écrite.**
+- **Le classement a été refait d'abord :** 600 cases A, 4 097 lignes en VAGUE_1, tous les témoins verts, une fiche neuve.
+- **L'à blanc :** 20 paquets de 100, **2 000 à écrire, 0 sautée, 0 contre le protocole.** L'empreinte de la vague est
+  **642d0fe875a76243**, celle de la colonne A **80f0b162fa7dba57**.
+  - Rapport : `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_174523_vague1e_A_BLANC`.
+- **Ma vérification par un autre chemin :** 2 000 sur 2 000 ont une étiquette prévue égale au dossier de SES pièces du
+  protocole, et à l'étiquette à l'arrivée. Les 2 000 étiquettes sont distinctes.
+- **Son contenu :** les lignes 605 à 2611, soit **1 998 ventes réglées**, 1 vente prévue et 1 annulée. 22 de ces lignes
+  ne s'écrivent que grâce au protocole.
+- **Ce qu'elle laisse dans la plage : 7 lignes.**
+  - 4 de sa décision B : WG8CG5T2, R9ANL92S, SA7DWYEZ et ANHQ1PK7 ;
+  - 2 de ses 19 : TL9AFW0O et RF9KYWSY ;
+  - 1 non tranchée : PEE1XTR8.
+- **Après cette vague, il restera 2 097 lignes en VAGUE_1.**
+- **Le bon à lire :** `notice/CLASSEUR_VAGUE_vague1e_2026-11-25_LE_BON_A_LIRE.txt` (local seulement).
+- **Lever ses décisions** demande de retirer leurs listes de l'écrivain (la décision B est écrite dans son code, les 19
+  dans un fichier). C'est un changement, donc à son mot. Les 6 lignes de la plage pourront alors partir dans une vague
+  suivante.
+
+**⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.**
