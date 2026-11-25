@@ -589,3 +589,61 @@ ba4992c8c778bcb8fc881082c93c301a**. La commande refuse le geste sans cette empre
   autre fichier n'a de caractère parasite.
 - **Le reflet `app_dossier_id` des notes et des conditions** est le numéro de BIEN de l'app (affaire_ledger.py, l. 55),
   pas l'étiquette : la vague n'y touche pas. A3 ne rafraîchit donc que `app_chaine_id`.
+
+### Le geste de 08:09 : arrêté à l'étape 2 par la commande elle-même, puis remis à la main (25/11)
+
+**Son accord, à 08:0x, porte sur le manifeste ba4992c8.** Le chemin complet du brouillon posé est
+`C:\Hektor\chantier_classeur_q6_cache\protocole_a_blanc_retrait_e\brouillon_detachements_protocole_passage_82.csv` : 636
+lignes, md5 051aee25fe8fa3c8caa5df93bb61c41d. C'est celui AVEC le retrait de E ; celui à 632 lignes est dans `protocole\`.
+
+**Lancé à 08:09:31. L'étape 0 est verte, sans aucun refus.**
+- **L'étape 1** a joué ses sauvegardes chez Supabase, quatre tables, suffixe 20261125_080931 :
+  - le registre (chaînes et étiquettes) : 31 375 lignes ;
+  - le compteur : 25 ;
+  - le journal des étiquettes : 11 664 ;
+  - la répartition : 17 907.
+- **L'étape 2** a posé le fichier des coupes, puis le module. Puis :
+  **« ⛔ ARRÊT : le module posé n'est pas le dépôt moins des lignes (0 ajoutée, 0 retirée) ».**
+
+**Les deux défauts, les miens, dans la commande :**
+1. **La preuve de pose, au geste, comparait le module à lui-même.** À blanc, le module posé est une copie dans la scène ; au
+   geste, c'est le fichier du dépôt. La comparaison « dépôt contre posé » lisait donc le même fichier. La preuve de `.env`
+   avait le même défaut (au geste, elle n'aurait jamais pu mordre).
+2. **La remise automatique n'a pas joué.** Elle n'était prévue que si l'étape 2 avait FINI (`pose is not None`), et elle
+   n'attrapait que les refus. Le fichier des coupes et le module sont donc restés posés ; `.env` n'avait pas été touché.
+
+**Remis à la main tout de suite** (`--remettre` depuis les sauvegardes de la scène) :
+- le fichier des coupes est revenu à f5a0a6d8, le module à a44f58df ; `.env` est resté à 30fd3b99, sans interrupteur ;
+- `git diff` est vide.
+
+**Relu chez Supabase :**
+- seules les quatre sauvegardes datées sont nées : ce sont des ajouts, rien n'est détruit ;
+- la répartition reste b531b578 (17 907), le journal 80, la mise de côté 14 ;
+- les chaînes et étiquettes du registre ont la même empreinte que la sauvegarde de 08:09 (5c92aa71) ;
+- **l'étape 5 n'a jamais été atteinte : rien n'a été poussé.**
+
+**La correction** (commande a643152c → **5ff83ac6**, 20 lignes ajoutées, 4 retirées ; le diff est dans
+`vague_du_soir/commande_diff_a643152c_vers_5ff83ac6.diff`) :
+- les originaux (module et `.env`) sont lus AVANT toute écriture, et les deux preuves comparent le posé à eux ;
+- la remise joue dès que la pose a COMMENCÉ, pour TOUTE erreur, et **jamais une fois l'étape 5 commencée**. Une poussée
+  interrompue se tranche avec lui, et la commande le dit.
+
+**Éprouvée sur le chemin du GESTE, sur des copies** (`test_vague_du_soir_geste_sur_copies.py`). C'est le vrai `main()` en
+mode geste ; le `.env` est factice, et Supabase, les programmes et le chaînage sont des leurres.
+- **A, une panne pendant la pose :** remis, copies identiques.
+- **B, une erreur au point de non-retour :** remis.
+- **C, une panne pendant l'étape 5 :** RIEN n'est remis, et la commande le dit.
+- **D, le chemin vert :** les étapes 0 à 8 dans l'ordre, la pose prouvée, « 9. ARRÊT ».
+- Les vrais fichiers n'ont jamais été touchés.
+
+**Puis rejouée à blanc de 0 à 4 sur l'état du jour :**
+- l'étape 0 entièrement verte (08:12, horaire compris) ;
+- la pose : 10 lignes en moins, 0 ajoutée, et `.env` = ses deux interrupteurs ;
+- le point de non-retour : **0 écart sur 31 375 pièces**.
+
+**Le nouveau manifeste : e65ea11dd4495daa2411c131f058d973.** Il ne change que l'empreinte de la commande ; les autres pièces
+sont identiques à ba4992c8. ⛔ **Il attend son accord** : celui de 08:0x portait sur la commande a643152c.
+
+**La leçon.** Une preuve qui compare « avant » et « après » doit lire l'« avant » AVANT d'écrire. Et une remise doit être
+prévue pour la panne PENDANT le geste, pas seulement après. L'essai à blanc ne pouvait voir ni l'un ni l'autre : il écrivait
+ailleurs. **Un chemin de geste s'éprouve sur des copies EN MODE GESTE, pas seulement à blanc.**

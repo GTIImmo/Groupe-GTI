@@ -5750,6 +5750,19 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   - la pose ne change plus les fins de ligne (le depot est en LF) ;
   - deux chemins abimes par l'outil Bash (``) ;
   - la garde de `.env` (une comparaison par lignes, pas un diff).
+### 20.50 Le geste de 08:09 arrete a l'etape 2 par la commande ; remis ; commande corrigee (25/11)
+
+- **Son accord** portait sur ba4992c8. Lance a 08:09:31 : etape 0 verte, etape 1 a joue ses 4 sauvegardes datees (suffixe
+  20261125_080931). L'etape 2 a pose le fichier des coupes et le module, puis s'est ARRETEE sur sa preuve de pose.
+- **Mes deux defauts :**
+  - au geste, la preuve comparait le module (et .env) a lui-meme ;
+  - la remise ne jouait que si l'etape 2 etait finie.
+- **Remis a la main** (f5a0a6d8 / a44f58df ; .env intact 30fd3b99) ; chez Supabase, seules les 4 sauvegardes sont nees,
+  tout le reste est inchange, et RIEN n'a ete pousse.
+- **Commande corrigee** (a643152c -> 5ff83ac6) : les originaux sont lus avant d'ecrire ; la remise joue des le debut de la
+  pose, pour toute erreur, et jamais apres le debut de l'etape 5.
+- **Eprouvee EN MODE GESTE sur des copies** (4 cas verts), puis a blanc 0 a 4 (0 ecart). Le nouveau manifeste
+  e65ea11dd4495daa2411c131f058d973 attend son accord.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

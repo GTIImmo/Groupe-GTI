@@ -326,6 +326,10 @@ def etape_2(M: dict, scene: Path, a_blanc: bool) -> dict:
     det = (cible / FICHIER_DET.name) if a_blanc else FICHIER_DET
     mod = (cible / MODULE.name) if a_blanc else MODULE
     env = (cible / ".env") if a_blanc else ENV
+    # ⛔ 25/11, LE GESTE DE 08:09 S'EST ARRETE ICI : au geste, le module pose EST le module du depot (meme fichier). La
+    #   preuve « depot moins les seules lignes retirees » comparait donc le fichier A LUI-MEME (0 retiree -> refus). Les
+    #   ORIGINAUX sont lus ICI, AVANT toute ecriture, et les preuves comparent le pose a eux -- a blanc comme au geste.
+    orig_mod, orig_env = MODULE.read_bytes(), ENV.read_bytes()
     shutil.copyfile(M["brouillon"]["chemin"], det)
     if md5(det) != M["brouillon"]["md5"]:
         raise Refus("le fichier des coupes pose n'a pas l'empreinte du brouillon")
@@ -337,7 +341,7 @@ def etape_2(M: dict, scene: Path, a_blanc: bool) -> dict:
     #   LF. On garde les fins de ligne d'origine, et on PROUVE que le fichier pose est le depot MOINS les seules lignes
     #   retirees : aucune ligne ajoutee, aucune changee.
     import difflib
-    d_ = list(difflib.unified_diff(MODULE.read_bytes().decode("utf-8").split("\n"),
+    d_ = list(difflib.unified_diff(orig_mod.decode("utf-8").split("\n"),
                                    mod.read_bytes().decode("utf-8").split("\n"), lineterm="", n=0))
     plus = [l_ for l_ in d_ if l_.startswith("+") and not l_.startswith("+++")]
     moins = [l_ for l_ in d_ if l_.startswith("-") and not l_.startswith("---")]
@@ -355,7 +359,7 @@ def etape_2(M: dict, scene: Path, a_blanc: bool) -> dict:
     def hors_interrupteurs(t: str) -> Counter:
         return Counter(l_ for l_ in t.replace("\r\n", "\n").split("\n")
                        if l_.split("=", 1)[0].strip() not in INTERRUPTEURS)
-    avant_, apres_ = hors_interrupteurs(ENV.read_bytes().decode("utf-8")), hors_interrupteurs(env.read_bytes().decode("utf-8"))
+    avant_, apres_ = hors_interrupteurs(orig_env.decode("utf-8")), hors_interrupteurs(env.read_bytes().decode("utf-8"))
     if avant_ != apres_:
         diff_ = (avant_ - apres_) + (apres_ - avant_)
         raise Refus(".env pose change autre chose que les deux interrupteurs (cles seulement, jamais les valeurs) : %s"
@@ -554,6 +558,11 @@ def main() -> int:
     durees = {}
     attendu = Path(a.attendu_temoin or M["attendu_E"]["chemin"])
     pose = None
+    # ⛔ 25/11, LE GESTE DE 08:09 : la remise ne jouait que si l'etape 2 avait FINI (`pose is not None`) -- un refus PENDANT
+    #   la pose laissait le fichier des coupes et le module poses (remis a la main a 08:1x). La remise joue desormais des que
+    #   la pose a COMMENCE, pour TOUTE erreur (pas seulement un refus), et jamais une fois l'etape 5 commencee (« apres
+    #   l'etape 5, on ne revient pas en arriere » : une poussee interrompue se tranche avec lui, pas par la machine).
+    pose_commencee = etape5_commencee = False
     try:
         t = time.time()
         if a.seulement in (None, 0):
@@ -570,6 +579,7 @@ def main() -> int:
         etape_1(scene, a_blanc, horo)
         durees[1] = time.time() - t
         t = time.time()
+        pose_commencee = True
         pose = etape_2(M, scene, a_blanc)
         durees[2] = time.time() - t
         if a_blanc:
@@ -594,6 +604,7 @@ def main() -> int:
             remettre_si_geste = False
         else:
             t = time.time()
+            etape5_commencee = True
             lancer(["phase2/sync/affaire_ledger.py", "--refresh", "--push"], "le chainage et sa poussee")
             durees[5] = time.time() - t
             t = time.time()
@@ -618,11 +629,16 @@ def main() -> int:
             t = time.time()
             lancer(["phase2/sync/repartition_commission.py", "--purger-orphelines", "--pousser"], "la repartition")
             durees[8] = time.time() - t
-    except Refus as e:
+    except Exception as e:  # noqa: BLE001 -- TOUTE erreur, pas seulement un refus
+        import traceback
         dire("⛔ ARRET : %s" % e)
-        if not a_blanc and pose is not None and 5 not in durees:
+        if not isinstance(e, Refus):
+            dire(traceback.format_exc())
+        if not a_blanc and pose_commencee and not etape5_commencee:
             dire("   AVANT L'ETAPE 5 : TOUT EST REMIS COMME AVANT")
             remettre(scene)
+        elif not a_blanc and etape5_commencee:
+            dire("   ⛔ L'ETAPE 5 A COMMENCE : RIEN N'EST REMIS PAR LA MACHINE -- on s'arrete et on tranche avec lui")
         return 1
     dire("9. ARRET -- durees (s) : %s ; total %.0f s" % (
         ", ".join("%d: %.0f" % kv for kv in sorted(durees.items())), sum(durees.values())))
