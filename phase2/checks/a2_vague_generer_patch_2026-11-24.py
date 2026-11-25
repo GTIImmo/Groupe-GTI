@@ -415,6 +415,13 @@ begin
   select count(*) into n from public.app_affaire_ledger where app_chaine_id in (%(nommees)s)
      and kind = 'vente' and coalesce(vente_reglee_app, '') <> '';
   if n <> 0 then raise exception '⛔ controle : % vente(s) reglee(s) sur les %(n_nommees)s chaines nommees', n; end if;
+  -- ⭐ LES ORPHELINES (l'alerte data.repartition_orpheline, 26 depuis le 21/11 : 13 dossiers du rapatriement du 13/11 que
+  --    la vague fait RENAITRE, et les chaines qui disparaissent a la vague, mises de cote ci-dessus) : apres A2, AUCUNE
+  --    part sur une chaine qui ne porte aucune piece (son mot du 25/11 : « ce rouge doit tomber a 0 ce soir »)
+  select count(*), coalesce(string_agg(distinct r.app_chaine_id::text, ','), '') into n, d
+    from public.app_affaire_repartition r
+   where not exists (select 1 from public.app_affaire_ledger l where l.app_chaine_id = r.app_chaine_id);
+  if n <> 0 then raise exception '⛔ controle : % part(s) orpheline(s) apres A2 (chaines %)', n, d; end if;
   -- ⭐ LA GARDE DU TEMPS 2 : plus AUCUNE vente reglee sans part a l'arrivee
   e := (%(sql_vr)s);
   if e <> '' then raise exception '⛔ controle : ventes reglees sans part apres A2 : [%]', e; end if;
@@ -580,6 +587,8 @@ select (select count(*) from public.app_classeur_realignement_journal where lot 
        (select count(*) from public.app_affaire_repartition where ecrit_par like '%(lot)s:%%') as parts_du_lot_attendu_%(n_rec)s_plus_1,
        (select count(*) from public.app_affaire_repartition_mise_de_cote where mise_de_cote_par = 'patch_%(lot)s') as mises_de_cote_attendu_%(n_mis)s,
        (%(sql_vr)s) as ventes_reglees_sans_part_attendu_vide,
+       (select count(*) from public.app_affaire_repartition r where not exists (select 1 from public.app_affaire_ledger l
+         where l.app_chaine_id = r.app_chaine_id)) as parts_orphelines_attendu_0,
        %(expr_membres_lit)s = '%(e_membres)s' as membres_comme_le_rejeu,
        (select %(expr_parts)s from public.app_affaire_repartition) as empreinte_apres;
 """) % D

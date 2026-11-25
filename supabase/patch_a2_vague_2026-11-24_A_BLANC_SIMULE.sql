@@ -481,6 +481,13 @@ begin
   select count(*) into n from public.app_affaire_ledger where app_chaine_id in (21, 117, 125, 1059, 3701, 4196, 4370, 4500, 4533, 4560, 4621, 4669, 4850, 6171, 6433, 7645, 11560, 12011, 12566, 14147, 15004, 16143, 16869, 17136, 17153, 17546, 17912, 19862, 20794, 21658, 22269, 22980, 23412, 24588, 24630, 24649, 26013, 26832, 27136, 27512, 27721, 28568)
      and kind = 'vente' and coalesce(vente_reglee_app, '') <> '';
   if n <> 0 then raise exception '⛔ controle : % vente(s) reglee(s) sur les 42 chaines nommees', n; end if;
+  -- ⭐ LES ORPHELINES (l'alerte data.repartition_orpheline, 26 depuis le 21/11 : 13 dossiers du rapatriement du 13/11 que
+  --    la vague fait RENAITRE, et les chaines qui disparaissent a la vague, mises de cote ci-dessus) : apres A2, AUCUNE
+  --    part sur une chaine qui ne porte aucune piece (son mot du 25/11 : « ce rouge doit tomber a 0 ce soir »)
+  select count(*), coalesce(string_agg(distinct r.app_chaine_id::text, ','), '') into n, d
+    from public.app_affaire_repartition r
+   where not exists (select 1 from public.app_affaire_ledger l where l.app_chaine_id = r.app_chaine_id);
+  if n <> 0 then raise exception '⛔ controle : % part(s) orpheline(s) apres A2 (chaines %)', n, d; end if;
   -- ⭐ LA GARDE DU TEMPS 2 : plus AUCUNE vente reglee sans part a l'arrivee
   e := (select coalesce(string_agg(c::text, ',' order by c), '') from (
     select distinct l.app_chaine_id c from public.app_affaire_ledger l

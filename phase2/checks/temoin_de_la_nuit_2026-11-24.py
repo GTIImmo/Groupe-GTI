@@ -62,6 +62,15 @@ select md5(coalesce((select string_agg(concat_ws('|', l.app_affaire_id, l.vente_
     from public.app_affaire_note n where abs(n.app_affaire_id) in (%s)), ''))""" % (IDS_42, IDS_42))
 
 
+def empreinte_py(rows) -> str:
+    """md5 de string_agg(concat_ws('|', app_chaine_id, cote, rang, hektor_user_id, nom_au_moment, pourcentage, origine,
+    ecrit_par), ';' order by app_chaine_id, cote, rang) -- calculee sur les lignes lues (photo ou maintenant)."""
+    import hashlib
+    rs = sorted(rows, key=lambda r: (int(r[0]), r[1], int(r[2])))
+    txt = ";".join("|".join(str(x) for x in r[:8] if x is not None) for r in rs)
+    return hashlib.md5(txt.encode("utf-8")).hexdigest()
+
+
 def lire(cu):
     cu.execute("select app_chaine_id, cote, rang, hektor_user_id, nom_au_moment, pourcentage::text, origine, ecrit_par, "
                "ecrit_le::text from public.app_affaire_repartition")
@@ -139,7 +148,57 @@ def main() -> int:
         print("      %s : %s" % (k, sorted(v)[:15]))
     nh = [ch for ch, v in B.items() if any(not str(r[6]).startswith("hektor") for r in v.values())
           and any(str(r[6]).startswith("hektor") for r in v.values())]
-    print("   ⚠ chaines MIXTES (une part hektor% a cote d'une part protegee) : %d %s" % (len(nh), sorted(nh)[:15]))
+    print("   ⚠ chaines MIXTES (une part hektor%% a cote d'une part protegee) : %d %s" % (len(nh), sorted(nh)[:15]))
+
+    # ③ SON MOT DU 25/11 : « LES DEUX FACES [...] AVEC TON EMPREINTE GLOBALE »
+    print()
+    print("③ L'EMPREINTE GLOBALE DU REGISTRE DES PARTS (la meme expression que les patchs : concat_ws, ordre chaine/cote/rang)")
+    cu.execute("select count(*), md5(coalesce(string_agg(concat_ws('|', app_chaine_id, cote, rang, hektor_user_id, "
+               "nom_au_moment, pourcentage, origine, ecrit_par), ';' order by app_chaine_id, cote, rang), '')) "
+               "from public.app_affaire_repartition")
+    n_sql, e_sql = cu.fetchone()
+    e_photo, e_py_maintenant = empreinte_py(av["parts"]), empreinte_py(rows)
+    print("   la photo (%s) : %d parts, empreinte %s (recalculee ici sur ses lignes)" % (av["quand"][:16], len(av["parts"]), e_photo))
+    print("   maintenant      : %d parts, empreinte %s (chez Supabase, en SQL)" % (n_sql, e_sql))
+    print("   ⭐ temoin de la methode : la meme empreinte recalculee ici sur les lignes de maintenant = %s -> %s" % (
+        e_py_maintenant, "IDENTIQUE au SQL" if e_py_maintenant == e_sql else "⛔ DIFFERENTE : la methode ne vaut rien"))
+    print("   -> %s" % ("LE REGISTRE DES PARTS EST INCHANGE DEPUIS LA PHOTO" if e_photo == e_sql else
+                       "⛔ LE REGISTRE A CHANGE DEPUIS LA PHOTO"))
+    # le temoin positif du comparateur : une copie de la photo dont UNE part est retouchee doit etre vue
+    import copy
+    faux = copy.deepcopy(av["parts"])
+    faux[0][5] = str(float(faux[0][5]) + 1)
+    A2_, B2_ = par_chaine(av["parts"]), par_chaine(faux)
+    vus = [ch for ch in set(A2_) | set(B2_) if {k: val(r) for k, r in A2_.get(ch, {}).items()} !=
+           {k: val(r) for k, r in B2_.get(ch, {}).items()}]
+    print("   ⭐ temoin positif du comparateur : une part de la photo retouchee (chaine %s) -> %d chaine(s) vue(s) changee(s) %s" % (
+        faux[0][0], len(vus), "(il voit)" if vus == [faux[0][0]] else "⛔ (il ne voit pas)"))
+
+    # ④ LES TABLES VOISINES DES GESTES DU 24/11 (ce qui pourrait avoir bouge ailleurs)
+    print()
+    print("④ LES TABLES VOISINES")
+    for titre, q in (
+            ("journal du realignement (par lot)", "select coalesce(string_agg(lot || ' ' || n, ', ' order by lot), '') from "
+             "(select lot, count(*) n from public.app_classeur_realignement_journal group by lot) x"),
+            ("journal : derniere ecriture", "select max(ecrit_le)::text from public.app_classeur_realignement_journal"),
+            ("mise de cote (par auteur)", "select coalesce(string_agg(mise_de_cote_par || ' ' || n, ', ' order by mise_de_cote_par), '') "
+             "from (select mise_de_cote_par, count(*) n from public.app_affaire_repartition_mise_de_cote group by 1) x"),
+            ("notes (app_affaire_note), par origine", "select string_agg(coalesce(origine, '-') || ' ' || n, ', ' order by origine) "
+             "from (select origine, count(*) n from public.app_affaire_note group by 1) x"),
+            ("notes ecrites depuis la photo", "select count(*) from public.app_affaire_note where ecrit_le > '%s'" % av["quand"]),
+            ("carnet des mandats : Charges du classeur", "select count(*) from public.app_mandat_champ_app where champ = "
+             "'charge_commission' and origine = 'classeur'"),
+            ("carnet : ecrit depuis la photo (tous champs)", "select coalesce(string_agg(champ || '/' || coalesce(origine, '-') || ' ' "
+             "|| n, ', '), '0') from (select champ, origine, count(*) n from public.app_mandat_champ_app where ecrit_le > '%s' "
+             "group by 1, 2) x" % av["quand"]),
+            ("parts ecrites depuis la photo", "select count(*) from public.app_affaire_repartition where ecrit_le > '%s'" % av["quand"])):
+        try:
+            cu.execute(q)
+            print("   %-48s %s" % (titre, cu.fetchone()[0]))
+        except Exception as e:  # noqa: BLE001
+            cn.rollback()
+            cu.execute("set transaction read only")      # la lecture reste en lecture seule apres une erreur
+            print("   %-48s (illisible : %s)" % (titre, str(e).strip().splitlines()[0][:120]))
     return 0
 
 

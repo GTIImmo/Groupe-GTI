@@ -362,3 +362,67 @@ reflets, pas de l'argent. La commande les joue à l'étape 7 s'ils sont au manif
   2. la préparation du jour, A1 et A3 compris, avec leur chiffrage ;
   3. son accord sur les quatre pièces, plus A1 et A3.
 - ⛔ Rien cette nuit.
+
+---
+
+## Le témoin de la nuit du 24 au 25/11 (son mot du 25/11, 07:1x) — mesuré AVANT de lire son contrôleur
+
+> Son mot : « LANCE LE TÉMOIN DE LA NUIT MAINTENANT [...] JE VEUX LES DEUX FACES [...] AVEC TON EMPREINTE GLOBALE. ⚠ ET
+> MESURE AVANT DE ME LIRE : mon contrôleur a pris sa propre photo hier soir à 22:00 [...] Si les deux ne tombent pas au
+> même endroit, on s'arrête. »
+
+**La mesure.** `temoin_de_la_nuit_2026-11-24.py comparer` a lu Supabase en lecture seule le 25/11 à 07:16 (06:16 UTC).
+Ma photo date du 24/11 à 17:57 (16:57 UTC). La sortie est gardée dans `protocole/temoin_nuit_comparer_25_11.txt`.
+- **Le premier lancement** a planté à la toute dernière ligne : le `%` de « hektor% » n'était pas échappé.
+- **Corrigé**, puis complété de l'empreinte globale, de deux témoins et des tables voisines.
+
+**Face 1 — ce qui a tenu : 4 / 4.**
+- ① les 18 Charges : b58ba6cb.
+- ④ les 12 parts : 91a61e04.
+- ⑤ les 2 corrections : adb3c8f8.
+- Les 42 écritures : 072b3cb3.
+
+**Face 2 — ce qui a bougé ailleurs sans qu'il le demande : RIEN, dans tout le registre des parts.**
+- **0 chaîne changée, 0 apparue, 0 disparue, 0 réécrite à l'identique** : aucun `ecrit_le` n'est neuf.
+- 0 chaîne mixte, c'est-à-dire une part `hektor%` à côté d'une part protégée.
+- **L'empreinte globale** (la même expression que les patchs) :
+  - **photo :** 17 907 parts, **b531b578ece1a45387162d9b8f0f8c9a** ;
+  - **maintenant :** 17 907 parts, **b531b578ece1a45387162d9b8f0f8c9a**.
+- **Le témoin de la méthode :** la même empreinte recalculée en Python sur les lignes de maintenant est identique au SQL.
+- **Le témoin positif du comparateur :** une part de la photo retouchée exprès (chaîne 351) est vue, 1 chaîne changée.
+
+**Les tables voisines :**
+- **le journal :** 80 lignes (charge 20, corrections 2, realignement_42 46, suppositions 12). Sa dernière écriture date
+  du 24/11 à 15:39.
+- **la mise de côté :** 14 (patch_suppositions 12, patch_corrections 2).
+- **les notes :** 4 524 (classeur 190, classeur:F 256, classeur:F+G 585, classeur:G 3 484, saisie 9).
+- **le carnet des mandats :** 871 Charges du classeur.
+- **Écrit depuis la photo :** 0 note, 0 ligne du carnet, 0 part.
+
+**Le zéro a son témoin positif : l'étape de répartition a tourné cette nuit** (06:27:19 → 06:27:22). Elle a envoyé
+7 420 lignes ; la base en a protégé 3 710 dossiers, n'a rien refusé et a écrit **0 ligne**.
+- **Comparé à la nuit du 24 :** protégés 3 704 → **3 710 (+6)** ; lignes envoyées 7 408 → **7 420 (+12)** ; « déjà à jour »
+  4 357 → 4 351 (−6) ; toujours 0 écrite.
+- **C'est exactement la taille de ④** (6 chaînes, 12 parts). L'explication : hier après-midi, la copie locale de la
+  répartition a été redescendue avec ④ dedans. La nuit, qui compare à cette copie, a renvoyé ces 6 dossiers, et **la base
+  les a protégés : c'est le verrou, en production**.
+- ⚠ **C'est une concordance de comptes, pas encore une preuve nominative.** Le journal du run ne donne pas la liste. Elle
+  se fera après la descente, en rejouant le calcul local sans pousser.
+
+**La descente** a démarré à 06:50:06, après 5 minutes d'attente de la fin du run. À 07:17 elle était encore à l'étape 1/3
+et écrivait `phase2.sqlite` : la préparation du jour l'attend.
+
+**Les 26 répartitions « accrochées à un dossier disparu »** (l'alerte `data.repartition_orpheline`, rouge depuis le
+21/11) :
+- **Leur date :** toutes **du 13/11 à 22:56**, écrites par « rapatriement classeur 13/11/2026 », en
+  `classeur_reconstitue`, 50/50. Ce sont **13 dossiers** : 3670, 11709, 14034, 14052, 14913, 19070, 19576, 19737, 20089,
+  24011, 27135, 28179, 28547.
+- **Aucune ne vient des gestes du 24/11**, et aucune nuit ne les a réécrites.
+- **⭐ La vague les fait renaître.** Dans le rejeu de la vague entière (passage 81), **les 13 numéros existent à
+  l'arrivée**, dont 6 qui portent une vente réglée (3672, 11712, 14036, 24013, 28181, 30762).
+- **L'arrivée, avant A2,** compte 28 chaînes orphelines : ce sont exactement les 28 chaînes qui disparaissent à la vague,
+  et **A2 les met toutes de côté**.
+- **Donc 0 après A2.** Un contrôle est ajouté au patch A2 (« 0 part orpheline après A2 »), et un compteur à sa répétition.
+  Ils se joueront à blanc dans la préparation du jour.
+- **À vérifier dans la préparation :** que chacune des 26 est **juste** pour sa ligne d'arrivée (le témoin de fin du
+  temps 2). La mesure du 23/11 disait 25 doublons purs et une divergence (27135 → 27133, sortie), que la vague sépare.

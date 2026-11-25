@@ -5709,6 +5709,21 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   inchangees.
 - **Demain, dans cet ordre :** le temoin de la nuit, puis la preparation (A1 et A3 compris), puis son accord sur les quatre
   pieces, plus A1 et A3.
+### 20.48 Le temoin de la nuit du 24 au 25/11 : 4/4 tenus, rien n'a bouge ailleurs (25/11, 07:16, mesure avant son controleur)
+
+- **Face 1 :** les 4 empreintes ont tenu (b58ba6cb, 91a61e04, adb3c8f8, 072b3cb3).
+- **Face 2 : rien n'a bouge dans tout le registre des parts.** Empreinte globale **b531b578** a la photo (24/11 17:57) et
+  maintenant, sur 17 907 parts. Aucune chaine changee, apparue, disparue ou reecrite a l'identique. La methode est verifiee
+  (meme empreinte en Python et en SQL), et le comparateur voit une part retouchee expres.
+- **Les tables voisines sont inchangees :** journal 80, mise de cote 14, notes 4 524 ; 0 ecriture depuis la photo.
+- **Le temoin positif du zero :** l'etape de repartition a tourne, a envoye 7 420 lignes et en a ecrit 0. Les proteges
+  passent de 3 704 a 3 710 (+6) et les lignes de 7 408 a 7 420 (+12) : c'est exactement la taille de ④, renvoye parce que la
+  copie locale portait ④ depuis hier, puis protege par la base. C'est une concordance de comptes ; la liste nominative se
+  fera apres la descente.
+- **Les 26 orphelines de l'alerte :** toutes du 13/11 a 22:56 (rapatriement), 13 dossiers. La vague les fait renaitre
+  (13/13 a l'arrivee, dont 6 avec une vente reglee), et A2 met de cote les 28 chaines qui disparaissent : donc 0 ce soir. Le
+  controle « 0 orpheline apres A2 » est ajoute au patch.
+- **Le detail :** PROCEDURE_LA_VAGUE_DU_SOIR, section « Le temoin de la nuit du 24 au 25/11 ».
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
