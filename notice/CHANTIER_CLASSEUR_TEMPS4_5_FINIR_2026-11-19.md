@@ -5898,6 +5898,19 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   2 ecarts d'honoraires (df0ce30c, 78bb247a), 1 dossier deja regle (G8YSAI5Z). 29 dates : 23 posables, 1 double PAOLONE,
   3 anterieures, 2 ecartees par lui.
 - **Regle gravee** (sa demande) : une preuve du juge ne se reecrit pas -- on fait passer ses lecteurs au verdict.
+
+### 20.60 Le juge n'a pas ete retouche ; le passage 81 rejoue : 2 verdicts changeraient (la liste E) ; arret (25/11)
+
+- **Pas de retouche** : protocole_classeur.py inchange depuis 38f8d83 (24/11) ; md5_code = b47f603b = celui de l'image du
+  passage 81.
+- **Le rejeu** (meme image, meme code, sur copie) : 4 800 lignes identiques ; P252U1JH et d2108609 passent d'ATTENTE a
+  TRANCHEE, parce que le juge lit EN DIRECT EXCLUES_DE_LA_REGLE_E (affaire_ledger.py, hors de son empreinte), dont la vague
+  a retire 4126 et 21520 (son accord). Aucune n'est ecrite ni prevue.
+- **Mon erreur, remise** : le 1er rejeu a ecrit le passage 82 dans le VRAI socle (socle() ouvre P.SOCLE, fixe a l'import ;
+  son temoin l'a vu). Mesure : 81 intact, seule difference le 82 ; etat pollue sauvegarde ; socle remis depuis la copie
+  d'avant (b23e2b3a, 07:26:47, 81 passages). Rejeu corrige et rejoue sur vraie copie : memes 2 lignes, vrai socle inchange.
+- **Arret selon sa regle** : la vague de 500 n'est PAS preparee. A lui : continuer sur le 81 (les 2 lignes vides et
+  nommees) ou un passage officiel apres la vague d'abord ; et faire couvrir la liste E par l'empreinte du juge.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

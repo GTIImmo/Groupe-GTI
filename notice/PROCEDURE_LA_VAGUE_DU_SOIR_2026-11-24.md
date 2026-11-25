@@ -1436,3 +1436,53 @@ par SQL : aucun de ces chemins ne passe par l'outil.
 fait passer ses LECTEURS au verdict (le fichier `une-preuve-du-juge-ne-se-reecrit-pas-on-fait-passer-ses-lecteurs.md`).
 
 **⛔ Rien chez Hektor, pas de push.** Le gel est intact.
+
+### ⛔ Le juge a-t-il changé ? Le passage 81 rejoué (25/11, 14:51-15:00) — arrêt avant la vague de 500
+
+> « TU VIENS DE MODIFIER protocole_classeur.py -- LE JUGE LUI-MÊME. Dis-moi quoi et pourquoi [...] Je veux savoir si ta
+> retouche change UN SEUL verdict du passage 81. [...] Si elle en change un, tu t'arrêtes et on regarde avant la vague
+> suivante. »
+
+**Il n'y a pas eu de retouche du juge. C'est mesuré :**
+- `protocole_classeur.py` est inchangé depuis le commit 38f8d83 (24/11, 08:41). Sa date de fichier est le 24/11 à 08:03,
+  et l'arbre de travail est propre ;
+- l'empreinte que le juge calcule sur son propre code (`md5_code`, qui couvre aussi ses deux modules) vaut aujourd'hui
+  **b47f603b**. C'est exactement celle qu'a enregistrée l'image de 07:26, sur laquelle le passage 81 a jugé.
+
+**Mais en rejouant le passage 81 avec le code d'aujourd'hui, 2 verdicts changent.** Le rejeu a porté sur la même image,
+avec le même code, et sur une copie du socle (`rejouer_le_passage_81_sur_copie_2026-11-25.py`).
+- **Les 4 800 autres lignes sont identiques :** même verdict, même étiquette, même motif, mêmes pièces, mêmes preuves.
+- **Les 2 lignes qui changent :**
+  - **P252U1JH** : en ATTENTE au 81 (pièce sans date invisible), TRANCHÉE au rejeu (pièces 4126 et 4128) ;
+  - **d2108609** : même chose, avec les pièces 21520 et 1001495.
+- **La cause est prouvée.** Le juge lit EN DIRECT la liste `EXCLUES_DE_LA_REGLE_E` de `phase2/sync/affaire_ledger.py`.
+  Ce fichier n'entre pas dans son empreinte.
+  - La vague de 09:02 a retiré 4126 et 21520 de cette liste, avec son accord : la sauvegarde de 09:02 la donnait comme
+    [4126, 4496, 4720, 21520, 26613] ; elle est aujourd'hui [4496, 4720, 26613].
+  - Ce n'est pas un changement de code : c'est une entrée du juge que la vague a posée, et que son empreinte ne voit pas.
+- **Pour les lignes écrites, rien ne change.** Aucune des 2 n'est écrite, ni prévue : sous le 81, l'écrivain les saute
+  (PAS_TRANCHÉE). Les 100 lignes écrites et toute la VAGUE_1 ont le même verdict aujourd'hui.
+
+**⛔ Mon erreur, réparée.**
+- **Ce qui s'est passé :** la 1re version du rejeu ne détournait que `P.DOSSIER`. Or `socle()` ouvre `P.SOCLE`, une
+  constante fixée à l'import. Le passage 82 s'est donc écrit dans le VRAI socle : 1 passage, 4 802 verdicts, 825 témoins.
+  Sa comparaison mettait le 81 face à lui-même, et ne valait rien.
+- **Qui l'a vu :** le témoin du script lui-même (« le VRAI socle : date et empreinte CHANGÉES » → ARRÊT).
+- **Ce que j'ai mesuré avant de réparer :**
+  - le passage 81 du vrai socle est identique, ligne pour ligne, à la copie prise juste avant le rejeu (4 802 sur 4 802) ;
+  - toutes les tables sont identiques à cette copie, au passage 82 près.
+- **La remise :**
+  - j'ai d'abord gardé l'état pollué en sauvegarde datée
+    (`prepa_25_11/socle_AVEC_LE_PASSAGE_82_ECRIT_PAR_ERREUR_20261125_145312.sqlite`) ;
+  - puis j'ai remis le socle depuis la copie d'avant le rejeu. Son empreinte est **b23e2b3a**, identique à la copie ; sa
+    date est 07:26:47 ; il compte 81 passages et 0 ligne du 82.
+- **Le rejeu a été corrigé** (`P.SOCLE` vise aussi la copie) et rejoué sur une vraie copie. Il retrouve les mêmes 2
+  lignes, et le vrai socle reste **inchangé**.
+- C'est la même leçon que l'arrêt de 08:09 : une copie se prouve copie, et CHAQUE chemin doit être détourné.
+
+**⛔ Arrêt, selon sa règle :** un verdict changerait au rejeu. **La vague de 500 n'est pas préparée.**
+- **Ce qui est à lui :**
+  - continuer sur le passage 81, les 2 lignes restant vides et nommées ;
+  - ou d'abord un passage officiel après la vague, puis le classement et la vague de 500 sur ce passage.
+- **Une lacune nommée :** l'empreinte du juge (`md5_code`) devrait couvrir aussi la liste E qu'il lit. C'est un
+  changement du juge, donc à son mot.
