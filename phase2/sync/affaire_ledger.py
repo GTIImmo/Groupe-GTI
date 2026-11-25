@@ -1585,12 +1585,6 @@ EXCLUES_DE_LA_REGLE_E: dict[int, str] = {
            "du classeur, INCERTAINE : prepare pour MOSNIER, ou brouillon de CREPINGE/LAROUX ou "
            "de LUTTENBACHER/CARRET ? Sans exclusion, E le reunirait au dossier CARRET + "
            "LUTTENBACHER. Exclu le 19/11 -- a retirer apres sa reponse.",
-    21520: "bien 43050, compromis ANNULE SANS DATE (282 000, acquereur 353198) -- la seule des 33 "
-           "reunions de E que le Sheet laisse DOUTEUSE : la ligne d2108609 CHOUVELLON DATE un compromis "
-           "(T = 26/08/2025, Annulee), mais l'offre CHOUVELLON n'existe chez nous que comme creation C5 "
-           "(1001495) -- ni le gel ni E ne sont prouves. Meme forme que 26613. Exclu le 19/11 au soir "
-           "par decision de Frederic (« OUI, exclue comme 26613, et declaree ») -- a retirer quand "
-           "la question CHOUVELLON aura sa reponse.",
     # ─── 20/11/2026, decision de Frederic : « LES 3 RATTACHEMENTS (4126, 4496, 4720) : exclus de E aussi,
     #     et declares comme 21520. Deux regles qui se contredisent et aucune des deux prouvee : on met de
     #     cote, on ne tranche pas. » Les trois ont la MEME forme : un compromis annule sans date au nom de X ;
@@ -1598,10 +1592,6 @@ EXCLUES_DE_LA_REGLE_E: dict[int, str] = {
     #     reunit au dossier (le nom) ; la garde G2 « l'offre acceptee datee bat le nom » (mesuree le 19/11 au
     #     soir sur une copie, PAS codee) le laisse seul. Trace : notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_
     #     2026-11-19.md, § 11.3 et chapitre ⑫. A retirer quand G2 sera codee et ses coupes relues.
-    4126: "bien 9232, compromis ANNULE SANS DATE (77 000, acquereur GUERIN 49384) -- E le reunirait au "
-          "dossier du compromis 4125 et de la vente 4129 (meme nom), dont l'offre acceptee DATEE est a "
-          "GIORGETTI (4127) ; G2 le laisse seul. Exclu le 20/11 par decision de Frederic (« on met de cote, "
-          "on ne tranche pas »).",
     4496: "bien 9769, compromis ANNULE SANS DATE (155 000, acquereur GALLOT 60182) -- E le reunirait au "
           "dossier du compromis 4495 et de la vente 4499 (meme nom), dont l'offre acceptee DATEE est a "
           "NOIRJEAN ET FAUCHEZ (4497) ; G2 le laisse seul. Exclu le 20/11 par decision de Frederic (« on "
