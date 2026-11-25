@@ -1713,3 +1713,47 @@ l'étiquette du 81, est seule sur son dossier, et son étiquette n'est pas déj�
 - **C'est le défaut du gel une fois de plus :** il lie encore les ligne-partenaires au compromis de l'autre.
 
 **⛔ Rien chez Hektor, pas de push.** Ses décisions du 20/11 ne sont pas levées : c'est à son mot.
+
+### Ses deux décisions du 20/11 LEVÉES ; la dernière vague (vague1f, 2 125) prête — PAS écrite (25/11, soir)
+
+> « Vague de 2 000 : accordée, et recomptée de mon côté [...] 2 600 étiquettes toutes différentes. Ton chiffre est exact. [...]
+> Mes trois paires : tu as raison, et c'est mon erreur. [...] Oui, lève-les. [...] dis-moi les deux empreintes et ton chiffre
+> d'étiquettes à la fin de la vague. »
+
+**La levée, dans l'écrivain** (`ecrire_colonne_a_du_sheet_2026-11-20.py`, sur son mot).
+- **Ce qui change :**
+  - `DECISIONS_LEVEES` nomme les deux décisions et pourquoi elles sont levées ;
+  - `lire_hors_vague()` ne rend plus que les décisions NON levées, c'est-à-dire aucune ;
+  - `decisions_du_20_11()` relit toujours les deux listes (9 et 19 lignes, avec leurs contrôles de compte), pour
+    l'histoire et pour l'épreuve.
+- **L'épreuve (`simuler`) : 38 verdicts, 0 rouge.** Une ligne de B (A6OS2TTJ) et une des 19 (0bc98552), glissées dans la
+  vague, doivent maintenant S'ÉCRIRE : c'est le témoin positif de la levée. Les deux s'écrivent.
+- **⚠ Un défaut de l'épreuve, corrigé.** Avec 2 600 cases écrites, la première case vide « libre » (qui sert au témoin
+  UUID_DÉJÀ_DANS_LE_SHEET) était devenue une ligne non tranchée, CQGLHH2X. Le témoin PAS_TRANCHÉE la prenait aussi : deux
+  témoins tombaient sur la même ligne, d'où 1 rouge. La case libre est désormais prise dans la VAGUE_1, hors de la vague.
+- **Le classement, refait avec sa fiche neuve :**
+  - 2 600 cases A ; **2 125 lignes en VAGUE_1** (2 097 + ses 28) ;
+  - 74 non tranchées (73 + la ligne neuve a360d9e3) et 4 doubles.
+  - Le témoin du danger inverse attend désormais 8NZ6V6XB en VAGUE_1 : sa décision est levée, et elle s'écrit avec
+    l'étiquette du PROTOCOLE, pas avec celle du gel.
+
+**La dernière vague, vague1f : 2 125 lignes, c'est-à-dire TOUT LE RESTE. Préparée, PAS écrite.**
+- **L'à blanc :** 22 paquets (21 de 100, 1 de 25) ; **2 125 à écrire, 0 sautée, 0 contre le protocole.** L'empreinte de
+  la vague est **47dc1d66d067d7b8**, celle de la colonne A **97800fd45bbde9da**.
+  - Rapport : `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_202427_vague1f_A_BLANC`.
+- **Ma vérification par un autre chemin :** 2 125 sur 2 125 ont une étiquette prévue égale au dossier de SES pièces du
+  protocole et à l'étiquette à l'arrivée. Les 2 125 étiquettes sont distinctes, et **aucune n'est parmi les 2 600 déjà
+  écrites.**
+- **Son contenu :**
+  - **ses 28 décisions levées : 28 sur 28** (19 + 9) ;
+  - ses trois paires, avec six étiquettes distinctes ;
+  - les lignes 825 à 4808 : 1 191 ventes réglées, 799 annulées, 55 ventes prévues, 39 ventes fixées, 23 compromis en
+    attente et 17 offres d'achat ;
+  - 159 de ces lignes ne s'écrivent que grâce au protocole.
+- **Après elle, la colonne A sera finie : 4 725 cases.** Il restera **78 cases vides** :
+  - 74 lignes que le protocole n'a pas tranchées : 58 « rien à étiqueter », P252U1JH et d2108609, 9Q0FHAKK, la ligne neuve
+    a360d9e3, et les autres impossibles ;
+  - ses 4 doubles de saisie.
+- **Le bon à lire :** `notice/CLASSEUR_VAGUE_vague1f_2026-11-25_LE_BON_A_LIRE.txt` (local seulement).
+
+**⛔ Rien n'est écrit : la vague attend son accord sur ces deux empreintes.** Rien chez Hektor, pas de push.

@@ -55,7 +55,8 @@ ORDRE = ["A_DEJA_REMPLIE", "PAS_TRANCHEE", "C5_SEULE", "PLUSIEURS_DOSSIERS", "AR
          "ETIQUETTE_DEJA_EN_A", "DECISION_B", "DECISION_19", "VAGUE_1"]
 #: ⚠ 25/11 : 8NZ6V6XB est une des 19 de sa decision du 20/11 -- l'ecrivain la refusait DEJA (lire_hors_vague) ; le
 #  danger reel par le gel etait donc de 4 lignes, pas 5 (mon compte de l'apres-midi, corrige ici et dans le compte rendu)
-CONTRE_PAR_LE_GEL = {"8NZ6V6XB": "DECISION_19", "ZV3QRSJG": "VAGUE_1", "P252U1JH": "PAS_TRANCHEE",
+#  ⭐ 25/11 (soir) : ses decisions du 20/11 LEVEES -> 8NZ6V6XB est ecrivable, avec l'etiquette du PROTOCOLE (pas celle du gel)
+CONTRE_PAR_LE_GEL = {"8NZ6V6XB": "VAGUE_1", "ZV3QRSJG": "VAGUE_1", "P252U1JH": "PAS_TRANCHEE",
                      "3THZJOOG": "PAS_TRANCHEE", "3QZ4DAD1": "PAS_TRANCHEE"}
 SES_DOUBLES = {"3308P0UX", "YRUF0S9H", "T2GZOY5O", "O6R10ZQA"}
 

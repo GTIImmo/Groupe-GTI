@@ -5953,6 +5953,15 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - **Ses 3 paires** (6U5DQQ4J/4PW2L3MG, EO8MXFE9/E1WD68ZB, S3HOG6UL/60CLRO51) : partagees PAR LE GEL (le partenaire y tient
   encore le compromis de l'autre), PAS par le protocole (lien delie ; chaque compromis va a la ligne dont la colonne
   Compromis porte sa date ; le partenaire ne tient que son offre ; 6 dossiers distincts). Rien a arbitrer.
+
+### 20.65 Ses deux decisions du 20/11 LEVEES ; la derniere vague (vague1f, 2 125 = tout le reste) prete (25/11, soir)
+
+- **Levee** (son mot « Oui, leve-les ») : DECISIONS_LEVEES dans l'ecrivain ; lire_hors_vague() -> {} ; les listes restent
+  lues (decisions_du_20_11). simuler 38/0, la levee eprouvee (A6OS2TTJ et 0bc98552 s'ecrivent) ; defaut de l'epreuve
+  corrige (case libre prise dans la VAGUE_1).
+- **vague1f** : 2 125 lignes, a blanc 2125/0, 0 contre (vague 47dc1d66d067d7b8, colonne A 97800fd45bbde9da) ; ma verification
+  2 125/2 125, distinctes, 0 parmi les 2 600 ; ses 28 dedans. Apres elle : 4 725 cases, 78 vides (74 non tranchees, 4
+  doubles). A SON ACCORD.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

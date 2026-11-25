@@ -634,9 +634,23 @@ def lire_decision_b() -> set[str]:
     return ids
 
 
+#: ⭐ SON MOT DU 25/11 (soir) : « Oui, lève-les. » -- ses deux decisions du 20/11 sont LEVEES. Mesure (25/11) : au passage
+#  81, les 19 sont tranchees 19/19 (un dossier, seules, etiquette absente de A) et les 9 de B ont l'etiquette de LEUR VENTE
+#  (la tentative ratee garde l'ancienne : G2 sans objet). Son controle : 28/28 tranchees, 28 etiquettes distinctes, aucune
+#  deja dans les 2 600 cases. Les listes restent lues (decisions_du_20_11) pour l'histoire et pour l'epreuve.
+DECISIONS_LEVEES = {"DECISION_B": "levee le 25/11 : au passage 81, l'etiquette prevue est celle de LEUR VENTE (G2 sans objet)",
+                    "DECISION_19": "levee le 25/11 : au passage 81, 19/19 tranchees, un seul dossier chacune"}
+
+
 def lire_hors_vague() -> dict[str, tuple[str, str]]:
-    """Les lignes que Frederic a SORTIES de la vague 1, et pourquoi : {ID Unique: (raison, detail)}.
-    Les 9 de B (vague 2, apres G2) et les 19 du 20/11 (une reparation que le Sheet designe les attend)."""
+    """Les lignes que Frederic a SORTIES de la vague et qu'il n'a PAS levees : {ID Unique: (raison, detail)}.
+    25/11 : ses deux decisions du 20/11 sont levees -> plus aucune ligne n'est sortie par elles."""
+    return {i: v for i, v in decisions_du_20_11().items() if v[0] not in DECISIONS_LEVEES}
+
+
+def decisions_du_20_11() -> dict[str, tuple[str, str]]:
+    """Ses deux decisions du 20/11, telles qu'ecrites : les 9 de B (vague 2, apres G2) et les 19 (une reparation que le
+    Sheet designe les attend). {ID Unique: (raison, detail)} -- lues meme levees (l'histoire, l'epreuve)."""
     hors = {i: ("DECISION_B", "decision du 20/11 : vague 2, apres G2") for i in lire_decision_b()}
     with DECISION_19.open(encoding="utf-8-sig", newline="") as f:
         lus = {propre(r["id_unique"]): propre(r["nature"]) for r in csv.DictReader(f, delimiter=";")}
@@ -1263,7 +1277,10 @@ def simuler(reg: Registre, journal=print) -> int:
     s = next(x); par_id[s]["etiquette_prevue"] = "00000000-0000-0000-0000-000000000000"; attendus[s] = "ETIQUETTE_A_CHANGE"
     s = next(x); par_id[s]["transactions"] = sorted(par_id[s]["transactions"] + [99999999]); attendus[s] = "GEL_A_CHANGE"
     s = next(x)
-    libre = next(k for k, r in enumerate(sheet.v) if k > 1 and not propre(r[A]) and propre(r[AL]) not in par_id)
+    # ⚠ 25/11 (soir) : 2 600 cases ecrites -- la 1re case vide etait devenue une ligne NON tranchee, que le temoin
+    #   PAS_TRANCHEE prend aussi : deux temoins sur la meme ligne. La case « libre » est prise dans la VAGUE_1, hors vague.
+    libre = next(k for k, r in enumerate(sheet.v) if k > 1 and not propre(r[A]) and propre(r[AL]) not in par_id
+                 and cl.get(propre(r[AL]), {}).get("case_aujourd_hui") == "VAGUE_1")
     sheet.v[libre][A] = par_id[s]["etiquette_prevue"]; attendus[s] = "UUID_DEJA_DANS_LE_SHEET"
     s = next(x)
     memo.t[s] = {"id_unique": s, "colonne": COLONNE, "valeur": par_id[s]["etiquette_prevue"], "avant": "",
@@ -1273,13 +1290,20 @@ def simuler(reg: Registre, journal=print) -> int:
     s1, s2 = next(x), next(x)
     par_id[s2]["etiquette_prevue"] = par_id[s1]["etiquette_prevue"]
     attendus[s1] = attendus[s2] = "UUID_EN_DOUBLE_DANS_LA_VAGUE"
-    # une ligne de la decision B, glissee dans la vague
-    b = sorted(i for i, (r, _) in exclus_b.items() if r == "DECISION_B")[0]
-    eb = entree_vivante(b, "SIMULATION")[0]
-    ent.append(eb); attendus[b] = "DECISION_B"
-    # une ligne des 19 du 20/11, glissee dans la vague
-    b19 = sorted(i for i, (r, _) in exclus_b.items() if r == "DECISION_19")[0]
-    ent.append(entree_vivante(b19, "SIMULATION")[0]); attendus[b19] = "DECISION_19"
+    # une ligne de la decision B, et une des 19 du 20/11, glissees dans la vague : SAUTEES tant que la decision tient ;
+    #   ⭐ 25/11, decisions LEVEES (son mot) : elles doivent maintenant s'ECRIRE -- temoin positif de la levee
+    decisions = decisions_du_20_11()
+    for raison in ("DECISION_B", "DECISION_19"):
+        cand = sorted(i for i, (r, _) in decisions.items() if r == raison and i in pos0 and i not in graines
+                      and not propre(valeurs[pos0[i][0] - 1][A]))
+        if not cand:
+            attendu(False, "temoin %s : aucune ligne de la decision dont la case A est vide -- NON EPROUVE" % raison)
+            continue
+        b = cand[0]
+        if b not in par_id:
+            par_id[b] = entree_vivante(b, "SIMULATION")[0]
+            ent.append(par_id[b])
+        attendus[b] = "A_ECRIRE" if raison in DECISIONS_LEVEES else raison
     # ⭐ 25/11 : une ligne REELLE que le protocole n'a pas tranchee, glissee dans la vague -> sautee et nommee
     pt = next((i for i in sorted((i for i, r in cl.items() if r["case_aujourd_hui"] == "PAS_TRANCHEE" and i in pos0
                                   and not propre(valeurs[pos0[i][0] - 1][A])), key=lambda i: pos0[i][0])), None)
