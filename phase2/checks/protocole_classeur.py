@@ -97,7 +97,8 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = "v21 -- 24/11 : ses quatre reponses -- 19814 a 4G2UHO35 (sa preuve de date)"
+VERSION = ("v22 -- 25/11 : l'empreinte du juge couvre ses entrees vivantes (liste E, ses 20 a part, mandants R16) ; le "
+           "socle interdit au rejeu sur copie -- AUCUNE regle de jugement changee (v21 : ses quatre reponses du 24/11)")
 
 # les colonnes de son Sheet que le protocole lit (et rien d'autre) -- la lecture du bien les montre telles quelles
 COLONNES_LUES = ["Mandat", "product_ref", "Lien CRM", "Etat Actuel", "Offre Achat", "Compromis", "Signé",
@@ -583,6 +584,36 @@ def md5_code() -> str:
     return h.hexdigest()
 
 
+# ⛔ SON MOT DU 25/11 : « LE JUGE PEUT CHANGER D'AVIS SANS QUE SON EMPREINTE BOUGE [...] fais entrer dans l'empreinte du
+#   juge TOUTES ses entrees vivantes [...] Nomme-les-moi, je veux savoir de quoi depend un verdict. »
+#   UN VERDICT DEPEND DE (inventaire du 25/11 : toutes les lectures de protocole_classeur.py, coupe_preuve_interne.py et
+#   piece_copie_ou_vraie.py pendant un passage) :
+#     . L'IMAGE -- sheet.json, registre.sqlite, gel.json, t6_photo.json : leur empreinte est au manifeste, verifiee ;
+#     . LE CODE -- les trois fichiers de CODE : md5_code() ;
+#     . TROIS ENTREES LUES AU MOMENT DE JUGER, hors de l'image et du code -- celles-ci :
+#         ① EXCLUES_DE_LA_REGLE_E de phase2/sync/affaire_ledger.py (son arbre de syntaxe) -- la vague du 25/11 en a retire
+#           4126 et 21520 : P252U1JH et d2108609 changent au rejeu (prouve sur copie) ;
+#         ② « a20 » de v3_calcul.json (ses 20 a part), moins SORTIES_DES_20_PAR_DECISION ;
+#         ③ mandants_des_biens_2026-11-23.json (R16) -- deja garde par MANDANTS_R16_MD5.
+#   (temoins.json et les trois CSV du 19-22/11 ne servent qu'aux TEMOINS du passage, pas aux verdicts.)
+#   L'empreinte porte sur CE QUE LE JUGE UTILISE (la liste E, pas tout affaire_ledger.py qui change pour d'autres raisons),
+#   lu par les memes fonctions que le jugement : une entree injectee pour un rejeu y apparait telle quelle.
+def entrees_vivantes() -> dict[str, str]:
+    def md5_de(x) -> str:
+        return hashlib.md5(json.dumps(x, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return {"EXCLUES_DE_LA_REGLE_E (phase2/sync/affaire_ledger.py)": md5_de(sorted(exclues_de_la_regle_e().items())),
+            "a20 (v3_calcul.json, ses 20 a part)": md5_de(sorted(les_20_a_part())),
+            "mandants R16 (%s)" % MANDANTS_R16.name: md5_fichier(MANDANTS_R16)}
+
+
+def empreinte_du_juge() -> str:
+    """L'empreinte du juge ENTIER : son code ET ses entrees vivantes (l'image a la sienne, au manifeste)."""
+    h = hashlib.md5(md5_code().encode("ascii"))
+    for k, v in sorted(entrees_vivantes().items()):
+        h.update(("%s=%s;" % (k, v)).encode("utf-8"))
+    return h.hexdigest()
+
+
 # ═════════════════════════════════════════════ L'IMAGE ═════════════════════════════════════════════════════════════
 def pooler():
     import psycopg2
@@ -852,7 +883,14 @@ create table if not exists temoin (passage integer not null, temoin text not nul
 """
 
 
+#: ⛔ SON MOT DU 25/11 : « Fais qu'un rejeu sur copie ne PUISSE PLUS ecrire dans le vrai socle, meme par erreur. » Un rejeu
+#  inscrit ici le VRAI socle : socle() refuse de l'ouvrir, quel que soit le chemin qu'on a oublie de detourner.
+SOCLES_INTERDITS: set = set()
+
+
 def socle() -> sqlite3.Connection:
+    if Path(SOCLE).resolve() in {Path(p).resolve() for p in SOCLES_INTERDITS}:
+        raise SystemExit("⛔ le socle %s est INTERDIT a ce processus (rejeu sur copie) : rien n'y est ecrit" % SOCLE)
     DOSSIER.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(SOCLE)
     con.executescript(SCHEMA)
@@ -1860,6 +1898,13 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
                        + (" / VARIANTE " + "+".join(sorted(VARIANTES_ACTIVES)) if VARIANTES_ACTIVES else ""), debut,
                        note))
     pid = cur.lastrowid
+    # ⭐ 25/11 : le passage garde l'empreinte de SES ENTREES VIVANTES (a cote du socle, sans toucher son schema)
+    ent = {"passage": pid, "image": I.d.name, "code": md5_code(), "entrees": entrees_vivantes(),
+           "empreinte_du_juge": empreinte_du_juge(), "fait_le": debut}
+    (DOSSIER / ("entrees_passage_%d.json" % pid)).write_text(json.dumps(ent, ensure_ascii=False, indent=1),
+                                                              encoding="utf-8")
+    dire("   le juge : code %s ; entrees vivantes %s ; EMPREINTE DU JUGE %s" % (
+        ent["code"][:8], {k.split(" (")[0]: v[:8] for k, v in ent["entrees"].items()}, ent["empreinte_du_juge"][:8]))
     rangs, par_bien = [], defaultdict(set)
     for i, vs in sorted(I.sheet["par_id"].items()):
         r = juger_ligne(I, i, vs[0])

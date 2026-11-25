@@ -1486,3 +1486,74 @@ avec le même code, et sur une copie du socle (`rejouer_le_passage_81_sur_copie_
   - ou d'abord un passage officiel après la vague, puis le classement et la vague de 500 sur ce passage.
 - **Une lacune nommée :** l'empreinte du juge (`md5_code`) devrait couvrir aussi la liste E qu'il lit. C'est un
   changement du juge, donc à son mot.
+
+### On reste sur le passage 81 ; la vague de 500 prête ; le juge voit enfin ses entrées ; le socle verrouillé (25/11, fin d'après-midi)
+
+> « ON RESTE SUR LE PASSAGE 81 [...] Une seule [référence], et c'est le 81. [...] PRÉPARE LA VAGUE DE 500. [...] fais entrer
+> dans l'empreinte du juge TOUTES ses entrées vivantes [...] dis-moi si le passage 81 avait d'autres entrées de ce genre qui
+> ont bougé depuis ce matin [...] Fais qu'un rejeu sur copie ne PUISSE PLUS écrire dans le vrai socle, même par erreur. »
+
+**La vague de 500, vague1d : préparée sur le passage 81, PAS écrite.**
+- **Le classement a d'abord été refait** après la vague1c : 100 cases A remplies, 4 597 lignes en VAGUE_1, tous les
+  témoins verts, une fiche de fabrication neuve.
+- **L'à blanc :** 5 paquets de 100, **500 à écrire, 0 sautée, 0 contre le protocole.** L'empreinte de la vague est
+  **a766058b78083c2a**, celle de la colonne A **8c7f1f6afe33a075**.
+  - Fichier : `notice/CLASSEUR_VAGUE_vague1d_2026-11-25.csv`.
+  - Rapport : `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_151054_vague1d_A_BLANC`.
+- **Son contenu :**
+  - les lignes 102 à 604, avec 500 étiquettes distinctes ;
+  - **489 ventes réglées**, 10 annulées et 1 vente prévue ;
+  - 15 lignes que seul le protocole débloque.
+- **Ce qu'elle laisse dehors :** aucun de ses 4 doubles, aucune non tranchée, aucune de ses décisions du 20/11. Dans la
+  plage, 3 lignes ne sont pas prises, parce que le protocole ne les a pas tranchées : CQGLHH2X (ligne 162), 53ZS73KW (227)
+  et 9Q0FHAKK (286). P252U1JH et d2108609 restent vides et nommées.
+- **Le bon à lire** est dans `notice/CLASSEUR_VAGUE_vague1d_2026-11-25_LE_BON_A_LIRE.txt` (local seulement).
+
+**De quoi dépend un verdict : l'inventaire de toutes les lectures du juge pendant un passage.** Il couvre
+`protocole_classeur.py`, `coupe_preuve_interne.py` et `piece_copie_ou_vraie.py`.
+- **L'image** (sheet.json, registre.sqlite, gel.json, t6_photo.json) : son empreinte est déjà au manifeste.
+- **Le code** (les 3 fichiers) : `md5_code()`.
+- **Trois entrées lues au moment de juger, qui étaient HORS de l'empreinte :**
+  - ① **la liste `EXCLUES_DE_LA_REGLE_E`** de `phase2/sync/affaire_ledger.py`. Elle a bougé à 09:02 avec la vague (4126 et
+    21520 retirés) ;
+  - ② **« ses 20 à part »** (`a20` de `v3_calcul.json`). Elle n'a pas bougé : le fichier date du 22/11 à 07:17 ;
+  - ③ **les mandants de R16** (`mandants_des_biens_2026-11-23.json`). Ils n'ont pas bougé, et le code les gardait déjà par
+    leur md5.
+- `temoins.json` et les trois CSV du 19 au 22/11 ne servent qu'aux TÉMOINS du passage, jamais aux verdicts.
+
+**Le passage 81 n'avait pas d'autre entrée qui ait bougé : seule la liste E. Son état est RECONSTITUÉ.**
+- **La liste E de 07:26 est connue par deux sources, identiques :** la sauvegarde de la vague (09:02, avant sa
+  modification), et le dépôt au parent du commit de la pose (35fa604^). Les deux donnent [4126, 4496, 4720, 21520,
+  26613].
+- **Le rejeu avec cette liste, sur une copie, rend les 4 802 verdicts du 81 à l'identique**, et les 825 lignes de témoin
+  aussi.
+- **Le rejeu avec la liste d'aujourd'hui** ne change que P252U1JH et d2108609.
+- **Les entrées reconstituées du 81 :**
+  `notice/PROTOCOLE_PASSAGE_81_SES_ENTREES_VIVANTES_RECONSTITUEES_2026-11-25.json`, avec une copie à côté du socle.
+- **⇒ Ses 100 lignes ont été jugées sur un état que l'on sait reconstituer, et qui l'est.**
+
+**Le juge, v22 : je l'ai modifié sur son ordre. Aucune règle de jugement ne change.**
+- **Ce qui est ajouté :**
+  - `entrees_vivantes()` et `empreinte_du_juge()` : l'empreinte porte sur ce que le juge UTILISE (la liste E, et non tout
+    le module), lu par les mêmes fonctions que le jugement ;
+  - chaque passage écrit désormais `entrees_passage_<n>.json` à côté du socle (son schéma n'est pas touché) ;
+  - le garde `SOCLES_INTERDITS` ;
+  - la VERSION v22.
+- **Le code passe de b47f603b à 4039688c.**
+- **La preuve qu'aucune règle ne change :** le rejeu v22 avec les entrées du 81 rend les 4 802 verdicts identiques.
+- **La preuve que la lacune est fermée :** l'empreinte du juge vaut d34413f8 avec les entrées du 81, et 271df49b avec
+  celles d'aujourd'hui. **Elle bouge exactement quand la liste E bouge.**
+
+**Un rejeu sur copie ne peut plus écrire dans le vrai socle. Le verrou a deux étages, et chacun est éprouvé à chaque
+rejeu :**
+- **dans le juge :** le vrai socle est inscrit dans `SOCLES_INTERDITS`, et `socle()` refuse de l'ouvrir. Le témoin essaie
+  de l'ouvrir : « INTERDIT à ce processus » ;
+- **sur le disque :** le vrai fichier est en lecture seule pendant tout le rejeu, puis rendu. Le témoin du mécanisme, sur
+  une copie jetable, répond « attempt to write a readonly database ».
+- **Le témoin de fin :** le vrai socle garde son empreinte (b23e2b3a) et sa date (07:26:47), avant et après chacun des 2
+  rejeux.
+- ⚠ **Un premier essai a échoué sans rien jouer :** une connexion restée ouverte empêchait d'effacer la copie jetable. Le
+  vrai socle n'avait pas été touché. C'est corrigé.
+
+**⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.** Les 47 valeurs restent rangées, sans rien poser. La
+sentinelle viendra après la colonne A.

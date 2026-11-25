@@ -5911,6 +5911,20 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   d'avant (b23e2b3a, 07:26:47, 81 passages). Rejeu corrige et rejoue sur vraie copie : memes 2 lignes, vrai socle inchange.
 - **Arret selon sa regle** : la vague de 500 n'est PAS preparee. A lui : continuer sur le 81 (les 2 lignes vides et
   nommees) ou un passage officiel apres la vague d'abord ; et faire couvrir la liste E par l'empreinte du juge.
+
+### 20.61 On reste sur le 81 ; vague1d (500) prete ; le juge v22 voit ses entrees vivantes ; le socle verrouille (25/11)
+
+- **vague1d** (500, 5 paquets) : a blanc 500/0, 0 contre le protocole (vague a766058b78083c2a, colonne A 8c7f1f6afe33a075),
+  lignes 102 a 604, 489 ventes reglees. A SON ACCORD. Hors : ses doubles, les non tranchees, ses decisions, P252U1JH,
+  d2108609.
+- **Un verdict depend de** : l'image (manifeste), le code (3 fichiers), et 3 entrees vivantes -- la liste E
+  (affaire_ledger.py, a bouge a 09:02), « ses 20 a part » (v3_calcul.json, pas bouge), les mandants R16 (garde md5).
+- **Le 81 reconstitue** : liste E de 07:26 par deux sources (sauvegarde 09:02 = git 35fa604^) ; rejeu = 4 802/4 802 et 825
+  temoins identiques. notice/PROTOCOLE_PASSAGE_81_SES_ENTREES_VIVANTES_RECONSTITUEES_2026-11-25.json.
+- **Juge v22** (son ordre) : entrees_vivantes / empreinte_du_juge / entrees_passage_<n>.json / SOCLES_INTERDITS ; aucune
+  regle changee (preuve ci-dessus) ; l'empreinte bouge avec la liste E (d34413f8 vs 271df49b).
+- **Rejeu sur copie** : verrou a deux etages (le juge refuse le vrai socle ; le fichier en lecture seule), temoins a chaque
+  rejeu ; vrai socle b23e2b3a / 07:26:47 inchange.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
