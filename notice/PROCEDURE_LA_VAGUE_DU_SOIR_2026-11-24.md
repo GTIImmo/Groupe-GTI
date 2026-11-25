@@ -926,3 +926,82 @@ le run les joue (la doublure, puis `affaire_ledger.py --refresh --push`), et rie
   recopiées par A2.
 - **L'outil de la colonne A les écarte encore** : sa liste DECISION_B est écrite dans son code et exige 9 lignes. Les
   écrire demanderait de lever cette exclusion, donc un changement de code, à son « vas-y ».
+
+### La colonne A : les 50 premières lignes ÉCRITES (vague1a, 25/11 à 11:13:31, son accord) — puis ARRÊT
+
+> « ⭐ VAS-Y : ÉCRIS LES 50 PREMIÈRES LIGNES DE LA COLONNE A. Empreinte de vague 5c2e8a02c756e706, empreinte de la colonne
+> A 8b6e4e39eb626cfa. ⛔ ET TU T'ARRÊTES LÀ. Tu me rends le compte rendu, JE REGARDE MON SHEET DE MES YEUX, et c'est
+> seulement après que tu continues. Pas 100, pas 500 : cinquante. »
+
+**La commande.** L'interrupteur `APP_SHEET_ECRIRE_AFFAIR_UUID=1` est donné à elle seule. Il n'est pas dans `.env`, et je
+l'ai vérifié avant de lancer :
+`python -u -X utf8 phase2/checks/ecrire_colonne_a_du_sheet_2026-11-20.py ecrire --vague notice/CLASSEUR_VAGUE_vague1a_2026-11-25.csv --empreinte-vague 5c2e8a02c756e706 --empreinte-colonne-a 8b6e4e39eb626cfa`
+- **Le résultat :** sortie 0 ; **50 écrites, 0 sautée** ; l'empreinte de la vague est vérifiée (5c2e8a02c756e706).
+- **La sauvegarde et le rapport** sont dans `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_111331_vague1a_ECRIRE`.
+- **Les 5 critères de l'outil sont verts :**
+  - les 50 lignes sont relues sur leur ID Unique, 0 fausse ;
+  - aucune autre case A n'est modifiée ;
+  - rien n'est écrit hors de la colonne A ;
+  - l'étiquette écrite est celle des transactions ;
+  - aucun uuid n'est sur deux lignes.
+- **Ma relecture indépendante**, par `apparier_classeur.lire_classeur()` et non par l'outil :
+  - 4 802 lignes lues ; **50 cases A remplies, et ce sont les 50 de la vague** ;
+  - chacune est sur la ligne de son ID Unique et porte l'étiquette prévue ;
+  - **0 hors de la vague, 0 fausse, 0 manquante** ;
+  - les 50 sont à la même ligne qu'à la préparation (lignes 4 à 70).
+- **Rien d'autre :** aucune 51e ligne, rien chez Hektor, pas de push. La vague suivante attend qu'il ait regardé son Sheet.
+
+**Les lignes à plusieurs dossiers : 48 aujourd'hui, pas 53, et toutes vides. Je corrige mon chiffre du matin.**
+- **Le chiffre du matin :** j'avais compté 63 lignes, soit 53 hors VAGUE_1. Je lisais les transactions du CLASSEMENT du
+  19/11.
+- **La lecture de l'outil :** il lit le GEL DU JOUR, avec les pièces effectives (une copie ne décide pas de l'étiquette).
+  Par cette lecture, il y a **48 lignes**, dont 10 de VAGUE_1, donc **38 hors VAGUE_1** :
+  - 19 « plusieurs dossiers » ;
+  - 11 « étiquette partagée » ;
+  - 6 en attente ;
+  - 2 PATCH_V2.
+- **L'écart, nommé ligne à ligne : 63 − 17 + 2 = 48.**
+  - 17 lignes PATCH_V2 n'ont plus le gel du 19/11 :
+    - 15 n'ont plus qu'une étiquette ;
+    - 2 n'ont plus de lien (8Q3LHGZ4, a8aaeb2b).
+  - 2 lignes sont sur deux étiquettes dans le gel du jour, et ne l'étaient pas le 19/11 : R0JRVFDC et f90b0418.
+- **Aucune n'est dans la vague1a, et leur case A est vide :** la relecture ne voit que les 50.
+- **La liste nommée :** `notice/CLASSEUR_COLONNE_A_LES_LIGNES_A_PLUSIEURS_DOSSIERS_2026-11-25.csv`. Elle porte la ligne,
+  la case du 19/11, les dossiers et les pièces effectives.
+
+**Les 21 ventes réglées sur une supposition, nommées avec leur montant.** Son mot : « Nomme-les proprement, avec leur
+montant ». ⬜ **Rien n'est décidé** : la manière de représenter la part d'un apporteur est son chantier à part.
+- **La source des montants.** Sur les 21, la commission TTC du Sheet est égale aux honoraires d'entrée du registre (0
+  écart). La part d'un apporteur vaut la commission TTC × son pourcentage au Sheet.
+- **20 lignes donnent une part à un apporteur :**
+  - **meilleursagents, sur 15 lignes : 18 075 € TTC.**
+    - À 25 % sur 14 lignes : 49 (1 075 €), 64 (875 €), 78 (1 625 €), 98 (1 750 €), 102 (1 750 €), 165 (1 725 €),
+      204 (1 375 €), 249 (1 275 €), 1075 (675 €), 1081 (1 500 €), 1116 (1 250 €), 1128 (1 250 €), 10072 (600 €),
+      11432 (750 €).
+    - À 10 % sur 1 ligne : 11438 (600 €).
+  - **GTI, sur 4 lignes : 9 057,50 €.**
+    - 1550 : 50 %, 3 000 € ;
+    - 11554 : 25 %, 1 557,50 € ;
+    - 11884 : 25 %, 3 250 € ;
+    - 14171 : 25 %, 1 250 €.
+  - **DENOPCE 1/2, sur 1 ligne : 22319, 50 %, 2 500 €.**
+  - **Le total des parts d'apporteurs est de 29 632,50 € TTC**, sur 111 130 € de commissions TTC.
+- **La 21e ligne, 22979** (FERNANDEZ 100, 9 000 € TTC), n'a pas d'apporteur. Elle est mixte, juste et protégée.
+- **Ce que dit la supposition de la nuit :** 50/50, sur UN SEUL nom, des deux côtés.
+  - **Sur 16 lignes**, c'est le négociateur 1 du Sheet, mis à 100 % au lieu de 75, 90 ou 50.
+  - **Sur 4 lignes, c'est un autre nom que le Sheet :**
+    - 1550 : un compte d'administration, quand le Sheet dit ABED 50 / GTI 50 ;
+    - 10072 : Groupe GTI Firminy, quand le Sheet dit ITIM ;
+    - 11554 : Groupe GTI Firminy, quand le Sheet dit CHANTUREAU ;
+    - 11884 : VIVIER, quand le Sheet dit THOMAS.
+- **Un fait mesuré, qui n'est pas une clé.**
+  - Sur 18 des 20 lignes, la `commission_agence` du registre vaut exactement la part HT de l'apporteur.
+  - Les 2 autres sont 11554 et 22319 : elle y vaut tout le HT.
+  - Ce rapport n'est pas propre aux apporteurs. Sur les 3 729 ventes réglées, 184 sont à 25 % et 485 à 50 %.
+  - Un reflet n'est pas une clé.
+- **Les paiements aux apporteurs.** Sur 10 des 15 lignes de meilleursagents, la case de la facture dit que l'apporteur a
+  été payé (« M.AGENT réglé », « meilleur agent virement ok »).
+- **La liste nommée :** `notice/CLASSEUR_LES_21_VENTES_REGLEES_SUR_UNE_SUPPOSITION_ET_LEURS_APPORTEURS_2026-11-25.csv`.
+  - Elle porte la chaîne, le dossier, l'ID, la ligne, ce que dit le Sheet, l'apporteur, son pourcentage, la commission
+    TTC, sa part, la `commission_agence` du registre, les parts d'aujourd'hui, le règlement et la facture.
+  - La supposition de 1550 y est écrite « un compte d'administration ».

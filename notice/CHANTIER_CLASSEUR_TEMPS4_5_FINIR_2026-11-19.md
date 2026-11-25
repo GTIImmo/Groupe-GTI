@@ -5819,6 +5819,22 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   - Les lignes a plusieurs etiquettes : 63 en tout, dont 53 hors de la case VAGUE_1 -- sans doute ses 53.
 - **La decision B** (9 lignes) est accomplie par la vague, mais l'outil de la colonne A les ecarte encore : la lever, c'est a
   lui.
+
+### 20.55 La colonne A : les 50 premieres lignes ECRITES (vague1a, 25/11 11:13:31, son accord) -- puis ARRET
+
+- **Ecrites : 50, sautees : 0**, sortie 0 ; les 5 criteres de l'outil sont verts. Sauvegarde et rapport :
+  `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_111331_vague1a_ECRIRE`.
+- **Ma relecture independante** (`lire_classeur`) : 50 cases A remplies, les 50 de la vague, chacune sur son ID Unique avec
+  l'etiquette prevue ; 0 hors de la vague, 0 fausse, 0 manquante ; meme ligne qu'a la preparation.
+- **Les lignes a plusieurs dossiers : 48, pas 53** (lecture de l'outil : le gel du jour, pieces effectives). Mon 63/53 du
+  matin lisait les transactions du 19/11 : 17 PATCH_V2 n'ont plus ce gel, 2 lignes (R0JRVFDC, f90b0418) y sont entrees. 38
+  hors VAGUE_1. Toutes vides, aucune dans la vague. Liste : `CLASSEUR_COLONNE_A_LES_LIGNES_A_PLUSIEURS_DOSSIERS_2026-11-25.csv`.
+- **Les 21 avec leur montant** (rien decide) : 20 apporteurs, 29 632,50 EUR TTC de parts sur 111 130 EUR de commissions --
+  meilleursagents 15 lignes 18 075, GTI 4 lignes 9 057,50, DENOPCE 1/2 1 ligne 2 500 ; 22979 sans apporteur. La supposition
+  met 50/50 sur un seul nom : le negociateur 1 du Sheet sur 16, un autre nom sur 4 (1550, 10072, 11554, 11884).
+  `commission_agence` = la part HT de l'apporteur sur 18 des 20, mais ce rapport n'est pas propre aux apporteurs (un reflet,
+  pas une cle). Liste : `CLASSEUR_LES_21_VENTES_REGLEES_SUR_UNE_SUPPOSITION_ET_LEURS_APPORTEURS_2026-11-25.csv`.
+- **Rien d'autre** : pas de 51e ligne, rien chez Hektor, pas de push. La vague suivante attend son oeil sur le Sheet.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
