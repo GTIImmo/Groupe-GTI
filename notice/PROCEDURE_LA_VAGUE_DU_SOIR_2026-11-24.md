@@ -1668,3 +1668,48 @@ l'étiquette du 81, est seule sur son dossier, et son étiquette n'est pas déj�
   suivante.
 
 **⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de push.**
+
+### La vague1e ÉCRITE : 2 000 lignes (25/11, 19:24, son accord) ; 2 600 cases ; ses trois « paires partagées »
+
+> « Accord pour la vague de 2 000. [...] donne-moi ton chiffre d'étiquettes écrites à la fin [...] Trois des lignes sorties
+> partagent leur dossier avec une AUTRE ligne du Sheet [...] Ton relevé dit « aucune n'est partagée » : nos deux mesures sont
+> peut-être justes sans mesurer la même chose. »
+
+**L'écriture.** L'interrupteur a été donné à la commande seule (aucun `.env`). Il était 19:24.
+- **Le résultat :** sortie 0 ; 20 paquets de 100, chacun relu juste après son écriture ; **2 000 écrites, 0 sautée,
+  0 contre le protocole.**
+- **Les 6 critères de l'outil sont verts.**
+- **La sauvegarde :** `C:\Hektor\Backups\classeur_colonne_a\2026-11-25_192440_vague1e_ECRIRE`.
+- **Avant d'écrire, j'ai vérifié** qu'aucune des 6 lignes de ses paires n'était dans la vague ni déjà écrite.
+
+**Son chiffre, par un autre chemin** (`relire_la_colonne_a_contre_le_protocole_2026-11-25.py`).
+- **La vague1e : 2 000 étiquettes écrites ; 2 000 sur 2 000 égales au dossier de leurs pièces du protocole** (et à la case
+  A, à l'étiquette à l'arrivée et à celle du fichier) ; **2 000 dossiers distincts** ; 0 à plusieurs dossiers ; 1 998
+  ventes réglées ; toutes à leur ligne de la préparation.
+- **La colonne entière : 2 600 cases remplies, exactement les quatre vagues écrites** (50 + 50 + 500 + 2 000).
+  - 0 case hors des vagues, 0 manquante, 0 étiquette sur deux lignes ;
+  - 0 ligne non tranchée remplie ;
+  - ses doubles et les 2 lignes de la liste E sont vides.
+  - La vague1b n'a jamais été écrite : elle a été remplacée par la vague1c.
+- **Une ligne neuve dans le Sheet :** **a360d9e3** (ligne 4809, Offre d'achat). Elle est absente du passage 81, donc
+  l'écrivain la saute. Elle attendra le passage officiel.
+
+**Ses trois paires : nos deux mesures sont justes, mais elles ne lisent pas la même chose.**
+- **Lui lit le GEL.** Le gel relie encore chaque ligne-partenaire au compromis de l'autre ligne :
+  - 4PW2L3MG → le compromis 24450 ;
+  - E1WD68ZB → le compromis 20264 ;
+  - 60CLRO51 → le compromis 17387.
+  Par le gel, la paire partage donc un dossier.
+- **Moi, je lis le PROTOCOLE.** Il a délié ces trois liens (ils font partie des 256), et chaque ligne a son dossier.
+  - **6U5DQQ4J → D2021-0638** : son compromis 24450 du 28/10/2021, qui est exactement la colonne « Compromis » de SA
+    ligne, plus son offre 24453 du 14/09/2021 ;
+  - **4PW2L3MG → D2022-0047** : son offre 24454 du 28/01/2022, seule. Sa ligne n'a pas de compromis.
+  - **EO8MXFE9 → D2023-0484** : son compromis 20264 du 15/04/2024 et son offre 20267 du 06/03/2024 ;
+  - **E1WD68ZB → D2023-0599** : son offre 20268 du 06/11/2023, seule.
+  - **S3HOG6UL → D2021-0648** : son compromis 17387 du 03/11/2021 et son offre 17390 du 08/10/2021 ;
+  - **60CLRO51 → D2021-0791** : son offre 17389 du 13/12/2021, seule.
+- **⇒ Il n'y a rien à arbitrer.** Chaque compromis va à la ligne dont la colonne « Compromis » porte sa date, et chaque
+  ligne-partenaire ne tient que son offre. Les six étiquettes sont distinctes, et aucune n'est déjà en A.
+- **C'est le défaut du gel une fois de plus :** il lie encore les ligne-partenaires au compromis de l'autre.
+
+**⛔ Rien chez Hektor, pas de push.** Ses décisions du 20/11 ne sont pas levées : c'est à son mot.

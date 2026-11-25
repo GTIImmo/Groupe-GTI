@@ -5944,6 +5944,15 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   17253 = l'affaire de 7W7XUBPO). Reparation proposee (rattachement par decision, passage officiel, 2 valeurs) : a lui.
 - **vague1e** (2 000) : a blanc 2000/0, 0 contre (vague 642d0fe875a76243, colonne A 80f0b162fa7dba57), lignes 605 a 2611,
   1 998 ventes reglees ; 7 lignes de la plage dehors (6 de ses decisions, 1 non tranchee). A SON ACCORD.
+
+### 20.64 La vague1e ECRITE (2 000, 25/11 19:24, son accord) ; 2 600 cases ; ses trois paires = le gel, pas le protocole
+
+- **Ecrite** : 20 paquets relus, 2 000/2 000, 0 contre le protocole, criteres 1-6 verts. **Relue** : 2 000/2 000 etiquette =
+  dossier de SES pieces du protocole, 2 000 dossiers distincts, 1 998 ventes reglees ; la colonne : 2 600 = les quatre
+  vagues, 0 hors, 0 sur deux lignes. Ligne neuve du Sheet a360d9e3 (absente du 81, sautee).
+- **Ses 3 paires** (6U5DQQ4J/4PW2L3MG, EO8MXFE9/E1WD68ZB, S3HOG6UL/60CLRO51) : partagees PAR LE GEL (le partenaire y tient
+  encore le compromis de l'autre), PAS par le protocole (lien delie ; chaque compromis va a la ligne dont la colonne
+  Compromis porte sa date ; le partenaire ne tient que son offre ; 6 dossiers distincts). Rien a arbitrer.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
