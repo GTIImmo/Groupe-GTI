@@ -156,7 +156,10 @@ def etape_0(M: dict, a_blanc: bool) -> list[str]:
 
     dire("0. LES GARDES DE DEPART")
     # les pieces du jour, avec leurs empreintes
-    for nom in ("brouillon", "attendu_E", "a2_patch", "a2_pregarde", "a2_repetition"):
+    for nom in ("brouillon", "attendu_E", "a2_patch", "a2_pregarde", "a2_repetition", "a1_patch", "a3_patch",
+                "a1_a3_inverse", "commande"):
+        if nom not in M and nom in ("a1_patch", "a3_patch", "a1_a3_inverse", "commande"):
+            continue
         x = M[nom]
         ok = Path(x["chemin"]).exists() and md5(Path(x["chemin"])) == x["md5"]
         garde(ok, "piece du jour %-14s %s (md5 %s)" % (nom, Path(x["chemin"]).name, x["md5"][:8]))
@@ -212,6 +215,17 @@ def etape_0(M: dict, a_blanc: bool) -> list[str]:
     vals = cu.fetchone()
     for c_, v_ in zip(cols, vals):
         garde(v_ is True, "pre-garde A2 : %s" % c_)
+    # la pre-garde d'A1 et d'A3 : les avis, les notes et les conditions n'ont pas bouge depuis la fabrication (sinon leurs
+    #   patchs refuseraient APRES le chainage -- on s'arrete AVANT)
+    if "a1a3_empreintes" in M:
+        E = M["a1a3_empreintes"]
+        cu.execute("select (select md5(coalesce(string_agg(concat_ws('|', id_unique, app_dossier_uuid, app_dossier_numero), "
+                   "';' order by id_unique), '')) from public.app_classeur_avis), (select md5(coalesce(string_agg(concat_ws("
+                   "'|', app_affaire_id, app_chaine_id), ';' order by app_affaire_id), '')) from public.app_affaire_note), "
+                   "(select md5(coalesce(string_agg(concat_ws('|', app_affaire_id, rang, app_chaine_id), ';' order by "
+                   "app_affaire_id, rang), '')) from public.app_affaire_condition)")
+        for nom_, v_ in zip(("avis", "notes", "conditions"), cu.fetchone()):
+            garde(v_ == E[nom_], "pre-garde A1/A3 : les %s n'ont pas bouge depuis la fabrication (%s)" % (nom_, v_[:8]))
     cn.rollback()
     cn.close()
     return refus
@@ -283,6 +297,12 @@ def module_sans_les_deux(source: str) -> str:
     return neuf
 
 
+def garder_fins(origine: Path, texte: str) -> bytes:
+    """Le texte, avec les fins de ligne du fichier d'origine (LF ou CRLF), en octets."""
+    t = texte.replace("\r\n", "\n")
+    return (t.replace("\n", "\r\n") if b"\r\n" in origine.read_bytes() else t).encode("utf-8")
+
+
 def env_pose(texte: str) -> str:
     lignes, vus = [], set()
     for l_ in texte.splitlines():
@@ -312,10 +332,34 @@ def etape_2(M: dict, scene: Path, a_blanc: bool) -> dict:
     dire("   le brouillon -> %s (md5 %s = le brouillon accorde ; %d lignes)" % (
         det, md5(det)[:8], len(det.read_text(encoding="utf-8").splitlines())))
     neuf = module_sans_les_deux(MODULE.read_text(encoding="utf-8"))
-    mod.write_text(neuf, encoding="utf-8")
-    dire("   le retrait de E -> %s : %s retirees, %d exclusions restent, le module compile (md5 %s)" % (
-        mod, "+".join(map(str, A_RETIRER)), len(exclusions_e(neuf)), md5(mod)[:8]))
-    env.write_text(env_pose(ENV.read_text(encoding="utf-8")), encoding="utf-8")
+    mod.write_bytes(garder_fins(MODULE, neuf))
+    # ⚠ 25/11 : la pose a blanc du 24/11 avait reecrit le module en CRLF (write_text sous Windows) alors que le depot est en
+    #   LF. On garde les fins de ligne d'origine, et on PROUVE que le fichier pose est le depot MOINS les seules lignes
+    #   retirees : aucune ligne ajoutee, aucune changee.
+    import difflib
+    d_ = list(difflib.unified_diff(MODULE.read_bytes().decode("utf-8").split("\n"),
+                                   mod.read_bytes().decode("utf-8").split("\n"), lineterm="", n=0))
+    plus = [l_ for l_ in d_ if l_.startswith("+") and not l_.startswith("+++")]
+    moins = [l_ for l_ in d_ if l_.startswith("-") and not l_.startswith("---")]
+    if plus or not moins:
+        raise Refus("le module pose n'est pas le depot moins des lignes (%d ajoutee(s), %d retiree(s))" % (len(plus), len(moins)))
+    dire("   le retrait de E -> %s : %s retirees (%d lignes en moins, 0 ajoutee, fins de ligne d'origine), %d exclusions "
+         "restent, le module compile (md5 %s)" % (mod, "+".join(map(str, A_RETIRER)), len(moins), len(exclusions_e(neuf)),
+                                                  md5(mod)[:8]))
+    env.write_bytes(garder_fins(ENV, env_pose(ENV.read_text(encoding="utf-8"))))
+    # ⚠ 25/11 : un diff ligne a ligne signalait la fin de fichier comme une ligne « vide » deplacee (un artefact
+    #   d'alignement). LA PREUVE JUSTE : sans les lignes des deux interrupteurs, le .env pose porte EXACTEMENT les lignes
+    #   d'origine, et rien d'autre.
+    from collections import Counter
+
+    def hors_interrupteurs(t: str) -> Counter:
+        return Counter(l_ for l_ in t.replace("\r\n", "\n").split("\n")
+                       if l_.split("=", 1)[0].strip() not in INTERRUPTEURS)
+    avant_, apres_ = hors_interrupteurs(ENV.read_bytes().decode("utf-8")), hors_interrupteurs(env.read_bytes().decode("utf-8"))
+    if avant_ != apres_:
+        diff_ = (avant_ - apres_) + (apres_ - avant_)
+        raise Refus(".env pose change autre chose que les deux interrupteurs (cles seulement, jamais les valeurs) : %s"
+                    % sorted({l_.split("=")[0] for l_ in diff_}))
     e = lire_env(env)
     if any(e.get(k) != v for k, v in INTERRUPTEURS.items()):
         raise Refus(".env pose ne porte pas les interrupteurs")
@@ -411,6 +455,48 @@ def jouer_sql(q: str, quoi: str) -> None:
         cn.close()
 
 
+def a_blanc_sql(chemin: Path) -> int:
+    """UN ESSAI A BLANC, joue par LA CONNEXION DU GESTE (celle que l'etape 7 utilisera) : le fichier ne doit porter AUCUN
+    commit ; il doit finir par une erreur VOULUE qui commence par « A BLANC » ; la transaction est annulee EXPLICITEMENT ;
+    puis une relecture prouve qu'aucune des tables que le fichier cree n'existe."""
+    import re
+    import psycopg2
+    import urllib.parse
+    from phase2.sync import push_upgrade_to_supabase as PU
+    q = chemin.read_text(encoding="utf-8")
+    if re.search(r"^\s*commit\s*;", q, re.I | re.M):
+        dire("⛔ %s porte un commit : ce n'est pas un essai a blanc, il n'est PAS envoye" % chemin.name)
+        return 2
+    tables = sorted(set(re.findall(r"create table public\.(\w+)", q, re.I)))
+    PU.load_env_files(PU.DEFAULT_ENV_FILES)
+    u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+    cn = psycopg2.connect(host=os.environ["SUPABASE_POOLER_HOST"], port=5432, dbname="postgres",
+                          user="postgres.dwaqxfrinihnychuoptk", password=urllib.parse.unquote(u.password),
+                          connect_timeout=15, sslmode="require")
+    cn.autocommit = False
+    t0 = time.time()
+    message, code = "", 1
+    try:
+        cn.cursor().execute(q)
+        message = "⛔ LE FICHIER N'A PAS LEVE SON ERREUR VOULUE -- annule quand meme"
+    except Exception as e:  # noqa: BLE001
+        message = str(e).strip()
+        code = 0 if message.startswith("A BLANC") else 1
+    finally:
+        cn.rollback()
+    for n in cn.notices:
+        dire("      " + n.strip())
+    dire("%s (%.0f s)" % (message, time.time() - t0))
+    cu = cn.cursor()
+    cu.execute("select %s" % (", ".join("to_regclass('public.%s') is null" % t for t in tables) or "true"))
+    rien = all(cu.fetchone())
+    cn.rollback()
+    cn.close()
+    dire("   relu apres : les %d table(s) que le fichier cree sont absentes -> %s" % (
+        len(tables), "RIEN N'EST RESTE" if rien else "⛔ UNE TABLE EST RESTEE"))
+    return code if rien else 3
+
+
 def lancer(args: list[str], quoi: str) -> None:
     dire("   $ %s %s" % (PY_RUN.name, " ".join(args)))
     t0 = time.time()
@@ -446,7 +532,10 @@ def main() -> int:
     ap.add_argument("--geste", action="store_true")
     ap.add_argument("--accord", default="", help="l'empreinte md5 du manifeste qu'il a accorde")
     ap.add_argument("--remettre", default="")
+    ap.add_argument("--a-blanc-sql", default="", help="un essai a blanc (sans commit, erreur voulue) par la connexion du geste")
     a = ap.parse_args()
+    if a.a_blanc_sql:
+        return a_blanc_sql(Path(a.a_blanc_sql))
     if a.remettre:
         remettre(Path(a.remettre))
         return 0
@@ -516,6 +605,15 @@ def main() -> int:
             for nom in ("a1_patch", "a3_patch"):
                 if nom in M:
                     jouer_sql(Path(M[nom]["chemin"]).read_text(encoding="utf-8"), nom)
+            # la repetition d'A2, en lecture seule (le journal, les parts du lot, la mise de cote, 0 vente reglee sans part,
+            #   0 orpheline, les membres comme le rejeu, l'empreinte d'apres)
+            import protocole_classeur as P
+            cn_, cu_ = P.pooler()
+            cu_.execute(Path(M["a2_repetition"]["chemin"]).read_text(encoding="utf-8"))
+            for c_, v_ in zip([c.name for c in cu_.description], cu_.fetchone()):
+                dire("      repetition A2 : %-48s %s" % (c_, v_))
+            cn_.rollback()
+            cn_.close()
             durees[7] = time.time() - t
             t = time.time()
             lancer(["phase2/sync/repartition_commission.py", "--purger-orphelines", "--pousser"], "la repartition")

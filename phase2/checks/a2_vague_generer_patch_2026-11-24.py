@@ -564,6 +564,15 @@ begin
 end $$;
 """) % D
 (OUT / (BASE + "_A_BLANC_SIMULE.sql")).write_text(sim, encoding="utf-8")
+# ⭐ 25/11 : les MORCEAUX d'A2 pour l'essai a blanc COMPLET (vague_a_blanc_complet.py) -- la simulation des chaines, le corps
+#   d'A2 sans son controle d'empreinte d'apres (l'essai la REND), et son inverse
+(Path(r"C:\Hektor\chantier_classeur_q6_cache\vague_du_soir") / ("corps_a2_%s.json" % arg.date)).write_text(json.dumps({
+    "sim": T("""update public.app_affaire_ledger l set app_chaine_id = v.c from (values
+    %(v_sim)s) v(a, c)
+ where l.app_affaire_id = v.a;""") % D, "n_sim": D["n_sim"],
+    "corps": corps_gardes + GESTE % D + CONTROLES % D, "inverse": INVERSE_CORPS % D,
+    "expr_parts": EXPR_PARTS, "sql_vr": SQL_VR, "vr_avant": D["vr_avant"], "lot": LOT, "tab": TAB}, ensure_ascii=False),
+    encoding="utf-8")
 
 # 3) la pre-garde, LECTURE SEULE, avant le point de non-retour : G2 (les parts n'ont pas change depuis la fabrication)
 pre = T("""-- %(base)s_PREGARDE -- LECTURE SEULE. A l'etape 0 de la vague, AVANT le point de non-retour : les parts que A2

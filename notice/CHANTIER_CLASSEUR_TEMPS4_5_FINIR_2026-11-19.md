@@ -5724,6 +5724,32 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   (13/13 a l'arrivee, dont 6 avec une vente reglee), et A2 met de cote les 28 chaines qui disparaissent : donc 0 ce soir. Le
   controle « 0 orpheline apres A2 » est ajoute au patch.
 - **Le detail :** PROCEDURE_LA_VAGUE_DU_SOIR, section « Le temoin de la nuit du 24 au 25/11 ».
+### 20.49 Le 25/11 : la preuve nominative du verrou ; la preparation du jour ; les pieces de son accord
+
+- **Son mot :** « nos chiffres tombent au meme endroit » (ses empreintes globales different des miennes par les colonnes,
+  et chacune est stable). « Fais la preuve nominative [...] Rends-moi les quatre pieces et j'accorde. »
+- **La preuve nominative** (`preuve_nominative_verrou_nuit_2026-11-25.py`, lecture seule) :
+  - la nuit du 25, rejouee sans pousser, donne 7 420 / 4 351 / 3 710 proteges / 0 ecrit, comme le journal ;
+  - le contrefactuel du 24 (④ et ⑤ defaits) donne 7 408 / 4 357 / 3 704, comme le journal ;
+  - **la difference = exactement les 6 chaines de ④** (1027, 1875, 4234, 6391, 9370, 27984). La nuit envoyait la
+    supposition, la base portait son classeur, elle a refuse.
+- **La preparation :**
+  - image 2026-11-25_072625 et passage 81 : 1 verdict change (571ffe9e), temoins identiques ;
+  - portes 81 et retrait de E a blanc (passage 82) : identiques a hier ;
+  - le brouillon de la vague : 634 morceaux, 051aee25 ;
+  - A2 v3 : 199 / 143 / 1, garde 0, 0 rendue fausse ; temoin de fin 234 (= hier + 571ffe9e, une offre).
+- **L'essai a blanc complet** (par la connexion de la commande, tout annule) : la vraie pose des etiquettes (fusion 231,
+  scission 295 / 612), A2, A1, A3. Il est VERT, empreinte d'apres **f4e1feb6** ; apres : 0 note fausse, 0 orpheline, 0
+  vente reglee sans part. La vraie pose est **identique piece par piece** a la prevision (797 pieces, 185 + 612).
+- **Le chiffrage :** sur 7 117 reflets, la vague en rend faux **309** (81 avis, 228 notes) ; A1 et A3 en ecrivent **376**
+  (107 + 269 : les 309, plus 67 deja faux aujourd'hui) ; apres, 0.
+- **Le manifeste du jour : ba4992c8c778bcb8fc881082c93c301a.** Les pieces : brouillon 051aee25, retrait de E (10 lignes),
+  A2 0e00a16b, commande a643152c, A1 e3d6ecb7 (exige 107), A3 7f5df158 (exige 269). La commande est eprouvee de 0 a 4 sur
+  l'etat du jour (0 ecart sur 31 375 pieces).
+- **Corriges en preparant :**
+  - la pose ne change plus les fins de ligne (le depot est en LF) ;
+  - deux chemins abimes par l'outil Bash (``) ;
+  - la garde de `.env` (une comparaison par lignes, pas un diff).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

@@ -426,3 +426,166 @@ et écrivait `phase2.sqlite` : la préparation du jour l'attend.
   Ils se joueront à blanc dans la préparation du jour.
 - **À vérifier dans la préparation :** que chacune des 26 est **juste** pour sa ligne d'arrivée (le témoin de fin du
   temps 2). La mesure du 23/11 disait 25 doublons purs et une divergence (27135 → 27133, sortie), que la vague sépare.
+
+---
+
+## Le 25/11 : son accord sur le témoin, la preuve nominative du verrou, la préparation du jour
+
+> Son mot : « ⭐ OUI, NOS CHIFFRES TOMBENT AU MÊME ENDROIT [...] ⚠ nos deux empreintes globales ne sont pas les mêmes (la
+> sienne b8e4a6ec, la tienne b531b578), parce que vous ne calculez pas sur les mêmes colonnes. Ce qui compte est que
+> CHACUNE soit identique entre la photo et maintenant [...] ⬜ FAIS LA PREUVE NOMINATIVE [...] ⏰ VAS-Y : la préparation du
+> jour [...] Rends-moi ensuite les quatre pièces et j'accorde. ⛔ Rien d'écrit avant mon accord. »
+
+### La preuve nominative du verrou (phase2/checks/preuve_nominative_verrou_nuit_2026-11-25.py, lecture seule)
+
+**Le calcul.** La vraie fonction de la nuit (`calculer` de repartition_commission.py) est rejouée **sans pousser**, avec
+le python du run. Elle est comparée, par `a_envoyer`, à la copie locale : 17 907 parts, empreinte b531b578, identique à
+Supabase.
+
+**① La nuit du 25, rejouée :**
+- 7 420 lignes à envoyer, 4 351 dossiers déjà à jour ;
+- 3 710 dossiers envoyés, tous protégés par la règle de la base, 0 que la base aurait écrit ;
+- **= le journal du run.**
+
+**② La nuit du 24, contrefactuelle.** C'est la même copie, avec ④ et ⑤ défaits (les 12 + 2 parts mises de côté reprennent
+leur place) : 7 408 lignes, 4 357 à jour, 3 704 protégés, 0 écrit. **= le journal du run du 24.**
+
+**③ La différence, nommée : exactement les 6 chaînes de ④** (1027, 1875, 4234, 6391, 9370, 27984), et 0 dans l'autre
+sens. Pour chacune, la nuit envoyait la supposition de Hektor, et la base portait son classeur ; elle a refusé. Par exemple :
+- **1027 :** TRIOLLIER/TRIOLLIER contre DIMARIA/TRIOLLIER ;
+- **1875 :** GENTES/GENTES contre DECHAUD/GENTES ;
+- **4234 :** BLANCHARD contre CHAMPAGNAC.
+
+**⭐ Le verrou est prouvé par les noms.**
+
+### La préparation du jour
+
+- **L'image** 2026-11-25_072625 a été prise après la descente (07:19:17, code 0). Elle compte 4 802 lignes au Sheet,
+  31 375 pièces (3 de plus qu'hier) et 12 820 liens au gel.
+- **Le passage 81 :**
+  - 4 729 tranchées et 73 en attente ;
+  - **un seul verdict change** : 571ffe9e, en attente → tranchée, parce que la nuit a amené sa pièce 30845 (bien
+    63167) ; 0 ligne déjà rendue ne change ;
+  - **les témoins sont identiques au passage 80** : 825 lignes sur 825, 0 écart neuf. Il sort en code 1 comme les
+    passages 78 à 80, sur les mêmes écarts, déjà nommés.
+
+- **Les portes du passage 81 :**
+  - le brouillon porte **les mêmes 630 morceaux** qu'au passage 80 ;
+  - le rejeu exact : **4 729 lignes justes sur 4 729, 4 729 étiquettes identiques** ;
+  - 0 pièce hors des biens ;
+  - R7b : 21 dossiers sur 21 (2 numéros neufs nommés : 14110, 27609) ;
+  - 795 étiquettes changent, dont 612 neuves.
+- **Le retrait de E à blanc** (passage 82 à blanc) :
+  - se débloquent **exactement P252U1JH et d2108609** ;
+  - avec la vague, **0 autre ligne ne bouge** ;
+  - le brouillon de la vague entière compte **634 morceaux** (630 plus les 4 coupes de 43050 et de 9232) ;
+  - le rejeu exact : 4 731 lignes justes sur 4 731, et 4 731 étiquettes identiques.
+- **A2 v3 sur la vague entière :**
+  - 199 recopies, 143 mises de côté, 1 complétée, sur 231 chaînes ;
+  - la garde est à 0 (93 chaînes sans le remède) ;
+  - 99 lignes rendues justes, 0 rendue fausse.
+- **Le témoin de fin, 234 lignes** (233 hier) :
+  - 196 annulées (sa décision), 22 noms non résolus (quarantaine du 13/11) ;
+  - 12 offres (11 + **571ffe9e**, l'offre CROIZIER que la nuit a fait trancher), 3 compromis en attente ;
+  - 1 U0GQ3KTO (réserve), **0 vente réglée**.
+
+### L'essai à blanc complet (la vraie répétition de l'étape 7, après la poussée)
+
+**Ce qu'il joue.** `supabase/vague_du_soir_2026-11-25_A_BLANC_COMPLET.sql`, par **la connexion même de la commande**
+(`vague_du_soir.py --a-blanc-sql`). Le fichier est refusé s'il porte un `commit`, il doit lever son erreur voulue, le
+retour arrière est explicite, puis une relecture prouve qu'aucune des tables qu'il crée n'existe.
+- **Le canal a d'abord été éprouvé :** un fichier avec `commit` est refusé sans être envoyé ; un essai minuscule crée sa
+  table (elle existe dans la transaction), tout s'annule, et la relecture le prouve.
+
+**Dans une transaction qui s'annule :**
+1. les 798 pièces reçoivent la chaîne de la vague ;
+2. la **vraie** pose des étiquettes, `app_poser_etiquettes_dossier()` (son compteur est une table : aucun numéro consommé) ;
+3. A2, A1, A3, leurs gardes et leurs contrôles ;
+4. les inverses ;
+5. le retour vérifié à l'état d'avant.
+
+**VERT sur les versions finales :**
+- **Avant :** 17 907 parts (b531b578), 14 mises de côté, journal 80, 155 notes fausses, 0 condition fausse, 26 parts
+  orphelines.
+- **La vraie pose :** pose 0, propagation 0, **fusion 231 dossiers / 250 lignes**, **scission 295 / 612**.
+- **Après la vague, sans remède :** 269 notes fausses, 56 parts orphelines (les 28 chaînes qui disparaissent), 93 chaînes à
+  vente réglée sans part.
+- **Après A2, A1 et A3 :**
+  - 17 964 parts, empreinte **f4e1feb6b43d1cc23698701493cf89a5** ;
+  - **0 note fausse, 0 condition fausse, 0 orpheline, 0 vente réglée sans part** ;
+  - 157 mises de côté ; journal 799 (A2 343, A1 107, A3 269).
+- **Après les inverses :** égal à l'état d'avant. Rien n'est resté.
+
+**⭐ La vraie pose des étiquettes, comparée pièce par pièce à la prévision du protocole**
+(`vague_du_soir_2026-11-25_ETIQUETTES_A_BLANC.sql`) :
+- **797 pièces** changent d'étiquette, toutes prévues ; 0 change sans l'être ;
+- **185** vont vers une étiquette existante : 185 identiques, 0 différente ;
+- **612** vont vers une neuve : 295 groupes prévus donnent 295 étiquettes neuves, 0 groupe éclaté.
+
+Les « 250 lignes » de fusion comptent les 185 qui changent, plus 65 lignes des dossiers fusionnés qui portaient déjà
+l'étiquette gardée.
+
+⚠ **Au geste, la poussée criera « ATTENTION ÉTIQUETTES : 231 FUSION(S) (seuil 10) »** : c'est attendu, et nommé d'avance.
+
+### Son chiffrage : sur les reflets, combien la vague rend faux, combien A1 et A3 réparent
+
+Les chiffres sont prévus par le rejeu et **MESURÉS identiques** par l'essai complet (la vraie pose) : A1 107, A3 269.
+
+- **Avis** (2 588 lignes, dont 2 560 portent un reflet) :
+  - 29 sont faux aujourd'hui ; **la vague en rend faux 81** ;
+  - **A1 en écrit 107** : les 81, plus 26 déjà faux aujourd'hui qui le resteraient. 3 faux d'aujourd'hui redeviennent justes
+    d'eux-mêmes ;
+  - 81 des 107 reçoivent un numéro neuf de la vague, 0 devient VIDE.
+- **Notes** (4 524) :
+  - 155 sont fausses aujourd'hui ; **la vague en rend fausses 228** ;
+  - **A3 en écrit 269** : les 228, plus 41 déjà fausses qui le resteraient. 114 fausses d'aujourd'hui redeviennent justes
+    d'elles-mêmes ;
+  - 6 notes n'ont plus leur transaction au registre (1001388, 1001389, 1001391, 1001392, 1001394, 1001395) : nommées, pas
+    touchées.
+- **Conditions** (33) :
+  - 0 fausse aujourd'hui, 0 rendue fausse, 0 écrite ;
+  - 5 n'ont plus leur transaction (les essais du 23/10 : 1001388/1-2, 1001391/1-2, 1001394/1) : nommées, pas touchées.
+- **En tout,** sur 7 117 reflets portés (2 560 + 4 524 + 33) :
+  - **la vague en rend faux 309** ;
+  - **A1 et A3 en écrivent 376** : les 309, plus 67 déjà faux aujourd'hui ;
+  - **après : 0 faux** (mesuré).
+
+### Les pièces de son accord (le manifeste du jour)
+
+`C:\Hektor\chantier_classeur_q6_cache\vague_du_soir\manifeste_vague_2026-11-25.json`, **md5
+ba4992c8c778bcb8fc881082c93c301a**. La commande refuse le geste sans cette empreinte, et l'étape 0 revérifie chaque pièce.
+1. **Le brouillon :** `brouillon_detachements_protocole_passage_82.csv`, 636 lignes, 634 morceaux, md5 051aee25.
+2. **Le retrait de E :** 10 lignes retirées (les entrées 21520 et 4126 d'`EXCLUES_DE_LA_REGLE_E`), 0 ajoutée ; il reste
+   4496, 4720 et 26613. L'étape 2 le pose par l'arbre de syntaxe et prouve le diff. Le diff est dans
+   `vague_du_soir/retrait_e_diff_2026-11-25.diff`.
+3. **Le patch A2 :** `patch_a2_vague_2026-11-25.sql`, md5 0e00a16b.
+   - G1 1212c9d9 (480 pièces), G2 e09a38b9 (272 parts), G3 les 93 chaînes nommées ;
+   - 199 recopies, 143 mises de côté (70 chaînes, chacune son motif, les 42 NOMMÉES), 1 complétée ;
+   - contrôles : 0 orpheline, 0 vente réglée sans part, l'empreinte d'après f4e1feb6 exigée ;
+   - son inverse (9e11ebc9) et sa répétition (cf3ee5f9).
+4. **La commande :** `vague_du_soir.py`, md5 a643152c, avec son manifeste. Éprouvée à blanc sur l'état du jour :
+   - **étape 0 :** verte, sauf l'horaire, qui a mordu à 07:56 (Relances Email et Sauvegarde à 08:00), puis à 08:00 (les
+     deux tournaient) ;
+   - **étape 2 :** dépôt moins 10 lignes, 0 ajoutée ; `.env` ne change que ses deux interrupteurs ;
+   - **étape 4 :** **0 écart sur 31 375 pièces** (164 s).
+- **Plus A1 et A3 :**
+  - `patch_a1_vague_2026-11-25.sql` (e3d6ecb7) **exige exactement 107 écritures** ;
+  - `patch_a3_vague_2026-11-25.sql` (7f5df158) **exige exactement 269 écritures** ;
+  - leur inverse est 1ddaef22 ; leurs pré-gardes sont à l'étape 0.
+
+**Ce que l'essai ne couvre pas, et que je dis :**
+- **L'étape 8**, la répartition de nuit le soir même. C'est la conversion ordinaire de la nuit : le verrou protège les parts
+  du classeur et d'A2, il est prouvé par les noms, et il n'y aura aucune orpheline après A2.
+- **La doublure de l'étape 3.**
+
+### Ce que j'ai trouvé et corrigé en préparant (rien n'était encore joué)
+
+- **La pose de l'étape 2 changeait les fins de ligne.** Le module de nuit et `.env` sont en LF ; `write_text` sous
+  Windows les réécrivait en CRLF (la pose à blanc d'hier : 3 791 lignes CRLF).
+  - La commande garde désormais les fins de ligne d'origine.
+  - Elle **prouve** que le module posé est le dépôt moins les seules lignes retirées (aucune ajoutée).
+  - Elle prouve que `.env` ne change que les deux interrupteurs ; elle ne nomme jamais une valeur, seulement une clé.
+- **Un chemin du générateur A2 avait été abîmé** par l'outil Bash (une barre oblique avalée). Il est corrigé, et aucun
+  autre fichier n'a de caractère parasite.
+- **Le reflet `app_dossier_id` des notes et des conditions** est le numéro de BIEN de l'app (affaire_ledger.py, l. 55),
+  pas l'étiquette : la vague n'y touche pas. A3 ne rafraîchit donc que `app_chaine_id`.
