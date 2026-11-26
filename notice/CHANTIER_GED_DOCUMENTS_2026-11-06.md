@@ -3905,3 +3905,10 @@ branche locale entière entre le 20 et le 24/11 ; rien à pousser. La production
 « Points d'attention ») ; EA32610 (59541) -- « Points d'attention (1) » : « Avenant : 2 mandants, 1 signature lue »,
 « Déposer la pièce » et **« Masquer »** à côté, plus aucune barre « Vrai / Faux / Déjà su ». ⚠ **« Masquer » n'a PAS été
 cliqué** : sur un bien réel il écrit dans le journal pour tout le monde ; l'essai demande une cible choisie par Frédéric.
+**✅ ESSAI RÉEL de « Masquer » / « Réafficher » (26/11, « Sur EA32610 »)** : avant, 8 jugements, aucun sur 59541. **Masquer**
+(09:14:10, heure de Paris) -> la carte « Avenant : 2 mandants, 1 signature lue » disparaît, « À traiter 0 », « Points
+d'attention (0) », « 1 point d'attention masqué pour tout le monde -- Réafficher » ; en base, une ligne L10 `masque` au
+nom de Frédéric. **Réafficher** (09:14:31) -> la carte revient avec « Déposer la pièce » et « Masquer », « À traiter 1 » ;
+en base, une ligne `reaffiche` (le journal garde les deux, le plus récent fait foi). Aucun message d'erreur. Le bien est
+revenu à son état d'avant l'essai (le point d'attention est visible). ⚠ Vu en passant : quand tout est masqué, l'en-tête
+dit « À traiter 0 » -- il pourrait se taire ; non corrigé, à trancher.
