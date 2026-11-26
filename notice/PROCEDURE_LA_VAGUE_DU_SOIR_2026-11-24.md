@@ -2270,3 +2270,58 @@ pg_class, phase2.sqlite en `mode=ro`, git grep).
   la trace n'est pas dans ses journaux : ce n'est pas mesuré.
 
 ⛔ Rien n'est écrit en base, la descente n'est pas modifiée, rien n'est poussé.
+
+### Le 26/11 (3) : la ligne 286 corrigée, l'image neuve, le passage 82 JOUÉ À BLANC — le passage officiel N'EST PAS lancé
+
+> « les deux cases sont corrigées. Tu peux partir [...] Rejuge les trois ensemble. Ton passage 82 doit rendre quatre
+> témoins, pas un [...] Si le Prix neuf lui en ajoute une par R9b, tu t'arrêtes et tu me la nommes [...] rien d'écrit
+> avant que tu m'aies montré les quatre témoins du ①. »
+
+- **L'image neuve** : `protocole/images/2026-11-26_094931`, prise à 09:49:31.
+  - Sheet : 4 803 lignes, une de plus qu'au 81. Registre : 31 378 pièces. Gel : 12 820 liens.
+- **Les cases changées depuis l'image du 81** (`79_image_26_11_contre_25_11.txt`) :
+  - colonne A : 4 725 cases, de vide à remplie (la vague du 25/11) ; aucune case déjà remplie n'a changé ;
+  - ses trois cases déclarées : 286 Mandat 17253 → 17010, 286 Prix 112800 → 460000, 245 Prix « NON TROUVÉ » → 112800 ;
+  - ⚠ une quatrième sur la 286 : « Charge Commission » vide → « Vendeur ». Le juge ne lit pas cette colonne ;
+  - la vie du classeur, sur des colonnes lues : 8 lignes récentes (42ae8884, 43faf7d9, 5804a343, 7cb7142f, bfe07c3b,
+    e6b0043e, et 2 sur leurs commentaires seuls) ;
+  - une ligne neuve, a360d9e3 : offre du 20/11/2026 (COUDERT, 10 000 €, annonce 63500).
+- **Le 82 joué à blanc sur copie, deux fois** : avec les entrées du jour, puis avec celles du 81.
+  - Les deux rendent la même empreinte de verdicts (b7dae92e) : les entrées vivantes ne changent rien.
+  - Le vrai socle n'est pas touché : b23e2b3a, 07:26:47, passage 81 au sommet.
+- **Les quatre témoins :**
+  1. **9Q0FHAKK** sort d'AUCUNE_PIECE_PROUVEE et est TRANCHÉE en 42dd4d66 (D2024-0511), sur 3647 + 3650 ⚠ **et 3648**.
+     3648 est l'offre du 23/08/2024, refusée par nous le 11/11/2026, et porte aujourd'hui D2024-0306. C'est déjà le cas
+     dans la simulation d'hier, et c'est la fusion annoncée de D2024-0306.
+  2. **7W7XUBPO** garde 8b711815, 2160 et 2161 ⚠ **et prend 2162** (la vente du 22/01/2025).
+     - Elle vient par la date (colonne « Vente Prévue »), pas par R9b.
+     - 2162 porte DÉJÀ D2024-0357 dans le registre : rien ne bouge, et sa colonne A n'est pas touchée.
+     - Au 81, elle était « à part sans effet sur l'étiquette ».
+     - Le Prix neuf de la 245 ne change rien : verdict identique à la simulation sans lui. Il y a 8 lignes au prix de
+       112 800, et aucune autre sur le bien 5617.
+  3. **427UDDSF** garde 704f50a8 (D2024-0278), 3646 + 3649 : tenu.
+  4. **Le compte** : 4 733 tranchées + 70 en attente = 4 803 (81 : 4 729 + 73 = 4 802 ; simulation : 4 730 + 72).
+     - Les 7 changements de la simulation sont tous là, à l'identique.
+     - En plus : P252U1JH et d2108609, attente → tranchée. C'est le retrait de 4126 et 21520 de la liste E par la vague
+       de 09:02, avec son accord (déjà mesuré le 25/11 à 14:51, « Le juge a-t-il changé ? » dans cette procédure).
+     - Et a360d9e3, tranchée sur 30848.
+     - 266 étiquettes passent de « NEUVE » à réelle (la vague) ; 42ae8884 et 7cb7142f prennent les compromis neufs de la
+       nuit, sans changer d'étiquette.
+- ⭐ **La colonne A contre le 82** : sur 4 725 cases écrites, le 82 rend la même étiquette pour les 4 725. Aucune n'est
+  contredite.
+- **Les lignes écrivables au 82** (colonne A vide, tranchée sur une étiquette réelle) : 8 lignes.
+  - 9Q0FHAKK, HUY49KEC, O6R10ZQA, YRUF0S9H, PEE1XTR8, P252U1JH, d2108609, a360d9e3.
+- **Les témoins du juge** : 30 écarts au lieu de 28 au 81.
+  - Nouveaux : HUY49KEC (déjà connu), P252U1JH et d2108609 (v3, même famille, effet du retrait de E).
+  - Disparu : 3308P0UX (coupes_29).
+- ⛔ **Arrêt avant le passage officiel**, parce que les témoins 1 et 2 portent chacun une pièce qu'il n'a pas nommée.
+- **Les comptes (son ③)** : 8 comptes ne sont pas lecteurs globaux, pas 7 — j'avais oublié l'administrateur désactivé.
+  - 3 se sont déjà connectés, et 5 sont ouvrables (ni bannis ni supprimés, mail confirmé).
+  - Le motif « désactivé dans l'app, ouvrable en base » touche 1 compte. Il n'a ni session ouverte ni jeton actif.
+  - Aucun autre registre (identité Workspace, fiche négociateur) n'en ajoute.
+  - Voisin : 5 comptes sans profil, dont 4 créés le 13/11 ; 2 sont ouvrables. Réserve nommée, rien touché.
+- **Ses accords notés pour la suite** : ② la RLS des 22 après le ①, avec trois témoins ; ④ la règle des dates ce soir.
+  - ⚠ La règle par date ne prend AUCUNE des 12 vues. Remplacer leur liste demande une règle par nature (vue ou table,
+    lue dans la base), pas par nom.
+
+⛔ Rien n'est écrit : ni passage officiel, ni Sheet, ni base, ni Hektor. Rien n'est poussé.

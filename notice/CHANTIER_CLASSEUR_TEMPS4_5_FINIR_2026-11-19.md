@@ -6067,6 +6067,18 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   5 comptes sans profil) ; anon ne lit rien. Remede `enable row level security`, a son accord.
 - Note : 12 vues nees apres le 12/10 descendent encore (25 384 lignes). Le crash de l'etape 4/4 = assertion libuv
   UV_HANDLE_CLOSING a la sortie de Node.
+
+### 20.73 Le 26/11 (3) : ligne 286 corrigee, image neuve 09:49, passage 82 JOUE A BLANC -- l'officiel n'est pas lance
+
+- Image 2026-11-26_094931 : ses 3 cases + une 4e sur la 286 (« Charge Commission », non lue par le juge), la vie de
+  8 lignes recentes, la ligne neuve a360d9e3 (30848).
+- 82 a blanc, entrees du jour = entrees du 81 (empreinte b7dae92e) : 4 733 + 70 = 4 803 ; les 7 de la simulation a
+  l'identique ; en plus P252U1JH et d2108609 (retrait de E par la vague) et a360d9e3.
+- Temoins : 427UDDSF tenu ; 9Q0FHAKK = D2024-0511 sur 3647 + 3650 ET 3648 (D2024-0306, la fusion annoncee) ; 7W7XUBPO
+  garde 8b711815 ET prend 2162, par la date (pas R9b), et 2162 porte deja D2024-0357 ; le Prix de la 245 ne change rien.
+- Colonne A : 4 725 / 4 725 rendues a l'identique par le 82. 8 lignes ecrivables.
+- ⛔ Arret avant l'officiel : deux pieces non nommees par lui (3648, 2162).
+- Comptes : 8 (pas 7), 3 deja connectes, 5 ouvrables ; le motif « desactive mais ouvrable » = 1. Reserve nommee.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

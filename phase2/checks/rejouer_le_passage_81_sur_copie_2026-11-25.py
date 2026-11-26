@@ -69,7 +69,15 @@ def main() -> int:
     # 26/11 : une image SIMULEE (ses cases corrigees, simuler_ses_deux_cases_de_9q0fhakk_2026-11-26.py) a la place de
     #   celle du 81 -- le verdict est compare au 81 ; l'etat du 81 n'est alors JAMAIS ecrit comme reconstitue
     ap.add_argument("--image", default=None)
+    # 26/11 (2) : une image NEUVE du protocole (prise par `protocole_classeur.py image`, dans protocole/images) -- le
+    #   passage 82 joue a blanc sur la copie ; meme regle : l'etat du 81 n'est jamais ecrit comme reconstitue
+    ap.add_argument("--image-du-protocole", default=None)
     args = ap.parse_args()
+    if args.image_du_protocole:
+        assert not args.image, "--image et --image-du-protocole s'excluent"
+        neuve = P.IMAGES / args.image_du_protocole
+        assert neuve.is_dir() and (neuve / "manifeste.json").exists(), "image du protocole introuvable : %s" % neuve
+        args.image = str(neuve)
     copie_dir = Path(args.copie)
     copie_dir.mkdir(parents=True, exist_ok=False)
     avant = (VRAI.stat().st_mtime, emp(VRAI))
@@ -121,13 +129,16 @@ def main() -> int:
             P._EXCLUES_E.update(e81)
             print("ENTREES DU 81 REMISES : liste E de la sauvegarde de 09:02 (avant la vague) = %s ; aujourd'hui = %s" % (
                 sorted(e81), sorted(liste_e(P.RACINE / "phase2" / "sync" / "affaire_ledger.py"))))
-        if args.image:
+        if args.image and args.image_du_protocole:
+            print("IMAGE NEUVE DU PROTOCOLE : %s" % args.image)
+        elif args.image:
             assert P.IMAGES.resolve() not in Path(args.image).resolve().parents, "une image simulee hors de protocole/images"
             print("⚠ IMAGE SIMULEE : %s" % args.image)
         I = P.Image(Path(args.image) if args.image else P.IMAGES / image)
         code = P.etape_passage(I, "rejeu du passage 81 SUR COPIE%s%s" % (
             " -- entrees du 81 remises" if args.entrees_de_81 else " -- entrees d'aujourd'hui",
-            " -- IMAGE SIMULEE %s" % Path(args.image).name if args.image else ""), "bien")
+            (" -- IMAGE NEUVE %s" if args.image_du_protocole else " -- IMAGE SIMULEE %s") % Path(args.image).name
+            if args.image else ""), "bien")
     finally:
         os.chmod(VRAI, stat.S_IREAD | stat.S_IWRITE)
     c = sqlite3.connect((copie_dir / "socle.sqlite").as_posix())
