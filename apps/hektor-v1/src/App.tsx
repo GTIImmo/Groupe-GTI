@@ -12880,8 +12880,8 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       onBilan={appliquerBilan}
       peutModifierTransaction={peutModifierTransaction}
       onResultat={setContexteDepot}
-      rangeEnListe={skin === 'v21'}
-      onDossier={skin === 'v21' ? setDossierGed : undefined}
+      rangeEnListe={skin === 'v21' || compact}
+      onDossier={skin === 'v21' || compact ? setDossierGed : undefined}
       onDeposer={gedDepot ? (code, libelle) => {
         setTypeAttendu({ code, libelle })
         setUploadOpen(true)
@@ -12980,35 +12980,164 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     )
   }
 
+  // GED V3, morceau 7 B (26/11/2026) : sorti de la branche cockpit, À L'IDENTIQUE, pour que le TÉLÉPHONE (panneau classique
+  // `compact`) range lui aussi sa liste par moment. Calculs purs ; aucun geste ni aucune écriture ne change.
+  const docTypeOf = (name: string): [string, string] => {
+    const n = name.toLowerCase()
+    if (/avenant/.test(n)) return ['avenant', 'Avenant']
+    if (/mandat/.test(n)) return ['mandat', 'Mandat']
+    if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
+    if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
+    if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
+    return ['autre', 'Document']
+  }
+  const enriched = documents.map((d) => {
+    const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
+    const st = sig?.status
+    const [type, typeLabel] = docTypeOf(`${d.document_name ?? ''} ${d.document_type ?? ''}`)
+    const signed = st === 'signed'
+    const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
+      : st === 'pending' ? 'En attente de signature'
+      : st === 'to_send' ? 'À envoyer en signature'
+      : st === 'cancelled' ? 'Signature annulée'
+      // A.2 P8-5 : l'expiration Youtrust se dit (le document redevient a envoyer).
+      : st === 'expired' ? `Signature expirée${sig?.expired_at ? ` le ${sig.expired_at}` : ''} — à renvoyer`
+      : ''
+    const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'expired' ? 'Expirée' : st === 'to_send' ? 'À préparer' : d.storage_status === 'cloud_available' ? 'Cloud' : 'Indexé'
+    const cloud = d.storage_status === 'cloud_available'
+    // A.2 lot 6b P5 : l'ancien PDF d'une regeneration (maquette « corriger » vue 6).
+    const remplace = mentionRemplace(d)
+    return { doc: d, type, typeLabel, signed, sigLabel, badge, cloud, remplace }
+  })
+  // « Le dossier » : seulement au filtre « Tous », et seulement si RecuManque a dit quoi va où (sinon : la liste à plat)
+  const vueDossier = docFilter === 'tous' && dossierGed !== null
+  // Une ligne de document : repliée, elle dit la pièce, deux valeurs lues et l'état (de signature compris) ; dépliée, ce
+  // que l'IA a lu PUIS la carte d'aujourd'hui, à l'identique : celle du cockpit (carteDocument) ou, au téléphone, la carte
+  // classique (carteClassique) -- morceau 7 B, 26/11.
+  const ligneDocument = (e: (typeof enriched)[number], piece: string | null, dansUnDossier: boolean, carte: (e: (typeof enriched)[number]) => ReactNode) => {
+    const lu = dossierGed?.lectures.get(e.doc.id) ?? null
+    const ouverte = ligneDocOuverte === e.doc.id
+    const etatSignature = e.sigLabel && !/^À envoyer/.test(e.sigLabel) ? e.sigLabel : null
+    return (
+      <div key={e.doc.id} className={`gd3-doc${ouverte ? ' is-ouverte' : ''}`}>
+        <button type="button" className="gd3-dl" aria-expanded={ouverte} onClick={() => setLigneDocOuverte(ouverte ? null : e.doc.id)}>
+          <span className={`gd3-page${lu && !lu.refusee ? ' is-lu' : ''}`} aria-hidden="true" />
+          <span className="gd3-dt">
+            <b>{piece ?? e.doc.document_name}</b>
+            <small>{piece ? `${dansUnDossier ? 'Dans un dossier de diagnostics : ' : ''}${e.doc.document_name}` : e.typeLabel}</small>
+            {lu && lu.morceaux.length ? <span className="gd3-puces">{lu.morceaux.slice(0, 2).map((m) => <span key={m} className="gd3-puce">{m}</span>)}</span> : null}
+            {lu?.refusee ? <span className="gd3-puces"><span className="gd3-puce is-refus">refusé par l'IA</span></span> : null}
+          </span>
+          <span className="gd3-etat">
+            {e.remplace ? <span className="ens-pill-remplace">Remplacé</span> : <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>}
+            {etatSignature ? <small className={`gd3-sig${e.signed ? ' is-signe' : ''}`}>{etatSignature}</small> : null}
+          </span>
+          <span className={`gd3-chev${ouverte ? ' is-ouvert' : ''}`} aria-hidden="true" />
+        </button>
+        {ouverte ? (
+          <div className="gd3-detail">
+            {lu ? (
+              <div className="gd3-lu">
+                <small>Ce que l'IA a lu</small>
+                {lu.morceaux.length ? <span className="gd3-puces">{lu.morceaux.map((m) => <span key={m} className="gd3-puce">{m}</span>)}</span> : <span>{lu.resume}</span>}
+                {lu.peutRevoir || (lu.peutGarder && lu.lectureId) ? (
+                  <span className="gd3-lu-gestes">
+                    {lu.peutRevoir ? <button type="button" className="gd3-lien" onClick={() => dossierGed?.revoir(e.doc.id)}>Revoir ce qu'il dit</button> : null}
+                    {lu.peutGarder && lu.lectureId ? (
+                      <button type="button" className="gd3-lien" disabled={dossierGed?.gardeEnCours !== null} onClick={() => dossierGed?.garder(lu.lectureId as string)}>
+                        {dossierGed?.gardeEnCours === lu.lectureId ? 'On garde la lecture…' : "C'est bien ce type : garder la lecture"}
+                      </button>
+                    ) : null}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {carte(e)}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+  // « Voir le suivi » (fenêtre du choix de signature) : déplier d'abord le groupe et la ligne du document, PUIS défiler
+  // jusqu'au suivi -- sinon `sst-<id>` n'existe pas encore et le clic tombe dans le vide (session signature, 20/11).
+  const ouvrirPuisSuivi = (d: ConsoleDocument) => {
+    if (!vueDossier || !dossierGed) { allerAuSuivi(d); return }
+    const groupe = dossierGed.groupes.find((g) => g.lignes.some((l) => l.documents.includes(d.document_name)))
+    setGroupesOuverts((o) => ({ ...o, [groupe ? groupe.moment : 'autres']: true }))
+    setLigneDocOuverte(d.id)
+    window.setTimeout(() => allerAuSuivi(d), 120)
+  }
+  // « Le dossier », la liste rangée par moment (morceau 3) -- partagée depuis le morceau 7 B (26/11) entre le cockpit et le
+  // téléphone : seule change la carte qu'une ligne dépliée monte (la sienne, à l'identique).
+  const rendreLeDossier = (carte: (e: (typeof enriched)[number]) => ReactNode) => (dossierGed ? (
+        <div className="gd3-dossier">
+          {dossierGed.groupes.map((g) => {
+            const ouvert = groupesOuverts[g.moment] ?? g.courant
+            const complet = g.recues === g.attendues
+            return (
+              <section key={g.moment} className={`gd3-groupe${g.courant ? ' is-courant' : ''}`}>
+                <button type="button" className="gd3-gtete" aria-expanded={ouvert} onClick={() => setGroupesOuverts((o) => ({ ...o, [g.moment]: !ouvert }))}>
+                  <span className={`gd3-chev${ouvert ? ' is-ouvert' : ''}`} aria-hidden="true" />
+                  <b>{LIBELLE_MOMENT[g.moment]}</b>
+                  <span className={`gd3-tag ${g.courant ? 'is-cours' : complet ? 'is-fait' : 'is-manque'}`}>{g.courant ? 'en cours' : complet ? 'complet' : 'à compléter'}</span>
+                  <small>{`${g.recues} sur ${g.attendues}`}</small>
+                </button>
+                {ouvert ? (
+                  <div className="gd3-lignes">
+                    {g.lignes.map((l) => {
+                      if (l.etat === 'recu') {
+                        // un nom porté par plusieurs fichiers est UNE fois dans la liste des noms (sinon chaque fichier
+                        // revenait autant de fois que son nom : vu en ligne le 20/11 sur 18849, quatre « Copie AAE PROMESSE… »)
+                        const noms = new Set(l.documents)
+                        const docs = enriched.filter((e) => noms.has(e.doc.document_name))
+                        return <Fragment key={l.cle}>{docs.map((e) => ligneDocument(e, l.libelle, l.dansUnDossier, carte))}</Fragment>
+                      }
+                      const cas = l.etat === 'selon_le_cas'
+                      return (
+                        <div key={l.cle} className={`gd3-manque${cas ? ' is-cas' : ''}`}>
+                          <span className="gd3-page is-vide" aria-hidden="true" />
+                          <span className="gd3-dt">
+                            <b>{l.libelle}</b>
+                            <small>{cas ? 'La fiche ne dit pas si elle est due' : `${l.niveau === 'obligatoire' ? 'obligatoire' : l.niveau === 'bonne_pratique' ? 'bonne pratique' : 'selon le cas'}${l.pourquoi ? ` : ${l.pourquoi}` : ''}`}{l.sensible ? ', toujours privé' : ''}</small>
+                          </span>
+                          {gedDepot ? (
+                            <button type="button" className={cas ? 'gd3-dep is-discret' : 'gd3-dep'} aria-label={`Déposer : ${l.libelle}`} onClick={() => {
+                              setTypeAttendu({ code: l.typeADeposer, libelle: l.libelle })
+                              setUploadOpen(true)
+                              window.setTimeout(() => window.document.querySelector('.ged-depot')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60)
+                            }}>Déposer</button>
+                          ) : <span />}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </section>
+            )
+          })}
+          {(() => {
+            const ranges = new Set(dossierGed.groupes.flatMap((g) => g.lignes.flatMap((l) => l.documents)))
+            const autres = enriched.filter((e) => !ranges.has(e.doc.document_name))
+            if (!autres.length) return null
+            const ouvert = groupesOuverts.autres ?? false
+            return (
+              <section className="gd3-groupe">
+                <button type="button" className="gd3-gtete" aria-expanded={ouvert} onClick={() => setGroupesOuverts((o) => ({ ...o, autres: !ouvert }))}>
+                  <span className={`gd3-chev${ouvert ? ' is-ouvert' : ''}`} aria-hidden="true" />
+                  <b>Autres documents</b>
+                  <span className="gd3-tag is-autre">{autres.length}</span>
+                  <small>sans pièce attendue</small>
+                </button>
+                {ouvert ? <div className="gd3-lignes">{autres.map((e) => ligneDocument(e, null, false, carte))}</div> : null}
+              </section>
+            )
+          })()}
+          {dossierGed.messageGarde ? <p className="gd3-msg" role="alert">{dossierGed.messageGarde}</p> : null}
+        </div>
+  ) : null)
+
   // ---- Skin « v21 » (cockpit) : bloc UNIFIE — liste maquette v21 + actions reelles + tiroir d'ajout.
   if (skin === 'v21') {
-    const docTypeOf = (name: string): [string, string] => {
-      const n = name.toLowerCase()
-      if (/avenant/.test(n)) return ['avenant', 'Avenant']
-      if (/mandat/.test(n)) return ['mandat', 'Mandat']
-      if (/dpe|diagnos|amiante|plomb|termite|gaz|elec|erp|risque/.test(n)) return ['diagnostic', 'Diagnostic']
-      if (/avis|estimation|valeur/.test(n)) return ['estimation', 'Avis']
-      if (/cadastr|plan/.test(n)) return ['autre', 'Cadastre']
-      return ['autre', 'Document']
-    }
-    const enriched = documents.map((d) => {
-      const sig = (d.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
-      const st = sig?.status
-      const [type, typeLabel] = docTypeOf(`${d.document_name ?? ''} ${d.document_type ?? ''}`)
-      const signed = st === 'signed'
-      const sigLabel = st === 'signed' ? `Signé${sig?.signed_at ? ` le ${sig.signed_at}` : ''}`
-        : st === 'pending' ? 'En attente de signature'
-        : st === 'to_send' ? 'À envoyer en signature'
-        : st === 'cancelled' ? 'Signature annulée'
-        // A.2 P8-5 : l'expiration Youtrust se dit (le document redevient a envoyer).
-        : st === 'expired' ? `Signature expirée${sig?.expired_at ? ` le ${sig.expired_at}` : ''} — à renvoyer`
-        : ''
-      const badge = signed ? 'Signé' : st === 'pending' ? 'En signature' : st === 'expired' ? 'Expirée' : st === 'to_send' ? 'À préparer' : d.storage_status === 'cloud_available' ? 'Cloud' : 'Indexé'
-      const cloud = d.storage_status === 'cloud_available'
-      // A.2 lot 6b P5 : l'ancien PDF d'une regeneration (maquette « corriger » vue 6).
-      const remplace = mentionRemplace(d)
-      return { doc: d, type, typeLabel, signed, sigLabel, badge, cloud, remplace }
-    })
     const cntAll = enriched.length
     const cntPrep = enriched.filter((e) => !e.signed).length
     const cntSigned = enriched.filter((e) => e.signed).length
@@ -13037,63 +13166,6 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
               </div>
             </div>
     )
-    // « Le dossier » : seulement au filtre « Tous », et seulement si RecuManque a dit quoi va où (sinon : la liste à plat)
-    const vueDossier = docFilter === 'tous' && dossierGed !== null
-    // Une ligne de document : repliée, elle dit la pièce, deux valeurs lues et l'état (de signature compris) ; dépliée, ce
-    // que l'IA a lu PUIS la carte d'aujourd'hui (carteDocument), à l'identique.
-    const ligneDocument = (e: (typeof enriched)[number], piece: string | null, dansUnDossier: boolean) => {
-      const lu = dossierGed?.lectures.get(e.doc.id) ?? null
-      const ouverte = ligneDocOuverte === e.doc.id
-      const etatSignature = e.sigLabel && !/^À envoyer/.test(e.sigLabel) ? e.sigLabel : null
-      return (
-        <div key={e.doc.id} className={`gd3-doc${ouverte ? ' is-ouverte' : ''}`}>
-          <button type="button" className="gd3-dl" aria-expanded={ouverte} onClick={() => setLigneDocOuverte(ouverte ? null : e.doc.id)}>
-            <span className={`gd3-page${lu && !lu.refusee ? ' is-lu' : ''}`} aria-hidden="true" />
-            <span className="gd3-dt">
-              <b>{piece ?? e.doc.document_name}</b>
-              <small>{piece ? `${dansUnDossier ? 'Dans un dossier de diagnostics : ' : ''}${e.doc.document_name}` : e.typeLabel}</small>
-              {lu && lu.morceaux.length ? <span className="gd3-puces">{lu.morceaux.slice(0, 2).map((m) => <span key={m} className="gd3-puce">{m}</span>)}</span> : null}
-              {lu?.refusee ? <span className="gd3-puces"><span className="gd3-puce is-refus">refusé par l'IA</span></span> : null}
-            </span>
-            <span className="gd3-etat">
-              {e.remplace ? <span className="ens-pill-remplace">Remplacé</span> : <span className={`fa-ck-docbadge${e.signed ? ' ok' : ''}`}>{e.badge}</span>}
-              {etatSignature ? <small className={`gd3-sig${e.signed ? ' is-signe' : ''}`}>{etatSignature}</small> : null}
-            </span>
-            <span className={`gd3-chev${ouverte ? ' is-ouvert' : ''}`} aria-hidden="true" />
-          </button>
-          {ouverte ? (
-            <div className="gd3-detail">
-              {lu ? (
-                <div className="gd3-lu">
-                  <small>Ce que l'IA a lu</small>
-                  {lu.morceaux.length ? <span className="gd3-puces">{lu.morceaux.map((m) => <span key={m} className="gd3-puce">{m}</span>)}</span> : <span>{lu.resume}</span>}
-                  {lu.peutRevoir || (lu.peutGarder && lu.lectureId) ? (
-                    <span className="gd3-lu-gestes">
-                      {lu.peutRevoir ? <button type="button" className="gd3-lien" onClick={() => dossierGed?.revoir(e.doc.id)}>Revoir ce qu'il dit</button> : null}
-                      {lu.peutGarder && lu.lectureId ? (
-                        <button type="button" className="gd3-lien" disabled={dossierGed?.gardeEnCours !== null} onClick={() => dossierGed?.garder(lu.lectureId as string)}>
-                          {dossierGed?.gardeEnCours === lu.lectureId ? 'On garde la lecture…' : "C'est bien ce type : garder la lecture"}
-                        </button>
-                      ) : null}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              {carteDocument(e)}
-            </div>
-          ) : null}
-        </div>
-      )
-    }
-    // « Voir le suivi » (fenêtre du choix de signature) : déplier d'abord le groupe et la ligne du document, PUIS défiler
-    // jusqu'au suivi -- sinon `sst-<id>` n'existe pas encore et le clic tombe dans le vide (session signature, 20/11).
-    const ouvrirPuisSuivi = (d: ConsoleDocument) => {
-      if (!vueDossier || !dossierGed) { allerAuSuivi(d); return }
-      const groupe = dossierGed.groupes.find((g) => g.lignes.some((l) => l.documents.includes(d.document_name)))
-      setGroupesOuverts((o) => ({ ...o, [groupe ? groupe.moment : 'autres']: true }))
-      setLigneDocOuverte(d.id)
-      window.setTimeout(() => allerAuSuivi(d), 120)
-    }
     return (
       <div className="fa-ck-docs-unified">
         <div className="fa-ck-pub-sec fa-ck-docs-head">
@@ -13127,72 +13199,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         {/* Visuel V3, morceau 3 (20/11/2026) : « Le dossier » -- la MÊME liste, rangée par moment. Chaque document est une
             ligne qui se déplie sur la carte d'aujourd'hui (carteDocument : mêmes gestes, mêmes composants de signature).
             L'état de signature reste visible ligne repliée (condition de la session signature, 20/11). */}
-        {vueDossier && dossierGed ? (
-          <div className="gd3-dossier">
-            {dossierGed.groupes.map((g) => {
-              const ouvert = groupesOuverts[g.moment] ?? g.courant
-              const complet = g.recues === g.attendues
-              return (
-                <section key={g.moment} className={`gd3-groupe${g.courant ? ' is-courant' : ''}`}>
-                  <button type="button" className="gd3-gtete" aria-expanded={ouvert} onClick={() => setGroupesOuverts((o) => ({ ...o, [g.moment]: !ouvert }))}>
-                    <span className={`gd3-chev${ouvert ? ' is-ouvert' : ''}`} aria-hidden="true" />
-                    <b>{LIBELLE_MOMENT[g.moment]}</b>
-                    <span className={`gd3-tag ${g.courant ? 'is-cours' : complet ? 'is-fait' : 'is-manque'}`}>{g.courant ? 'en cours' : complet ? 'complet' : 'à compléter'}</span>
-                    <small>{`${g.recues} sur ${g.attendues}`}</small>
-                  </button>
-                  {ouvert ? (
-                    <div className="gd3-lignes">
-                      {g.lignes.map((l) => {
-                        if (l.etat === 'recu') {
-                          // un nom porté par plusieurs fichiers est UNE fois dans la liste des noms (sinon chaque fichier
-                          // revenait autant de fois que son nom : vu en ligne le 20/11 sur 18849, quatre « Copie AAE PROMESSE… »)
-                          const noms = new Set(l.documents)
-                          const docs = enriched.filter((e) => noms.has(e.doc.document_name))
-                          return <Fragment key={l.cle}>{docs.map((e) => ligneDocument(e, l.libelle, l.dansUnDossier))}</Fragment>
-                        }
-                        const cas = l.etat === 'selon_le_cas'
-                        return (
-                          <div key={l.cle} className={`gd3-manque${cas ? ' is-cas' : ''}`}>
-                            <span className="gd3-page is-vide" aria-hidden="true" />
-                            <span className="gd3-dt">
-                              <b>{l.libelle}</b>
-                              <small>{cas ? 'La fiche ne dit pas si elle est due' : `${l.niveau === 'obligatoire' ? 'obligatoire' : l.niveau === 'bonne_pratique' ? 'bonne pratique' : 'selon le cas'}${l.pourquoi ? ` : ${l.pourquoi}` : ''}`}{l.sensible ? ', toujours privé' : ''}</small>
-                            </span>
-                            {gedDepot ? (
-                              <button type="button" className={cas ? 'gd3-dep is-discret' : 'gd3-dep'} aria-label={`Déposer : ${l.libelle}`} onClick={() => {
-                                setTypeAttendu({ code: l.typeADeposer, libelle: l.libelle })
-                                setUploadOpen(true)
-                                window.setTimeout(() => window.document.querySelector('.ged-depot')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60)
-                              }}>Déposer</button>
-                            ) : <span />}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : null}
-                </section>
-              )
-            })}
-            {(() => {
-              const ranges = new Set(dossierGed.groupes.flatMap((g) => g.lignes.flatMap((l) => l.documents)))
-              const autres = enriched.filter((e) => !ranges.has(e.doc.document_name))
-              if (!autres.length) return null
-              const ouvert = groupesOuverts.autres ?? false
-              return (
-                <section className="gd3-groupe">
-                  <button type="button" className="gd3-gtete" aria-expanded={ouvert} onClick={() => setGroupesOuverts((o) => ({ ...o, autres: !ouvert }))}>
-                    <span className={`gd3-chev${ouvert ? ' is-ouvert' : ''}`} aria-hidden="true" />
-                    <b>Autres documents</b>
-                    <span className="gd3-tag is-autre">{autres.length}</span>
-                    <small>sans pièce attendue</small>
-                  </button>
-                  {ouvert ? <div className="gd3-lignes">{autres.map((e) => ligneDocument(e, null, false))}</div> : null}
-                </section>
-              )
-            })()}
-            {dossierGed.messageGarde ? <p className="gd3-msg" role="alert">{dossierGed.messageGarde}</p> : null}
-          </div>
-        ) : null}
+        {vueDossier && dossierGed ? rendreLeDossier(carteDocument) : null}
 
         <div className="fa-ck-doclist">
           {(vueDossier && dossierGed ? [] : shown).map((e) => carteDocument(e))}
@@ -13239,6 +13246,58 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
     )
   }
 
+  // Morceau 7 B (26/11/2026) : la carte classique d'un document, À L'IDENTIQUE, dans une fonction -- montée par la liste à plat
+  // (ordinateur) et par la ligne dépliée de « Le dossier » (téléphone).
+  const carteClassique = (document: ConsoleDocument) => {
+    const preparing = pendingDocumentIds.has(document.id)
+    const deleting = deletingDocumentIds.has(document.id)
+    const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
+    return (
+      <article key={document.id} className={`console-document-row console-document-${document.storage_status}${documentRemplace(document) ? ' ens-doc-remplace' : ''}`}>
+        <span className="console-document-icon" data-ftype={consoleFileType(document)} aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
+        <div className="console-document-main">
+          <strong>{document.document_name}</strong>
+          {/* A.2 lot 6b P5 : l'ancien PDF d'une regeneration, garde, sans bouton Signature. */}
+          {mentionRemplace(document) ? <span className="ens-remplace-mention">{mentionRemplace(document)}</span> : null}
+          <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
+          {/* 3e (13/10/2026) : « supprimé chez Hektor, gardé chez nous ».
+              Avant, la ligne restait (la synchro n'efface que les doublons)
+              mais SANS AUCUNE MENTION : on gardait un document sans savoir
+              que Hektor ne l'avait plus. Mesuré : 1 à 12 cas sur 162 544. */}
+          {document.present_in_hektor === false ? (
+            <span className="console-document-absent">
+              {bvs("Supprimé chez Hektor")}{document.absent_depuis ? ` le ${formatDate(document.absent_depuis)}` : ''} — conservé chez nous
+            </span>
+          ) : null}
+          {/* 3d / lot 2c (14/10/2026) -- L'ETAT DE L'ENVOI A HEKTOR.
+              La pastille de droite dit deja « En attente » pour
+              `pending_upload`, mais elle ne dit pas DE QUOI, et surtout
+              un envoi ECHOUE n'apparaissait NULLE PART. ⚠ Ca compte : le
+              repreneur n'est pas branche (piece 4), donc un echec est
+              aujourd'hui DEFINITIF -- et il etait muet.
+              ⭐ Le mot « chez nous » est la volontairement : c'est ce que
+              le negociateur doit retenir, le document ne risque rien. */}
+          {document.storage_status === 'pending_upload' || document.envoi_hektor_statut === 'a_envoyer' ? (
+            <span className="console-document-encours">
+              {bvs("Chez nous — envoi à Hektor en cours")}
+            </span>
+          ) : document.envoi_hektor_statut === 'echec' ? (
+            <span className="console-document-absent">
+              {bvs("Chez nous — l'envoi à Hektor a échoué")}
+            </span>
+          ) : null}
+          <SignatureBadge signature={signature} />
+          {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
+          <SuiviSignatairesYoutrust preuvesActives={preuvesActives} document={document} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
+        </div>
+        <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
+        {docRowActions(document)}
+      </article>
+    )
+  }
+  // Au téléphone seulement (`compact`, un seul appelant) : la liste rangée par moment, comme au cockpit.
+  const vueDossierTel = compact && vueDossier && dossierGed !== null
+
   return (
     <details className={`console-documents-panel cdocs-v2 ${compact ? 'is-compact' : ''}`}>
       <summary className="console-documents-head">
@@ -13265,55 +13324,10 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
 
         {loading ? <p className="empty-state">Chargement des documents Console...</p> : null}
         {!loading && documents.length === 0 ? <p className="empty-state">Aucun document Console indexe pour ce dossier.</p> : null}
-        {documents.length > 0 ? (
+        {documents.length > 0 && vueDossierTel ? rendreLeDossier((e) => carteClassique(e.doc)) : null}
+        {documents.length > 0 && !vueDossierTel ? (
           <div className="console-documents-list">
-            {documents.map((document) => {
-              const preparing = pendingDocumentIds.has(document.id)
-              const deleting = deletingDocumentIds.has(document.id)
-              const signature = (document.metadata_json as { signature?: SignatureMeta } | null)?.signature ?? null
-              return (
-                <article key={document.id} className={`console-document-row console-document-${document.storage_status}${documentRemplace(document) ? ' ens-doc-remplace' : ''}`}>
-                  <span className="console-document-icon" data-ftype={consoleFileType(document)} aria-hidden="true"><DetailIcon type={consoleDocumentIconType(document)} /></span>
-                  <div className="console-document-main">
-                    <strong>{document.document_name}</strong>
-                    {/* A.2 lot 6b P5 : l'ancien PDF d'une regeneration, garde, sans bouton Signature. */}
-                    {mentionRemplace(document) ? <span className="ens-remplace-mention">{mentionRemplace(document)}</span> : null}
-                    <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
-                    {/* 3e (13/10/2026) : « supprimé chez Hektor, gardé chez nous ».
-                        Avant, la ligne restait (la synchro n'efface que les doublons)
-                        mais SANS AUCUNE MENTION : on gardait un document sans savoir
-                        que Hektor ne l'avait plus. Mesuré : 1 à 12 cas sur 162 544. */}
-                    {document.present_in_hektor === false ? (
-                      <span className="console-document-absent">
-                        {bvs("Supprimé chez Hektor")}{document.absent_depuis ? ` le ${formatDate(document.absent_depuis)}` : ''} — conservé chez nous
-                      </span>
-                    ) : null}
-                    {/* 3d / lot 2c (14/10/2026) -- L'ETAT DE L'ENVOI A HEKTOR.
-                        La pastille de droite dit deja « En attente » pour
-                        `pending_upload`, mais elle ne dit pas DE QUOI, et surtout
-                        un envoi ECHOUE n'apparaissait NULLE PART. ⚠ Ca compte : le
-                        repreneur n'est pas branche (piece 4), donc un echec est
-                        aujourd'hui DEFINITIF -- et il etait muet.
-                        ⭐ Le mot « chez nous » est la volontairement : c'est ce que
-                        le negociateur doit retenir, le document ne risque rien. */}
-                    {document.storage_status === 'pending_upload' || document.envoi_hektor_statut === 'a_envoyer' ? (
-                      <span className="console-document-encours">
-                        {bvs("Chez nous — envoi à Hektor en cours")}
-                      </span>
-                    ) : document.envoi_hektor_statut === 'echec' ? (
-                      <span className="console-document-absent">
-                        {bvs("Chez nous — l'envoi à Hektor a échoué")}
-                      </span>
-                    ) : null}
-                    <SignatureBadge signature={signature} />
-                    {/* A.2 P8-3 : qui a signe, qui attend (Youtrust seulement ; ImmoSign garde ses boutons). */}
-                    <SuiviSignatairesYoutrust preuvesActives={preuvesActives} document={document} gestesActifs={signatureYoutrust} onJobCreated={onJobCreated} onChange={() => { void refreshDocuments(true) }} />
-                  </div>
-                  <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
-                  {docRowActions(document)}
-                </article>
-              )
-            })}
+            {documents.map((document) => carteClassique(document))}
           </div>
         ) : null}
         {/* A.2 P8-4 : les pieces de la signature. */}
@@ -13331,7 +13345,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
             numeroMandat={dossier.numero_mandat != null ? String(dossier.numero_mandat) : null}
             negociateur={dossier.commercial_nom ?? null}
             onRegenerer={() => { const pris = demanderNouveauMandat(dossier, choixDoc); if (pris) setChoixDoc(null); return pris }}
-            onVoirSuivi={() => { const d = choixDoc; setChoixDoc(null); allerAuSuivi(d) }}
+            onVoirSuivi={() => { const d = choixDoc; setChoixDoc(null); ouvrirPuisSuivi(d) }}
           />
         ) : null}
         {signDoc ? (
