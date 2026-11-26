@@ -13,6 +13,10 @@ CE QU'ON EPROUVE, regle par regle :
   1  pas de compte, pas de bascule (EXIGER_LE_COMPTE) : un compte qui ne repond pas
      refuse la copie neuve. Le cas qui compte : une lecture COUPEE (300 sur 500) avec un
      compte absent passait en silence.
+  2  un message ne promet pas une copie qui n'existe pas (UN_MESSAGE_DIT_VRAI).
+  3  un objet suivi que le serveur n'expose plus se declare (objets_disparus) ; rien n'est
+     supprime. L'interrupteur DECLARER_LES_DISPARUS, lui, vit dans main() : il s'eprouve
+     par un --dry-run (voir la note d'audit, § 11).
 
 CHAQUE REGLE A SON TEMOIN INVERSE : son interrupteur eteint, le meme cas DOIT reproduire
 le comportement d'avant. Un essai qui passerait aussi interrupteur eteint ne prouverait rien.
@@ -230,12 +234,67 @@ def regle_1():
     print()
 
 
+def regle_2():
+    print("=== REGLE 2 : un message ne promet pas une copie qui n'existe pas ===")
+    juger("2  l'interrupteur est ALLUME dans le fichier", True, pfs.UN_MESSAGE_DIT_VRAI)
+    garde = " -- l'ancienne copie est conservee"
+
+    erreur = passer(base(), Lecteur(lignes(500), compte=499))
+    juger("2a sans copie locale : le refus le DIT, et ne promet rien", (True, True, False),
+          ("incomplete" in erreur, "AUCUNE copie locale" in erreur, garde in erreur))
+    erreur = passer(base(ancienne=500, etat=(500, VEILLE, None, VEILLE)), Lecteur(lignes(500), compte=499))
+    juger("2b avec une copie locale : « l'ancienne copie est conservee », comme avant", True,
+          erreur.endswith(garde))
+    erreur = passer(base(), Lecteur(lignes(500), compte=None))
+    juger("2c le refus de la regle 1 dit vrai lui aussi", True,
+          erreur.startswith("comptage impossible") and "AUCUNE copie locale" in erreur)
+
+    # TEMOIN INVERSE : eteint, le mensonge d'avant revient, au mot pres.
+    erreur = avec("UN_MESSAGE_DIT_VRAI", False,
+                  lambda: passer(base(), Lecteur(lignes(500), compte=499)))
+    juger("2d INVERSE eteint : le texte d'avant, A L'OCTET PRES (il promettait une copie absente)",
+          "copie incomplete : 500 lignes lues, 499 attendues cote Supabase -- l'ancienne copie est conservee",
+          erreur)
+    print()
+
+
+def regle_3():
+    print("=== REGLE 3 : un objet suivi qui disparait du serveur se declare ===")
+    juger("3  l'interrupteur est ALLUME dans le fichier", True, pfs.DECLARER_LES_DISPARUS)
+    con = sqlite3.connect(":memory:")
+    pfs.ensure_state_table(con)
+    suivis = {"present": 3, "present_doublure__sb": 2, "parti": 2, "parti_doublure__sb": 1,
+              "parti_sans_copie": None}
+    for nom, n in suivis.items():
+        con.execute("INSERT INTO sb_pull_state(table_name, lignes) VALUES (?, ?)", (nom, n))
+        if n is not None:
+            con.execute('CREATE TABLE "%s" (x)' % nom)
+            con.executemany('INSERT INTO "%s" VALUES (?)' % nom, [(i,) for i in range(n)])
+    con.commit()
+    schema = {"present": None, "present_doublure": None, "autre_table_du_serveur": None}
+    avant = (sorted(r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")),
+             con.execute("SELECT count(*) FROM sb_pull_state").fetchone()[0])
+    juger("3a les trois disparus sont nommes, avec ce qui reste en local",
+          [("parti", 2), ("parti_doublure__sb", 1), ("parti_sans_copie", None)],
+          pfs.objets_disparus(con, schema))
+    juger("3b une doublure __sb dont l'original existe n'est PAS prise pour disparue", True,
+          "present_doublure__sb" not in [n for n, _ in pfs.objets_disparus(con, schema)])
+    apres = (sorted(r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")),
+             con.execute("SELECT count(*) FROM sb_pull_state").fetchone()[0])
+    juger("3c et RIEN n'est supprime (tables et lignes d'etat inchangees)", avant, apres)
+    juger("3d le serveur sans aucun suivi disparu : liste vide", [],
+          pfs.objets_disparus(con, {n.removesuffix("__sb"): None for n in suivis}))
+    print()
+
+
 def main():
     vieux = (pfs.PAGE_SIZE, pfs.PAUSE_PAGE)
     pfs.PAGE_SIZE, pfs.PAUSE_PAGE = 100, 0
     try:
         regle_0()
         regle_1()
+        regle_2()
+        regle_3()
     finally:
         pfs.PAGE_SIZE, pfs.PAUSE_PAGE = vieux
     print("%d/%d verts" % (VERTS, VERTS + len(ROUGES)))

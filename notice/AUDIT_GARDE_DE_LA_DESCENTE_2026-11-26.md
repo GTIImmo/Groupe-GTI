@@ -644,3 +644,34 @@ normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
   0. C'est la faille B, que traitera la règle 4. L'essai changera de sens ce jour-là.
 - **L'ancien banc** : 19 sur 19.
 - **Le retour arrière** : `EXIGER_LE_COMPTE = False`.
+- **Commit** : `2cb4cab`.
+
+### Règles 2 et 3 — ce que la descente dit doit être vrai (26/11)
+
+- **Le code** :
+  - `UN_MESSAGE_DIT_VRAI = True` et la fonction `suite_du_refus()` : les deux messages de
+    refus disent « l'ancienne copie est conservée » **seulement si elle existe**, et sinon
+    « AUCUNE copie locale n'existe encore : rien n'est remplacé, rien n'est gardé » ;
+  - `DECLARER_LES_DISPARUS = True` et la fonction `objets_disparus()` : à chaque passage
+    complet, la descente nomme les objets suivis que l'API n'expose plus, avec ce qui en
+    reste en local. Elle ne supprime rien et ne sort pas en code 1.
+- **Le banc : 32 sur 32** pour les règles 0 à 3.
+  - Règle 2 : sans copie locale, le refus le dit ; avec une copie, le texte reste
+    « conservée » ; le refus de la règle 1 dit vrai lui aussi.
+  - **Témoin inverse** de la règle 2 : interrupteur éteint, le texte d'avant revient **à
+    l'octet près**, avec la promesse d'une copie absente.
+  - Règle 3 : trois disparus fabriqués sont nommés avec leur reste local. Une doublure
+    `__sb` dont l'original existe n'est pas prise pour disparue, et rien n'est supprimé.
+- **Sur l'état réel**, avec la vraie fonction `main()` en `--dry-run` :
+  - les conditions : la base locale ouverte en **lecture seule**, **aucun appel réseau**
+    (toute requête aurait levé), **aucun `.env` lu**, et pour liste du serveur les 279
+    objets mesurés au serveur le 26/11 ;
+  - **interrupteur allumé** : exactement les 5 disparus mesurés.
+    - `app_classeur_lien_avant_regel_20261029`, `_20261031` et `_20261109` : « AUCUNE
+      COPIE LOCALE » ;
+    - `app_notaire_interlocuteur` : 0 ligne gardée ;
+    - `tmp_etape12_avant` : 39 lignes gardées.
+  - **interrupteur éteint** : aucune ligne, comme avant ;
+  - dans les deux cas, 169 tables à descendre (le chiffre du `--dry-run` de `092eb03`) ;
+  - `phase2.sqlite` est inchangé : même taille (7 089 815 552 octets), même heure (16:37:51).
+- **Le retour arrière** : les deux interrupteurs à `False`.

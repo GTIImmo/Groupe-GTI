@@ -292,6 +292,28 @@ DATE_DE_LA_COPIE_EN_PLACE = True
 # Epreuve : phase2/sync/test_garde_de_la_descente.py.
 EXIGER_LE_COMPTE = True
 
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLES 2 ET 3 -- CE QUE LA DESCENTE DIT DOIT ETRE VRAI              26/11/2026
+#
+# REGLE 2 : UN MESSAGE NE PROMET PAS UNE COPIE QUI N'EXISTE PAS. Tout refus finissait par
+#   « l'ancienne copie est conservee ». Le 26/11, SIX lignes de sb_pull_state le disaient
+#   pour des tables qui n'ont JAMAIS eu de copie locale (les trois gels du classeur des
+#   29/10, 31/10 et 09/11, les trois sauvegardes de la vague du 25/11). Le message dit
+#   desormais l'un ou l'autre, selon ce qui existe en local (suite_du_refus).
+# REGLE 3 : UN OBJET SUIVI QUI DISPARAIT DU SERVEUR SE DECLARE. La liste des cibles vient de
+#   l'API : un objet que Supabase n'expose plus n'etait plus une cible, et rien ne se passait
+#   -- pas une ligne au journal, sa copie locale figee, sa ligne d'etat pour toujours. Le
+#   26/11, 5 des 284 objets suivis avaient disparu (tous par des gestes voulus :
+#   tmp_etape12_avant le 24/08, app_notaire_interlocuteur renomme le 06/11, les trois gels du
+#   classeur). Le jour ou une table disparaitrait PAR ERREUR, sa copie locale deviendrait la
+#   derniere, et personne ne le saurait. Chaque passage les nomme donc (objets_disparus).
+#   ⛔ RIEN N'EST SUPPRIME, ni la copie ni l'etat ; PAS de code 1 : une suppression voulue est
+#   normale. C'est une declaration, comme celle des sauvegardes ecartees.
+# Interrupteurs : False = le texte et le silence d'avant.
+# Epreuve : phase2/sync/test_garde_de_la_descente.py.
+UN_MESSAGE_DIT_VRAI = True
+DECLARER_LES_DISPARUS = True
+
 
 def load_env_file(path: Path) -> None:
     """Meme convention que push_contacts_to_supabase.py."""
@@ -601,6 +623,38 @@ def descendues(conn: sqlite3.Connection) -> set[str]:
     return {r[0] for r in conn.execute(f"SELECT table_name FROM {STATE_TABLE}")}
 
 
+def suite_du_refus(conn: sqlite3.Connection, table: str) -> str:
+    """REGLE 2 (26/11) : la fin d'un message de refus dit ce qui existe VRAIMENT en local.
+
+    Interrupteur eteint : le texte d'avant, a l'octet pres.
+    """
+    garde = " -- l'ancienne copie est conservee"
+    if not UN_MESSAGE_DIT_VRAI:
+        return garde
+    existe = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+    return garde if existe else (" -- AUCUNE copie locale n'existe encore : rien n'est remplace, "
+                                 "rien n'est garde")
+
+
+def objets_disparus(conn: sqlite3.Connection, schema: dict) -> list[tuple[str, int | None]]:
+    """REGLE 3 (26/11) : les objets suivis que l'API n'expose plus.
+
+    Rend [(nom local, lignes de la copie locale ou None s'il n'y en a aucune)]. Le nom chez
+    Supabase est le nom local sans son suffixe de doublure __sb. Ne supprime RIEN.
+    """
+    presentes = local_tables(conn)
+    disparus: list[tuple[str, int | None]] = []
+    for local in sorted(descendues(conn)):
+        distant = local[:-4] if local.endswith("__sb") else local
+        if distant in schema:
+            continue
+        n = (conn.execute('SELECT count(*) FROM "%s"' % local).fetchone()[0]
+             if local in presentes else None)
+        disparus.append((local, n))
+    return disparus
+
+
 def encode(value: Any) -> Any:
     """Scalaires tels quels ; objets et tableaux en texte JSON."""
     if isinstance(value, (dict, list)):
@@ -804,8 +858,8 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     # les deux controles ci-dessous (relecture, refus) etaient sautes et la bascule avait lieu.
     if attendu is None and EXIGER_LE_COMPTE:
         raise RuntimeError(
-            "comptage impossible chez Supabase (le compte n'a pas repondu) -- bascule refusee "
-            "-- l'ancienne copie est conservee")
+            "comptage impossible chez Supabase (le compte n'a pas repondu) -- bascule refusee"
+            + suite_du_refus(conn, table))
 
     # LE RATTRAPAGE PAR RANG -- correctif du 22/08, cas vu en vrai sur
     # app_mandat_broadcast_current (1 524 lues / 1 528 attendues).
@@ -852,8 +906,8 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
         # le jour ou ca arrive, cette erreur le dira au lieu de laisser passer une copie
         # amputee.
         raise RuntimeError(
-            f"copie incomplete : {total} lignes lues, {attendu} attendues cote Supabase "
-            "-- l'ancienne copie est conservee")
+            f"copie incomplete : {total} lignes lues, {attendu} attendues cote Supabase"
+            + suite_du_refus(conn, table))
 
     # LA BASCULE : l'ancienne n'est remplacee qu'ICI, copie verifiee complete.
     conn.execute('DROP TABLE IF EXISTS "%s"' % table)
@@ -1229,6 +1283,14 @@ def main() -> int:
             print(f"  ⚠ dont {sans_copie} SANS AUCUNE COPIE LOCALE : l'original n'existe qu'au serveur")
         for nom, n in zip(sauvegardes_ecartees, en_local):
             print(f"     - {nom}  ({'⚠ AUCUNE COPIE LOCALE' if n is None else f'{n} lignes en local'})")
+    if not args.table and DECLARER_LES_DISPARUS:
+        # REGLE 3 (26/11) : voir DECLARER_LES_DISPARUS. Une declaration, pas un echec.
+        disparus = objets_disparus(conn, schema)
+        if disparus:
+            print(f"  objets suivis ABSENTS du serveur (regle 3, 26/11) : {len(disparus)} -- rien n'est "
+                  f"supprime, leur copie locale reste figee")
+            for nom, n in disparus:
+                print(f"     - {nom}  ({'⚠ AUCUNE COPIE LOCALE' if n is None else f'{n} lignes gardees en local'})")
     print(f"  a descendre : {len(cibles)}")
     if doublures:
         print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")
