@@ -238,6 +238,34 @@ RELECTURE_ENTIERE_MAX = 15000  # au-dela, on ne redemande pas une table en un se
 # Les VUES restent ecartees par VUES_NON_DESCENDUES, a part : une autre nature, une autre regle.
 NOM_DATE_EN_FIN = re.compile(r"(_20\d{6}(_\d{6})?$|_20\d{2}_\d{2}_\d{2}$)")
 
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLE 0 -- LA DATE D'UNE COPIE EST CELLE DE LA COPIE EN PLACE      26/11/2026
+#
+# LE DEFAUT. copy_table enregistrait `derniere_descente = <ce passage>` AVANT de copier
+#   (« enregistrer avant de copier », correctif du 21/08), et marquer_echec la laissait en
+#   place. Apres un refus, sb_pull_state disait donc « copiee aujourd'hui » pour une copie
+#   de LA VEILLE.
+# QUI S'Y FIE (audit du 26/11, notice/AUDIT_GARDE_DE_LA_DESCENTE_2026-11-26.md § 10.1) :
+#   . relation_ledger.py (l. ~587, run de nuit) ne leve un retrait que si la doublure est
+#     « du jour » -- trompe, il ferait REAPPARAITRE un lien retire la veille ;
+#   . relation_disparue.py, mandat_un_numero.py et check_gti_health.py jugent leur
+#     fraicheur sur la meme date.
+#   Jamais mordu en 34 descentes (aucune de leurs copies n'a echoue). Mais les gardes du
+#   compte et de la chute (regles 1 et 4) FABRIQUENT des refus : sans cette regle, elles
+#   armeraient le piege.
+# LA REGLE. La date n'avance qu'a une BASCULE reussie (fin de copy_table) ou a un delta
+#   reussi (copy_delta). L'enregistrement « copie en cours » ne touche plus la date d'une
+#   ligne existante ; une table neuve part avec une date VIDE.
+#   . « copie en cours » reste ecrit dans dernier_echec : ceux qui le guettent
+#     (mandat_un_numero, la sante) le voient comme avant ;
+#   . le maximum des dates (« heure du dernier passage », lu par la sante) avance des la
+#     premiere table reussie : toutes portent l'heure de DEPART du passage.
+# ⚠ Seul cas change pour la sante : si TOUTES les tables echouaient la meme nuit, le
+#   maximum resterait celui de la veille. La tache « GTI Descente » (critical) le dit deja.
+# Interrupteur : False = le comportement d'avant, a l'octet pres.
+# Epreuve : phase2/sync/test_garde_de_la_descente.py (temoin inverse compris).
+DATE_DE_LA_COPIE_EN_PLACE = True
+
 
 def load_env_file(path: Path) -> None:
     """Meme convention que push_contacts_to_supabase.py."""
@@ -578,13 +606,23 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     # laissait une table PARTIELLE absente de sb_pull_state : au run suivant elle passait
     # pour une table NATIVE, le garde-fou la protegeait, et elle n'etait plus JAMAIS
     # retentee. Une copie tronquee se faisant passer pour de la donnee, en silence.
-    conn.execute(
-        f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
-        "VALUES(?, NULL, ?, 'copie en cours') "
-        "ON CONFLICT(table_name) DO UPDATE SET lignes=NULL, derniere_descente=excluded.derniere_descente, "
-        "dernier_echec='copie en cours'",
-        (table, stamp),
-    )
+    if DATE_DE_LA_COPIE_EN_PLACE:
+        # REGLE 0 (26/11) : la date ne bouge PAS ici. Seule une bascule reussie l'avance
+        # (plus bas) : apres un refus, elle dit encore le jour de la copie en place.
+        conn.execute(
+            f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
+            "VALUES(?, NULL, NULL, 'copie en cours') "
+            "ON CONFLICT(table_name) DO UPDATE SET lignes=NULL, dernier_echec='copie en cours'",
+            (table,),
+        )
+    else:
+        conn.execute(
+            f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
+            "VALUES(?, NULL, ?, 'copie en cours') "
+            "ON CONFLICT(table_name) DO UPDATE SET lignes=NULL, derniere_descente=excluded.derniere_descente, "
+            "dernier_echec='copie en cours'",
+            (table, stamp),
+        )
     conn.commit()
 
     total = 0
