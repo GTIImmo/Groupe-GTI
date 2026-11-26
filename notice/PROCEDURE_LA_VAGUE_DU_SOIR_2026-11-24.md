@@ -2474,3 +2474,64 @@ dc5b77ee).
 
 ⛔ Rien n'est écrit dans le Sheet, en base ni chez Hektor. Le fichier des rattachements n'est pas touché, et rien n'est
 poussé.
+
+### Le 26/11 (6) : R29 retirée (v23.3), la ligne de rattachement de 3648 éprouvée, la RLS des 22 prête — rien d'écrit
+
+**① R29 RETIRÉE (juge v23.3), sur son mot.**
+- Elle passe dans `REGLES_RETIREES`, et `joue()` la refuse, même en variante de mesure.
+- La preuve, par un rejeu du 82 sur copie : verdicts b7dae92e identiques, 27 écarts, et plus aucune ligne « R29 ».
+- ⭐ **LA LEÇON, DANS SES TERMES :** « Le seul cas qu'elle couvrait était 9Q0FHAKK elle-même, et il a disparu quand j'ai
+  corrigé mes deux cases. C'était un pansement sur la cause. Ce qui a protégé cette ligne, c'est qu'elle est restée
+  visiblement en attente jusqu'à ce que je la regarde. » — **une garde qui laisse la ligne en attente valait mieux qu'une
+  règle qui l'aurait tranchée seule.**
+- Et la leçon voisine (son mot) : une décision tenue par un témoin de dernière seconde n'est pas tenue. Les quatre doubles
+  sont désormais tenus par une règle.
+
+**② ⛔ RÉSERVE NOMMÉE, LA TROISIÈME FOIS — un chantier à ouvrir pour lui-même.**
+- 9Q0FHAKK est bloquée par NOTRE opération des 11 et 12/11 : 1 202 offres refusées, dont 3648 à 19:03 par le
+  rattrapage_cascade_annulation, alors qu'elle venait d'être acceptée.
+- Son mot : « C'est un chantier à ouvrir pour lui-même, pas à réparer dossier par dossier quand il nous tombe dessus. »
+- La ligne de rattachement de 3648 répare CE dossier ; elle ne répare pas l'opération.
+
+**③ La ligne de rattachement, À SA RELECTURE avant la nuit.** Le vrai fichier n'est pas touché.
+```
+3648;3647;8395;2026-11-26;POTTIER -- l'offre du 23/08/2024 (acceptee, puis refusee le 11/11/2026 par notre rattrapage_cascade_annulation) rejoint son compromis 3647 et sa vente 3650 : la ligne 9Q0FHAKK du classeur (passage 82) -- D2024-0306 fusionne dans D2024-0511
+```
+- **Éprouvée par la VRAIE fonction de nuit**, `recalculer_les_chaines`, sur une copie en mémoire du registre
+  (`rejouer_le_rattachement_de_3648_2026-11-26.py`), avec un fichier temporaire :
+  - BASE : le fichier tel qu'il est rend la base, 0 écart ;
+  - POSITIF : 3648 passe dans la chaîne 3647, avec 3647 et 3650 ; le compteur « [M] rattachement décidé à la main » passe
+    de 16 à 17 ;
+  - INVERSE : seule 3648 change de chaîne, et 427UDDSF garde {3646, 3649} ;
+  - GARDES : ni deux ventes ni deux compromis vivants de plus dans un dossier ;
+  - ÉTIQUETTE : la plus petite pièce, 3647, porte D2024-0511, et plus aucune pièce ne porterait D2024-0306.
+  - ⚠ Vu au passage : la nuit applique les rattachements AVANT les coupes à la main. La coupe du bien 8395 n'isole que
+    {3646, 3649} (427UDDSF), donc 3648 reste bien avec 3647. Le rejeu le confirme.
+- **Le témoin de demain** (`temoin_du_rattachement_de_3648_2026-11-27.py`, à lancer après 07:30) MESURE, à la place du
+  compte rendu :
+  - la chaîne dans le registre local et dans Supabase ;
+  - l'étiquette de chaque pièce, et qui porte encore D2024-0306 ;
+  - la fusion inscrite au journal des étiquettes ;
+  - et son témoin positif : les 16 autres rattachements sont-ils réunis ?
+  - ⭐ **Lancé aujourd'hui, il répond « PAS RÉUNIE » (code 1)**, et voit les 16 autres réunis. C'est son témoin inverse :
+    il sait voir les deux états.
+- **Une seule vague demain, pas deux** (son mot) : les six lignes d'un coup, sur un classement propre et sans cri — 9Q0FHAKK
+  avec PEE1XTR8, HUY49KEC, P252U1JH, d2108609 et a360d9e3.
+
+**④ CE SOIR, dans son ordre, chaque geste à son mot :**
+1. **La RLS des 22 seule** (`refermer_les_22_sauvegardes_ouvertes_2026-11-26.py`).
+   - Ses gardes sont VERTES dès ce matin, en lecture seule : la liste mesurée à l'instant correspond exactement aux 22
+     figées ; aucune n'a de RLS ni de politique, toutes appartiennent à postgres ; et le témoin positif tient (en
+     authenticated, chaque table rend ses lignes).
+   - ⚠ Mon premier essai à blanc est passé par le pooler du juge, qui ouvre en LECTURE SEULE : la base a refusé l'ALTER,
+     et rien n'a été touché. L'essai à blanc et le geste demandent une connexion en écriture, et je ne l'ouvre qu'à son
+     mot, ce soir.
+   - Puis l'essai à blanc (transaction annulée), puis le geste. Témoin (a) : 0 ligne pour authenticated, et le même compte
+     en postgres.
+2. **Témoin (b)** : le rejeu du 82 sur copie doit retrouver b7dae92e.
+3. **Témoin (c), la descente de contrôle** : `pull_from_supabase.py --table` pour les 22 → 22 tables, 0 échec, le même
+   nombre de lignes qu'en postgres.
+4. **Seulement après (c) : la règle « un nom qui finit par une date ne descend plus »**, puis le `--dry-run`.
+5. **Et la ligne de rattachement**, après sa relecture, avant le run de 04:00.
+
+⛔ Rien n'est écrit en base, dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.

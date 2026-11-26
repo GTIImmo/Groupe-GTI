@@ -6110,6 +6110,18 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   - temoin 4 : 3 attentes perimees, nommees.
   - Reste le seul temoin 1 : pas de fiche, l'ecrivain refuse.
 - Proposition : 3648 -> 3647 dans rattachements_manuels.csv (a son mot), la nuit fusionne D2024-0306 dans D2024-0511.
+
+### 20.76 Le 26/11 (6) : R29 retiree (v23.3) ; la reserve du 11-12/11 ; le rattachement de 3648 eprouve ; la RLS prete
+
+- R29 RETIREE (REGLES_RETIREES, joue() la refuse) ; rejeu du 82 : b7dae92e, 27 ecarts. ⭐ SA LECON : « une garde qui laisse
+  la ligne en attente valait mieux qu'une regle qui l'aurait tranchee seule ».
+- ⛔ RESERVE (3e fois) : notre operation des 11-12/11 (1 202 offres refusees, dont 3648 a 19:03, juste acceptee) -- « un
+  chantier a ouvrir pour lui-meme, pas a reparer dossier par dossier ».
+- La ligne 3648;3647;8395 : eprouvee par la vraie fonction de nuit sur copie. Seule 3648 bouge, D2024-0511 est gardee,
+  D2024-0306 se vide. A sa relecture.
+- Le temoin du matin (mesure, pas rapporte) : lance le 26, il dit « PAS REUNIE » et voit les 16 autres reunis.
+- Ce soir : RLS des 22 (gardes vertes en lecture seule ; l'essai a blanc et le geste a son mot), temoins (b) et (c), puis
+  la regle des dates, puis la ligne. Demain : UNE vague, six lignes.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

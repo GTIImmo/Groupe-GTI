@@ -101,7 +101,8 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = ("v23.2 -- 26/11 : le temoin v3 attend, pour HUY49KEC, P252U1JH et d2108609, ce que SES decisions leur donnent "
+VERSION = ("v23.3 -- 26/11 : R29 RETIREE par son mot (« un pansement sur la cause » ; 0 candidat au 82) -- aucun verdict "
+           "ne change ; v23.2 -- 26/11 : le temoin v3 attend, pour HUY49KEC, P252U1JH et d2108609, ce que SES decisions leur donnent "
            "(son mot : « trois attentes perimees ») -- aucun verdict ne change ; "
            "v23.1 -- 25/11 (nuit) : 3741 SORTIE de ses neuf a part (son mot : « la raison de la mise a part a disparu ») "
            "-- v23, 25/11 (soir) : R27, R28, R29 VALIDEES par son accord (« Oui, les trois ») -- R27 la meme affaire sur "
@@ -335,6 +336,16 @@ REGLES_VALIDEES = {
             "prendrait 3 autres lignes (la paire de R27, 5C80H7ZF) : il n'y joue pas",
             "son accord du 25/11 au soir : « R28 : d'accord [...] Garde-la enfermee dans son motif » -- et, avant : « je ne "
             "veux pas fixer un nombre de jours [...] un seul mandat, une seule vente »"),
+}
+#: ⛔ LES REGLES RETIREES -- elles ne jouent JAMAIS, pas meme en variante de mesure (joue() les refuse) ; leur texte et leur
+#  code restent ici, pour l'histoire et pour la mesure qui a justifie le retrait.
+#  R29, RETIREE LE 26/11 -- SON MOT : « R29 : retire-la. Ta mesure est la bonne demonstration : le seul cas qu'elle couvrait
+#  etait 9Q0FHAKK elle-meme, et il a disparu quand j'ai corrige mes deux cases. C'etait un pansement sur la cause. Ce qui a
+#  protege cette ligne, c'est qu'elle est restee visiblement en attente jusqu'a ce que je la regarde. [...] une garde qui
+#  laisse la ligne en attente valait mieux qu'une regle qui l'aurait tranchee seule. »
+#  La mesure (mesurer_le_cas_de_r29_2026-11-26.py, dans le juge) : image du 81 -> 1 candidat, 9Q0FHAKK (arrete par sa
+#  garde) ; image du 82 -> 0 candidat sur 62 lignes regardees. Elle n'a jamais tranche une ligne.
+REGLES_RETIREES = {
     "R29": ("LA LIGNE SUIT LA VENTE DE SA COMMISSION : une ligne non tranchee dont le nom note est celui d'une offre Hektor "
             "PROPOSEE le jour de sa case « Offre Achat » (un fait d'epoque : la 1re proposition de son journal, l'etat de "
             "l'offre n'est jamais lu), sur une annonce dont le mandat ne porte qu'UNE vente, quand les honoraires de cette "
@@ -343,7 +354,9 @@ REGLES_VALIDEES = {
             "verdicts, sous la garde du deja-rendu (aucune ligne tranchee de l'un ou l'autre bien ne doit bouger)",
             "son accord du 25/11 au soir : « R29 : ⛔ change le mot « refusee », il ne prouve rien [...] 1 206 offres portent "
             "un refus date du 11 ou du 12 novembre 2026 [...] reecris la condition avec un fait d'epoque [...] Puis pose les "
-            "trois. » -- ma mesure : ces refus sont les NOTRES (1 202 sur 1 202 portent un de nos travaux de refus)"),
+            "trois. » -- ma mesure : ces refus sont les NOTRES (1 202 sur 1 202 portent un de nos travaux de refus)",
+            "RETIREE le 26/11 par son mot : « R29 : retire-la [...] C'etait un pansement sur la cause » -- son seul cas, "
+            "9Q0FHAKK (un Mandat emprunte a la ligne 245), a disparu a la source ; 0 candidat au passage 82"),
 }
 # R27 : les deux paires de jumelles qu'elle tranche, et la ligne qui porte -- SON accord, ecrit ici pour que le temoin le
 #   redise (« y compris le fait que VIALLARD aille a YRUF0S9H ») ; PAOLONE : O6R10ZQA, la date posee (critere ②)
@@ -399,7 +412,8 @@ VARIANTES_ACTIVES: set = set()
 def joue(regle: str) -> bool:
     """Une regle joue si elle est VALIDEE (toujours) ou si un passage de mesure l'active (--variantes) -- sauf pendant que la
     garde du deja-rendu rejoue un bien SANS elle (SUSPENDUES)."""
-    return (regle in REGLES_VALIDEES or regle in VARIANTES_ACTIVES) and regle not in SUSPENDUES
+    return ((regle in REGLES_VALIDEES or regle in VARIANTES_ACTIVES) and regle not in SUSPENDUES
+            and regle not in REGLES_RETIREES)
 
 
 SUSPENDUES: set = set()
@@ -2306,7 +2320,8 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
     for x in I.sheet["sans_id"]:
         rangs.append({"id_unique": "#%d" % x["num"], "num": x["num"], "biens": [], "verdict": "ATTENTE",
                       "motif": "SANS_ID_UNIQUE", "motif_texte": MOTIFS["SANS_ID_UNIQUE"][1], "epreuve": "E1"})
-    # R29 (validee le 25/11 au soir) : APRES tous les verdicts, AVANT R16 -- sous sa propre garde du deja-rendu
+    # R29 : ⛔ RETIREE LE 26/11 (son mot, voir REGLES_RETIREES) -- joue("R29") rend toujours faux ; le bloc reste pour
+    #   l'histoire du code, il ne s'execute plus
     if joue("R29"):
         rangs = r29_apres_les_verdicts(I, rangs, par_bien, perimetre)
         if DONNEE_PAR_R29 or R29_ABSTENUES:
