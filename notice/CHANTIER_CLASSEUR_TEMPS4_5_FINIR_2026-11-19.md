@@ -6184,6 +6184,18 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Chaque nuit en moins : 281 017 lignes copiees (16,9 %) + 3 tables en echec chaque nuit (53 685 lues pour rien, le
   code 1 depuis le 25/11) ; ~458 appels. Duree non mesuree : demain.
 - Suite : la ligne de rattachement, en dernier.
+
+### 20.83 Le 26/11 (13) : la regle des dates declare ce qu'elle retire -- 3 sauvegardes sans aucune copie locale
+
+- Six lignes d'etat portent « l'ancienne copie est conservee », aucune n'a de copie locale (son constat). Trois existent
+  encore au serveur et echouent (les avant_vague du 25/11, 17 907 lignes chacune, non lisibles par authenticated ni
+  anon) ; les trois avant_regel (29/10, 31/10, 09/11) n'existent plus au serveur (09/11 supprimee le 10/11 avec son
+  accord, reconstituable ; 31/10 en fichier dans supabase/rollback ; 29/10 : non mesure).
+- La liste imprimee compte la copie locale et dit « ⚠ dont 3 SANS AUCUNE COPIE LOCALE » + leurs noms. Fichier additif
+  par rapport a avant la regle (+57). Dry-run 169, 3 sans copie ; --table force ; 19 / 19.
+- Ses trois questions : 281 017 lignes en moins par nuit (+ 53 685 lues pour rien) ; 3 / 69 sans copie locale ; le code 1
+  tombe a 0 (il venait de ces trois seules) -- a sa place une ligne de journal, pas une alarme.
+- Plus rien dans pull_from_supabase.py (l'autre session). Suite : la ligne.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

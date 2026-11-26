@@ -1139,15 +1139,25 @@ def main() -> int:
     print(f"Supabase expose {len(schema)} tables/vues")
     print(f"  vues ecartees (VUES_NON_DESCENDUES) : {vues_ecartees}")
     if sauvegardes_ecartees:
-        # ON LE DIT A CHAQUE PASSAGE : une exclusion deliberee se declare. Le total est celui du
-        #   dernier etat local (sb_pull_state) -- aucun appel de plus a l'API pour des tables qu'on ne copie pas.
-        etat = {r[0]: r[1] for r in conn.execute(f"SELECT table_name, lignes FROM {STATE_TABLE}")}
-        connues = [etat.get(n) if etat.get(n) is not None else etat.get(n + "__sb") for n in sauvegardes_ecartees]
+        # ON LE DIT A CHAQUE PASSAGE : une exclusion deliberee se declare. Les lignes sont celles de la COPIE
+        #   LOCALE, comptees ici -- aucun appel de plus a l'API pour des tables qu'on ne copie pas.
+        # ⚠ SON MOT (26/11) : une sauvegarde qui n'a JAMAIS descendu entiere n'a AUCUNE copie locale, et le
+        #   message de son echec (« l'ancienne copie est conservee ») rassurait sur une copie qui n'existait pas.
+        #   La regle la retire de la descente : son absence devient definitive, et le code 1 qui la criait tombe.
+        #   Le cri passe donc ICI, nommement, a chaque passage : « AUCUNE COPIE LOCALE ».
+        presentes = local_tables(conn)
+        en_local: list[int | None] = []
+        for nom in sauvegardes_ecartees:
+            ici = nom if nom in presentes else (nom + "__sb" if nom + "__sb" in presentes else None)
+            en_local.append(None if ici is None else conn.execute('SELECT count(*) FROM "%s"' % ici).fetchone()[0])
+        sans_copie = sum(n is None for n in en_local)
         print(f"  sauvegardes datees ecartees (NOM_DATE_EN_FIN, 26/11) : {len(sauvegardes_ecartees)} tables, "
-              f"{sum(n or 0 for n in connues)} lignes au dernier etat local NON recopiees "
-              f"({sum(n is None for n in connues)} sans compte connu) -- --table les force, rien n'est supprime")
-        for nom, n in zip(sauvegardes_ecartees, connues):
-            print(f"     - {nom}  ({'compte inconnu' if n is None else f'{n} lignes'})")
+              f"{sum(n or 0 for n in en_local)} lignes en copie locale NON recopiees -- --table les force, rien "
+              f"n'est supprime")
+        if sans_copie:
+            print(f"  ⚠ dont {sans_copie} SANS AUCUNE COPIE LOCALE : l'original n'existe qu'au serveur")
+        for nom, n in zip(sauvegardes_ecartees, en_local):
+            print(f"     - {nom}  ({'⚠ AUCUNE COPIE LOCALE' if n is None else f'{n} lignes en local'})")
     print(f"  a descendre : {len(cibles)}")
     if doublures:
         print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")

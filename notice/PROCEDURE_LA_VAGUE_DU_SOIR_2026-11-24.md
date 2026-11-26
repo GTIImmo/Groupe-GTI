@@ -2797,3 +2797,53 @@ Les deux trous de la garde de nuit (0 == 0 ; comptage None) restent : la règle 
 les autres tables.
 
 **⑥ La suite, à son mot :** la ligne de rattachement, en dernier, avant 04:00.
+
+### Le 26/11 (13) : la règle des dates DÉCLARE ce qu'elle retire — 3 sauvegardes sans aucune copie locale
+
+**Son mot** : six sauvegardes portent « copie incomplète -- l'ancienne copie est conservée », et LES SIX SONT ABSENTES DU
+LOCAL : « ce message rassure sur quelque chose qui n'existe pas ». La règle les retire de la descente : leur absence en
+local devient définitive, et le code 1 tombe, « alors que ce cri disait quelque chose de vrai ». Le filet est dans sa
+condition d'origine : la descente IMPRIME ce qu'elle écarte. « Tiens-la. » Les trois failles de la garde de la descente
+partent dans une session à part : ne pas toucher à pull_from_supabase.py au-delà de la règle.
+
+**① La mesure** (prepa_25_11/112, lecture seule) :
+- **Six lignes de l'état de la descente (sb_pull_state)** portent ce message, et **aucune des six n'a de copie locale** —
+  son constat est exact.
+- **Mais trois seulement existent encore au serveur et échouent encore** : `app_affaire_repartition_avant_a2vague_20261125`,
+  `..._avant_vague_20261125_080931`, `..._avant_vague_20261125_090205` — 17 907 lignes chacune, 17 895 lues ; nées le
+  25/11 après la descente, elles ont échoué à la seule descente qui les a vues (26/11, exit 1). Elles ne sont pas dans
+  les 22 de 13:39 (pas de RLS), mais ni authenticated ni anon n'ont le droit de les lire.
+- **Les trois `app_classeur_lien_avant_regel` du 29/10, du 31/10 et du 09/11 N'EXISTENT PLUS AU SERVEUR** : la descente
+  ne les voit plus depuis le 01/11 et le 10/11 ; leurs trois lignes d'état sont des restes (derniers essais 31/10, 01/11,
+  10/11). Celle du 09/11 a été supprimée le 10/11 avec son accord (elle se reconstitue par une requête, vérifiée dans
+  les deux sens : `patch_regel_classeur_lien_2026-11-09_INVERSE.sql`) ; celle du 31/10 est gardée en fichier dans le
+  dépôt (`supabase/rollback/app_classeur_lien_avant_regel_20261031.sql`) ; celle du 29/10 : je n'ai trouvé ni où ni
+  quand elle a été supprimée — non mesuré. ⚠ « L'original est au serveur » ne vaut donc que pour les trois du 25/11.
+- Les journaux de descente des 20 derniers jours : des tables datées en échec les 10/11 (1), 14 et 15/11 (2) et 26/11
+  (3) ; jamais une table vivante.
+
+**② La liste imprimée dit désormais la chose** (retouche de MA règle seulement ; par rapport à avant la règle, le fichier
+reste additif : +57 lignes, aucune retirée) :
+- les lignes de chaque sauvegarde écartée sont celles de sa COPIE LOCALE, comptées à chaque passage ;
+- « ⚠ dont 3 SANS AUCUNE COPIE LOCALE : l'original n'existe qu'au serveur », puis chacune nommée « ⚠ AUCUNE COPIE
+  LOCALE » ;
+- pas de conseil « --table » : ces trois-là échoueraient de même (au-dessus du plafond de la relecture par rang) — c'est
+  le sujet de l'autre session.
+- Épreuves (prepa_25_11/113) : `--dry-run` 69 écartées, 281 017 lignes en local, 3 sans copie, 169 à descendre ;
+  `--dry-run --table app_affaire_repartition_avant_a2vague_20261125` : 1 à descendre ; essai sans clé primaire 19 / 19.
+
+**③ Ses trois questions :**
+- **Lignes que la descente arrêtera de recopier chaque nuit : 281 017** copiées avec succès (66 tables, 16,9 % des
+  1 664 983 de ce matin), **plus 53 685 lues pour rien** dans les 3 tables en échec — 69 tables, 334 738 lignes en base.
+- **Objets retirés sans AUCUNE copie locale aujourd'hui : 3 sur 69** (les trois du 25/11, 53 721 lignes, seulement au
+  serveur). Les trois du classeur ne sont pas retirés par la règle : elles n'existent déjà plus nulle part au serveur.
+- **Le code 1 tombe-t-il à 0 à cause de la règle : OUI.** L'exit 1 de ce matin venait de ces trois tables et de rien
+  d'autre ; demain, s'il n'y a pas d'autre échec, la descente sort en 0. **À sa place**, le journal portera chaque
+  nuit « ⚠ dont 3 SANS AUCUNE COPIE LOCALE » et leurs trois noms. ⚠ C'est une ligne de journal, pas une alarme : ni le
+  code de sortie ni le moniteur ne la lisent. Le cri passe de l'alarme au journal.
+- Les six lignes d'état au message trompeur restent telles quelles : rien n'est supprimé.
+
+⛔ Rien n'est écrit en base. Rien dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé. Je ne
+touche plus à pull_from_supabase.py : l'autre session lira ce commit.
+
+**④ La suite, à son mot :** la ligne de rattachement, en dernier, avant 04:00.
