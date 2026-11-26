@@ -3912,3 +3912,6 @@ nom de Frédéric. **Réafficher** (09:14:31) -> la carte revient avec « Dépos
 en base, une ligne `reaffiche` (le journal garde les deux, le plus récent fait foi). Aucun message d'erreur. Le bien est
 revenu à son état d'avant l'essai (le point d'attention est visible). ⚠ Vu en passant : quand tout est masqué, l'en-tête
 dit « À traiter 0 » -- il pourrait se taire ; non corrigé, à trancher.
+**26/11 (« Oui, le cacher »)** : l'en-tête « À traiter » ne s'affiche plus quand il n'y a rien à traiter (tout masqué ou
+fait) -- condition `nbATraiter > 0` ; la ligne « N point(s) d'attention masqué(s) -- Réafficher » reste. `test_ged_mesure`
+27 VERT (un contrôle de plus), témoin inverse (`>= 0`) 1 ROUGE ; essais voisins verts ; build. Commité, PAS POUSSÉ.
