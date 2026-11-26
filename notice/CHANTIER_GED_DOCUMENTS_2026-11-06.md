@@ -3946,3 +3946,9 @@ séparation, la barre qui se remplit fichier par fichier) -- elles demandent de 
 à décider à part.
 **Contrôles** : `test_ged_depot_v3.cjs` **6 VERT** (dont « DepotDocuments.tsx non modifié ») ; témoin inverse (habit retiré)
 **5 ROUGE** ; tous les essais GED verts ; build. ⚠ Pas vu à l'écran : il faut le déploiement.
+**✅ EN LIGNE le 26/11 (« Oui, pousse »)** : rejoué seul sur `origin/main` avec la note du morceau 5, l'arbre exact essayé à part
+(dépôt 33, socle 16, classement 37, lecture 62, build), poussé en `8d13a3c` ; la production sert la feuille neuve. **Vu dans le
+Chrome de Frédéric sur 18849, sans rien déposer** : « Déposer des documents » s'ouvre avec l'en-tête CLAIR (titre encre,
+pastilles « Compromis » et « Mandat 18849 » sur fond brume, croix claire), la zone « Glisse les fichiers ici » et la liste des
+pièces non trouvées inchangées ; refermée par « Fermer ». Les lignes en cartes et les pages à bande magenta n'ont pas été vues
+(il faut déposer un fichier).
