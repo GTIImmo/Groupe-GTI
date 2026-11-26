@@ -6152,6 +6152,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   etiquette posee avant la gardee absorbee jusqu'a la nuit du 26 au 27/11. Corps inchanges a l'octet (42ae94f1,
   e8d37e5c). Son controle independant de la RLS : vert, aucune protection forcee.
 - Ce soir, inchange : rejeu du 82, descente des 22, regle des dates, puis la ligne.
+
+### 20.80 Le 26/11 (10) : renvoi dans les patchs du 09/11 et du 12/11 ; temoin (b) VERT (b7dae92e, 4 803 / 4 803)
+
+- Son mot : les patchs du 09/11 et du 12/11 ne sont pas des archives (le premier endroit ou l'on tombe) -> une ligne de
+  renvoi en tete de chacun, qui contient « la plus ancienne » et renvoie au bloc du 22/11 (la scission aussi garde le
+  plus petit app_affaire_id, verifie dans le code).
+- « Ce soir » retire : on enchaine. Temoin (b) 15:38 : rejeu du 82 sur copie, verdicts b7dae92e = 82 officiel, 4 803 /
+  4 803 ; verrous mordus, vrai socle 5ca7c766 inchange ; juge 5262c384 inchange. Vrai par construction a l'egard de la
+  RLS (un passage ne lit rien en base ; le juge ne nomme aucune des 22).
+- Suite a son mot : descente des 22, regle des dates, puis la ligne.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

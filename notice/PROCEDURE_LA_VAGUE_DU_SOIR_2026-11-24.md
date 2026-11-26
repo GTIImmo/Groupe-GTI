@@ -2659,3 +2659,43 @@ vigueur) :
 
 **③ Ce soir, dans son ordre, inchangé :** le rejeu du 82 (b7dae92e), la descente des 22, la règle des dates, puis la
 ligne de rattachement, avant 04:00.
+
+### Le 26/11 (10) : les deux anciens patchs ont leur renvoi ; le témoin (b) est VERT — on enchaîne cet après-midi
+
+**Son mot** : ses quatre contrôles de §20.79 sont exacts (programme identique sans commentaires, corps intacts à l'octet,
+le juge ne lit que la liste E, le fabricant du patch refuse de tourner sur la fonction d'aujourd'hui). Mais les patchs du
+09/11 et du 12/11 ne sont PAS des archives : « c'est dans celui du 09/11 que j'ai trouvé la règle moi-même ce midi, en
+cherchant « la plus ancienne » : c'est le PREMIER endroit où on tombe ». Et le « ce soir » est retiré : « Enchaîne
+maintenant, dans le même ordre [...] Tu me montres chaque étape avant la suivante. »
+
+**① Une ligne de renvoi en tête de chacun des deux**, `patch_etiquette_dossier_2026-11-09.sql` et
+`patch_etiquette_annee_2026-11-12_LECTEURS.sql`.
+- La ligne contient elle-même « la plus ancienne » : qui cherche ces mots tombe d'abord sur elle.
+- Elle dit : aux étapes PROPAGATION, FUSION et SCISSION, « la plus ancienne » veut dire le PLUS PETIT app_affaire_id,
+  jamais la date ni le numéro (l'ANNÉE du numéro, elle, vient bien de la date) ; elle renvoie au bloc de vérité du 22/11
+  et porte les deux chiffres.
+- Vérifié dans le code en vigueur : la scission garde aussi l'étiquette du groupe qui tient le plus petit app_affaire_id
+  (la CTE « tete », `order by l.app_dossier_uuid, l.app_affaire_id`). Les trois occurrences de chaque fichier disent donc
+  la même chose fausse, et un seul renvoi les couvre.
+- Rien d'autre ne change dans ces fichiers (le reste identique à l'octet, une ligne en tête). Ils ne sont plus joués.
+
+**② Témoin (b) : le rejeu du 82 sur copie — VERT, 15:38:34-41.**
+- Même commande que la preuve de R29 : `rejouer_le_passage_81_sur_copie_2026-11-25.py <copie neuve>
+  --image-du-protocole 2026-11-26_094931`, puis la comparaison des verdicts au 82 officiel.
+- **Empreinte des verdicts du rejeu b7dae92e = 82 officiel b7dae92e, IDENTIQUES : 4 803 / 4 803 lignes.**
+- Les verrous ont mordu : le juge refuse le vrai socle, le disque refuse l'écriture ; le vrai socle est inchangé
+  (5ca7c766, date et empreinte).
+- Le juge : code d53df916, entrées vivantes f2c3a16b / 8892c978 / da3b63b6, empreinte 5262c384 — les mêmes qu'à la
+  preuve de R29. Ma retouche de la docstring d'affaire_ledger.py n'a rien changé au juge.
+- 27 écarts de témoins, les mêmes qu'avant (tous antérieurs au 82).
+- ⚠ **Ce qu'il prouve, et ce qu'il ne prouve pas** : un passage sur une image déjà prise ne lit RIEN en base (l'image est
+  locale : Sheet, registre copié de phase2.sqlite, gel ; seule la PRISE d'une image lit app_classeur_lien). Et aucun des
+  trois fichiers de code du juge ne nomme une des 22 tables (mesuré). Le témoin (b) est donc, comme le (c), vrai par
+  construction à l'égard de la RLS : il prouve que le juge et ses entrées n'ont pas bougé de la journée, pas que la RLS
+  est sans effet sur lui — ce qu'aucun de ses lecteurs ne peut d'ailleurs subir.
+- Sortie : prepa_25_11/107.
+
+⛔ Rien n'est écrit en base. Rien dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
+
+**③ La suite, à son mot :** la descente de contrôle des 22 (`--table`, sans perdre une ligne), puis la règle des dates,
+puis la ligne de rattachement en dernier, avant 04:00.
