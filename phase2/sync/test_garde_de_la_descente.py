@@ -17,6 +17,9 @@ CE QU'ON EPROUVE, regle par regle :
   3  un objet suivi que le serveur n'expose plus se declare (objets_disparus) ; rien n'est
      supprime. L'interrupteur DECLARER_LES_DISPARUS, lui, vit dans main() : il s'eprouve
      par un --dry-run (voir la note d'audit, § 11).
+  4  une chute ne se croit pas sans geste humain (REFUSER_LES_CHUTES) : moins de la moitie
+     de la copie en place, des 100 lignes pour tout objet, des 2 lignes pour une table a cle
+     qui n'est pas une file d'attente ; --accepter-chute la laisse passer.
 
 CHAQUE REGLE A SON TEMOIN INVERSE : son interrupteur eteint, le meme cas DOIT reproduire
 le comportement d'avant. Un essai qui passerait aussi interrupteur eteint ne prouverait rien.
@@ -96,10 +99,12 @@ def base(ancienne=None, etat=None):
     return con
 
 
-def passer(con, lecteur):
-    """Ce que main() fait pour une table (l. ~1220-1235). Rend le message d'echec, ou None."""
+def passer(con, lecteur, distant="t_distante", cles=("id",), accepter=False):
+    """Ce que main() fait pour une table (sa boucle de copie). Rend le message d'echec, ou None.
+    `cles` vide = une vue ou une table sans cle primaire ; `accepter` = --accepter-chute."""
     try:
-        pfs.copy_table(con, lecteur, "t_distante", "t_locale", COLONNES, "id", CE_MATIN, ["id"])
+        pfs.copy_table(con, lecteur, distant, "t_locale", COLONNES, "id", CE_MATIN, list(cles),
+                       accepter_chute=accepter)
         pfs.marquer_complete(con, "t_locale", CE_MATIN)
         return None
     except Exception as exc:                                       # noqa: BLE001
@@ -226,10 +231,12 @@ def regle_1():
     juger("1h lecture coupee, compte present : la relecture par rang la repare (500)", (None, 500),
           (erreur, locales(con)[0]))
 
-    # LIMITE CONNUE, ecrite pour qu'on ne la croie pas fermee : 0 = 0 passe encore.
-    con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
-    erreur = passer(con, Lecteur([], compte=0))
-    juger("1i limite : une source VIDE remplace encore 500 lignes par 0 (c'est la regle 4)",
+    # LIMITE DE LA REGLE 1 SEULE, gardee comme preuve : sans la regle 4, 0 = 0 passe.
+    def vide():
+        con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
+        return passer(con, Lecteur([], compte=0)), con
+    erreur, con = avec("REFUSER_LES_CHUTES", False, vide)
+    juger("1i regle 1 SEULE (regle 4 eteinte) : une source VIDE remplace 500 lignes par 0",
           (None, 0), (erreur, locales(con)[0]))
     print()
 
@@ -287,6 +294,54 @@ def regle_3():
     print()
 
 
+def regle_4():
+    print("=== REGLE 4 : une chute ne se croit pas sans geste humain ===")
+    juger("4  l'interrupteur est ALLUME, seuils 50 % / 100 lignes / 2 lignes", (True, 0.5, 100, 2),
+          (pfs.REFUSER_LES_CHUTES, pfs.CHUTE_FRACTION, pfs.CHUTE_SEUIL_GENERAL,
+           pfs.CHUTE_SEUIL_TABLE_A_CLE))
+
+    def cas(ancienne, neuve, **k):
+        con = base(ancienne=ancienne, etat=(ancienne, VEILLE, None, VEILLE))
+        return passer(con, Lecteur(lignes(neuve)), **k), con
+
+    # (a) LA FAILLE B : une source videe en amont.
+    erreur, con = cas(500, 0)
+    juger("4a source VIDE (500 -> 0) : REFUSEE, et le refus dit comment l'accepter", True,
+          erreur is not None and erreur.startswith("chute refusee")
+          and "--accepter-chute t_distante" in erreur)
+    juger("4b les 500 restent, aucune __tmp, la date reste celle de la veille", (500, [], VEILLE),
+          locales(con) + (etat(con)[1],))
+    juger("4c 500 -> 240 (48 %) : REFUSEE", True, (cas(500, 240)[0] or "").startswith("chute refusee"))
+    juger("4d 500 -> 300 (60 %) : passe", None, cas(500, 300)[0])
+    # (b) les petites tables a cle : les saisies de l'app.
+    juger("4e table a cle 48 -> 20 : REFUSEE (seuil de 2 lignes)", True,
+          (cas(48, 20)[0] or "").startswith("chute refusee"))
+    juger("4f table a cle 48 -> 30 : passe", None, cas(48, 30)[0])
+    juger("4g table a cle 1 -> 0 : passe (sous le seuil de 2)", None, cas(1, 0)[0])
+    # Les files d'attente, ecartees de (b) mais pas de (a).
+    juger("4h file d'attente 3 -> 1 (le cas du 20/11) : passe", None,
+          cas(3, 1, distant="app_relation_provisional")[0])
+    juger("4i file d'attente 300 -> 0 : REFUSEE quand meme (seuil de 100)", True,
+          (cas(300, 0, distant="app_search_pending")[0] or "").startswith("chute refusee"))
+    juger("4j app_pending_resolution n'est PAS une file : 40 -> 0 REFUSEE", True,
+          (cas(40, 0, distant="app_pending_resolution")[0] or "").startswith("chute refusee"))
+    # Une vue (sans cle) : seulement le seuil general.
+    juger("4k vue 26 -> 0 (le cas du 26/11, orphelines) : passe", None, cas(26, 0, cles=())[0])
+    juger("4l vue 25 175 -> 0 : REFUSEE (seuil de 100)", True,
+          (cas(25175, 0, cles=())[0] or "").startswith("chute refusee"))
+    # Une table neuve n'a pas de temoin : elle passe.
+    juger("4m table neuve, 0 ligne : passe (rien a comparer)", None,
+          passer(base(), Lecteur([], compte=0)))
+    # LE GESTE HUMAIN.
+    erreur, con = cas(500, 0, accepter=True)
+    juger("4n --accepter-chute : la chute voulue passe (500 -> 0)", (None, 0), (erreur, locales(con)[0]))
+    # TEMOIN INVERSE : interrupteur eteint, la faille B revient.
+    erreur, con = avec("REFUSER_LES_CHUTES", False, lambda: cas(500, 0))
+    juger("4o INVERSE eteint : 500 lignes remplacees par 0, sans un mot", (None, 0),
+          (erreur, locales(con)[0]))
+    print()
+
+
 def main():
     vieux = (pfs.PAGE_SIZE, pfs.PAUSE_PAGE)
     pfs.PAGE_SIZE, pfs.PAUSE_PAGE = 100, 0
@@ -295,6 +350,7 @@ def main():
         regle_1()
         regle_2()
         regle_3()
+        regle_4()
     finally:
         pfs.PAGE_SIZE, pfs.PAUSE_PAGE = vieux
     print("%d/%d verts" % (VERTS, VERTS + len(ROUGES)))

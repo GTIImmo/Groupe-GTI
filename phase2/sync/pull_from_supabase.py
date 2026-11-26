@@ -314,6 +314,40 @@ EXIGER_LE_COMPTE = True
 UN_MESSAGE_DIT_VRAI = True
 DECLARER_LES_DISPARUS = True
 
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLE 4 -- UNE CHUTE NE SE CROIT PAS SANS GESTE HUMAIN              26/11/2026
+#
+# LE TROU (faille B de l'audit, § 4). Le compte et la lecture viennent de la MEME source :
+#   si une table est videe chez Supabase, 0 = 0 et la copie pleine est remplacee par du
+#   vide, sans un mot. service_role passe outre la RLS (rolbypassrls = true, mesure) : un
+#   zero de l'API veut dire que la source est VRAIMENT vide -- donc le vrai risque est une
+#   perte reelle en amont (un TRUNCATE, un DELETE de trop, un patch), recopiee le lendemain
+#   sur la seule copie hors de Supabase. Zero n'est que le cas extreme d'une chute.
+# LE TEMOIN POSITIF : LA COPIE D'HIER. Avant la bascule, la copie neuve est comparee a la
+#   copie en place. Elle est REFUSEE (l'ancienne reste, echec nomme, code 1) si elle a moins
+#   de CHUTE_FRACTION de l'ancienne ET que l'ancienne avait :
+#     (a) au moins CHUTE_SEUIL_GENERAL lignes -- toute table, toute vue ;
+#     (b) au moins CHUTE_SEUIL_TABLE_A_CLE lignes, pour une table A CLE PRIMAIRE dont le nom
+#         n'est pas celui d'une file d'attente (FILE_D_ATTENTE). C'est ce qui garde les
+#         petites saisies de l'app : le carnet des transactions (48 lignes au 26/11), les
+#         saisies de contact (46), les transactions supprimees (28)...
+# SON MOT (26/11) : « oui vas-y », sur le conseil d'ecarter les files d'attente de (b) --
+#   elles se vident par nature (app_relation_provisional 3 -> 1 le 20/11 aurait crie), et
+#   app_search_pending est lue en local par la sante : refuser sa copie la ferait crier une
+#   seconde fois. Elles restent gardees par (a) au-dela de 100 lignes. Le NOM decide : une
+#   FIN de nom _pending, _provisional ou _dirty (app_pending_resolution n'en est PAS une).
+# MESURE sur les 34 descentes du 28/10 au 26/11 (rejouees avec decision_de_chute) :
+#   0 fausse alerte. Les chutes legitimes au-dessus de 100 lignes font au plus 2,6 %.
+# UNE CHUTE VOULUE s'accepte par un geste humain, nomme : --accepter-chute <table>
+#   (repetable, avec --table). Elle est alors ecrite au journal.
+# Interrupteur : REFUSER_LES_CHUTES = False = le comportement d'avant.
+# Epreuve : phase2/sync/test_garde_de_la_descente.py.
+REFUSER_LES_CHUTES = True
+CHUTE_FRACTION = 0.5
+CHUTE_SEUIL_GENERAL = 100
+CHUTE_SEUIL_TABLE_A_CLE = 2
+FILE_D_ATTENTE = re.compile(r"_(pending|provisional|dirty)$")
+
 
 def load_env_file(path: Path) -> None:
     """Meme convention que push_contacts_to_supabase.py."""
@@ -637,6 +671,24 @@ def suite_du_refus(conn: sqlite3.Connection, table: str) -> str:
                                  "rien n'est garde")
 
 
+def decision_de_chute(distant: str, ancienne: int, neuve: int, a_cle: bool) -> str | None:
+    """REGLE 4 (26/11) : la chute de `ancienne` a `neuve` lignes doit-elle etre refusee ?
+
+    Fonction PURE (aucune base, aucun reseau) : c'est elle qu'on rejoue sur l'historique des
+    journaux. Rend le motif du refus, ou None si la copie peut basculer.
+    """
+    if neuve >= ancienne * CHUTE_FRACTION:
+        return None
+    generale = ancienne >= CHUTE_SEUIL_GENERAL
+    petite = (a_cle and ancienne >= CHUTE_SEUIL_TABLE_A_CLE
+              and not FILE_D_ATTENTE.search(distant))
+    if not (generale or petite):
+        return None
+    return (f"chute refusee : {neuve} lignes au serveur pour {ancienne} dans la copie en place "
+            f"(moins de {int(CHUTE_FRACTION * 100)} %) -- si elle est voulue : "
+            f"--table {distant} --accepter-chute {distant}")
+
+
 def objets_disparus(conn: sqlite3.Connection, schema: dict) -> list[tuple[str, int | None]]:
     """REGLE 3 (26/11) : les objets suivis que l'API n'expose plus.
 
@@ -664,7 +716,7 @@ def encode(value: Any) -> Any:
 
 def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
                table: str, columns: list[str], cle: str, stamp: str,
-               cles: list[str] | None = None) -> tuple[int, int]:
+               cles: list[str] | None = None, accepter_chute: bool = False) -> tuple[int, int]:
     """Recopie une table. Renvoie (lignes ecrites, appels API).
 
     `distant` = le nom chez Supabase, celui qu'on interroge.
@@ -908,6 +960,18 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
         raise RuntimeError(
             f"copie incomplete : {total} lignes lues, {attendu} attendues cote Supabase"
             + suite_du_refus(conn, table))
+
+    # REGLE 4 (26/11) : UNE CHUTE NE SE CROIT PAS SANS GESTE HUMAIN -- voir REFUSER_LES_CHUTES.
+    # Le temoin est la copie EN PLACE : une table neuve (aucune copie) n'a rien a comparer.
+    if REFUSER_LES_CHUTES and conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+        ancienne = conn.execute('SELECT COUNT(*) FROM "%s"' % table).fetchone()[0]
+        motif = decision_de_chute(distant, ancienne, total, bool(cles))
+        if motif and not accepter_chute:
+            raise RuntimeError(motif + suite_du_refus(conn, table))
+        if motif:
+            print(f"        {distant} : CHUTE ACCEPTEE par geste humain (--accepter-chute) : "
+                  f"{ancienne} -> {total} lignes")
 
     # LA BASCULE : l'ancienne n'est remplacee qu'ICI, copie verifiee complete.
     conn.execute('DROP TABLE IF EXISTS "%s"' % table)
@@ -1163,6 +1227,9 @@ def main() -> int:
                              "reponse qui casse, pas le nombre de requetes."
                              % PAGE_SIZE)
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
+    parser.add_argument("--accepter-chute", action="append", default=[],
+                        help="REGLE 4 (26/11) : accepter, par geste humain, la chute de cette table "
+                             "(plus de la moitie de ses lignes perdue). Repetable, avec --table.")
     args = parser.parse_args()
 
     # ─── --page-size ─────────────────────────────────────────────   01/10/2026
@@ -1291,6 +1358,12 @@ def main() -> int:
                   f"supprime, leur copie locale reste figee")
             for nom, n in disparus:
                 print(f"     - {nom}  ({'⚠ AUCUNE COPIE LOCALE' if n is None else f'{n} lignes gardees en local'})")
+    if not args.table and REFUSER_LES_CHUTES:
+        # REGLE 4 (26/11) : l'exclusion des files d'attente du seuil de 2 lignes se DECLARE.
+        files = sorted(d for d, _ in cibles if FILE_D_ATTENTE.search(d))
+        if files:
+            print(f"  files d'attente ecartees du seuil de {CHUTE_SEUIL_TABLE_A_CLE} lignes (regle 4, 26/11) : "
+                  f"{len(files)} -- le seuil de {CHUTE_SEUIL_GENERAL} lignes les garde : {', '.join(files)}")
     print(f"  a descendre : {len(cibles)}")
     if doublures:
         print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")
@@ -1335,7 +1408,9 @@ def main() -> int:
                         print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes  (delta)")
                 if not fait_par_delta:
                     lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp,
-                                                cles=cles)
+                                                cles=cles,
+                                                accepter_chute=(distant in args.accepter_chute
+                                                                or local in args.accepter_chute))
                     marquer_complete(conn, local, stamp)
                     lignes_totales += lignes
                     appels_totaux += appels

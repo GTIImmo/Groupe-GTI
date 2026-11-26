@@ -675,3 +675,49 @@ normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
   - dans les deux cas, 169 tables à descendre (le chiffre du `--dry-run` de `092eb03`) ;
   - `phase2.sqlite` est inchangé : même taille (7 089 815 552 octets), même heure (16:37:51).
 - **Le retour arrière** : les deux interrupteurs à `False`.
+- **Commit** : `28ef02e`.
+- ⚠ **Poussée** : les commits `ef36b19`, `2cb4cab` et `28ef02e` ont été **poussés sur
+  GitHub vers 20:10**, avec d'autres commits du jour. Ce n'est pas par cette session : à
+  20:48, `origin/main` était sur `28ef02e`.
+
+### Règle 4 — une chute ne se croit pas sans geste humain (26/11, au soir)
+
+- **Sa décision** (26/11) : « oui vas-y », sur le conseil d'écarter les files d'attente du
+  seuil de 2 lignes.
+- **Le code** :
+  - les constantes `REFUSER_LES_CHUTES = True`, `CHUTE_FRACTION = 0.5`,
+    `CHUTE_SEUIL_GENERAL = 100`, `CHUTE_SEUIL_TABLE_A_CLE = 2` et
+    `FILE_D_ATTENTE = _(pending|provisional|dirty)$`, qui porte sur la **fin** du nom ;
+  - la fonction pure `decision_de_chute()`, et la garde dans `copy_table` juste avant la
+    bascule ;
+  - l'option `--accepter-chute <table>` (le geste humain, écrit au journal) ;
+  - la déclaration, à chaque passage, des files d'attente écartées.
+- **La règle** : une copie qui a moins de la moitié de la copie en place est refusée si
+  celle-ci avait :
+  - au moins 100 lignes (toute table, toute vue) ;
+  - ou au moins 2 lignes, pour une table à clé qui n'est pas une file d'attente.
+- **Le banc : 48 sur 48** pour les règles 0 à 4.
+  - La source vidée (500 → 0) est refusée, le message dit comment l'accepter, et la copie
+    d'hier reste avec sa date.
+  - Les seuils sont respectés : 48 % refusé, 60 % accepté ; une table à clé de 48 → 20
+    refusée, de 48 → 30 acceptée, de 1 → 0 acceptée.
+  - La file d'attente du 20/11 (3 → 1) passe, mais une file de 300 → 0 est refusée ;
+    `app_pending_resolution` n'est pas prise pour une file.
+  - Une vue de 26 → 0 passe, une de 25 175 → 0 est refusée ; une table neuve passe.
+  - `--accepter-chute` laisse passer la chute voulue.
+  - **Le témoin inverse**, interrupteur éteint : 500 lignes remplacées par 0, sans un mot.
+  - L'essai 1i (« 0 = 0 passe ») est désormais joué règle 4 éteinte : il prouve que la
+    règle 1 seule ne fermait pas ce trou.
+- **Le rejeu de l'histoire avec la vraie fonction** : 67 journaux (34 descentes et 33 runs
+  de nuit), 5 703 copies complètes comparées chacune à la précédente, **0 refus**.
+  - **Le témoin positif du rejeu** : sans l'exclusion des files, il retrouve exactement le
+    cas connu (`app_relation_provisional` 3 → 1, le 20/11) ; avec un seuil volontairement
+    trop strict (0,5 %), il voit 23 baisses. Le zéro est donc réel.
+- **Le `--dry-run` réel** (lecture seule, sans réseau, sans `.env`) déclare les **8** files
+  écartées : `app_annonce_pending`, `app_annonce_provisional`, `app_contact_pending`,
+  `app_contact_provisional`, `app_rapprochement_dirty`, `app_relation_provisional`,
+  `app_search_pending` et `app_search_provisional`. Il trouve toujours 169 tables à
+  descendre, et `phase2.sqlite` est inchangé.
+- **L'ancien banc** : 19 sur 19.
+- **Le retour arrière** : `REFUSER_LES_CHUTES = False`.
+- **Ce qui reste** : la règle 5, la sonde (`monitoring/check_gti_health.py`).
