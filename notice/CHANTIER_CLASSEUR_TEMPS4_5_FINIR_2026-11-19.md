@@ -6079,6 +6079,21 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Colonne A : 4 725 / 4 725 rendues a l'identique par le 82. 8 lignes ecrivables.
 - ⛔ Arret avant l'officiel : deux pieces non nommees par lui (3648, 2162).
 - Comptes : 8 (pas 7), 3 deja connectes, 5 ouvrables ; le motif « desactive mais ouvrable » = 1. Reserve nommee.
+
+### 20.74 Le 26/11 (4) : l'attribution du 82 ligne par ligne, puis le PASSAGE OFFICIEL 82 (10:22)
+
+- Attribution par couches (C0 81 / C1 v23 / C2 v23.1 / C3 ses 2 cases de la 286 / C4 ses 2 autres / C5 image neuve /
+  C6 entrees du jour) :
+  - 284 lignes en tout : R27 6, R28 (v23.1) 1, R29 0 ;
+  - ses cases de la 286 : 2 (9Q0FHAKK, 7W7XUBPO) ; Prix de la 245 et Charge Commission : 0 ;
+  - image neuve : 278 (260 « NEUVE -> reelle » par la vague, et 18 nommees) ; entrees du jour : 0.
+- ⚠ LA COINCIDENCE DU PRIX, A NOMMER (elle reviendra) : 2162 vaut 112 800, le Prix neuf de la 245. Elle est ecartee en
+  rejouant avec et sans ce Prix : verdict identique, et 2162 vient par la date.
+- 3308P0UX et T2GZOY5O : attente, RIEN_A_ETIQUETER par R27. Leurs jumelles YRUF0S9H (D2022-0644) et O6R10ZQA (D2021-0797)
+  sont tranchees, mais restent VIDES par sa decision du 25/11 (SES_DOUBLES). L'ecrivable est donc 6, pas 8.
+- Passage OFFICIEL 82, 10:22 : 4 733 + 70 = 4 803 ; empreinte b7dae92e = la copie ; socle b23e2b3a -> 5ca7c766 ; Sheet
+  relu, 4 725 cases inchangees ; code 1, un temoin crie (30 ecarts, 28 au 81).
+- L'ecrivain lit encore PASSAGE_DU_PROTOCOLE = 81.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

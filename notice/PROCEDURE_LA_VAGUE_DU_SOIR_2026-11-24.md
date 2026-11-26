@@ -2325,3 +2325,80 @@ pg_class, phase2.sqlite en `mode=ro`, git grep).
     lue dans la base), pas par nom.
 
 ⛔ Rien n'est écrit : ni passage officiel, ni Sheet, ni base, ni Hektor. Rien n'est poussé.
+
+### Le 26/11 (4) : l'attribution du 82 ligne par ligne, puis le PASSAGE OFFICIEL 82 (10:22) — rien d'autre n'est écrit
+
+> « Montre-moi donc l'attribution, ligne par ligne : ce qui vient de mes cases, ce qui vient de v23.1 et de quelle règle
+> [...] Et dis-moi où en sont 3308P0UX et T2GZOY5O [...] Ensuite tu lances le 82 officiel, avec tes témoins après coup. »
+
+**L'attribution** (`phase2/checks/attribuer_le_passage_82_2026-11-26.py`, sortie `88_…`). Elle procède par couches, et
+chacune ne change qu'une chose :
+- C0 : le 81 ;
+- C1 : le juge v23 ;
+- C2 : v23.1 ;
+- C3 : ses 2 cases de la 286 ;
+- C4 : ses 2 autres cases (posées par `simuler_ses_quatre_cases_sur_l_image_du_81_2026-11-26.py`, sur l'image du 81 et
+  rien d'autre) ;
+- C5 : l'image neuve entière ;
+- C6 : les entrées du jour.
+
+Le passage de v21 à v22 ne change rien : le rejeu du 25/11 avait rendu les 4 802 verdicts à l'identique.
+
+284 lignes diffèrent entre le 81 et le 82 :
+- **R27, 6 lignes :**
+  - 3308P0UX et T2GZOY5O passent de tranchée à attente (RIEN_A_ETIQUETER, non porteuses) ;
+  - 9B7U8221 change seulement de motif (de DEUX_LIGNES_UN_DOSSIER à RIEN_A_ETIQUETER) ;
+  - PEE1XTR8 passe d'attente à tranchée (porteuse ; avant, c'était DEUX_LIGNES_UN_DOSSIER) ;
+  - YRUF0S9H et O6R10ZQA changent seulement de preuve : « R27 » remplace « exception nommée ».
+- **R28, par v23.1 (sa décision sur 3741), 1 ligne :** HUY49KEC passe de COPIE_SEULE à tranchée, D2018-0476.
+- **R29 : aucune ligne.**
+- **Ses deux cases de la 286, 2 lignes :**
+  - 9Q0FHAKK passe d'AUCUNE_PIECE_PROUVEE à tranchée, sur 3647, 3648 et 3650 ;
+  - 7W7XUBPO prend 2162. Au 81, 2162 était « à part sans effet sur l'étiquette ».
+- **Ses deux autres cases (Prix de la 245, Charge Commission de la 286) : aucune ligne, même sur l'image du 81.**
+  - ⚠ **LA COÏNCIDENCE, À NOMMER CAR ELLE REVIENDRA :** le montant de 2162 (et de 2160) vaut exactement 112 800, le Prix
+    neuf de la 245. Elle a été écartée en rejouant sans ce Prix, puis avec : le verdict de 7W7XUBPO est le même.
+  - 2162 vient par la date (colonne « Vente Prévue »), pas par le Prix.
+- **L'image neuve, 278 lignes :**
+  - 260 lignes changent seulement d'étiquette, de « NEUVE » à réelle : la vague de 09:02 a réalisé ces dossiers.
+  - 18 autres :
+    - 9Q0FHAKK, YRUF0S9H, O6R10ZQA, ESVJUR12, ULFVA1AQ, Z3DYDC4X, ZZ5WKMWM : l'étiquette réalisée par la vague ;
+    - P252U1JH et d2108609 : le retrait de E par la vague (sa décision) ;
+    - 42ae8884 et 7cb7142f : les compromis neufs de la nuit, 30850 et 30849 ;
+    - a360d9e3 : la ligne neuve, sur 30848 ;
+    - b72db9d5 : l'offre 30836 est passée de proposée à acceptée ;
+    - L2B2WGCF, OAUI9CKR, ULA087KO : seule la phrase des pièces à part change (« PERD » devient « GARDE » son numéro) ;
+    - UAER0F0F et VYNGKCR0 : la preuve d'un compromis sans date passe de R19 à R17.
+    - Aucune de ces 18 ne change de verdict, sauf P252U1JH, d2108609 et a360d9e3.
+- **Les entrées du jour : aucune ligne.**
+
+**3308P0UX et T2GZOY5O :** en attente, RIEN_A_ETIQUETER par R27 (son accord du 25/11). Elles sont « la même affaire que
+YRUF0S9H / O6R10ZQA ».
+- Leurs jumelles deviennent tranchées sur une étiquette réelle : YRUF0S9H en D2022-0644, O6R10ZQA en D2021-0797. Pour le
+  juge, elles sont donc écrivables.
+- ⛔ **La raison nommée :** le classement de la colonne A les garde VIDES. C'est `SES_DOUBLES` (les quatre), par son mot du
+  25/11 : « NE TRANCHE PAS SEUL : laisse les quatre lignes VIDES et nomme-les ».
+- ⚠ Correction : l'écrivain n'a donc que 6 lignes écrivables, et non les 8 que j'annonçais.
+
+**Le passage OFFICIEL 82** : 10:22:13 → 10:22:27, image 2026-11-26_094931, juge v23.1 (code 45fc0d9b, empreinte du juge
+dc5b77ee).
+- 4 733 tranchées + 70 en attente = 4 803 : le compte boucle.
+- Il sort en code 1 parce qu'un témoin crie : 30 écarts et 3 en attente (le 81 avait 28 écarts et 8 en attente). Ce sont
+  les mêmes que sur la copie.
+
+**Ses témoins après coup :**
+1. **Les 4 725 cases d'hier :** dans le Sheet relu à 10:22:51, aucune n'a bougé et aucune case n'a été remplie depuis
+   09:49. Le 82 officiel rend la même étiquette pour les 4 725.
+2. **Le socle neuf :**
+   - avant : b23e2b3a, 25/11 07:26:47 ; après : 5ca7c766, 26/11 10:22:27 ;
+   - l'empreinte des verdicts du 82 officiel est b7dae92e, identique à la copie ;
+   - les 825 lignes des témoins du juge sont identiques à la copie.
+3. **Les écrivables :**
+   - pour l'écrivain, 6 : 9Q0FHAKK (D2024-0511), HUY49KEC (D2018-0476), PEE1XTR8 (D2021-0331), P252U1JH (D2020-0592),
+     d2108609 (D2025-0427), a360d9e3 (D2026-0400) ;
+   - 2 sont tenues vides par sa décision : YRUF0S9H et O6R10ZQA.
+
+**L'écrivain lit encore le 81** : `PASSAGE_DU_PROTOCOLE = 81` dans `ecrire_colonne_a_du_sheet_2026-11-20.py`. Le passage au
+82 est la première pièce de la vague d'une ligne.
+
+⛔ Rien n'est écrit dans le Sheet, en base ni chez Hektor. Rien n'est poussé.
