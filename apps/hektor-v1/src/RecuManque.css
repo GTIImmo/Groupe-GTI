@@ -246,3 +246,14 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: var(--bv-magenta,
 .gm2-masquer:hover { color: var(--bv-ink, #1f2121); }
 .gm2-masquees { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 2px 0; color: var(--bv-subtle, #7c8082); font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .gm2-traiter-n { animation: none !important; } }
+
+/* Visuel V3, morceau 7 (26/11/2026) : LE TÉLÉPHONE -- deux défauts mesurés à 390 px sur 18849, CSS seulement, rien ne
+   change à l'ordinateur ni aux gestes. (1) Les boutons d'un document partageaient la ligne à parts ÉGALES (flex: 1 1 0,
+   styles.css) : « Signature » et « Supprimer » sortaient de leur bouton (67 et 69 px de texte pour 65). Ils prennent
+   désormais leur largeur, puis se partagent le reste ; s'ils ne tiennent pas, le dernier passe à la ligne.
+   (2) « Non trouvée : déposer » était coupé en « Non trouvée : … » (121 px pour 88) : il passe à la ligne. La case d'une
+   pièce REÇUE garde sa ligne unique et ses points de suspension (un nom de fichier sans espace sortirait de la case). */
+@media (max-width: 760px) {
+  .mobile-console-documents .console-document-row .console-document-actions .ghost-button { flex: 1 1 auto; min-width: max-content; }
+  .gm2-f .gm2-ic:not(.is-recu) ~ .gm2-fd { white-space: normal; overflow: visible; text-overflow: clip; }
+}
