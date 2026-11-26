@@ -2133,3 +2133,98 @@ qui prenait aussi le 10/11 (3 offres) et le 16/11 (1). C'est un chantier à part
 
 ⛔ Rien n'est écrit dans le Sheet, rien chez Hektor, pas de passage officiel, pas de push. ⏰ Rien n'est mesuré entre
 04:00 et 07:30. Demain matin, avant tout le reste : `temoin_de_la_nuit_2026-11-25.py comparer`.
+
+### Le matin du 26/11 : la nuit vérifiée, le témoin de la nuit du 25 comparé, les parts de 9Q0FHAKK mesurées — RIEN ÉCRIT
+
+> « Vérifie-le de ton côté et donne-moi la comparaison du témoin de la nuit du 25 [...] ⏰ Attends la fin de la descente
+> [...] 9Q0FHAKK passe donc en premier, plus en dernier. [...] ses deux parts doivent porter DECHAUD 50 et GENTES 50, comme
+> mon classeur, et plus une supposition. Dis-moi comment tu t'y prendrais, sans rien écrire. »
+
+**① La nuit, vue de mon côté.**
+- **Le run :** « Run quotidien termine 2026-11-26 06:58:43 (exit 0) ». Aucune étape n'a rendu de code non nul, et la
+  tâche GTI Quotidien rend 0.
+- **La descente :** elle a démarré à 06:59:11, après 14 minutes d'attente du run, et s'est terminée à 07:30:24. La tâche
+  rend **1**. 235 tables sont descendues (1 664 983 lignes), et deux défauts sont nommés :
+  - ⚠ **3 tables en échec, toutes des sauvegardes de la vague du 25/11** : app_affaire_repartition_avant_a2vague_20261125,
+    …_avant_vague_20261125_080931 et …_avant_vague_20261125_090205.
+    - Le compte : 17 895 lignes lues sur 17 907 attendues, et l'ancienne copie locale est gardée.
+    - La cause, déjà connue : ces copies ont été créées par `create table … as select`, donc sans clé primaire.
+      Elles dépassent le plafond de 15 000 lignes de la relecture par rang, posé le 15/11.
+    - Aucune table vivante n'est touchée. Mais la descente sortira en code 1 chaque nuit tant que rien n'est fait.
+  - L'étape 4/4 (rattrapage du carnet) s'est arrêtée net à la fermeture de Node (exit −1073740791), APRÈS avoir fait son
+    travail (« rien a poser »). La descente ne compte pas cet échec.
+- Je n'ai rien mesuré avant 07:30:24.
+
+**② Le témoin de la nuit du 25 (relu à 07:31, contre la photo du 25/11 à 10:01) : la vague a tenu, et les orphelines
+sont restées à 0.**
+- **Le chaînage :** 0 pièce de la photo n'a changé de chaîne, et 0 n'a changé d'étiquette. 3 pièces sont neuves (30848,
+  30849, 30850), et aucune n'a disparu.
+- **8016 (SXJDHXKF, ROMERA 100) :** inchangée, et protégée.
+- **Les reflets :** avis, notes et conditions sont tenus.
+- **Les comptes :**
+  - orphelines 0 → 0 ; ventes réglées sans part 0 → 0 ;
+  - journal du réalignement 809 → 809 ; mise de côté 158 → 158 ;
+  - les gestes du 24/11 sont tenus.
+- **Une seule ligne change : les étiquettes distinctes, 11 605 → 11 606.** C'est l'offre neuve 30848 (acceptée le
+  25/11, annonce 63500), qui reçoit D2026-0400. Les deux compromis neufs rejoignent des dossiers déjà étiquetés
+  (D2026-0331, D2026-0339). C'est la vie normale du registre.
+- **Le registre des parts :** 0 chaîne changée, apparue ou disparue. Empreinte globale inchangée (17 968 parts). Le
+  témoin du comparateur voit bien une part retouchée exprès.
+- **2 chaînes réécrites à l'identique, en supposition :** **3647** (celle de 9Q0FHAKK) et **27136**.
+  - 27136 : D2024-0316, sur le bien 53342, avec HERITIER en supposition. Aucune ligne du classeur ne porte cette
+    étiquette. Même motif que 3647 ; je n'y ai pas touché.
+
+**③ Les parts de 9Q0FHAKK : ce que la nuit a fait, et pourquoi.**
+- **Sur 3647** (compromis 3647, vente 3650, D2024-0511) : GENTES 50 en entrée et 50 en sortie, en
+  hektor_partage_suppose, réécrites à 05:35:07.
+  - C'est une supposition, et la nuit la réécrit chaque nuit.
+  - Elle était déjà sur la photo du 25/11 à 10:01. Elle a donc été posée le 25/11, entre la vague (09:02) et la photo,
+    et pas cette nuit. Cette nuit, elle a seulement été réécrite à l'identique.
+- **Sur 3646** (la première tentative de SOUCHON : compromis 3646 et offre 3649, D2024-0278) : GENTES 50/50 en
+  **classeur_reconstitue**. Ces parts ont été posées par le rapatriement du 13/11, depuis **427UDDSF** (GENTES 100 ;
+  `notice/A5_RAPATRIEMENT_REPARTITION_2026-11-13.csv`, lignes 979-980).
+  - Le 13/11, la vente 3650 était encore dans cette chaîne.
+  - La vague a sorti 3647 et 3650 dans une chaîne neuve. Les parts du classeur sont restées avec les pièces de 427UDDSF,
+    ce qui est juste pour cette ligne.
+  - 9Q0FHAKK, elle, n'a jamais reçu de parts : elle n'était reliée à aucun dossier.
+- ⚠ **Une correction sur le mécanisme.** Ce n'est pas l'étiquette qui protège un dossier, c'est l'**origine de ses
+  parts**.
+  - La répartition de nuit (`phase2/sync/repartition_commission.py`) ne lit ni le classeur ni la colonne A.
+  - C'est la base qui saute toute chaîne portant une part dont l'origine ne commence pas par « hektor ».
+  - Une étiquette seule n'arrêterait donc pas la supposition. Ce qui l'arrête, c'est de remplacer les DEUX parts hektor
+    (sa règle du 24/11 : « l'origine n'est pas une étiquette, c'est le verrou »).
+  - L'étiquette garde sa place dans la méthode : c'est elle qui prouve que ces parts sont celles de la ligne 286.
+
+**④ La méthode pour DECHAUD 50 / GENTES 50, sans rien écrire.** C'est le modèle du 24/11
+(`patch_suppositions_2026-11-24`), qui a déjà fait exactement ce remplacement sur la chaîne 1875 (A07EC3DH).
+1. **Ton Sheet :** les deux cases de la ligne 286 corrigées (mandat 17010, prix 460 000).
+2. **Une image neuve, puis un passage officiel du protocole** (le 82, dans le vrai socle), comparé au 81. Le rejeu sur
+   copie de cette nuit en attend 7 lignes, et je nommerai toute autre ligne qui bouge.
+   - L'écrivain de la colonne A passe alors du passage 81 au 82.
+3. **La colonne A de 9Q0FHAKK :** une vague d'une ligne, D2024-0511, avec ses deux empreintes et ton accord. Les quatre
+   autres étiquettes que le 82 rend écrivables (HUY49KEC, PEE1XTR8, YRUF0S9H, O6R10ZQA) iraient avec elle si tu le veux.
+4. **Le patch des parts,** généré et jamais écrit à la main :
+   - **Les gardes :** la chaîne 3647 porte EXACTEMENT les 2 suppositions mesurées (uid 32, 50 et 50, empreinte) ; la
+     colonne A de 9Q0FHAKK dit 42dd4d66 ; le lot n'est pas déjà au journal.
+   - **La sauvegarde datée :** les parts de 3647, avec une CLÉ PRIMAIRE, pour ne pas ajouter une 4e table qui casse la
+     descente.
+   - **Ta règle 6 :** les deux suppositions sont mises de côté, avec leur place.
+   - **Le journal :** chaque part y est écrite avec sa ligne d'origine, 9Q0FHAKK (n° 286).
+   - **La pose,** par la décomposition du 13/11 (50/50 : la 1re prend l'entrée) :
+     - entrée 1 : 31 SIMON DECHAUD 50 ;
+     - sortie 1 : 32 CHRISTELE GENTES 50 ;
+     - origine classeur_reconstitue, écrite par « classeur:9Q0FHAKK ».
+   - **Les contrôles :**
+     - 3647 porte exactement ces 2 parts, et plus aucune part hektor ;
+     - 3646 est intacte (les parts de 427UDDSF) ;
+     - le total des parts est inchangé.
+5. **L'épreuve à blanc,** en rejouant la VRAIE fonction de nuit (app_repartition_absorber) sur une copie : elle doit
+   sauter 3647. L'inverse est prêt.
+6. **Le témoin,** le lendemain après la répartition de 05:35 : 3647 doit sortir de la liste « réécrite à l'identique »,
+   et 0 supposition ne doit revenir.
+
+- Les 9 000 € de DECHAUD : 50 % de la commission de 18 000 €.
+- Si la vague réalise ensuite la fusion de l'offre 3648 dans ce dossier, la chaîne garde le numéro de sa plus petite
+  pièce, 3647. Les parts ne deviennent pas orphelines.
+
+⛔ Rien n'est écrit, ni dans le Sheet, ni chez Hektor, ni en base. Pas de passage officiel, pas de push.

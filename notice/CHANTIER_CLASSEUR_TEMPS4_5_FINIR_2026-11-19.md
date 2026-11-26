@@ -6035,6 +6035,25 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   le verdict de 9Q0FHAKK est realise : FUSION dans D2024-0511, D2024-0306 n'est plus porte par aucune piece (pas de dossier
   vide : il disparait, numero brule, trace au journal). Rien ne s'appuie sur lui (colonne A 0, avis 0, parts 0).
 - **Ensuite** : sa correction dans le Sheet, puis une image NEUVE pour le passage officiel.
+
+### 20.71 Le matin du 26/11 : la nuit verifiee, le temoin de la nuit du 25 compare, les parts de 9Q0FHAKK mesurees
+
+- **Run** : termine 06:58:43, exit 0. **Descente** : 06:59:11 -> 07:30:24, tache en code 1 -- 3 sauvegardes de la vague
+  du 25/11 sans cle primaire (17 895 / 17 907, au-dessus du plafond de 15 000 de la relecture par rang) ; ancienne copie
+  gardee, aucune table vivante touchee ; elle sortira en 1 chaque nuit tant que rien n'est fait. Etape 4/4 : arret de
+  Node apres son travail (« rien a poser »).
+- **Temoin de la nuit du 25** (relu 07:31) : la vague a TENU (0 chaine, 0 etiquette changees) ; orphelines 0 -> 0 ;
+  ventes reglees sans part 0 -> 0 ; 8016 tenue ; reflets, journal (809), mise de cote (158), gestes du 24/11 tenus ;
+  etiquettes 11 605 -> 11 606 (l'offre neuve 30848, D2026-0400) ; parts : empreinte inchangee (17 968), 2 chaines
+  reecrites a l'identique en supposition, 3647 et 27136 (D2024-0316, HERITIER, sans ligne au classeur).
+- **Les parts de 9Q0FHAKK** : 3647 porte GENTES 50/50 hektor_partage_suppose (posee le 25/11 apres la vague) ; 3646
+  porte GENTES 50/50 classeur_reconstitue, de 427UDDSF (rapatriement du 13/11) -- juste pour elle.
+- ⚠ **Correction** : c'est l'ORIGINE des parts qui protege, pas l'etiquette (la nuit ne lit ni le classeur ni la colonne
+  A) ; l'etiquette prouve a qui sont les parts.
+- **La methode** (modele du 24/11, chaine 1875 / A07EC3DH) : sa correction -> image neuve + passage officiel 82 ->
+  colonne A de 9Q0FHAKK (D2024-0511) -> patch des parts (gardes, sauvegarde AVEC cle primaire, regle 6, journal avec la
+  ligne 286, entree 31 DECHAUD 50 + sortie 32 GENTES 50 en classeur_reconstitue, 3646 intacte) -> a blanc avec la vraie
+  fonction de nuit -> temoin du lendemain apres 05:35.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
