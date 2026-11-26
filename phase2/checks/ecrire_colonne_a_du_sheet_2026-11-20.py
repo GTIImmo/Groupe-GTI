@@ -86,13 +86,17 @@ DECISION_19 = RACINE / "notice" / "TEMPS7_DECISION_DU_20_11_LES_19_HORS_DE_LA_VA
 #: ⭐ SON MOT DU 25/11 : « ON SUIT LE PROTOCOLE. C'est lui mon juge [...] Refais le classement sur SES pieces, pas sur
 #   le gel. » -- le classement du 19/11 (TEMPS5_Q8, sur le gel) est REMPLACE par celui-ci ; preparer refuse un classement
 #   sans fiche de fabrication ou plus vieux que la derniere vague (fraicheur_du_classement).
-CLASSEMENT = RACINE / "notice" / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-25.csv"
+#: ⭐ 26/11 : le classement du passage 82 (celui du 81 reste dans son fichier du 25/11, intact).
+CLASSEMENT = RACINE / "notice" / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-26_PASSAGE_82.csv"
 #: LE JUGE : le verdict du protocole, ligne par ligne (pieces, preuves, etiquette a l'arrivee) -- le passage que la vague
 #  du 25/11 a realise (manifeste e65ea11d ; temoin : etiquette a l'arrivee = etiquette d'aujourd'hui, 4 729 / 4 729).
 #  ⛔ L'ecrivain ne lit PLUS le gel (app_classeur_lien) pour savoir quelles pieces sont sur une ligne : le gel date du
 #  19/11, le protocole lui a delie 256 liens et en a relie 108 (324 lignes), et la vague ne l'a pas touche.
 SOCLE_PROTOCOLE = Path(r"C:\Hektor\chantier_classeur_q6_cache\protocole\socle.sqlite")
-PASSAGE_DU_PROTOCOLE = 81
+#: ⭐ SON MOT DU 26/11 : « l'ecrivain au passage 82 (il lit encore le 81, je l'ai vu ligne 95) » -- le passage OFFICIEL 82
+#  (26/11 10:22, juge v23.1, socle 5ca7c766, empreinte des verdicts b7dae92e ; temoin : il rend a l'identique les 4 725
+#  cases deja ecrites).
+PASSAGE_DU_PROTOCOLE = 82
 SORTIES = Path(r"C:\Hektor\Backups\classeur_colonne_a")
 SORTIES_SIMULATION = Path(r"C:\Hektor\chantier_classeur_q6_cache\ecrivain_colonne_a_simulation")
 

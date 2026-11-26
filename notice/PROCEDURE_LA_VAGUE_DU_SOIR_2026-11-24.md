@@ -2402,3 +2402,75 @@ dc5b77ee).
 82 est la première pièce de la vague d'une ligne.
 
 ⛔ Rien n'est écrit dans le Sheet, en base ni chez Hektor. Rien n'est poussé.
+
+### Le 26/11 (5) : ses trois attentes du témoin v3 (v23.2), le cas de R29, l'écrivain au passage 82 — ARRÊT avant la vague
+
+> « Mets-les à jour dans le témoin v3 avant ce soir, en nommant chacune par ma décision et sa date [...] R29 ne touche
+> aucune ligne au 82 [...] nomme-moi le cas qu'elle devait couvrir [...] Pour 9Q0FHAKK, vas-y dans cet ordre : l'écrivain
+> au passage 82 [...] Tu me montres chaque étape avant la suivante. »
+
+**① Le juge v23.2 : le témoin v3 attend ce que ses décisions donnent (HUY49KEC, P252U1JH, d2108609).**
+- C'est `V3_ATTENDU_PAR_SA_DECISION` : la décision et sa date sont écrites dans l'attendu du témoin.
+- Les trois attentes :
+  - HUY49KEC : 3741 + 1001587, sa décision du 25/11 au soir (3741 hors de ses à part, R28) ;
+  - P252U1JH : 4126 + 4128, sa décision du 24/11 réalisée par la vague du 25/11 ;
+  - d2108609 : 21520 + 1001495, même chose.
+- **La preuve, par un rejeu sur copie de l'image de 09:49 :**
+  - verdicts b7dae92e, identiques au 82 officiel ;
+  - seules ces trois lignes du témoin changent, de l'écart à l'accord ;
+  - 27 écarts au lieu de 30. Ce sont les 28 du 81, moins 3308P0UX qui est guéri.
+- ⚠ Ces 27 écarts sont plus anciens que le 82, et le juge sort encore en code 1 à cause d'eux. Ils ne sont pas encore
+  nommés un par un.
+
+**② R29 : son cas, mesuré DANS le juge** (`mesurer_le_cas_de_r29_2026-11-26.py`, avec sa propre fonction r29_candidat).
+- **Témoin positif, l'image du 81 :** sur 68 lignes non tranchées regardées, UN seul candidat, 9Q0FHAKK.
+  - Son nom POTTIER est celui de l'offre 3648, proposée le 23/08/2024 sur l'annonce 8395, mandat 17010.
+  - La seule vente de ce mandat est 3650, et ses honoraires valent sa Commission.
+  - La garde du déjà-rendu l'a arrêté, parce que 7W7XUBPO aurait pris 2162.
+- **L'image du 82 :** sur 62 lignes regardées, **aucun candidat**. 56 n'ont aucune offre à leur nom le jour de leur case,
+  4 n'ont ni nom ni date, et 2 passent l'offre mais s'arrêtent plus loin.
+- **Conclusion :** le cas a existé, une seule fois, et le juge le voyait. C'était une ligne au Mandat emprunté à une autre
+  ligne. Sa correction à la source l'a fait disparaître.
+  - La protection réelle a été l'ATTENTE visible (AUCUNE_PIECE_PROUVEE), qu'il a lue et corrigée.
+  - Je recommande de retirer R29. Elle n'est pas retirée : c'est à son mot.
+
+**③ Étape 1 de 9Q0FHAKK : l'écrivain au passage 82.**
+- Quatre outils lisent maintenant le 82 :
+  - `ecrire_colonne_a_du_sheet` (PASSAGE_DU_PROTOCOLE = 82) ;
+  - `classer_colonne_a_par_le_protocole` (PASSAGE = 82) ;
+  - `relire_la_colonne_a_contre_le_protocole` ;
+  - `colonne_a_contre_le_verdict_du_protocole`.
+- Le classement du 81 reste intact (fichier du 25/11). Celui du 82 va dans un fichier neuf :
+  `notice/CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-26_PASSAGE_82.csv`.
+- Témoin : l'écrivain charge le passage 82 (4 733 tranchées sur 4 803), et voit 9Q0FHAKK sur 3647, 3648 et 3650.
+
+**Le classement du 82 a crié, et chaque cri est nommé :**
+- **Témoin 1 (4 732 / 4 733) — 9Q0FHAKK est rangée PLUSIEURS_DOSSIERS.**
+  - 3647 et 3650 portent D2024-0511, mais **3648 porte encore D2024-0306** : la nuit la garde dans sa propre chaîne.
+  - ⭐ La cause : 3648 est une de NOS refus du 11/11, par le rattrapage_cascade_annulation de 19:03. Elle avait été
+    acceptée juste avant.
+  - L'écrivain exige une seule étiquette sur toutes les pièces d'une ligne : **la colonne A de 9Q0FHAKK ne peut pas
+    s'écrire tant que 3648 n'a pas rejoint la chaîne 3647.**
+- **Témoin 5 — ⛔ MA FAUTE.** Je lui avais écrit que le classement tenait YRUF0S9H et O6R10ZQA vides par sa décision.
+  - C'est FAUX au 82 : la case DOUBLE_DE_SAISIE ne les prenait que si deux lignes tranchées portaient le même dossier.
+  - R27 a mis une des deux jumelles en attente, donc la règle ne les voyait plus. Seul le témoin 5 les arrêtait.
+  - **C'est corrigé** : sa décision est désormais une règle, placée avant tout verdict. Les quatre doubles restent vides,
+    quoi qu'en dise le juge.
+- **Témoin 4 — trois attentes périmées, nommées comme le v3 :**
+  - 8NZ6V6XB et ZV3QRSJG ont été écrites le 25/11 à 19:40 UTC par la vague1f ;
+  - P252U1JH est sa décision du 24/11, réalisée par la vague du 25/11.
+- **Après ces corrections, il ne reste qu'un cri, le témoin 1 (9Q0FHAKK).**
+  - Le classement range 4 725 cases déjà remplies, 68 lignes non tranchées, 1 ligne PLUSIEURS_DOSSIERS, 4 doubles et
+    5 lignes écrivables : PEE1XTR8, HUY49KEC, P252U1JH, d2108609, a360d9e3.
+  - Il n'a PAS de fiche de fabrication : l'écrivain le refuse, et rien ne peut partir.
+
+**La suite proposée, sans rien écrire :** une ligne dans `phase2/sync/rattachements_manuels.csv`.
+- C'est son mécanisme du 12/11 : la nuit l'applique, avec 16 lignes aujourd'hui. Le fichier dit « on n'en ajoute
+  JAMAIS une sans lui ».
+- La ligne serait `3648;3647;8395;2026-11-26;POTTIER -- …`.
+- La nuit mettrait 3648 dans la chaîne 3647. La fusion garde l'étiquette de la plus petite pièce, 3647 : D2024-0306
+  fusionnerait donc dans D2024-0511.
+- Le lendemain : le témoin (3648 en D2024-0511, journal « fusion »), le classement signé, puis la vague d'une ligne.
+
+⛔ Rien n'est écrit dans le Sheet, en base ni chez Hektor. Le fichier des rattachements n'est pas touché, et rien n'est
+poussé.

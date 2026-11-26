@@ -101,7 +101,9 @@ IMAGES = DOSSIER / "images"
 SOCLE = DOSSIER / "socle.sqlite"
 BASE = RACINE / "phase2" / "phase2.sqlite"
 CODE = [Path(__file__).resolve(), Path(K.__file__).resolve(), Path(PC.__file__).resolve()]
-VERSION = ("v23.1 -- 25/11 (nuit) : 3741 SORTIE de ses neuf a part (son mot : « la raison de la mise a part a disparu ») "
+VERSION = ("v23.2 -- 26/11 : le temoin v3 attend, pour HUY49KEC, P252U1JH et d2108609, ce que SES decisions leur donnent "
+           "(son mot : « trois attentes perimees ») -- aucun verdict ne change ; "
+           "v23.1 -- 25/11 (nuit) : 3741 SORTIE de ses neuf a part (son mot : « la raison de la mise a part a disparu ») "
            "-- v23, 25/11 (soir) : R27, R28, R29 VALIDEES par son accord (« Oui, les trois ») -- R27 la meme affaire sur "
            "deux lignes, R28 un mandat une seule vente (dans le motif COPIE_SEULE seulement), R29 la ligne suit la vente de "
            "sa commission (un fait d'epoque, jamais le mot « refusee ») ; v22 : l'empreinte des entrees vivantes")
@@ -620,6 +622,21 @@ SES_DECISIONS = {
         "remplace": "sa mise a part du 21/11 (a20 : « date 2018-11-23 sur aucune case, honoraires inconnus ») -- le temoin "
                     "a_part_20 ne l'attend plus « a personne »",
         "lignes": {"HUY49KEC": [3741]}},
+}
+#: ⭐ SON MOT DU 26/11 : « Tes 30 ecarts : je les ai nommes un par un [...] Les trois neufs sont tous sur le temoin v3, et ce
+#  sont mes trois decisions [...] Aucun n'est une regression : ce sont trois attentes perimees. Mets-les a jour dans le
+#  temoin v3 avant ce soir, en nommant chacune par ma decision et sa date. Sinon elles crieront chaque nuit pour rien. »
+#  -- la V3 (22/11) attendait l'etat d'AVANT ses decisions ; pour ces trois lignes seulement, l'attendu du temoin v3 devient
+#  celui de sa decision (pieces vraies ET copies, comme la V3 les compare), et le temoin ecrit la decision dans l'attendu.
+V3_ATTENDU_PAR_SA_DECISION = {
+    "HUY49KEC": {"pieces": [3741, 1001587],
+                 "decision": "sa decision du 25/11 au soir : 3741 sortie de ses neuf a part, R28 lui donne D2018-0476"},
+    "P252U1JH": {"pieces": [4126, 4128],
+                 "decision": "sa decision du 24/11 (ses 64 du verrou : 4126 + 4128), realisee par le retrait de 4126 de la "
+                             "liste E a la vague du 25/11 (09:02)"},
+    "d2108609": {"pieces": [21520, 1001495],
+                 "decision": "sa decision du 24/11 (ses 64 du verrou : 21520), realisee par le retrait de 21520 de la liste E "
+                             "a la vague du 25/11 (09:02)"},
 }
 ATTENDU_TEMOINS = {"v3_lignes": 456, "v3_morceau": 431, "v3_a_part": 20, "v3_attend_avec_sa_ligne": 3,
                    "v3_exception_nommee": 2, "coupes_132": 132, "lignes_132": 274, "coupes_29": 29, "lignes_29": 57,
@@ -2584,12 +2601,12 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
         lignes_ecart.append((pid, famille, i, attendu, obtenu, -1 if ec is None else ec))
         sortie.setdefault(famille, Counter())["attend" if ec is None else ("ecart" if ec else "accord")] += 1
 
-    def juger_pieces(famille: str, lignes: list, pieces: list, vraies_seules: bool = False):
+    def juger_pieces(famille: str, lignes: list, pieces: list, vraies_seules: bool = False, nommee: str | None = None):
         """vraies_seules : ses coupes du 20/11 ne portaient QUE les pieces Hektor (une copie ne decide pas) -- on ne
-        compare alors que les vraies pieces du verdict."""
+        compare alors que les vraies pieces du verdict. nommee : la decision qui a remplace l'attendu (ecrite avec lui)."""
         for i in lignes:
             v = V.get(i)
-            att = " ".join(map(str, pieces))
+            att = " ".join(map(str, pieces)) + (" (%s)" % nommee if nommee else "")
             if v is None:
                 noter(famille, i, att, "ABSENTE DU SHEET", 1)
             elif v[0] != "TRANCHEE":
@@ -2605,7 +2622,11 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
             #   on verifie chaque neutre a part (famille v3_neutres)
             mm = _re.search(r"neutres : ([\d ]+)\)", x["pourquoi"])
             neu = [int(n) for n in mm.group(1).split()] if mm else []
-            juger_pieces("v3", [x["ligne"]], [a for a in x["pieces"] if a not in neu])
+            if x["ligne"] in V3_ATTENDU_PAR_SA_DECISION:       # son mot du 26/11 : trois attentes perimees, par SA decision
+                d_ = V3_ATTENDU_PAR_SA_DECISION[x["ligne"]]
+                juger_pieces("v3", [x["ligne"]], d_["pieces"], nommee=d_["decision"])
+            else:
+                juger_pieces("v3", [x["ligne"]], [a for a in x["pieces"] if a not in neu])
             for n in neu:
                 v = V.get(x["ligne"])
                 if v is None or v[0] != "TRANCHEE":

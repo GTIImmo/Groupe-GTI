@@ -35,7 +35,7 @@ import piece_copie_ou_vraie as PC  # noqa: E402
 
 NOTICE = RACINE / "notice"
 SOCLE = P.DOSSIER / "socle.sqlite"
-PASSAGE = 81
+PASSAGE = 82  # 26/11 : le passage OFFICIEL 82 (son mot : « l'ecrivain au passage 82 ») -- le meme que l'ecrivain
 CLASSEMENT = NOTICE / "CLASSEMENT_COLONNE_A_APRES_LA_VAGUE_2026-11-25.csv"
 VAGUE1A = NOTICE / "CLASSEUR_VAGUE_vague1a_2026-11-25.csv"
 VERDICTS_AUDIT = NOTICE / "AUDIT_INDEPENDANT_CLASSEUR_VERDICTS_2026-11-18.csv"

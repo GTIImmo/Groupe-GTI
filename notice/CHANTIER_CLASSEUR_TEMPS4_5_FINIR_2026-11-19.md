@@ -6094,6 +6094,22 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Passage OFFICIEL 82, 10:22 : 4 733 + 70 = 4 803 ; empreinte b7dae92e = la copie ; socle b23e2b3a -> 5ca7c766 ; Sheet
   relu, 4 725 cases inchangees ; code 1, un temoin crie (30 ecarts, 28 au 81).
 - L'ecrivain lit encore PASSAGE_DU_PROTOCOLE = 81.
+
+### 20.75 Le 26/11 (5) : v23.2 (ses trois attentes du temoin v3), le cas de R29, l'ecrivain au 82 -- arret avant la vague
+
+- v23.2 : le temoin v3 attend, pour HUY49KEC / P252U1JH / d2108609, ce que SES decisions donnent, nommees et datees.
+  Rejeu sur copie : verdicts b7dae92e identiques ; ecarts 30 -> 27 (les 27 sont anterieurs au 82).
+- R29 mesuree DANS le juge : image du 81 -> 1 candidat, 9Q0FHAKK (arrete par la garde) ; image du 82 -> 0 sur 62. Le cas
+  (un Mandat emprunte) n'existe plus depuis sa correction. Retrait recommande, a son mot.
+- L'ecrivain (et le classement, la relecture, le controle) lisent le passage 82 ; classement neuf du 26/11, celui du
+  25/11 intact.
+- Le classement crie, chaque cri nomme :
+  - temoin 1 : 9Q0FHAKK = PLUSIEURS_DOSSIERS, parce que 3648 (refusee par NOTRE rattrapage du 11/11 19:03, apres avoir ete
+    acceptee) porte encore D2024-0306 ;
+  - temoin 5 : MA FAUTE, les doubles n'etaient tenus vides que par le temoin -- devenu une REGLE ;
+  - temoin 4 : 3 attentes perimees, nommees.
+  - Reste le seul temoin 1 : pas de fiche, l'ecrivain refuse.
+- Proposition : 3648 -> 3647 dans rattachements_manuels.csv (a son mot), la nuit fusionne D2024-0306 dans D2024-0511.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

@@ -48,16 +48,29 @@ import piece_copie_ou_vraie as PC  # noqa: E402
 
 NOTICE = RACINE / "notice"
 SOCLE = P.DOSSIER / "socle.sqlite"
-PASSAGE = 81
+#: ⭐ SON MOT DU 26/11 : « Pour 9Q0FHAKK, vas-y dans cet ordre : l'ecrivain au passage 82 (il lit encore le 81, je l'ai vu
+#  ligne 95) » -- le passage OFFICIEL 82 (26/11 10:22, socle 5ca7c766, empreinte des verdicts b7dae92e). Le classement du
+#  81 reste tel quel dans son fichier du 25/11 ; celui du 82 va dans un fichier NEUF (jamais d'ecrasement).
+PASSAGE = 82
 PAR_LE_GEL = NOTICE / "CLASSEMENT_COLONNE_A_APRES_LA_VAGUE_2026-11-25.csv"
-SORTIE = NOTICE / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-25.csv"
+SORTIE = NOTICE / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-26_PASSAGE_82.csv"
 ORDRE = ["A_DEJA_REMPLIE", "PAS_TRANCHEE", "C5_SEULE", "PLUSIEURS_DOSSIERS", "ARRIVEE_NON_TENUE", "DOUBLE_DE_SAISIE",
          "ETIQUETTE_DEJA_EN_A", "DECISION_B", "DECISION_19", "VAGUE_1"]
 #: ⚠ 25/11 : 8NZ6V6XB est une des 19 de sa decision du 20/11 -- l'ecrivain la refusait DEJA (lire_hors_vague) ; le
 #  danger reel par le gel etait donc de 4 lignes, pas 5 (mon compte de l'apres-midi, corrige ici et dans le compte rendu)
 #  ⭐ 25/11 (soir) : ses decisions du 20/11 LEVEES -> 8NZ6V6XB est ecrivable, avec l'etiquette du PROTOCOLE (pas celle du gel)
-CONTRE_PAR_LE_GEL = {"8NZ6V6XB": "VAGUE_1", "ZV3QRSJG": "VAGUE_1", "P252U1JH": "PAS_TRANCHEE",
-                     "3THZJOOG": "PAS_TRANCHEE", "3QZ4DAD1": "PAS_TRANCHEE"}
+CONTRE_PAR_LE_GEL_AU_81 = {"8NZ6V6XB": "VAGUE_1", "ZV3QRSJG": "VAGUE_1", "P252U1JH": "PAS_TRANCHEE",
+                           "3THZJOOG": "PAS_TRANCHEE", "3QZ4DAD1": "PAS_TRANCHEE"}
+#: ⭐ 26/11, AU PASSAGE 82 -- trois attentes PERIMEES, chacune nommee par ce qui l'a fait bouger (son mot du 26/11 sur le
+#  temoin v3 : « Mets-les a jour [...] en nommant chacune par ma decision et sa date. Sinon elles crieront chaque nuit pour
+#  rien ») ; les deux autres n'ont pas bouge.
+CONTRE_PAR_LE_GEL = {
+    "8NZ6V6XB": ("A_DEJA_REMPLIE", "ecrite le 25/11 a 19:40 UTC par la vague1f (app_sheet_ecrit), sur l'etiquette du protocole"),
+    "ZV3QRSJG": ("A_DEJA_REMPLIE", "ecrite le 25/11 a 19:40 UTC par la vague1f (app_sheet_ecrit), sur l'etiquette du protocole"),
+    "P252U1JH": ("VAGUE_1", "sa decision du 24/11 (4126 + 4128), realisee par le retrait de 4126 de la liste E a la vague "
+                            "du 25/11 (09:02)"),
+    "3THZJOOG": ("PAS_TRANCHEE", "inchangee"),
+    "3QZ4DAD1": ("PAS_TRANCHEE", "inchangee")}
 SES_DOUBLES = {"3308P0UX", "YRUF0S9H", "T2GZOY5O", "O6R10ZQA"}
 
 
@@ -142,6 +155,13 @@ def main() -> int:
         motif, autres = "", []
         if col_a.get(i):
             c = "A_DEJA_REMPLIE"
+        elif i in SES_DOUBLES:
+            # ⛔ SON MOT DU 26/11 : « les quatre doubles devaient rester vides par decision ». Au 81 la case DOUBLE_DE_SAISIE
+            #   les prenait d'elle-meme (deux lignes tranchees sur le meme dossier) ; au 82, R27 met une des deux en attente
+            #   et la regle ne les voyait plus -- SEUL le temoin 5 les arretait. Sa decision est desormais une REGLE, avant
+            #   tout verdict : ces quatre lignes restent vides, quel que soit ce que le juge en dit.
+            c, autres = "DOUBLE_DE_SAISIE", sorted(SES_DOUBLES - {i})
+            motif = "sa decision du 25/11 : « laisse les quatre lignes VIDES et nomme-les » (redite le 26/11)"
         elif not v or v["verdict"] != "TRANCHEE":
             c = "PAS_TRANCHEE"
             motif = ("%s : %s" % (v["motif"], v["motif_texte"][:140])) if v else "absente du passage %d" % PASSAGE
@@ -176,8 +196,12 @@ def main() -> int:
     if len(u_v1) != len(v1) or any(en_a.get(u) for u in u_v1):
         echecs.append("VAGUE_1 : une etiquette sur deux lignes ou deja en A")
     t4 = {i: out[i]["case"] for i in CONTRE_PAR_LE_GEL if i in out}
-    print("TEMOIN 4 : les 5 que le gel ecrirait contre le protocole : %s (attendu %s)" % (t4, CONTRE_PAR_LE_GEL))
-    if t4 != CONTRE_PAR_LE_GEL:
+    att4 = {i: c_ for i, (c_, _r) in CONTRE_PAR_LE_GEL.items()}
+    print("TEMOIN 4 : les 5 que le gel ecrirait contre le protocole : %s (attendu %s)" % (t4, att4))
+    for i, (c_, r_) in CONTRE_PAR_LE_GEL.items():
+        if CONTRE_PAR_LE_GEL_AU_81.get(i) != c_:
+            print("          %s : %s au 81 -> %s au 82 -- %s" % (i, CONTRE_PAR_LE_GEL_AU_81.get(i), c_, r_))
+    if t4 != att4:
         echecs.append("les 5 : %s" % t4)
     t5 = sorted(i for i in out if out[i]["case"] == "DOUBLE_DE_SAISIE")
     print("TEMOIN 5 : ses doubles de saisie, laisses VIDES et nommes : %s (attendu %s)" % (t5, sorted(SES_DOUBLES)))

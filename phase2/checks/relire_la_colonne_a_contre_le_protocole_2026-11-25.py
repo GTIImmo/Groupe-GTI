@@ -48,7 +48,7 @@ def main() -> int:
             A[i], row[i], etat[i] = l[0].strip(), num, l[kE].strip()
     con = sqlite3.connect("file:%s?mode=ro" % (P.DOSSIER / "socle.sqlite").as_posix(), uri=True)
     V = {i: (v, e or "", json.loads(ps) if ps else []) for i, v, e, ps in con.execute(
-        "select id_unique, verdict, etiquette, pieces from verdict where passage=81")}
+        "select id_unique, verdict, etiquette, pieces from verdict where passage=82")}  # 26/11 : le 82 officiel, comme l'ecrivain
     con.close()
     cn, cu = P.pooler()
     cu.execute("select app_affaire_id, app_dossier_uuid::text, app_dossier_numero, transaction_origine, hektor_affaire_id "
