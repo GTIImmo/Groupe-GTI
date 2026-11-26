@@ -3929,3 +3929,9 @@ fait) -- condition `nbATraiter > 0` ; la ligne « N point(s) d'attention masqué
 **Rien de ce qu'elle écrit ne change** : `enregistrer` intact (un seul appel à `onEnregistrer`), mêmes chemins vers Hektor.
 **Contrôles** : `test_ged_bilan_v3.cjs` **9 VERT** ; témoin inverse (page jamais ouverte d'office) **1 ROUGE** ; tous les essais
 GED (bilan 137, socle 16…) et les 5 de la signature verts ; build. ⚠ Pas vu à l'écran : il faut le déploiement.
+**✅ EN LIGNE le 26/11 (« Oui, pousse »)** : rejoué seul sur `origin/main`, l'arbre exact essayé à part (bilan v3 9, bilan 137,
+socle 16, mesure 27, build), poussé en `c21ef1e` ; la production sert `bc-msg-coche`. **Vu dans le Chrome de Frédéric sur
+18849, sans rien enregistrer** : « Voir et corriger » ouvre « Ce que dit le compromis » avec l'en-tête CLAIR, la plaque « Le
+compromis : le 01/02/2027 » cadrée magenta (« correction ») face à « La transaction : le 23/01/2027 » barrée, et **la page 5
+sur 38 ouverte d'office** dans la colonne de droite, dessinée en quelques secondes. Fermée par « Fermer ». La coche de réussite
+n'a pas été vue (il aurait fallu enregistrer, donc écrire chez Hektor).
