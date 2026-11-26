@@ -266,6 +266,32 @@ NOM_DATE_EN_FIN = re.compile(r"(_20\d{6}(_\d{6})?$|_20\d{2}_\d{2}_\d{2}$)")
 # Epreuve : phase2/sync/test_garde_de_la_descente.py (temoin inverse compris).
 DATE_DE_LA_COPIE_EN_PLACE = True
 
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLE 1 -- PAS DE COMPTE, PAS DE BASCULE                           26/11/2026
+#
+# LE TROU (faille A de l'audit, § 3). La verification avant bascule etait
+#   `if attendu is not None and attendu != total` : quand SupabaseReader.count rendait None,
+#   la verification etait SAUTEE et la copie neuve remplacait l'ancienne quand meme.
+#   count rend None apres une panne plus longue que les 4 essais de get() (~9 s pour le
+#   reseau, ~36 s pour une passerelle 52x), sur tout refus 4xx (jamais reessaye), ou sur un
+#   Content-Range sans total chiffre.
+# CE QU'IL POUVAIT COUTER. Le compte est le SEUL juge d'une lecture courte : une reponse
+#   coupee qui ressemble a une fin de table, une colonne de parcours nulle, un plafond de
+#   lignes abaisse chez Supabase (« Max rows » < 1 000 : toute table plus grosse serait lue
+#   en une page). Exemple vecu chaque nuit : app_securite_droits_avant_20261008 se lisait
+#   1 000 lignes sur 2 546, et seul le compte la sauvait.
+# A-T-IL MORDU ? Jamais, mesure du 28/10 au 26/11 : 88 lectures courtes, le compte a
+#   repondu a chacune ; 149 deltas reussis sur les 5 plus grosses tables (un delta exige le
+#   compte) ; un comptage prend au plus 1,8 s au serveur, pour une limite de 8 s.
+# LA REGLE. Si le compte ne repond pas, la copie neuve est REFUSEE : l'ancienne reste, la
+#   table part en echec (nommee, code 1), et elle est retentee a la descente suivante.
+#   Le delta, lui, traitait deja None comme un doute (copy_delta, filet n°1) : inchange.
+# ⚠ Une table qui n'a encore AUCUNE copie locale attend la nuit suivante au lieu d'arriver
+#   sans verification. C'est voulu.
+# Interrupteur : False = le comportement d'avant (bascule sans verification).
+# Epreuve : phase2/sync/test_garde_de_la_descente.py.
+EXIGER_LE_COMPTE = True
+
 
 def load_env_file(path: Path) -> None:
     """Meme convention que push_contacts_to_supabase.py."""
@@ -773,6 +799,13 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     # donc chez Supabase AVANT la bascule : si la neuve n'est pas entiere, on la refuse et
     # l'ancienne reste. Le serveur ne peut jamais se retrouver avec MOINS qu'avant.
     attendu = reader.count(distant)
+
+    # REGLE 1 (26/11) : PAS DE COMPTE, PAS DE BASCULE -- voir EXIGER_LE_COMPTE. Sans compte,
+    # les deux controles ci-dessous (relecture, refus) etaient sautes et la bascule avait lieu.
+    if attendu is None and EXIGER_LE_COMPTE:
+        raise RuntimeError(
+            "comptage impossible chez Supabase (le compte n'a pas repondu) -- bascule refusee "
+            "-- l'ancienne copie est conservee")
 
     # LE RATTRAPAGE PAR RANG -- correctif du 22/08, cas vu en vrai sur
     # app_mandat_broadcast_current (1 524 lues / 1 528 attendues).

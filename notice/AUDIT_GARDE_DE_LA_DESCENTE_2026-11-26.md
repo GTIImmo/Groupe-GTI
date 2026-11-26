@@ -604,7 +604,7 @@ problème ». Les règles sont donc écrites ce soir, une par une. Chacune a son
 et son témoin inverse, et chacune fait l'objet d'un commit local à part, dans la branche
 normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
 
-### Règle 0 — la date d'une copie est celle de la copie en place (26/11, 20:05)
+### Règle 0 — la date d'une copie est celle de la copie en place (26/11, 19:56, `ef36b19`)
 
 - **Le code** : `pull_from_supabase.py`, constante `DATE_DE_LA_COPIE_EN_PLACE = True`, et
   l'enregistrement « copie en cours » de `copy_table`.
@@ -625,3 +625,22 @@ normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
 - **Le retour arrière** : `DATE_DE_LA_COPIE_EN_PLACE = False`, ou `git revert` du commit.
 - **Prend effet** à la prochaine exécution, sans aucun geste : la descente ciblée du run de
   04:00, puis la descente de 06:45.
+
+### Règle 1 — pas de compte, pas de bascule (26/11)
+
+- **Le code** : constante `EXIGER_LE_COMPTE = True`, et un refus juste après
+  `attendu = reader.count(distant)` dans `copy_table`. Le message est « comptage impossible
+  chez Supabase (le compte n'a pas répondu) — bascule refusée ». Le reste de la fonction
+  est inchangé.
+- **L'épreuve : 22 sur 22** avec la règle 0. Côté règle 1 :
+  - compte absent : la copie est refusée, et l'ancienne reste avec sa date ;
+  - **lecture coupée à 300 lignes sur 500 et compte absent : refusée, les 500 restent** ;
+  - compte juste : la copie passe ;
+  - lecture coupée avec un compte : réparée par la relecture par rang, comme avant.
+- **Le témoin inverse**, interrupteur éteint : la lecture coupée remplace la copie **sans
+  un mot**, et l'état la dit complète et du jour (essais 1e et 1f). C'est exactement la
+  faille A.
+- **La limite, écrite exprès** (essai 1i) : une source vide remplace encore 500 lignes par
+  0. C'est la faille B, que traitera la règle 4. L'essai changera de sens ce jour-là.
+- **L'ancien banc** : 19 sur 19.
+- **Le retour arrière** : `EXIGER_LE_COMPTE = False`.

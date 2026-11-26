@@ -10,6 +10,9 @@ CE QU'ON EPROUVE, regle par regle :
   0  la date d'une copie est celle de la copie EN PLACE (DATE_DE_LA_COPIE_EN_PLACE) :
      apres un refus, sb_pull_state garde la date de la veille -- c'est elle que lisent
      relation_ledger, relation_disparue, mandat_un_numero et la sante.
+  1  pas de compte, pas de bascule (EXIGER_LE_COMPTE) : un compte qui ne repond pas
+     refuse la copie neuve. Le cas qui compte : une lecture COUPEE (300 sur 500) avec un
+     compte absent passait en silence.
 
 CHAQUE REGLE A SON TEMOIN INVERSE : son interrupteur eteint, le meme cas DOIT reproduire
 le comportement d'avant. Un essai qui passerait aussi interrupteur eteint ne prouverait rien.
@@ -170,11 +173,69 @@ def regle_0():
     print()
 
 
+class LecteurCoupe(Lecteur):
+    """Un serveur qui coupe la lecture : au-dela de `coupe`, les pages reviennent VIDES --
+    exactement le signal d'une fin de table. C'est le cas que seul le compte peut juger."""
+
+    def __init__(self, lignes, compte, coupe):
+        super().__init__(lignes, compte)
+        self.coupe = coupe
+
+    def page_apres(self, table, cle, borne, size):
+        return [r for r in super().page_apres(table, cle, borne, size) if r[cle] < self.coupe]
+
+
+def regle_1():
+    print("=== REGLE 1 : pas de compte, pas de bascule ===")
+    juger("1  l'interrupteur est ALLUME dans le fichier", True, pfs.EXIGER_LE_COMPTE)
+
+    # Le compte ne repond pas, la lecture est complete : on refuse quand meme (on ne sait pas).
+    con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
+    erreur = passer(con, Lecteur(lignes(500), compte=None))
+    juger("1a compte None : la bascule est REFUSEE, et le refus est nomme", True,
+          erreur is not None and erreur.startswith("comptage impossible"))
+    juger("1b la copie d'avant est intacte (500), aucune __tmp", (500, []), locales(con))
+    juger("1c et sa date reste celle de la veille (regle 0)", VEILLE, etat(con)[1])
+
+    # LE CAS QUI COMPTE : le serveur coupe a 300 lignes sur 500, et le compte ne repond pas.
+    def coupee():
+        con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
+        erreur = passer(con, LecteurCoupe(lignes(500), compte=None, coupe=300))
+        return con, erreur
+    con, erreur = coupee()
+    juger("1d lecture coupee + compte None : REFUSEE, les 500 restent", (True, 500),
+          (erreur is not None, locales(con)[0]))
+    # TEMOIN INVERSE : interrupteur eteint, la copie amputee passe EN SILENCE.
+    con, erreur = avec("EXIGER_LE_COMPTE", False, coupee)
+    juger("1e INVERSE eteint : aucune erreur, et la copie tombe a 300 sans un mot", (None, 300),
+          (erreur, locales(con)[0]))
+    juger("1f INVERSE eteint : et l'etat la dit complete, du jour", (300, CE_MATIN, None), etat(con))
+
+    # Le compte repond juste : rien ne change.
+    con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
+    erreur = passer(con, Lecteur(lignes(510)))
+    juger("1g compte juste : la copie passe (510), sans message", (None, 510), (erreur, locales(con)[0]))
+
+    # La lecture coupee AVEC un compte : refusee comme avant (le compte la juge).
+    con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
+    erreur = passer(con, LecteurCoupe(lignes(500), compte=500, coupe=300))
+    juger("1h lecture coupee, compte present : la relecture par rang la repare (500)", (None, 500),
+          (erreur, locales(con)[0]))
+
+    # LIMITE CONNUE, ecrite pour qu'on ne la croie pas fermee : 0 = 0 passe encore.
+    con = base(ancienne=500, etat=(500, VEILLE, None, VEILLE))
+    erreur = passer(con, Lecteur([], compte=0))
+    juger("1i limite : une source VIDE remplace encore 500 lignes par 0 (c'est la regle 4)",
+          (None, 0), (erreur, locales(con)[0]))
+    print()
+
+
 def main():
     vieux = (pfs.PAGE_SIZE, pfs.PAUSE_PAGE)
     pfs.PAGE_SIZE, pfs.PAUSE_PAGE = 100, 0
     try:
         regle_0()
+        regle_1()
     finally:
         pfs.PAGE_SIZE, pfs.PAUSE_PAGE = vieux
     print("%d/%d verts" % (VERTS, VERTS + len(ROUGES)))
