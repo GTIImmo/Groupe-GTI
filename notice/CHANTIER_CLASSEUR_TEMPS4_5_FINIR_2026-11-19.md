@@ -6122,6 +6122,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Le temoin du matin (mesure, pas rapporte) : lance le 26, il dit « PAS REUNIE » et voit les 16 autres reunis.
 - Ce soir : RLS des 22 (gardes vertes en lecture seule ; l'essai a blanc et le geste a son mot), temoins (b) et (c), puis
   la regle des dates, puis la ligne. Demain : UNE vague, six lignes.
+
+### 20.77 Le 26/11 (7) : la ligne validee (+ « [refus 11/11] ») ; le temoin du matin lit le journal de la nuit
+
+- Ligne 3648;3647;8395 VALIDEE par lui, avec le marqueur « [refus 11/11] » en tete du commentaire ; rejouee : tout vert.
+  A ecrire EN DERNIER ce soir, avant 04:00.
+- ⭐ SON MOT : « Reunie « oui » ne dit pas par quoi. » Le temoin exige « [M] rattachement decide a la main » et l'absence des
+  trois refus et de DEUX VENTES. ⚠ Le journal compte par LIBELLE, il ne nomme pas le bien : lus = decides = lignes du
+  fichier, sans autre [M], prouve que chaque ligne a ete appliquee a la main ; le bien 8395 est nomme par un rejeu de la
+  seule ligne 3648 (⑤). Lecteur eprouve : 4 / 4 journaux truques font crier.
+- RLS des 22 : gardes revertes ; la connexion en ecriture a son mot, au moment de la RLS.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

@@ -2535,3 +2535,37 @@ poussé.
 5. **Et la ligne de rattachement**, après sa relecture, avant le run de 04:00.
 
 ⛔ Rien n'est écrit en base, dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
+
+### Le 26/11 (7) : la ligne de rattachement VALIDÉE, avec son marqueur ; le témoin du matin lit le journal de la nuit
+
+**① La ligne, validée par lui, avec un seul ajout : le marqueur « [refus 11/11] » en tête du commentaire.**
+- Son mot : « pour qu'on retrouve d'un seul coup toutes les réparations nées de cette opération quand on ouvrira ce chantier
+  pour lui-même ».
+```
+3648;3647;8395;2026-11-26;[refus 11/11] POTTIER -- l'offre du 23/08/2024 (acceptee, puis refusee le 11/11/2026 par notre rattrapage_cascade_annulation) rejoint son compromis 3647 et sa vente 3650 : la ligne 9Q0FHAKK du classeur (passage 82) -- D2024-0306 fusionne dans D2024-0511
+```
+- Rejouée avec le marqueur par la vraie fonction de nuit sur copie : TOUT VERT, à l'identique (seule 3648 bouge, D2024-0511
+  gardée, D2024-0306 vidée). Le lecteur rend le commentaire qui commence par « [refus 11/11] ». La ligne est en ASCII.
+- ⏰ Elle s'écrit EN DERNIER ce soir, avant 04:00 (son ordre). Le fichier n'est pas touché.
+
+**② Le témoin du matin lit maintenant le journal de la nuit (son mot) :** « Réunie « oui » ne dit pas par quoi : si une règle
+l'avait rapprochée d'elle-même, ou si notre ligne n'avait pas été appliquée du tout, le témoin dirait oui dans les deux cas. »
+- Le mécanisme écrit cinq messages (affaire_ledger.py, boucle « LES RATTACHEMENTS DECIDES A LA MAIN ») : « [M] rattachement
+  decide a la main » est le seul attendu ; « le bien ne correspond pas », « transaction introuvable », « deja obtenu par une
+  regle » et le cri « DEUX VENTES » doivent être absents — et tout autre message « [M] ».
+- ⚠ **Le journal ne nomme pas le bien** : `signale()` compte par libellé. La preuve se lit donc ainsi : chaque ligne produit
+  EXACTEMENT UN des quatre premiers messages (la boucle fait `continue` après chaque refus) ; donc « lignes lues » =
+  « décidé à la main » = les lignes du fichier, sans aucun autre « [M] », veut dire que CHAQUE ligne, la nôtre comprise, a
+  été appliquée à la main. Plus : l'étape DONE, un journal postérieur à l'écriture du fichier, et « fusion N » avec N ≥ 1.
+- ⑤ **Le bien nommé** : la vraie fonction rejouée sur le registre du matin avec SEULE la ligne 3648 (aucune autre décision
+  n'est sur 8395) doit dire exactement { « décidé à la main » : 1 }. C'est un rejeu, pas l'enregistrement de la nuit.
+- **Ses témoins, pris aujourd'hui :**
+  - le lecteur crie sur 4 journaux truqués en mémoire sur 4 (un refus ajouté, DEUX VENTES ajouté, une ligne non appliquée,
+    la ligne absente), et se tait sur le vrai ;
+  - le journal du 26/11 : 16 lues, 16 « décidé à la main », aucun autre « [M] », étape DONE, fusion 0 → « pas » ;
+  - ⑤ positif avec la ligne proposée : 3648 → 3647, { « décidé à la main » : 1 } ; ⑤ inverse sans la ligne : aucun message.
+
+**③ La RLS des 22 : gardes revertes cet après-midi** (22 mesurées = 22 figées, RLS absente, propriétaire postgres, aucune
+politique, chacune lisible par authenticated). La connexion en écriture se demande AU MOMENT de la RLS (son mot).
+
+⛔ Rien n'est écrit en base, dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.

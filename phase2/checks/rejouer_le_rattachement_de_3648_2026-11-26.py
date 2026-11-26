@@ -39,7 +39,10 @@ import phase2.sync.affaire_ledger as al  # noqa: E402
 
 BASE = RACINE / "phase2" / "phase2.sqlite"
 SOURCE, CIBLE, BIEN = 3648, 3647, 8395
-LIGNE_PROPOSEE = ("3648;3647;8395;2026-11-26;POTTIER -- l'offre du 23/08/2024 (acceptee, puis refusee le 11/11/2026 par "
+#: ⭐ 26/11, son mot : « Ajoute seulement un marqueur en tete du commentaire, « [refus 11/11] », pour qu'on retrouve d'un seul
+#:   coup toutes les reparations nees de cette operation quand on ouvrira ce chantier pour lui-meme. »
+MARQUEUR = "[refus 11/11]"
+LIGNE_PROPOSEE = ("3648;3647;8395;2026-11-26;[refus 11/11] POTTIER -- l'offre du 23/08/2024 (acceptee, puis refusee le 11/11/2026 par "
                   "notre rattrapage_cascade_annulation) rejoint son compromis 3647 et sa vente 3650 : la ligne 9Q0FHAKK du "
                   "classeur (passage 82) -- D2024-0306 fusionne dans D2024-0511")
 DECISIONS_ATTENDUES = 16
@@ -80,6 +83,8 @@ def main() -> int:
     echecs = []
     print("LA LIGNE PROPOSEE (a sa relecture, elle n'est PAS dans le vrai fichier) :\n   %s\n" % LIGNE_PROPOSEE)
     assert ";" not in LIGNE_PROPOSEE.split(";", 4)[4], "un point-virgule dans le pourquoi casserait la lecture"
+    assert LIGNE_PROPOSEE.split(";", 4)[4].startswith(MARQUEUR + " "), "le marqueur doit ouvrir le commentaire"
+    assert LIGNE_PROPOSEE.isascii(), "aucun accent dans la ligne"
     decisions = al.lire_rattachements_manuels()
     print("FICHIER : %d decisions (attendu %d) ; 3648 deja dedans : %s"
           % (len(decisions), DECISIONS_ATTENDUES, any(s == SOURCE for s, _c, _b, _p in decisions)))
@@ -98,6 +103,10 @@ def main() -> int:
         print("   le fichier temporaire se lit : %d decisions, dont %s" % (len(lu), [d[:3] for d in lu if d[0] == SOURCE]))
         if len(lu) != DECISIONS_ATTENDUES + 1 or not any(d[:3] == (SOURCE, CIBLE, BIEN) for d in lu):
             echecs.append("la ligne proposee ne se lit pas")
+        pq = [d[3] for d in lu if d[0] == SOURCE]
+        print("   son commentaire, tel que le LECTEUR le rend : %r" % (pq[0][:60] + "..." if pq else None))
+        if not pq or not pq[0].startswith(MARQUEUR + " "):
+            echecs.append("le marqueur n'ouvre pas le commentaire lu")
         apres, compte_apres = rejouer(avec)
     avant, compte_avant = rejouer(al.FICHIER_RATTACHEMENTS)
 
