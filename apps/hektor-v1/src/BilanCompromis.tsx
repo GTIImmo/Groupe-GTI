@@ -142,7 +142,14 @@ export default function BilanCompromis({
   }, [bilan, decisions, rouvertes])
 
   // ── le document, à la page de la ligne regardée (le fichier est chargé UNE fois, chaque page dessinée à la demande) ──
-  const [pageVue, setPageVue] = useState<number | null>(null)
+  // Visuel V3, morceau 5 (26/11) : la page s'ouvre D'OFFICE à la première ligne à trancher qui a une page (au lieu d'une
+  // colonne vide « Touche « page » sur une ligne »). Pas au téléphone : là, la page REMPLACE la liste (Échap pour revenir).
+  const [pageVue, setPageVue] = useState<number | null>(() => {
+    if (!document) return null
+    try { if (window.matchMedia?.('(max-width: 760px)').matches) return null } catch { return null }
+    const premiere = bilan.lignes.find((l) => l.page && l.etat !== 'accord' && !l.fige) ?? bilan.lignes.find((l) => l.page)
+    return premiere?.page ?? null
+  })
   const [apercu, setApercu] = useState<{ image: string; page: number; nbPages: number } | { erreur: string } | 'lecture' | null>(null)
   const fichier = useRef<Blob | null>(null)
   useEffect(() => {
@@ -366,7 +373,13 @@ export default function BilanCompromis({
         </div>
 
         <footer className="bc-pied">
-          {message ? <p className={`bc-msg${message.erreur ? ' is-erreur' : ''}`} role="status">{message.texte}</p> : (
+          {message ? (
+            <p className={`bc-msg${message.erreur ? ' is-erreur' : ''}`} role="status">
+              {/* morceau 5 : une écriture réussie se signe d'une coche tracée */}
+              {!message.erreur ? <svg className="bc-msg-coche" width="22" height="22" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="12" /><path d="M8 13.5l3.2 3.2L18 9.8" /></svg> : null}
+              <span>{message.texte}</span>
+            </p>
+          ) : (
             <p className="bc-resume" aria-live="polite">
               {resume || (rienAFaire ? 'Tout est déjà tranché.' : 'Aucun choix pour l\'instant.')}
               {parLaFenetre ? <small>{bilan.genre === 'offre'
