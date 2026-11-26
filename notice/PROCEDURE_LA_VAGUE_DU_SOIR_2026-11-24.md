@@ -2847,3 +2847,44 @@ reste additif : +57 lignes, aucune retirée) :
 touche plus à pull_from_supabase.py : l'autre session lira ce commit.
 
 **④ La suite, à son mot :** la ligne de rattachement, en dernier, avant 04:00.
+
+### Le 26/11 (14) : LA LIGNE 3648 ÉCRITE, EN DERNIER — et le plantage du rattrapage du carnet, noté pour qu'il ne se perde pas
+
+**Son mot** : « Écris la ligne de rattachement maintenant. Puis arrête-toi : la vague des six se joue demain, après le
+témoin. » Son contrôle de la règle des dates, de son côté : 69 noms pris, tous des tables ; 2 avec clé, 67 sans ; 66 copies
+locales et 3 absentes ; 281 017 lignes ; 238 − 69 = 169 ; les trois échecs de ce matin sont ces trois tables et rien
+d'autre ; et aucun des 210 autres noms du schéma ne contient même quatre chiffres. Les trois `app_classeur_lien_avant_regel`
+n'existent plus au serveur (il l'a vérifié) ; pour les trois du 25/11, ni anon ni authenticated n'ont le moindre droit.
+
+**① La ligne, écrite à 19:52** (prepa_25_11/114, commit local **bd21457**, le fichier seul) :
+- c'est `LIGNE_PROPOSEE` du script de rejeu, celle qu'il a relue — importée, jamais retapée ; ajoutée **en octets** à la fin
+  du fichier : les 16 décisions d'avant sont identiques octet pour octet (md5 6e02260c → **3e4a913b**, +280 octets, BOM
+  gardé, LF seuls) ;
+- **le lecteur de nuit** (`lire_rattachements_manuels`) : 17 décisions, 3648 → 3647 / 8395, le marqueur « [refus 11/11] »
+  ouvre le commentaire ;
+- **la vraie fonction** (`recalculer_les_chaines`), sur le VRAI fichier, sur une copie en mémoire de `app_affaire_ledger` :
+  contre la base, **seule 3648 change de chaîne** ; 3648, 3647 et 3650 → 3647 ; « [M] rattachement décidé à la main » 17 ;
+  aucun autre [M].
+- Rien en base : c'est la nuit qui l'appliquera.
+
+**② Le témoin de demain** : sa référence est vérifiée dans le journal du run de cette nuit (sa mesure) : 16 lignes lues, 16
+rattachements appliqués, aucun autre message [M]. Donc demain, après 07:30 :
+`python -X utf8 -u phase2\checks\temoin_du_rattachement_de_3648_2026-11-27.py` → **17 / 17 / 17**, puis la vague des six,
+à son accord. ⛔ Rien avant.
+
+**③ ⚠ Le SECOND échec de la descente de ce matin — pas mon chantier, noté pour qu'il ne se perde pas** (son ajout) :
+- à la fin du journal : « rattrapage du carnet termine (exit -1073740791) », puis « (!) rattrapage du carnet en ECHEC -- la
+  descente n'echoue pas pour lui » ;
+- mesuré dans les 34 journaux de descente qui portent cette étape (depuis le 28/10) : **deux fois, le 06/11 et le 26/11** ;
+  les 32 autres sortent en 0 ;
+- les deux fois, la même forme : le script `enqueue_rattrapage_carnet` a FINI son travail et imprimé son compte rendu
+  (`lignes_lues: 0`, « rien a poser »), puis le processus s'arrête net à la sortie sur
+  « Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76 » ;
+- −1073740791 = **0xC0000409**, le même code que les arrêts nets du worker (notés le 22/10) — même code, je ne dis pas même
+  cause : non mesuré ;
+- ⚠ **quand le code 1 de la descente tombera à 0** (la règle des dates), ce plantage deviendra encore moins visible : il ne
+  touche déjà pas le code de sortie. Il ne vit que dans ces deux lignes du journal.
+- Je n'y touche pas.
+
+⛔ Écrit : le fichier des rattachements (une ligne) et ce compte rendu. Rien en base, rien dans le Sheet ni chez Hektor. Rien
+n'est poussé. **Arrêt jusqu'au témoin de demain.**

@@ -6196,6 +6196,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Ses trois questions : 281 017 lignes en moins par nuit (+ 53 685 lues pour rien) ; 3 / 69 sans copie locale ; le code 1
   tombe a 0 (il venait de ces trois seules) -- a sa place une ligne de journal, pas une alarme.
 - Plus rien dans pull_from_supabase.py (l'autre session). Suite : la ligne.
+
+### 20.84 Le 26/11 (14) : la ligne 3648 ECRITE en dernier (bd21457) -- arret jusqu'au temoin
+
+- La ligne relue (LIGNE_PROPOSEE, marqueur [refus 11/11]) ajoutee en octets a 19:52 : 16 decisions inchangees octet pour
+  octet, md5 6e02260c -> 3e4a913b. Lecteur de nuit : 17 decisions. Vraie fonction sur le vrai fichier, copie en memoire :
+  seule 3648 change de chaine (-> 3647, avec 3650), [M] 17, aucun autre [M].
+- Temoin du 27/11 apres 07:30 : 17 / 17 / 17 (sa reference : 16 / 16 cette nuit), puis la vague des six a son accord.
+- ⚠ Second echec de la descente du 26/11 : rattrapage du carnet exit -1073740791 (0xC0000409), assertion libuv a la
+  SORTIE de Node apres « rien a poser » ; 2 fois sur 34 (06/11, 26/11) ; ne touche pas le code de sortie, moins visible
+  encore quand le code 1 tombera. Pas mon chantier, non touche.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
