@@ -6172,6 +6172,18 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   comptage enveloppe qui leve avant la bascule (eprouve 4 / 4), puis la descente : 22 tables, 125 387 lignes, code 0 ;
   22 / 22 egales a postgres et a l'API ; postgres inchange. 7 344 / 7 346 rattrape par la relecture par rang.
 - Suite : regle des dates, puis la ligne.
+
+### 20.82 Le 26/11 (12) : ④ la regle des dates ECRITE dans la descente -- 69 tables sortent de la nuit
+
+- Mesure : 69 noms dates, 69 tables, 67 sans cle primaire (21 / 22 pour la RLS : son chiffre, j'en avais nomme une),
+  334 738 lignes en base. Aucun autre nom du schema ne porte une annee.
+- pull_from_supabase.py : NOM_DATE_EN_FIN, sans --table ces noms ne descendent plus ; --table force ; rien n'est
+  supprime ; liste et total ecrits a chaque passage. +47 lignes, aucune retiree.
+- Epreuves : temoin inverse 279 noms (69 pris, 0 vue), 8 / 8 cas ; dry-run 169 a descendre (238 - 69) ; --table force
+  (1) ; test sans cle primaire 19 / 19. test_un_seul_verrou rouge AVANT moi (sa preuve relit HEAD), non touche.
+- Chaque nuit en moins : 281 017 lignes copiees (16,9 %) + 3 tables en echec chaque nuit (53 685 lues pour rien, le
+  code 1 depuis le 25/11) ; ~458 appels. Duree non mesuree : demain.
+- Suite : la ligne de rattachement, en dernier.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

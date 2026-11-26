@@ -2746,3 +2746,54 @@ rattachements ni chez Hektor. Rien n'est poussé.
 
 **④ La suite, à son mot :** la règle des noms qui finissent par une date, puis la ligne de rattachement en dernier, avant
 04:00.
+
+### Le 26/11 (12) : ④ LA RÈGLE DES DATES ÉCRITE dans la descente — 69 tables sortent de la nuit, rien n'est supprimé
+
+**Son mot** : 125 387 lignes recomptées de son côté, aucune table provisoire oubliée ; le second trou (comptage en échec →
+garde SAUTÉE) est réel, vérifié. Mais « tu sous-estimes la table sans clé primaire : tu en nommes une, il y en a 21 sur les
+22 que tu viens de descendre. Et 67 sur les 69 [...] Les vingt autres sont passées du premier coup par chance, pas par
+construction. Donc la règle des dates n'est pas la dernière corvée : c'est elle qui ferme ce risque. Vas-y maintenant. Et
+dis-moi au passage combien de lignes la descente arrêtera de recopier chaque nuit. »
+
+**① La mesure, de mon côté** (prepa_25_11/110, lecture seule) :
+- 69 noms finissent par une date, sur 279 relations ; les 69 sont des TABLES (aucune vue), toutes exposées par l'API ;
+- **67 sur 69 sans clé primaire** (seules `app_chainage_photo_20261110` et `app_fonction_sauvegarde_20261113` en ont une) ;
+  sur les 22 de la RLS, 21 sans clé : son chiffre est juste, et j'avais nommé une table là où il y avait une famille ;
+- **334 738 lignes en base** (comptées exactement) ; les 67 sans clé en portent 303 589 (l'estimation de postgres,
+  reltuples, en donne 303 203 — son 303 166 est de cet ordre) ;
+- aucun autre nom du schéma ne contient une année : la règle ne peut pas prendre une table vivante aujourd'hui.
+
+**② La règle, dans `phase2/sync/pull_from_supabase.py`** (additive : 47 lignes ajoutées, aucune retirée) :
+- `NOM_DATE_EN_FIN` = la même expression que la RLS des 22 (`_AAAAMMJJ`, `_AAAAMMJJ_HHMMSS`, `_AAAA_MM_JJ`) ;
+- sans `--table`, un tel nom ne descend plus ; **`--table` le force** ;
+- **rien n'est supprimé** : ni en base, ni la copie locale déjà descendue (figée, et juste), ni sa ligne de sb_pull_state ;
+- **la liste écartée et son total sont écrits à chaque passage** (le total au dernier état local, sans appel de plus) ;
+- le bloc qui l'explique est posé sous `RELECTURE_ENTIERE_MAX` ; les vues restent à part (`VUES_NON_DESCENDUES`).
+
+**③ Les épreuves** (prepa_25_11/111) :
+- témoin inverse sur les 279 noms : la règle en prend 69, dont les 22 ; aucune vue ; aucun nom non pris ne porte un
+  nombre de 4 chiffres ; 8 / 8 cas fabriqués justes (dont `_202611`, `_2026`, `_20261125_avant` NON pris) ;
+- `--dry-run` : vues écartées 41, **sauvegardes datées écartées 69**, **à descendre 169** (ce matin : 238 = 169 + 69) ;
+- `--dry-run --table app_chainage_photo_20261110` : à descendre 1 — **le forçage marche** ;
+- `test_descente_sans_cle_primaire.py` : 19 / 19 verts ;
+- ⚠ `test_un_seul_verrou.py` est ROUGE, mais AVANT moi et sans rapport : sa « preuve » relit `magasin_affaire_app.py`
+  dans HEAD, qui porte le correctif depuis qu'il est commité — elle ne peut plus que rougir ; ses vrais contrôles sont
+  verts. Non touché.
+
+**④ Ce que la nuit arrêtera de recopier** (journal de la descente de ce matin, `descente_2026-11-26_06-45-02.log`) :
+- **281 017 lignes copiées avec succès** dans 66 tables datées, soit **16,9 %** des 1 664 983 lignes de la descente ;
+- **plus 3 tables de 17 907 lignes qui échouaient CHAQUE NUIT** (17 895 lues sur 17 907, au-dessus du plafond de la
+  relecture par rang) : 53 685 lignes lues pour rien, et **la cause du code 1 de la descente depuis le 25/11** — ce matin
+  encore (« 3 table(s) en echec », exit 1) ;
+- soit ~334 700 lignes lues en moins par nuit ; **458 appels API** en moins (calculé : pages + comptages, sans la
+  relecture par rang), et 69 pauses de 2 s. La durée gagnée n'est PAS mesurée : le journal de demain la dira.
+
+**⑤ Demain matin, à lire dans le journal de la descente** (première nuit de la règle) : « sauvegardes datees ecartees
+(NOM_DATE_EN_FIN, 26/11) : 69 tables », « a descendre : 169 » (plus les tables nées d'ici là), et un code 0 si rien
+d'autre n'échoue.
+
+⛔ Rien n'est écrit en base. Rien dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
+Les deux trous de la garde de nuit (0 == 0 ; comptage None) restent : la règle les rend sans objet pour les 69, pas pour
+les autres tables.
+
+**⑥ La suite, à son mot :** la ligne de rattachement, en dernier, avant 04:00.

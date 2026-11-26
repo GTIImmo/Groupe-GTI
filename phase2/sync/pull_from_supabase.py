@@ -99,6 +99,8 @@ USAGE
 -----
   python phase2/sync/pull_from_supabase.py --dry-run    # affiche le plan, n'ecrit rien
   python phase2/sync/pull_from_supabase.py              # descend tout
+                                                        #   sauf les vues (VUES_NON_DESCENDUES) et, depuis le 26/11,
+                                                        #   les sauvegardes datees (NOM_DATE_EN_FIN) ; --table les force
   python phase2/sync/pull_from_supabase.py --table app_rapprochement   # une seule
 """
 from __future__ import annotations
@@ -107,6 +109,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -205,6 +208,35 @@ VUES_NON_DESCENDUES = frozenset({
 # ⚠ Le jour ou un gel depassera 15 000 lignes, le vrai remede sera de lui DONNER
 #   une cle primaire a la creation, pas de remonter ce chiffre encore une fois.
 RELECTURE_ENTIERE_MAX = 15000  # au-dela, on ne redemande pas une table en un seul bloc
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LES SAUVEGARDES DATEES NE DESCENDENT PLUS                        26/11/2026
+#
+# SON MOT (26/11) : « la regle des dates n'est pas la derniere corvee : c'est elle qui ferme ce risque, puisqu'elle sort
+#   ces tables de la descente » -- le risque des tables SANS CLE PRIMAIRE.
+# CE QU'ELLES SONT : des photos et des sauvegardes prises AVANT un geste de masse, datees par leur nom
+#   (« ..._avant_<geste>_<date> »), pour pouvoir revenir en arriere. Leur contenu ne change plus apres leur creation :
+#   les recopier chaque nuit ne rapporte rien.
+# CE QU'ELLES COUTAIENT (mesure du 26/11, chantier_classeur_q6_cache/prepa_25_11/110) : 69 tables, 334 738 lignes en
+#   base, toutes recopiees chaque nuit ; 67 sur 69 SANS cle primaire (CREATE TABLE ... AS SELECT). Le parcours par valeur
+#   s'y rabat sur la premiere colonne, qui se repete, et saute des lignes au bord des pages : elles passaient par CHANCE,
+#   pas par construction. Trois (17 907 lignes chacune, au-dessus de RELECTURE_ENTIERE_MAX) echouaient CHAQUE NUIT depuis
+#   le 25/11 -> la descente sortait en code 1 ; et le 26/11 a 16:36, app_affaire_repartition_avant_classeur_20261113 a
+#   encore rendu 7 344 / 7 346 au premier passage (rattrapee par rang).
+# LA REGLE : un nom qui finit par une date (_AAAAMMJJ, _AAAAMMJJ_HHMMSS ou _AAAA_MM_JJ) ne descend plus.
+#   . --table la force, comme pour les vues (c'est le chemin de la descente de controle du 26/11) ;
+#   . RIEN n'est supprime : ni en base, ni la copie locale deja descendue (elle reste, figee, et juste -- son contenu ne
+#     change plus) ; sb_pull_state garde sa derniere descente ;
+#   . la liste ecartee et son total de lignes (au dernier etat local) sont ECRITS a chaque passage : une exclusion
+#     deliberee se declare (regle du 14/10).
+# ⚠ Ce n'est pas une liste a tenir : c'est le NOM qui decide. Une sauvegarde neuve, nommee selon l'usage, est ecartee
+#   d'elle-meme. Le risque restant est du BON cote : une sauvegarde mal nommee descend comme avant -- du volume en trop,
+#   jamais une perte.
+# ⛔ NE JAMAIS donner a une table VIVANTE un nom qui finit par une date : elle cesserait de descendre. Le 26/11, les 69
+#   noms qui la portent sont tous des sauvegardes (tous des tables, aucune vue), et AUCUN autre des 279 noms du schema ne
+#   contient une annee (mesure).
+# Les VUES restent ecartees par VUES_NON_DESCENDUES, a part : une autre nature, une autre regle.
+NOM_DATE_EN_FIN = re.compile(r"(_20\d{6}(_\d{6})?$|_20\d{2}_\d{2}_\d{2}$)")
 
 
 def load_env_file(path: Path) -> None:
@@ -1087,11 +1119,16 @@ def main() -> int:
     cibles: list[tuple[str, str]] = []
     doublures: list[tuple[str, str]] = []
     vues_ecartees = 0
+    sauvegardes_ecartees: list[str] = []
     for nom in sorted(schema):
         if args.table and nom not in args.table:
             continue
         if not args.table and nom in VUES_NON_DESCENDUES:
             vues_ecartees += 1
+            continue
+        # LES SAUVEGARDES DATEES (26/11) : voir NOM_DATE_EN_FIN. --table les force.
+        if not args.table and NOM_DATE_EN_FIN.search(nom):
+            sauvegardes_ecartees.append(nom)
             continue
         if nom in natives:
             cibles.append((nom, nom + "__sb"))
@@ -1101,6 +1138,16 @@ def main() -> int:
 
     print(f"Supabase expose {len(schema)} tables/vues")
     print(f"  vues ecartees (VUES_NON_DESCENDUES) : {vues_ecartees}")
+    if sauvegardes_ecartees:
+        # ON LE DIT A CHAQUE PASSAGE : une exclusion deliberee se declare. Le total est celui du
+        #   dernier etat local (sb_pull_state) -- aucun appel de plus a l'API pour des tables qu'on ne copie pas.
+        etat = {r[0]: r[1] for r in conn.execute(f"SELECT table_name, lignes FROM {STATE_TABLE}")}
+        connues = [etat.get(n) if etat.get(n) is not None else etat.get(n + "__sb") for n in sauvegardes_ecartees]
+        print(f"  sauvegardes datees ecartees (NOM_DATE_EN_FIN, 26/11) : {len(sauvegardes_ecartees)} tables, "
+              f"{sum(n or 0 for n in connues)} lignes au dernier etat local NON recopiees "
+              f"({sum(n is None for n in connues)} sans compte connu) -- --table les force, rien n'est supprime")
+        for nom, n in zip(sauvegardes_ecartees, connues):
+            print(f"     - {nom}  ({'compte inconnu' if n is None else f'{n} lignes'})")
     print(f"  a descendre : {len(cibles)}")
     if doublures:
         print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")
