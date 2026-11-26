@@ -3898,3 +3898,10 @@ Déjà su » (morceau 4).
 barre, masque / reaffiche, le doublon retiré, plus de note à l'enregistrement, les anciens verdicts ne masquent rien) **26
 VERT** ; témoin inverse (Masquer écrivant « vrai », doublon remis) **2 ROUGE**. Tous les autres essais GED et les 5 de la
 signature verts ; `npm run build` passe. ⚠ Pas vu à l'écran : il faut le déploiement.
+**✅ EN LIGNE (constaté le 26/11)** : le commit `7272556` était déjà dans `origin/main` -- une autre session a poussé la
+branche locale entière entre le 20 et le 24/11 ; rien à pousser. La production sert `gm2-traiter-h`, `gm2-masquees`,
+« Voir et corriger », « Masquage… ». **Vu dans le Chrome de Frédéric, lecture seule** : 18849 (62850) -- « À traiter 1 »,
+« À corriger ou compléter (1) », « Voir et corriger », et l'alerte en double de la date de l'acte a DISPARU (plus de bloc
+« Points d'attention ») ; EA32610 (59541) -- « Points d'attention (1) » : « Avenant : 2 mandants, 1 signature lue »,
+« Déposer la pièce » et **« Masquer »** à côté, plus aucune barre « Vrai / Faux / Déjà su ». ⚠ **« Masquer » n'a PAS été
+cliqué** : sur un bien réel il écrit dans le journal pour tout le monde ; l'essai demande une cible choisie par Frédéric.
