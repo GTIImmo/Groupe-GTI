@@ -6054,6 +6054,19 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   colonne A de 9Q0FHAKK (D2024-0511) -> patch des parts (gardes, sauvegarde AVEC cle primaire, regle 6, journal avec la
   ligne 286, entree 31 DECHAUD 50 + sortie 32 GENTES 50 en classeur_reconstitue, 3646 intacte) -> a blanc avec la vraie
   fonction de nuit -> temoin du lendemain apres 05:35.
+
+### 20.72 Le 26/11 (2) : les sauvegardes datees dans la descente -- mesurees, regle proposee, rien branche
+
+- **Son compte et le mien** : ses 61 / 249 862 = les « _avant_ » descendus ; la regle par date en prend 69 / 281 017.
+  Elle ajoute les 3 en echec et 5 datees sans « _avant_ ».
+- **Aucune raison de descendre** : 0 sur 69 n'a change de taille en 26 nuits ; personne ne lit leur copie locale
+  (17 nommees dans du code, toutes lues dans Supabase ou ecrites en texte SQL) ; les 66 copies locales restent.
+- **Regle proposee** : un nom qui FINIT PAR UNE DATE ne descend plus (`--table` le force). Simulee : 169 tables,
+  1 383 966 lignes, 0 echec. Cote generateurs : sauvegarde datee + cle primaire + RLS, sans droit pour authenticated.
+- ⚠⚠ **Non traite** : 22 sauvegardes datees sans RLS, ouvertes en S/I/U/D a `authenticated` (2 commerciaux actifs et
+  5 comptes sans profil) ; anon ne lit rien. Remede `enable row level security`, a son accord.
+- Note : 12 vues nees apres le 12/10 descendent encore (25 384 lignes). Le crash de l'etape 4/4 = assertion libuv
+  UV_HANDLE_CLOSING a la sortie de Node.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

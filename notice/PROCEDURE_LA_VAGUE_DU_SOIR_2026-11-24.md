@@ -2228,3 +2228,45 @@ sont restées à 0.**
   pièce, 3647. Les parts ne deviennent pas orphelines.
 
 ⛔ Rien n'est écrit, ni dans le Sheet, ni chez Hektor, ni en base. Pas de passage officiel, pas de push.
+
+### Le 26/11 au matin (2) : les sauvegardes datées dans la descente — MESURÉ, RIEN BRANCHÉ
+
+> « est-ce que ces 61 tables ont la moindre raison de descendre, et quelle règle poses-tu pour que les sauvegardes
+> futures n'y entrent pas d'elles-mêmes ? Une règle par motif de nom, pas une liste de 61 exclusions à la main. »
+
+Mesure : `phase2/checks/mesurer_les_sauvegardes_dans_la_descente_2026-11-26.py` (lecture seule ; journaux du 01 au 26/11,
+pg_class, phase2.sqlite en `mode=ro`, git grep).
+
+- **Son compte et le mien.** Ses 61 tables / 249 862 lignes = les noms en « _avant_ » qui sont descendus. La règle par
+  date en prend **69 / 281 017** : ses 61, plus les 3 en échec (« _avant_ » aussi), plus 5 tables datées sans « _avant_ »
+  (la photo du chaînage du 10/11, 31 145 lignes ; deux copies de fonctions ; une table d'essai ; un compte supprimé).
+- **Aucune raison de descendre :**
+  - elles sont figées : 0 des 69 n'a changé de taille en 26 nuits ;
+  - personne ne lit leur copie locale. 17 sont nommées dans du code : générateurs de patchs, lecteurs par le pooler ou
+    l'API, et un test de la descente qui travaille en mémoire ;
+  - une sauvegarde sert à l'inverse d'un geste, et l'inverse se joue dans Supabase ;
+  - les 66 copies locales déjà faites restent là (la règle ne supprime rien), et les 3 en échec n'ont jamais été
+    écrites en local.
+- **La règle proposée (non branchée)** : un nom qui FINIT PAR UNE DATE est une photo figée, et ne descend plus.
+  - Le motif : `_AAAAMMJJ`, suivi ou non de `_HHMMSS`, ou bien `_AAAA_MM_JJ`.
+  - `--table` la force encore, comme pour les vues, et la descente imprime chaque nuit la liste écartée.
+  - « _avant_ » n'ajoute rien (0 nom en « _avant_ » sans date), et il prendrait un jour une table vivante.
+  - Le risque est du bon côté : une sauvegarde mal nommée descend comme aujourd'hui (du volume, jamais une perte).
+  - Simulée sur cette nuit : 169 tables, 1 383 966 lignes, **0 échec**.
+- **La cause, côté générateurs** : 67 des 69 n'ont pas de clé primaire (`create table … as select`). Une sauvegarde
+  naît désormais datée, avec une clé primaire et la RLS active, et sans droit pour anon ni authenticated.
+- ⚠⚠ **Trouvé en passant, PAS TRAITÉ** :
+  - **22 sauvegardes datées n'ont pas de RLS, et `authenticated` y a SELECT, INSERT, UPDATE et DELETE.** C'est le
+    privilège par défaut de `postgres` sur le schéma public. Les tables vivantes, elles, filtrent par
+    `is_app_global_reader()` ou le portefeuille.
+  - Exemple : 3 copies du registre des parts (7 398 lignes), dont toute la répartition de l'agence au 13/11.
+  - Qui est concerné : 2 comptes commerciaux actifs et 5 comptes sans profil. Anon ne lit rien.
+  - Le remède (`enable row level security`, sans politique) ne change aucun contenu. Le pooler du juge (postgres) et
+    la descente (service_role) passent toujours. ⛔ Il attend son accord.
+- **Même défaut, autre famille** : 12 vues nées après le 12/10 descendent encore (25 384 lignes), parce que
+  VUES_NON_DESCENDUES est une liste.
+- **Le crash 0xC0000409 de l'étape 4/4** : il porte « Assertion failed: !(handle->flags & UV_HANDLE_CLOSING) »
+  (libuv, à la sortie de Node). Même signature dans la descente du 06/11 et le ménage des 24 et 25/11. Pour le worker,
+  la trace n'est pas dans ses journaux : ce n'est pas mesuré.
+
+⛔ Rien n'est écrit en base, la descente n'est pas modifiée, rien n'est poussé.
