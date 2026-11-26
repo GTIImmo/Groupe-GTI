@@ -14,6 +14,11 @@ avec temoin, pas avec promesse : (a) les 22 rendent zero ligne pour authenticate
 retrouve le meme md5 de socle, (c) la descente du soir passe les 22 sans rien perdre. » ; « Ce soir, dans cet ordre : la
 RLS des 22 seule, puis la descente de controle avec ses trois temoins, puis -- et seulement apres -- la regle des dates. »
 
+✅ GESTE FAIT LE 26/11 A 13:39:02-06, en plein jour sur son mot (« ouvre maintenant plutot que ce soir ») : a blanc vert
+   (13:38), annulation verifiee par les gardes, puis le geste ; temoin (a) 22 / 22 a 0 pour authenticated, 125 387 lignes
+   intactes en postgres ; relu par une connexion neuve (relire_la_rls_des_22_apres_le_geste_2026-11-26.py) : RLS 22 / 22,
+   0 politique, anon sans droit de lecture, 0 table a nom date encore ouverte. Sorties prepa_25_11/102-104.
+   ⚠ Relance en « gardes », G1 refuse desormais (la liste ouverte est vide) : c'est attendu. Retour : `inverse`.
 CE SCRIPT PORTE LE TEMOIN (a) ; (b) est le rejeu du 82 sur copie, (c) la descente `--table` des 22 (commandes au carnet).
 LES GARDES, avant tout geste :
   G1  la liste mesuree A L'INSTANT (nom date en fin, pas de RLS, authenticated a SELECT) = la liste FIGEE ci-dessous, a

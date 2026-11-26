@@ -6132,6 +6132,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   fichier, sans autre [M], prouve que chaque ligne a ete appliquee a la main ; le bien 8395 est nomme par un rejeu de la
   seule ligne 3648 (⑤). Lecteur eprouve : 4 / 4 journaux truques font crier.
 - RLS des 22 : gardes revertes ; la connexion en ecriture a son mot, au moment de la RLS.
+
+### 20.78 Le 26/11 (8) : la RLS des 22 FAITE (13:39) ; la fusion departage par le plus petit app_affaire_id
+
+- RLS des 22 FAITE en plein jour sur son mot : a blanc vert 13:38, annulation verifiee, geste 13:39:02-06 ; temoin (a)
+  22 / 22 a 0, 125 387 lignes intactes ; relue par une connexion neuve (anon sans droit, 0 table datee ouverte).
+- ⭐ LA FUSION : le commentaire dit « la plus ancienne », le CODE garde l'etiquette du PLUS PETIT app_affaire_id. Notre
+  cas : D2024-0306 posee le 12/11, D2024-0511 nee d'une scission le 25/11 -> les deux sens de « plus ancienne » gardent
+  D2024-0306, le code garde D2024-0511 (3647 < 3648), ce qu'attend le verdict. Sur 296 fusions : 107 ont absorbe le
+  numero le plus ancien. Rien n'est change ; a trancher par lui.
+- Ce soir : rejeu du 82, descente des 22, regle des dates, puis la ligne.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

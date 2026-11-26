@@ -2569,3 +2569,47 @@ l'avait rapprochée d'elle-même, ou si notre ligne n'avait pas été appliquée
 politique, chacune lisible par authenticated). La connexion en écriture se demande AU MOMENT de la RLS (son mot).
 
 ⛔ Rien n'est écrit en base, dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
+
+### Le 26/11 (8) : la RLS des 22 FAITE en plein jour ; sur quoi la fusion départage VRAIMENT
+
+**① La RLS des 22 : faite à 13:39, sur son mot** (« ouvre maintenant plutôt que ce soir [...] En plein jour nous sommes là
+pour regarder »).
+- Sa mesure, des quatre côtés : aucune vue n'en dépend, aucune fonction en base ne les nomme, l'écran ne les cite pas ;
+  leurs seuls lecteurs sont des scripts lancés à la main. La descente lit avec la clé de service, que la RLS ne concerne
+  pas : le témoin (c) confirmera une chose vraie par construction, il ne protège pas (on le garde quand même).
+- 13:38:35, l'essai à blanc : VERT, transaction annulée. Les gardes relancées juste après : RLS toujours absente sur les
+  22, donc l'annulation n'a rien laissé.
+- 13:39:02-06, le geste : témoin (a) 22 / 22 à 0 ligne pour authenticated, 125 387 lignes intactes en postgres, une par
+  une ; relu après le commit : 22 / 22 avec la RLS.
+- Relu par une connexion NEUVE, en lecture seule (`relire_la_rls_des_22_apres_le_geste_2026-11-26.py`) : RLS 22 / 22,
+  0 politique ; anon n'a même pas le droit de lire ces tables (il n'a jamais été exposé) ; plus aucune table à nom daté
+  ouverte à authenticated.
+- Sorties : prepa_25_11/102 (à blanc), 103 (geste), 104 (relecture). Retour arrière : le mode `inverse`.
+
+**② ⭐ Sur quoi la fusion départage VRAIMENT — ce n'est pas ce que son commentaire annonce (son mot).**
+- Le commentaire, deux fois : la RPC `app_poser_etiquettes_dossier` (« On garde la plus ANCIENNE ») et la docstring de
+  `poser_les_etiquettes_de_dossier` (« on garde la plus ancienne »).
+- **Le code** (étape 3, `gagnante`) : `distinct on (app_chaine_id) ... order by l.app_chaine_id, l.app_affaire_id`. Il garde
+  l'étiquette de la transaction au **plus petit app_affaire_id** du groupe, parmi celles qui en portent une. Ni la date de
+  l'étiquette, ni son numéro, ni la date du dossier. La propagation (étape 2) départage de la même façon.
+- **Notre cas, mesuré :**
+  - 445c3170 / D2024-0306 a été posée le 12/11 à 22:08:04 (offre 3648, rangée au 23/08/2024) ;
+  - 42dd4d66 / D2024-0511 est née d'une **scission** le 25/11 à 08:07:40 : la coupe de 427UDDSF a coupé D2024-0278, et la
+    part {3647, 3650} a reçu une étiquette neuve (compromis rangé au 11/09/2024) ;
+  - donc **les deux sens de « plus ancienne » garderaient D2024-0306** — la plus tôt posée comme le plus vieux numéro ;
+  - **le code garde D2024-0511**, parce que 3647 < 3648. C'est ce qu'attend le verdict du protocole pour 9Q0FHAKK : le
+    résultat est le bon, mais par le numéro interne des transactions, pas par l'âge.
+- **Sur les 296 fusions du journal :**
+  - 107 ont absorbé le numéro le PLUS ANCIEN (le numéro d'un dossier a donc « rajeuni » 107 fois) ;
+  - aucune n'a encore absorbé une étiquette posée AVANT la gardée, mais 170 étaient ex aequo (posées dans la même
+    seconde, départagées par l'app_affaire_id) ;
+  - **celle de cette nuit sera la première** à absorber une étiquette posée treize jours avant la gardée.
+- ⛔ Rien n'est changé : ni le code, ni les commentaires. À trancher par lui, plus tard : garder la règle du code et
+  corriger les deux commentaires, ou changer la règle (qui donnerait alors D2024-0306 cette nuit, contre le verdict).
+- Mesure : `mesurer_la_regle_de_fusion_des_etiquettes_2026-11-26.py` (lecture seule) ; texte de la RPC : prepa_25_11/105
+  (md5 b9fa8dea) ; sortie 106.
+
+**③ Ce soir, dans son ordre :** le rejeu du 82 (b7dae92e), la descente de contrôle des 22, la règle des dates, puis la
+ligne de rattachement, avant 04:00.
+
+⛔ Rien d'autre n'est écrit en base. Rien dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
