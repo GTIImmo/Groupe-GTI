@@ -16,6 +16,8 @@ voir(/\.mobile-console-documents \.console-document-row \.console-document-actio
   'au téléphone, un bouton de document prend sa largeur (plus de texte qui sort du bouton)')
 voir(/\.gm2-f \.gm2-ic:not\(\.is-recu\) ~ \.gm2-fd \{ white-space: normal;/.test(bloc), '« Non trouvée : déposer » passe à la ligne au lieu d\'être coupé')
 voir(!/\.gm2-f \.gm2-fd \{/.test(bloc), 'TÉMOIN : la case d\'une pièce REÇUE garde sa ligne unique (un nom de fichier sans espace ne sort pas de la case)')
+voir(/\.gd3-dl \{ grid-template-columns: 30px minmax\(0, 1fr\) 14px;/.test(bloc) && /\.gd3-dl \.gd3-etat \{ grid-column: 2; grid-row: 2;/.test(bloc) && /\.gd3-dt b \{ overflow-wrap: anywhere; \}/.test(bloc),
+  'ligne repliée (morceau 7 B) : l\'état passe sous le nom, un nom sans espace se coupe -- le nom n\'est plus écrasé (19 px vus en ligne)')
 voir(bloc !== '' && !/^[^{]*\{[^}]*\}/m.test(fin.slice(0, fin.indexOf('@media'))), 'tout le morceau est sous @media (max-width: 760px) : l\'ordinateur ne change pas')
 voir(i > css.indexOf('Visuel V3, morceau 4'), 'les règles sont AJOUTÉES après les anciennes (rien de réécrit)')
 // aucun geste ne change : ni App.tsx ni RecuManque.tsx ne sont touchés par ce morceau

@@ -3975,3 +3975,16 @@ par `ouvrirPuisSuivi` ; `test_ged_dossier_range.cjs` lit le texte d'App.tsx -> �
 attachés au cockpit. **Session signature prévenue le 26/11** (« Audit signature électronique Youtrust », texte :
 `notice/PROMPT_AVERTIR_SESSION_SIGNATURE_GED_TELEPHONE_2026-11-26.md`). ⏳ B attend sa réponse et le « vas-y » de Frédéric.
 **Vu en passant, hors GED** : au téléphone, sur les tuiles photo, l'étiquette « Visible » est recouverte par le bouton de masquage.
+**✅ B EN LIGNE le 26/11 (« Oui, vas-y », « Oui, pousse »)** : rejoué seul sur `origin/main` avec les notes §12.64 et §12.65 (le
+commit de note s'appuyait sur §12.64, restée locale), l'arbre exact essayé (App.tsx et RecuManque.tsx identiques à ceux essayés,
+essais GED verts, build), poussé en `22eb636`. `test_ged_dossier_range.cjs` **25 VERT** : section ⑤ neuve, le code DÉPLACÉ
+comparé au caractère à la version d'avant (carte classique, enriched, ligne, groupes et « Déposer ») ; témoins 1 et 2 ROUGE.
+**Vu en ligne sur 18849 au téléphone (iframe 390 px, lecture seule, aucun bouton touché)** : « Le dossier » avec 5 groupes
+(Compromis en cours 1 sur 10, Offre, Mise en vente et visites, Prise de mandat complets, Autres documents 4), plus de grille ni
+de liste à plat, **20 lignes pour 20 documents**, une ligne dépliée montre la CARTE CLASSIQUE (Ouvrir, Signature, Supprimer, 0
+débordement), l'état « Signé le 22/09/2026 à 16:41 » visible ligne repliée, page 371 px.
+⚠ **La vérification a trouvé un défaut** : la ligne repliée a 4 colonnes, et au téléphone l'état écrasait le nom (« Mandat de
+vente signé » à 19 px ; « planCadastralNormalise.pdf » passait sous la pastille). Correctif CSS, téléphone seulement (bloc
+morceau 7 de `RecuManque.css`) : l'état passe SOUS le nom, un nom sans espace se coupe. Éprouvé en direct sur la fiche en ligne
+avant d'être écrit. `test_ged_telephone_v3.cjs` **7 VERT**, témoin 5 ROUGE. Commité, PAS POUSSÉ. Non vérifié : « Voir le suivi »
+cliqué au téléphone (il faut un document en signature Youtrust ; l'essai fixe le chemin).

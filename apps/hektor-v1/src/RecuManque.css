@@ -256,4 +256,12 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: var(--bv-magenta,
 @media (max-width: 760px) {
   .mobile-console-documents .console-document-row .console-document-actions .ghost-button { flex: 1 1 auto; min-width: max-content; }
   .gm2-f .gm2-ic:not(.is-recu) ~ .gm2-fd { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* (3) morceau 7 B, vu en ligne sur 18849 : la ligne repliée d'un document avait 4 colonnes, et l'état (« Signé » + « Signé le
+     22/09/2026 à 16:41 ») laissait 19 px au nom ; un nom sans espace (« planCadastralNormalise.pdf ») passait sous la pastille.
+     Au téléphone, l'état passe SOUS le nom, et un nom sans espace se coupe. */
+  .gd3-dl { grid-template-columns: 30px minmax(0, 1fr) 14px; row-gap: 6px; }
+  .gd3-dl .gd3-page { grid-row: 1 / span 2; align-self: start; }
+  .gd3-dl .gd3-chev { grid-column: 3; grid-row: 1; }
+  .gd3-dl .gd3-etat { grid-column: 2; grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; }
+  .gd3-dt b { overflow-wrap: anywhere; }
 }
