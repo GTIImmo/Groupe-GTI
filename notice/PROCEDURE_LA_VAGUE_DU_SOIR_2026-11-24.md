@@ -2699,3 +2699,50 @@ maintenant, dans le même ordre [...] Tu me montres chaque étape avant la suiva
 
 **③ La suite, à son mot :** la descente de contrôle des 22 (`--table`, sans perdre une ligne), puis la règle des dates,
 puis la ligne de rattachement en dernier, avant 04:00.
+
+### Le 26/11 (11) : le témoin (c) est VERT — les 22 descendues avec un témoin positif, aucune ligne perdue
+
+**Son contrôle du rejeu** : juste ; le socle n'a pas bougé depuis 10:22:27. **Les 30 et les 27 écarts** : 30 est la trace du
+82 officiel, 27 est le juge d'aujourd'hui ; les 3 sont les attentes v3 corrigées (v23.2). **27 ne sera officiel qu'au
+prochain passage.**
+
+**Son ajout** : « ta garde compare les lignes lues aux lignes attendues, mais les deux viennent de la MÊME source. Si elle
+rendait zéro, 0 = 0 et les 22 copies locales seraient remplacées par du vide sans un mot. Exige donc le témoin positif :
+attendu différent de zéro, table par table, avant la bascule. »
+
+**① Ce que la garde de la descente fait vraiment** (`pull_from_supabase.copy_table`, lu dans le code) : elle remplit
+`<table>__tmp` par l'API, compte la table par la MÊME API (Content-Range), et ne bascule que si lues == attendues.
+**Deux trous, et le second est le pire :**
+- attendu 0 et lues 0 → 0 == 0 → la copie locale est remplacée par une table vide, sans un mot (son trou) ;
+- attendu None (le comptage a échoué) → la garde est SAUTÉE (`if attendu is not None and ...`) → la bascule a lieu sans
+  aucune vérification.
+- ⚠ Ces deux trous restent dans le CODE DE NUIT (descente de 07:45) : rien n'y est changé. Ce script ne les ferme que pour
+  la descente de contrôle des 22.
+
+**② Le script** `phase2/checks/descendre_les_22_avec_temoin_positif_2026-11-26.py` (gardes / geste), sans toucher au code
+de nuit :
+- T0 l'attendu INDÉPENDANT : chaque table comptée par une autre porte (le pooler, rôle postgres, pas l'API), exigé
+  différent de zéro table par table, et le total égal aux 125 387 du geste de 13:39 (en dur) — sinon rien ne descend ;
+- T1 le témoin positif DANS la bascule : le comptage de l'API est enveloppé ; il lève si l'attendu est None, 0 ou différent
+  du compte indépendant ; il est appelé avant la bascule, donc la table part en échec et l'ancienne copie reste ;
+- T1i l'enveloppe éprouvée d'abord, hors ligne : elle lève sur 0, sur None et sur le compte − 1, laisse passer le bon ; T0
+  refuse une liste qui contient un zéro ;
+- T2 après : chaque copie locale = le compte indépendant ; l'API a compté pour chacune (preuve que l'enveloppe était bien
+  sur le chemin de la bascule) ; 0 échec ; aucune `__tmp` ; postgres relu, inchangé.
+
+**③ Le résultat** (gardes VERTES, prepa_25_11/108 ; geste 16:36:04-37:52, sortie 109) :
+- T0 : 22 tables, 125 387 lignes, aucun zéro ; T1i : 4 / 4 ;
+- la descente : 22 tables, **125 387 lignes en 106 s**, 152 appels, **code 0** ;
+- T2 : **22 / 22**, chaque copie locale = postgres = l'API ; total local 125 387 ; aucune `__tmp` ; postgres inchangé ;
+- les copies locales d'avant avaient déjà ces comptes : la descente n'a rien perdu, et rien gagné ;
+- ⭐ une table a joué le rattrapage existant : `app_affaire_repartition_avant_classeur_20261113` a d'abord rendu
+  **7 344 / 7 346**, puis la relecture par rang l'a rendue entière (une sauvegarde sans clé primaire, dont la première
+  colonne se répète). La garde de la descente a fait son travail ; le témoin le confirme.
+- Comme il l'a dit : (c) confirme une chose vraie par construction (la descente lit avec la clé de service, que la RLS ne
+  concerne pas) — mais le témoin positif est maintenant exigé, et il a été éprouvé.
+
+⛔ Seul phase2.sqlite a été écrit (les 22 copies, aux mêmes comptes). Rien en base, rien dans le Sheet, dans le fichier des
+rattachements ni chez Hektor. Rien n'est poussé.
+
+**④ La suite, à son mot :** la règle des noms qui finissent par une date, puis la ligne de rattachement en dernier, avant
+04:00.

@@ -6162,6 +6162,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   4 803 ; verrous mordus, vrai socle 5ca7c766 inchange ; juge 5262c384 inchange. Vrai par construction a l'egard de la
   RLS (un passage ne lit rien en base ; le juge ne nomme aucune des 22).
 - Suite a son mot : descente des 22, regle des dates, puis la ligne.
+
+### 20.81 Le 26/11 (11) : temoin (c) VERT -- les 22 descendues avec un temoin positif, 125 387 lignes, 0 perdue
+
+- 30 / 27 ecarts : 30 = la trace du 82 officiel, 27 = le juge d'aujourd'hui (les 3 attentes v3 corrigees) ; 27 ne sera
+  officiel qu'au prochain passage.
+- La garde de la descente compte par la MEME API : 0 == 0 viderait la copie, et un comptage None SAUTE la garde. Les deux
+  trous restent dans le code de nuit. Script descendre_les_22_avec_temoin_positif : attendu INDEPENDANT (pooler) non nul,
+  comptage enveloppe qui leve avant la bascule (eprouve 4 / 4), puis la descente : 22 tables, 125 387 lignes, code 0 ;
+  22 / 22 egales a postgres et a l'API ; postgres inchange. 7 344 / 7 346 rattrape par la relecture par rang.
+- Suite : regle des dates, puis la ligne.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
