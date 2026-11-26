@@ -2961,7 +2961,8 @@ def poser_les_etiquettes_de_dossier(client) -> dict:
       `app_poser_etiquettes_dossier`, qui rend ses QUATRE gestes.
           pose          un groupe sans aucune etiquette en recoit une neuve
           propagation   une transaction nue dans un groupe deja etiquete
-          fusion        deux etiquettes dans un groupe -> on garde la plus ancienne
+          fusion        deux etiquettes dans un groupe -> on garde celle de la transaction
+                        au PLUS PETIT app_affaire_id (PAS « la plus ancienne » : voir plus bas)
           scission      une etiquette sur deux groupes -> l'autre part en recoit une neuve
 
     OU, DANS LE RUN, ET POURQUOI LA. Elle est appelee par
@@ -2982,6 +2983,26 @@ def poser_les_etiquettes_de_dossier(client) -> dict:
       (elle ne vit plus que dans le journal). Un matin ou le chainage a beaucoup
       bouge, on doit le voir TOUT DE SUITE, pas trois semaines apres : au-dela du
       seuil, la ligne est criee.
+
+    QUELLE ETIQUETTE GAGNE UNE FUSION -- CORRIGE LE 26/11/2026. Ce texte disait « on
+      garde la plus ancienne » ; c'etait FAUX. La RPC garde l'etiquette de la
+      transaction au PLUS PETIT app_affaire_id du groupe, parmi celles qui en portent
+      une (etape 3 : `distinct on (app_chaine_id) ... order by app_chaine_id,
+      app_affaire_id`) ; la propagation (etape 2) departage de la meme facon. Ni la
+      date de pose de l'etiquette, ni son numero, ni la date du dossier n'y entrent.
+      Mesure du 26/11 sur les 296 fusions du journal : AUCUNE n'avait absorbe une
+      etiquette posee avant la gardee (170 posees dans la meme seconde, departagees
+      par l'app_affaire_id) -- le commentaire et le code tombaient d'accord PAR
+      COINCIDENCE ; mais 107 avaient deja absorbe le numero le plus ancien. La
+      premiere a absorber une etiquette posee avant est prevue la nuit du 26 au
+      27/11 : 3648 rejoint 3647, D2024-0511 (nee d'une scission le 25/11) est gardee,
+      D2024-0306 (posee le 12/11) est absorbee -- c'est ce qu'attend le verdict du
+      protocole pour 9Q0FHAKK.
+      ⛔ LA REGLE DU CODE EST GARDEE, PAR DECISION DU 26/11. NE PAS « ALIGNER » LE CODE
+      SUR L'ANCIEN COMMENTAIRE : 9Q0FHAKK basculerait sur D2024-0306. La RPC en base
+      porte encore « On garde la plus ANCIENNE » (pas rejouee pour un commentaire,
+      expres) ; la verite est ecrite en tete de
+      supabase/patch_journal_ancien_numero_2026-11-22.sql.
 
     Mesure du 12/11, sur 11 441 dossiers : 318 ms. Les droits sont ceux de la RPC
     voisine, qui tourne deja dans ce meme run avec la meme cle.

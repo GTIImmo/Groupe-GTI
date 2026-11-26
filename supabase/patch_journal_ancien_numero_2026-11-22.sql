@@ -23,6 +23,7 @@
 -- ⛔ IL S'ARRETE SEUL, sans rien laisser, si la fonction n'est plus celle lue le 22/11 (empreinte 815e956f716cceb6477876b774b9f885),
 --   si la colonne existe deja, ou si la contrainte des evenements a change.
 -- Ensuite : patch_journal_ancien_numero_2026-11-22_REPETITION.sql (lecture seule). Retour arriere : patch_journal_ancien_numero_2026-11-22_INVERSE.sql
+-- ⛔ 26/11 : le commentaire « On garde la plus ANCIENNE » de l'etape (3) FUSION est FAUX -- voir le bloc juste avant la fonction.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 begin;
@@ -56,6 +57,25 @@ comment on column public.app_dossier_etiquette_journal.ancien_numero is
   'dossier_numero, porte par autre_uuid). RESTAURATION : le numero quitte (le neuf est dossier_numero, celui de la '
   'sauvegarde). Vide pour une pose ou une propagation : rien ne change de numero.';
 
+-- ⛔⛔ AJOUTE A LA MAIN LE 26/11/2026, HORS DU CORPS DE LA FONCTION. Le corps ci-dessous est, a l'octet pres, celui que
+--   ce patch a pose ; la fonction n'est PAS rejouee en base pour un commentaire, par decision du 26/11.
+-- ⛔ L'ETAPE (3) FUSION CI-DESSOUS DIT « On garde la plus ANCIENNE ». C'EST FAUX, ET C'EST UN PIEGE ARME.
+--   Le code garde l'etiquette de la transaction au PLUS PETIT app_affaire_id du groupe, parmi celles qui en portent
+--   une : `distinct on (l.app_chaine_id) ... order by l.app_chaine_id, l.app_affaire_id` (la CTE « gagnante »). La
+--   propagation (2) departage de la meme facon. Ni la date de pose de l'etiquette, ni son numero, ni la date du dossier
+--   n'y entrent.
+--   LES DEUX CHIFFRES (mesure du 26/11, phase2/checks/mesurer_la_regle_de_fusion_des_etiquettes_2026-11-26.py) :
+--     . 296 fusions au journal ;
+--     . ZERO avait absorbe une etiquette posee AVANT la gardee, jusqu'a la nuit du 26 au 27/11. 170 avaient ete posees
+--       dans la meme seconde et departagees par l'app_affaire_id : le commentaire et le code tombaient d'accord PAR
+--       COINCIDENCE. (Par le NUMERO en revanche, 107 avaient deja absorbe le plus ancien.)
+--   LE CONTRE-EXEMPLE, prevu la nuit du 26 au 27/11 : l'offre 3648 rejoint son compromis 3647 (rattachement manuel
+--     « [refus 11/11] ») ; D2024-0511 (nee d'une scission le 25/11) est GARDEE, D2024-0306 (posee le 12/11) est
+--     ABSORBEE. C'est ce qu'attend le verdict du protocole pour la ligne 9Q0FHAKK du classeur.
+--   ⛔ LA REGLE DU CODE EST GARDEE, PAR DECISION DU 26/11 : elle donne le bon resultat et elle est eprouvee 296 fois.
+--     NE PAS ALIGNER LE CODE SUR LE COMMENTAIRE : 9Q0FHAKK basculerait sur D2024-0306. Si un jour on rejoue cette
+--     fonction pour une autre raison, corriger AUSSI le commentaire de l'etape (3) dans le corps.
+--   Meme verite dans la docstring de poser_les_etiquettes_de_dossier (phase2/sync/affaire_ledger.py).
 CREATE OR REPLACE FUNCTION public.app_poser_etiquettes_dossier(p_limite integer DEFAULT NULL::integer, p_a_blanc boolean DEFAULT false)
  RETURNS TABLE(geste text, dossiers integer, lignes integer)
  LANGUAGE plpgsql

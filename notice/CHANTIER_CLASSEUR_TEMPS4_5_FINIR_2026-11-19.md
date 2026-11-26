@@ -6142,6 +6142,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   D2024-0306, le code garde D2024-0511 (3647 < 3648), ce qu'attend le verdict. Sur 296 fusions : 107 ont absorbe le
   numero le plus ancien. Rien n'est change ; a trancher par lui.
 - Ce soir : rejeu du 82, descente des 22, regle des dates, puis la ligne.
+
+### 20.79 Le 26/11 (9) : la regle de fusion GARDEE ; la docstring et le fichier du patch disent la verite
+
+- Sa decision : on garde la regle du code (le plus petit app_affaire_id), « eprouvee 296 fois » ; le commentaire est un
+  « piege arme ». Docstring Python corrigee (code inchange : arbre sans docstrings a4eb89e7 avant et apres, liste E du
+  juge identique). La fonction n'est PAS rejouee en base : la verite est ecrite HORS DU CORPS dans
+  patch_journal_ancien_numero_2026-11-22.sql (+ renvoi dans son inverse), avec les deux chiffres -- 296 fusions, zero
+  etiquette posee avant la gardee absorbee jusqu'a la nuit du 26 au 27/11. Corps inchanges a l'octet (42ae94f1,
+  e8d37e5c). Son controle independant de la RLS : vert, aucune protection forcee.
+- Ce soir, inchange : rejeu du 82, descente des 22, regle des dates, puis la ligne.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

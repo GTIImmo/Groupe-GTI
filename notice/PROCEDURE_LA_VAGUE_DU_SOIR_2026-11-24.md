@@ -2613,3 +2613,49 @@ pour regarder »).
 ligne de rattachement, avant 04:00.
 
 ⛔ Rien d'autre n'est écrit en base. Rien dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
+
+### Le 26/11 (9) : la règle de fusion GARDÉE ; ses deux textes disent enfin la vérité, sans rien rejouer en base
+
+**Sa décision** : « on garde la règle du code, sans discuter -- elle donne le bon résultat et elle est éprouvée 296 fois.
+Mais le commentaire n'est pas de la cosmétique, c'est un piège armé : qui le lira dans six mois alignera le code sur lui
+et fera basculer 9Q0FHAKK sur D2024-0306. » Deux textes, deux coûts : la docstring Python tout de suite ; la fonction en
+base n'est PAS rejouée pour un commentaire, la vérité va dans le fichier du patch du dépôt, avec les deux chiffres.
+
+Son contrôle indépendant de la RLS : 22 / 22, 125 387 lignes au chiffre près, zéro ligne en authenticated sur quatre
+d'entre elles ; aucune n'est en protection FORCÉE, donc la descente de 07:45 ne peut pas être gênée. Son écart sur les
+naissances (126 inconnues) était chez lui : en cherchant aussi hors de la pose, il retrouve mes trois chiffres.
+
+**① La docstring** de `poser_les_etiquettes_de_dossier` (`phase2/sync/affaire_ledger.py`) :
+- la ligne des quatre gestes dit « on garde celle de la transaction au PLUS PETIT app_affaire_id (PAS « la plus
+  ancienne ») » ;
+- un paragraphe neuf, « QUELLE ÉTIQUETTE GAGNE UNE FUSION -- CORRIGÉ LE 26/11 », porte la règle, les deux chiffres, le
+  contre-exemple de cette nuit et le ⛔ « ne pas aligner le code sur l'ancien commentaire ».
+- Preuve que seul le texte a bougé : l'arbre de syntaxe du fichier, docstrings vidées, a la même empreinte avant et
+  après (a4eb89e7) ; la liste E que lit le juge est identique à celle du dernier commit. L'empreinte du juge ne lit
+  pas ce fichier en entier (seulement sa liste E) : le rejeu du 82 de ce soir n'est pas touché.
+
+**② Le fichier du patch** `supabase/patch_journal_ancien_numero_2026-11-22.sql` (celui qui a posé la fonction en
+vigueur) :
+- un bloc « ⛔⛔ AJOUTÉ À LA MAIN LE 26/11, HORS DU CORPS » juste avant `CREATE OR REPLACE FUNCTION` : le commentaire de
+  l'étape (3) est faux, la vraie règle (la CTE « gagnante »), **les deux chiffres -- 296 fusions, zéro étiquette posée
+  avant la gardée absorbée jusqu'à la nuit du 26 au 27/11** (170 ex aequo ; par le numéro, 107), le contre-exemple
+  3648 → 3647 (D2024-0511 gardée, D2024-0306 absorbée), et la consigne « si on rejoue un jour cette fonction pour une
+  autre raison, corriger AUSSI le commentaire dans le corps » ;
+- une ligne de renvoi en tête du fichier ; quatre lignes de renvoi dans son `_INVERSE.sql` (même règle dans les deux
+  versions).
+- ⛔ Le CORPS des deux fonctions est inchangé à l'octet : md5 du texte `CREATE ... $function$` avant / après,
+  42ae94f1 (patch) et e8d37e5c (inverse). La base garde md5 b9fa8dea et son commentaire faux, en connaissance de cause.
+- ⚠ Le fichier dit « Fabriqué par fabriquer_patch_journal_ancien_numero.py -- NE PAS RETOUCHER À LA MAIN » : l'ajout est
+  marqué comme fait à la main, hors du corps. On ne peut de toute façon plus le refabriquer (sa garde exige la fonction
+  du 22/11, 815e956f).
+- Dans le patch en vigueur, seule l'étape (3) se trompe : les commentaires de la propagation (2) et de la scission (4)
+  ne parlent pas d'âge.
+- Restent, NON touchés, deux anciens patchs déjà remplacés dont le corps dit « la plus ancienne » :
+  `patch_etiquette_annee_2026-11-12_LECTEURS.sql` (propagation l. 290, fusion l. 322, scission l. 376) et
+  `patch_etiquette_dossier_2026-11-09.sql` (propagation l. 324, scission l. 415). Ce sont des archives ; le patch en
+  vigueur renvoie à la vérité.
+
+⛔ Rien n'est écrit en base. Rien dans le Sheet, dans le fichier des rattachements ni chez Hektor. Rien n'est poussé.
+
+**③ Ce soir, dans son ordre, inchangé :** le rejeu du 82 (b7dae92e), la descente des 22, la règle des dates, puis la
+ligne de rattachement, avant 04:00.

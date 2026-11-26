@@ -13,6 +13,10 @@ begin
 end
 $garde$;
 
+-- ⛔ AJOUTE A LA MAIN LE 26/11/2026, HORS DU CORPS : l'etape (3) FUSION ci-dessous dit « On garde la plus ANCIENNE ».
+--   C'EST FAUX : elle garde le PLUS PETIT app_affaire_id (la meme regle dans les deux versions). Le detail et les deux
+--   chiffres (296 fusions ; zero etiquette posee avant la gardee absorbee jusqu'a la nuit du 26 au 27/11) sont dans
+--   patch_journal_ancien_numero_2026-11-22.sql, juste avant la fonction.
 CREATE OR REPLACE FUNCTION public.app_poser_etiquettes_dossier(p_limite integer DEFAULT NULL::integer, p_a_blanc boolean DEFAULT false)
  RETURNS TABLE(geste text, dossiers integer, lignes integer)
  LANGUAGE plpgsql
