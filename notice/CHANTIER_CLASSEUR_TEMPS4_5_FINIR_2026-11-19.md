@@ -6206,6 +6206,15 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - ⚠ Second echec de la descente du 26/11 : rattrapage du carnet exit -1073740791 (0xC0000409), assertion libuv a la
   SORTIE de Node apres « rien a poser » ; 2 fois sur 34 (06/11, 26/11) ; ne touche pas le code de sortie, moins visible
   encore quand le code 1 tombera. Pas mon chantier, non touche.
+
+### 20.85 Le 26/11 (15) : pousse (sommet 28ef02e) ; la descente porte trois regles de l'autre session -- relire avant de juger
+
+- Il a relu le fichier des rattachements : rien a reprendre. Il a pousse : bd21457 et bb20aae partis, local = serveur (20:48).
+- ef36b19 / 2cb4cab / 28ef02e (19:56-20:00) : regles 0 a 3 de l'autre session, allumees, premiere nuit le 27/11 a 06:45.
+  Ma regle des dates intacte au mot pres (les 9 lignes retirees sont dans copy_table, aucune a moi) ; « gardees en local »
+  est le texte de SA regle 3, ma ligne dit « en local ».
+- 27/11 : temoin apres 07:30 puis attendre son accord ; relire git log du fichier AVANT de juger la regle sur le journal ;
+  un code 1 se lit table par table (sa regle 1 peut creer un echec).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

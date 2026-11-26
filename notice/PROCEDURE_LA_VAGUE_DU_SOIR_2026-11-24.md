@@ -2888,3 +2888,30 @@ rattachements appliqués, aucun autre message [M]. Donc demain, après 07:30 :
 
 ⛔ Écrit : le fichier des rattachements (une ligne) et ce compte rendu. Rien en base, rien dans le Sheet ni chez Hektor. Rien
 n'est poussé. **Arrêt jusqu'au témoin de demain.**
+
+### Le 26/11 (15) : la descente n'est plus à moi seule — à relire demain AVANT de juger la règle des dates
+
+**Son mot** : il a relu le fichier des rattachements de son côté (17 décisions, la 17e est la ligne validée, les 16 d'avant
+intactes octet pour octet, ni retour chariot, ni accent, ni point-virgule dans le commentaire) : rien à reprendre. **Il a
+poussé** : mes deux commits (bd21457, bb20aae) sont partis avec les 12 autres du jour, sommet du serveur **28ef02e**.
+Mesuré à 20:48 : `main...origin/main` sans écart.
+
+**L'autre session a posé trois règles sur `pull_from_supabase.py`**, allumées, qui jouent pour la première fois à la
+descente du 27/11 (06:45) : `ef36b19` 19:56 règle 0 (la date d'une copie est celle de la copie EN PLACE), `2cb4cab` 19:58
+règle 1 (pas de compte, pas de bascule), `28ef02e` 20:00 règles 2 et 3 (ce que la descente dit doit être vrai).
+
+**Vérifié de mon côté** (`git diff 092eb03 28ef02e`, +142 / −9) : ma constante `NOM_DATE_EN_FIN`, mon exclusion et ma
+déclaration des sans-copie sont **inchangées au mot près** ; les 9 lignes retirées sont toutes dans `copy_table` (l'état
+« copie en cours » et le message « l'ancienne copie est conservee »), aucune n'est à moi. Une précision : « lignes gardees en
+local » est le texte de SA règle 3 (« objets suivis ABSENTS du serveur »), imprimée juste après ma liste ; ma ligne dit
+toujours « lignes en local ».
+
+**⏰ Demain matin, dans cet ordre :**
+1. après 07:30, `temoin_du_rattachement_de_3648_2026-11-27.py` → 17 / 17 / 17 ; puis **attendre son accord** pour la vague ;
+2. avant de juger ma règle sur le journal de la descente : **relire `git log -- phase2/sync/pull_from_supabase.py`** ; dans
+   le journal, deux listes se suivront — la mienne (« sauvegardes datees ecartees … 69 », « ⚠ dont 3 SANS AUCUNE COPIE
+   LOCALE ») et celle de sa règle 3 (non mesurée : je ne prédis pas ce qu'elle nommera) ;
+3. ⚠ le code de sortie ne se juge plus par ma seule règle : sa règle 1 peut faire tomber une table en échec là où
+   l'ancienne garde basculait. Un code 1 demain se lit table par table, pas comme un démenti de la règle des dates.
+
+⛔ Rien d'autre : je ne touche pas au fichier.
