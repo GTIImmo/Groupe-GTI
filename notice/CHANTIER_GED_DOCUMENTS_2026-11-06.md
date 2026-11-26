@@ -3935,3 +3935,14 @@ socle 16, mesure 27, build), poussé en `c21ef1e` ; la production sert `bc-msg-c
 compromis : le 01/02/2027 » cadrée magenta (« correction ») face à « La transaction : le 23/01/2027 » barrée, et **la page 5
 sur 38 ouverte d'office** dans la colonne de droite, dessinée en quelques secondes. Fermée par « Fermer ». La coche de réussite
 n'a pas été vue (il aurait fallu enregistrer, donc écrire chez Hektor).
+
+### 12.64 VISUEL V3, MORCEAU 6 -- la fenêtre de dépôt à l'habit de la V3 (26/11, « Enchaîne ») -- ÉCRIT, PAS EN LIGNE
+
+**CSS seulement** (`DepotDocuments.css`, règles AJOUTÉES en fin de fichier ; `DepotDocuments.tsx` NON touché -- la fenêtre est
+ouverte aux négociateurs depuis le 18/11, seul l'habit bouge) : en-tête CLAIR (sauf la feuille du téléphone, dont la poignée
+blanche est faite pour un fond sombre) ; chaque fichier en petite page blanche à bande magenta ; les lignes en cartes (la
+liste perd son cadre). **Pas fait dans ce morceau** : les animations de la maquette (les pages qui s'écartent à la
+séparation, la barre qui se remplit fichier par fichier) -- elles demandent de toucher le composant, donc son code d'envoi ;
+à décider à part.
+**Contrôles** : `test_ged_depot_v3.cjs` **6 VERT** (dont « DepotDocuments.tsx non modifié ») ; témoin inverse (habit retiré)
+**5 ROUGE** ; tous les essais GED verts ; build. ⚠ Pas vu à l'écran : il faut le déploiement.
