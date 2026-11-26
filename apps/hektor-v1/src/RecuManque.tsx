@@ -694,7 +694,8 @@ export function RecuManque({
       {!rangeEnListe && precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
       {!rangeEnListe ? <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div> : null}
 
-      {propositions.length || faites.length || alertesVisibles.length || masquees.length || aTrancher.length ? (
+      {/* 26/11 (Frédéric : « Oui, le cacher ») : rien à traiter (tout masqué ou fait) -> pas d'en-tête « À traiter 0 » */}
+      {nbATraiter > 0 ? (
         <div className="gm2-traiter-h" role="status">
           <b>À traiter</b>
           <span className="gm2-traiter-n" key={nbATraiter}>{nbATraiter}</span>

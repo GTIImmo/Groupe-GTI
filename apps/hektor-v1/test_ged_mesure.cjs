@@ -75,6 +75,7 @@ const ged = construire('src/lib/ged.ts', { hasSupabaseEnv: true, supabase: fauss
     'Masquer écrit « masque », Réafficher écrit « reaffiche » ; seule une ligne dont le dernier mot est « masque » est masquée')
   voir(/const alertesVisibles = alertes\.filter\(\(a\) => !lieeAUneCarte\(a\) && !masquees\.includes\(a\)\)/.test(rm), 'une alerte déjà montrée par une fenêtre « Ce que dit… » n\'a plus sa propre carte (le doublon)')
   voir(!/verdictDesChoix/.test(rm), 'enregistrer une fenêtre n\'écrit plus de note de mesure')
+  voir(/\{nbATraiter > 0 \? \(\s*<div className="gm2-traiter-h"/.test(rm), 'rien à traiter (tout masqué) : pas d\'en-tête « À traiter 0 » (décision du 26/11)')
   voir(/const cle = cleJugement\(a\)[\s\S]{0,200}gedJuger\(\{ hektorAnnonceId, regle: a\.code, cle, texte: a\.texte, niveau: a\.niveau, verdict \}\)/.test(rm), 'le jugement garde la règle, la clé, le texte et le niveau TELS QU\'AFFICHÉS')
   // habillage H1 (16/11) : la ligne n'est plus un bouton ; « Déposer la pièce » est un bouton de la carte, la barre sa voisine
   const bloc = rm.slice(rm.indexOf('{alertesVisibles.map((a, i) => {'), rm.indexOf('gm2-lus'))
