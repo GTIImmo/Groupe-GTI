@@ -3915,3 +3915,17 @@ dit « À traiter 0 » -- il pourrait se taire ; non corrigé, à trancher.
 **26/11 (« Oui, le cacher »)** : l'en-tête « À traiter » ne s'affiche plus quand il n'y a rien à traiter (tout masqué ou
 fait) -- condition `nbATraiter > 0` ; la ligne « N point(s) d'attention masqué(s) -- Réafficher » reste. `test_ged_mesure`
 27 VERT (un contrôle de plus), témoin inverse (`>= 0`) 1 ROUGE ; essais voisins verts ; build. Commité, PAS POUSSÉ.
+
+### 12.63 VISUEL V3, MORCEAU 5 -- « Ce que dit… » à l'habit de la V3 (26/11, « Enchaîne ») -- ÉCRIT, PAS EN LIGNE
+
+**Le code** (`BilanCompromis.tsx` : deux ajouts ; `BilanCompromis.css` : des règles AJOUTÉES en fin de fichier) :
+- la **page du document s'ouvre d'office** à la première ligne à trancher qui a une page (sinon la première qui en a une) --
+  plus de colonne vide « Touche « page » sur une ligne » ; ⚠ **pas au téléphone** (≤ 760 px), où la page remplace la liste ;
+  sans document retrouvé, rien (point 2 du §5 de l'audit graphique) ;
+- **en-tête clair** (blanc, titre encre) au lieu du bandeau noir ;
+- la **plaque du document** (« Le compromis », « Le DPE »…) marquée magenta : la classe `is-document` que le code pose
+  n'avait JAMAIS reçu de style (la CSS visait `is-compromis`, point 4 du §5) -- le papier beige n'est pas repris (V3) ;
+- une écriture **réussie se signe d'une coche tracée** dans le pied ; une erreur, non.
+**Rien de ce qu'elle écrit ne change** : `enregistrer` intact (un seul appel à `onEnregistrer`), mêmes chemins vers Hektor.
+**Contrôles** : `test_ged_bilan_v3.cjs` **9 VERT** ; témoin inverse (page jamais ouverte d'office) **1 ROUGE** ; tous les essais
+GED (bilan 137, socle 16…) et les 5 de la signature verts ; build. ⚠ Pas vu à l'écran : il faut le déploiement.
