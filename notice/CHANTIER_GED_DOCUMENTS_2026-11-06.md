@@ -3952,3 +3952,26 @@ Chrome de Frédéric sur 18849, sans rien déposer** : « Déposer des documents
 pastilles « Compromis » et « Mandat 18849 » sur fond brume, croix claire), la zone « Glisse les fichiers ici » et la liste des
 pièces non trouvées inchangées ; refermée par « Fermer ». Les lignes en cartes et les pages à bande magenta n'ont pas été vues
 (il faut déposer un fichier).
+
+### 12.65 VISUEL V3, MORCEAU 7 -- le téléphone (26/11, « A puis B », « Oui, les deux ») -- A EN LIGNE, B AUDITÉ
+
+**Le constat, vu à 390 px sur 18849 (iframe dans le Chrome de Frédéric)** : le téléphone affiche le panneau CLASSIQUE
+(`ConsoleDocumentsPanel` avec `compact`, un seul appelant, `App.tsx` ~l. 42863), rangé dans la section repliée « Contenu de
+l'annonce ». Rien ne sort de la page (371 px pour 386), le haut « À traiter » (morceau 4) et le dépôt (morceau 6) sont là. Mais :
+40 boutons de document sur 59 débordaient (« Signature », « Supprimer » : 67 et 69 px de texte pour 65, `flex: 1 1 0`) ; les
+10 cases « Non trouvée : déposer » étaient coupées (121 px pour 88) ; la grille des 10 pièces fait ~1 500 px ; la liste des 20
+documents en cartes de 160 px en fait ~3 300, sans rangement (les morceaux 3 et 6 ne jouent qu'au cockpit).
+**A, CSS seulement** (fin de `RecuManque.css`, sous `@media (max-width: 760px)`) : un bouton de document prend sa largeur
+(`flex: 1 1 auto; min-width: max-content`), « Supprimer » passe seul à la ligne ; « Non trouvée : déposer » passe à la ligne.
+⚠ Ma première règle touchait aussi la case d'une pièce REÇUE (un nom de fichier sans espace en serait sorti) : resserrée à
+`.gm2-ic:not(.is-recu) ~ .gm2-fd`. `test_ged_telephone_v3.cjs` **6 VERT**, témoin **4 ROUGE**. **EN LIGNE en `75096d6`**
+(rejoué seul sur `origin/main`, arbre exact essayé, build). **Vu en ligne sans injection** : 0 bouton sur 59 qui déborde,
+seule la case reçue garde ses points de suspension (voulu), page 371 px.
+**B, le rangement « Le dossier » au téléphone : AUDITÉ, PAS CODÉ.** Ce qu'il touche : `App.tsx`, la branche classique, sous
+`compact` seulement -- sortir `enriched` et `ouvrirPuisSuivi` de la branche cockpit (calcul pur), mettre la carte classique dans
+une fonction (JSX à l'identique), `ligneDocument` recevant la carte à monter, `rangeEnListe`/`onDossier` allumés aussi sous
+`compact`. Ce qu'il pourrait casser : « Voir le suivi » de la fenêtre classique (la ligne repliée n'a pas `sst-<id>`) -> passer
+par `ouvrirPuisSuivi` ; `test_ged_dossier_range.cjs` lit le texte d'App.tsx -> à adapter. Les styles `gd3-*` ne sont pas
+attachés au cockpit. **Session signature prévenue le 26/11** (« Audit signature électronique Youtrust », texte :
+`notice/PROMPT_AVERTIR_SESSION_SIGNATURE_GED_TELEPHONE_2026-11-26.md`). ⏳ B attend sa réponse et le « vas-y » de Frédéric.
+**Vu en passant, hors GED** : au téléphone, sur les tuiles photo, l'étiquette « Visible » est recouverte par le bouton de masquage.
