@@ -6215,6 +6215,14 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   est le texte de SA regle 3, ma ligne dit « en local ».
 - 27/11 : temoin apres 07:30 puis attendre son accord ; relire git log du fichier AVANT de juger la regle sur le journal ;
   un code 1 se lit table par table (sa regle 1 peut creer un echec).
+
+### 20.86 Le 27/11 (1) : le temoin du rattachement de 3648 VERT (08:04, code 0) -- la vague des six attend son accord
+
+- Sa nuit : quotidien exit 0 ; descente code 0 (hier 1), ma regle des dates nomme les 69 ; carnet exit 0, pas de plantage ;
+  regles 3 et 4 de l'autre session jouees (5, 8). Pas de code 1 a lire.
+- Temoin : 3648 en chaine 3647 (local et Supabase), 0 piece sur D2024-0306, fusion D2024-0511 <- D2024-0306 au journal
+  (05:23) ; 16/16 autres reunis ; journal de nuit 17 lues / 17 decide a la main / aucun autre [M] ; 8395 rejoue : un seul [M].
+- Suite, a son accord : la vague des six (9Q0FHAKK d'abord, --source neuf), puis le partage DECHAUD 50 / GENTES 50 sur 3647.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

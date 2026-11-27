@@ -2915,3 +2915,28 @@ toujours « lignes en local ».
    l'ancienne garde basculait. Un code 1 demain se lit table par table, pas comme un démenti de la règle des dates.
 
 ⛔ Rien d'autre : je ne touche pas au fichier.
+
+### Le 27/11 (1) : le témoin du rattachement de 3648 est VERT — la nuit l'a appliqué, par le bon mécanisme
+
+**Son mot du matin** : la nuit est verte. GTI Quotidien 04:00:01 → 06:52:57, exit 0. La descente a attendu le run 8 minutes,
+puis a tourné de 06:53:09 à 07:19:31 : **code 0, quand elle était en code 1 hier**. Le rattrapage du carnet est en exit 0
+(0 ligne, « rien à poser ») ; le 0xC0000409 des 06/11 et 26/11 ne s'est pas reproduit. Ma règle des dates a parlé : 69
+tables, 281 017 lignes, nommées une à une, dont les trois « ⚠ AUCUNE COPIE LOCALE ». Les règles 3 et 4 de l'autre session ont
+joué aussi (5 objets absents du serveur, 8 files écartées du seuil de 2 lignes). Il n'y a pas de code 1 à lire table par
+table : la phrase de prudence n'a pas eu à servir.
+
+**Le témoin**, `temoin_du_rattachement_de_3648_2026-11-27.py`, joué à 08:04, sort en **code 0** :
+- ① registre local : 3648 dans la chaîne 3647, et 427UDDSF (3646, 3649) à part ;
+- ② Supabase : 3647, 3648 et 3650 en chaîne 3647, sur 42dd4d66 / D2024-0511 ; **0 pièce** porte encore D2024-0306 ;
+  journal des étiquettes : « 2026-11-27 05:23:00 fusion D2024-0511 <- D2024-0306 [3648] » ;
+- ③ témoin positif du mécanisme : les 16 autres rattachements du fichier, 16 réunis ;
+- ④ le journal de la nuit (`quotidien_2026-11-27_04-00-02.log`, postérieur au fichier) : lignes lues **17**, « décidé à la
+  main » **17**, autre « [M] » **aucun**, fusion d'étiquette 1, étape DONE. Le témoin inverse du lecteur crie sur 4 journaux
+  truqués sur 4 ;
+- ⑤ la vraie fonction rejouée sur le registre du matin avec la seule ligne 3648 : le bien 8395 dit « [M] rattachement décidé à
+  la main » une fois, et rien d'autre.
+
+⇒ **3648 est réunie à 3647 par le rattachement décidé à la main, et D2024-0306 a fusionné dans D2024-0511** — mesuré.
+
+⛔ Rien d'écrit en base, dans le Sheet ni chez Hektor. **La vague des six attend son accord** : 9Q0FHAKK en premier, puis
+PEE1XTR8, HUY49KEC, P252U1JH, d2108609, a360d9e3, avec un `--source` neuf. Puis le partage DECHAUD 50 / GENTES 50 sur 3647.
