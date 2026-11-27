@@ -6566,7 +6566,7 @@ FAIT (en base, relu, et le plus souvent controle aussi par son propre chemin) :
 - pousse : origin/main = d7315b5 (deux fusions sans reecriture des autres sessions).
 
 ⏰ DEMAIN MATIN, AVANT TOUTE CHOSE (son mot) -- APRES 07:45 :
-    python -X utf8 -u phase2\checks	emoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger
+    python -X utf8 -u phase2\checks\temoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger
   la photo du 27/11 a 20:35 (cache : temoin_de_la_nuit_2026-11-27.json) contre la base : les 4 628 notes A L'OCTET, les
   9 665 parts du classeur (dont les 419 du lot C sur 203 chaines -- la nuit doit les avoir SAUTEES), les 9 notes saisies,
   les avis 2 283 / 393 / 2 414. ⛔ SI UN SEUL BOUGE : ON S'ARRETE ET ON CHERCHE. (+ les 472 dates d'annulation, a titre
