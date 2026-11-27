@@ -531,6 +531,14 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
   - ⚠ **Avant de la valider** : 87 des 277 sont dans un dossier orphelin, qu'aucune ligne ne porte. Les
     rattacher à leur ligne est un geste de chaînage. Et l'écrivain de la colonne A lit ces pièces :
     son effet est à mesurer sur la copie.
+  - ✅ **Les deux mesures sont faites** (carnet § 20.99) :
+    - **L'écrivain** : ses cases ne changent pas, mais son témoin 1 tombe de 4 733 à 4 660, parce que
+      73 lignes auraient leurs pièces dans plusieurs dossiers.
+    - **Les 87 orphelins** : 58 pièces y sont seules. 16 feraient changer l'étiquette en cas de fusion,
+      et 6 touchent une pièce tenue par une autre ligne.
+    - ⭐ **R30a**, la forme restreinte aux pièces déjà dans le dossier de leur ligne : 190 pièces sur 186
+      lignes, 0 verdict et 0 étiquette changés, les témoins de l'écrivain intacts. **C'est la forme
+      sûre**, et elle est proposée à sa validation.
 
 **Étape 3 — les dates d'annulation élargies.**
 - **Ce qu'elle fait** : s'il n'y a aucun compromis et seulement une offre refusée, la date va sur
@@ -723,6 +731,47 @@ jours de lecture de la boucle. C'est une estimation.
 ---
 
 ## 8. Ce que je te demande de trancher
+
+> ✅ **SES RÉPONSES DU 27/11 AU SOIR — elles font foi** (« J'ai poussé. Voilà mes réponses, enchaîne. »)
+>
+> - **D1 OUI** : les 190 restent chez nous. « Elles sont mortes, elles restent. »
+> - **D2 OUI** : la Commission TTC des 18 compromis nés du classeur va dans `honoraires_entree_app`.
+> - **D3 OUI, les 109 sont exclues**, et voici la raison à écrire : « ce ne sont pas des écarts de date de
+>   compromis, c'est ma date d'annulation qui tombe avant le rendez-vous de signature. Les corriger serait
+>   corriger la mauvaise colonne. »
+> - **D4 : la date et le signal. Jamais l'état.** « Changer un état chez Hektor automatiquement, c'est
+>   refuser une offre ou annuler un compromis sans qu'un humain l'ait voulu. Hors de question. »
+> - **D5 : signaler d'abord.** La boucle ne crée rien chez Hektor de son propre chef.
+> - **D6 : le Sheet fait foi sur le montant. Mais on ne corrige que si l'on est sûr de comparer la bonne
+>   chose.** Trois contrôles doivent passer avant d'écrire une seule commission :
+>   - **① HT ou TTC** : la colonne porte la commission **TTC**. Le champ visé doit être le TTC, et non une
+>     part hors taxes. `commission_agence` en est une, et elle est vide depuis mai 2026 : **ne jamais la
+>     comparer à la colonne** ;
+>   - **② la bonne transaction** : on compare à la **vente** quand elle existe. Sans vente, la commission
+>     du compromis est provisoire : c'est une affaire en cours, elle reste **en attente** ;
+>   - **③ le prix doit concorder** : si le montant de Hektor diffère du Prix du Sheet, ce n'est pas un écart
+>     de commission mais un écart de prix. On le **signale à part**.
+>
+>   Quand les trois passent, **le Sheet gagne et on corrige l'app** : « c'est mon montant qui sert à la
+>   paie ». Et tout ce qui paraît aberrant (un prix à 743 €) se **signale**, sans jamais s'écrire en
+>   silence.
+>   - ✅ **Mesuré aux trois contrôles** (carnet § 20.99) :
+>     - ① le champ TTC est égal au Sheet sur 3 683 ventes ; `commission_agence` ne l'est que 3 fois ;
+>     - ② 1 020 lignes sans vente sont en attente ;
+>     - ③ 10 écarts de prix sont signalés à part ;
+>     - **19 conflits** passent les trois contrôles, mais **9 sont un partage** (le Sheet porte exactement
+>       la moitié ou les trois quarts) : un 4e contrôle est proposé. Il en reste 10.
+>   - **Aberrations** : la colonne Prix porte 42, 43 ou 63 (un département) sur 990 lignes, et 743 sur
+>     VMSFVBJS.
+> - **D7** : trois ventes candidates à lui proposer (réelles, récentes, avec un petit écart), chacune avec
+>   ses risques. C'est lui qui choisit. Proposées : 0bc98552, ba54cb6c et b7aabaf3 (carnet § 20.99).
+> - **D8 OUI** : le Notaire et les colonnes non citées restent dehors.
+> - **D9** : déjà confirmé.
+> - **D10 NON** : on ne crée pas l'offre chez Hektor pour les 170 lignes. Leur date va chez nous.
+> - **D11 OUI, le signal suffit.** L'étape « informer Hektor » reste en dernier, et elle ne se prépare que
+>   si le rapport du matin montre qu'elle sert vraiment.
+> - **R30** : ses deux mesures (les 87 dossiers orphelins, et l'effet sur l'écrivain de la colonne A) se
+>   font sans l'attendre. Puis R30 lui est présentée complète, et c'est là qu'il dira oui ou non.
 
 - **D1** — Les 190 nées du classeur : rien chez Hektor, elles restent chez nous. *(ma recommandation)*
 - **D2** — Les 18 compromis nés du classeur : leur Commission TTC va dans `honoraires_entree_app`.

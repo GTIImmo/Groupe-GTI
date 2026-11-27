@@ -6379,6 +6379,37 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   . l'ecrivain de la colonne A LIT les pieces du verdict et signale une ligne a plusieurs dossiers : son effet sur ces 87
     est A MESURER sur la copie avant toute validation (« on fait passer ses lecteurs »).
 - Rien en base, rien dans le Sheet, rien chez Hektor. Le vrai socle n'a pas bouge (temoin de fin).
+
+### 20.99 Le 27/11 (14) : SES REPONSES D1-D11 ; R30 COMPLETE (les 87 orphelins, l'ecrivain) ; R30a ; D6 aux trois controles ; D7
+
+- SES REPONSES (elles font foi, § 8 du plan) : D1 oui (les 190 restent chez nous) ; D2 oui ; D3 oui, les 109 exclues --
+  « c'est ma date d'annulation qui tombe avant le rendez-vous de signature » ; D4 la date et le signal, JAMAIS l'etat ;
+  D5 signaler ; D6 le Sheet fait foi sur le montant, apres TROIS controles (① TTC, jamais commission_agence ; ② la vente
+  quand elle existe, sinon en attente ; ③ le prix doit concorder, sinon un ecart de prix signale a part) et tout
+  l'aberrant se signale ; D7 trois candidates ; D8 oui ; D10 non (la date chez nous) ; D11 oui, le signal suffit.
+- R30 COMPLETE, ses deux mesures :
+  . les 87 pieces en dossier orphelin : toutes sur une AUTRE chaine que leur ligne ; 58 seules dans leur dossier ;
+    29 avec 1 a 3 autres pieces (21 avec un compromis annule) ; ⛔ 16 : l'orphelin porte une piece PLUS PETITE que la
+    ligne -- une fusion de dossiers changerait l'etiquette (la plus petite gagne) ; ⛔ 6 : l'orphelin porte une piece
+    tenue par une autre ligne.
+  . l'ecrivain de la colonne A (son classement rejoue sur la copie, 82 contre 83) : ses cases NE CHANGENT PAS (4 731
+    deja remplies, 71 pas tranchees, 4 doubles), 0 ligne nouvellement ecrivable ; ⛔ MAIS son temoin 1 (etiquette a
+    l'arrivee = etiquette d'aujourd'hui de ses pieces) tombe de 4 733 a 4 660 : 73 lignes auraient leurs pieces dans 2 a
+    4 dossiers. Le temoin « les 5 » echoue AUSSI sans variante (anterieur, sans rapport).
+- R30a (variante, meme jour) : R30 restreinte aux pieces DEJA dans le dossier de l'etiquette de leur ligne. Rejouee sur
+  copie : 190 pieces sur 186 lignes, 0 verdict, 0 etiquette ; l'ecrivain : temoin 1 4 733 / 4 733, temoin 2 4 731 /
+  4 731, cases identiques. ⭐ C'EST LA FORME SURE : elle ne bouge aucun dossier.
+- D6 mesure aux trois controles (4 733 lignes tranchees, Commission TTC du Sheet) :
+  . ① le champ TTC = honoraires d'entree + sortie : egal au Sheet sur 3 683 ventes ; commission_agence ne l'egale que 3
+    fois (temoin : c'est bien une part, ne jamais la comparer) ;
+  . ② 1 020 lignes sans vente vivante : EN ATTENTE ;
+  . ③ 10 ecarts de PRIX, signales a part ; 1 ligne a deux ventes, signalee ;
+  . 19 conflits passent les trois controles. ⚠ 8 d'entre eux sont EXACTEMENT la moitie de Hektor, 1 les trois quarts :
+    un partage entre agences (le Sheet porte la part GTI), pas une erreur -- je propose un 4e controle. Restent 10.
+  . ABERRATIONS : la colonne Prix porte 42, 43 ou 63 (un departement) sur 990 lignes, 0 sur 12, et 743 sur VMSFVBJS.
+- D7, trois ventes proposees (reelles, recentes, petit ecart) : 0bc98552 (vente 23319, +1 000), ba54cb6c (23211,
+  -1 000), b7aabaf3 (1445, -200). Ecartees : 78bb247a (un de ses cas en attente), 650e65c8 (reglee le 15/12/2025,
+  AVANT sa vente du 29/01/2026 : aberrant).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

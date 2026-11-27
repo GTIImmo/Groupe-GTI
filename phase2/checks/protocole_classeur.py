@@ -395,6 +395,8 @@ VARIANTES = {
     "R30": "une piece « a part sans effet sur l'etiquette » (son critere 2) possible pour UNE SEULE ligne du bien, plus grande "
            "que la plus petite piece prouvee de sa ligne, rejoint les pieces de sa ligne (jamais une de SES 20 a part, jamais "
            "une mise de cote) -- le geste 6 : une seule facon de la rattacher",
+    "R30a": "R30 restreinte aux pieces DEJA dans le dossier de l'etiquette de leur ligne -- la colonne pieces les rattrape, aucun "
+            "dossier ne bouge (les pieces des dossiers orphelins restent a part : leur rattachement est un geste de chainage)",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
     # R16 a quitte cette liste le 23/11 (son mot, et la preuve du passage 49) : elle est dans REGLES_VALIDEES
     # R17 a quitte cette liste le 23/11 (son message, et la preuve du passage 54) : elle est dans REGLES_VALIDEES
@@ -419,7 +421,7 @@ R30_POSSIBLES: dict = {}
 DONNEE_PAR_R30: dict = {}
 
 
-def r30_apres_les_verdicts(rangs: list) -> None:
+def r30_apres_les_verdicts(rangs: list, I=None, meme_dossier: bool = False) -> None:
     """R30, LE GESTE 6, APRES tous les verdicts (comme R16) : une piece « a part sans effet sur l'etiquette » nommee par UNE
     SEULE ligne tranchee, possible pour elle seule (R30_POSSIBLES == 1), tenue par aucune ligne, plus grande que TOUTES les
     pieces de sa ligne, jamais une de SES 20 a part -> elle rejoint les pieces de sa ligne. Aucun verdict, aucune etiquette ne
@@ -438,6 +440,8 @@ def r30_apres_les_verdicts(rangs: list) -> None:
             continue
         x = xs[0]
         if a < min(x.get("pieces") or [a]):
+            continue
+        if meme_dossier and I is not None and I.pieces[a].get("app_dossier_uuid") != x.get("etiquette"):
             continue
         x["pieces"] = sorted(set(x["pieces"]) | {a})
         DONNEE_PAR_R30[a] = x["id_unique"]
@@ -2239,7 +2243,7 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         # R30 (variante du 27/11, le geste 6) : on NOTE seulement le nombre de lignes possibles de chaque piece neutre (le plus
         #   grand vu, garde comprise) ; elle joue APRES tous les verdicts (r30_apres_les_verdicts), jamais ici -- poser des
         #   pieces dans ce jugement faisait mordre la garde du deja-rendu sur R22 (40ELE6SQ, ARF57GC5 retombaient, 27/11)
-        if neutres and joue("R30"):
+        if neutres and (joue("R30") or joue("R30a")):
             for a in neutres:
                 R30_POSSIBLES[a] = max(R30_POSSIBLES.get(a, 0), len(r["possibles"].get(a, [])))
         preuves = [preuve_nommee(I, a, gl, r["preuve"].get(a, "")) for a in ids]
@@ -2386,8 +2390,8 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
                 or "aucune", " . ".join("%s (%s)" % (i_, x_["pourquoi"]) for i_, x_ in sorted(R29_ABSTENUES.items()))
                 or "aucune"))
     # R30 (variante du 27/11, le geste 6) : APRES tous les verdicts -- elle n'allonge que la colonne pieces
-    if joue("R30"):
-        r30_apres_les_verdicts(rangs)
+    if joue("R30") or joue("R30a"):
+        r30_apres_les_verdicts(rangs, I, meme_dossier=not joue("R30"))
         dire("   R30 : %d piece(s) rattachee(s) a la seule ligne qui peut les prendre (le geste 6), sur %d ligne(s)" % (
             len(DONNEE_PAR_R30), len(set(DONNEE_PAR_R30.values()))))
     # R16 (validee le 23/11) : APRES tous les verdicts -- les pieces tenues sont alors connues ; elle ne touche que SANS_BIEN
