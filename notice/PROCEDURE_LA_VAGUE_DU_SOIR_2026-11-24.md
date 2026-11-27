@@ -3012,3 +3012,66 @@ contournée. ⛔ **Leçon : regarder l'heure contre cette fenêtre AVANT de dema
   0 (`relire_sans_la_liste_e.py`, dossier de travail). L'outil n'est pas touché : à son mot.
 
 ⛔ Rien d'écrit en base ni chez Hektor. **Suite, à son accord** : le partage DECHAUD 50 / GENTES 50 sur la chaîne 3647.
+
+### Le 27/11 (4) : le partage DECHAUD 50 / GENTES 50 sur 3647 — patch fabriqué, essai à blanc VERT, il attend son accord
+
+**Son mot** : « Oui » (préparer le partage à blanc, sans rien écrire).
+
+**① La mesure** (lecture seule, 10:14-10:19) :
+- La chaîne 3647 porte le compromis 3647, l'offre 3648 et la vente 3650, toutes trois sur D2024-0511 (42dd4d66).
+- Ses deux parts sont GENTES 50 en entrée et GENTES 50 en sortie, en `hektor_partage_suppose`, écrites par la conversion le
+  26/11 à 05:35:07. La nuit du 27/11 ne les a pas réécrites.
+- La chaîne 3646 (427UDDSF) porte ses propres parts du classeur, GENTES 50/50 du 13/11. Elle ne bouge pas.
+- Le registre des parts : 17 970 parts, empreinte 96d757a1. 0 orpheline, 0 vente réglée sans part.
+- **Ce qui écrit des parts en base** : trois fonctions, toutes lues.
+  - `app_repartition_absorber`, la nuit : elle saute toute chaîne qui porte une part non « hektor% ».
+  - `app_repartition_purger_orphelines` : elle ne touche qu'une chaîne sans transaction, donc pas 3647.
+  - `app_repartition_commission_set` : la saisie de l'écran.
+
+**② Le générateur** (`phase2/checks/parts_3647_generer_patch_2026-11-27.py`) : rien n'y est tapé à la main.
+- Le Sheet est lu en direct : la ligne 286 (9Q0FHAKK, colonne A 42dd4d66, Vente réglée) dit DECHAUD 50, GENTES 50.
+- La ligne est nettoyée, décomposée et résolue par les fonctions du rapatriement du 13/11 : **entrée 1 = 31 SIMON DECHAUD
+  50, sortie 1 = 32 CHRISTELE GENTES 50**.
+- Le protocole (passage 82) dit : TRANCHEE, pièces 3647, 3648, 3650.
+- Chaque état que les gardes exigent est vérifié chez Supabase au moment de fabriquer le patch.
+
+**③ Le patch** (`supabase/patch_parts_3647_2026-11-27.sql`, md5 43411178), dans cet ordre :
+- **Les gardes.** Il ne se rejoue pas. Il exige :
+  - les membres et le dossier de 3647 ;
+  - les deux suppositions exactes ;
+  - l'empreinte de 3646 (b8b0db64) et celle du registre (96d757a1).
+- **La sauvegarde datée** `app_affaire_repartition_avant_parts3647_20261127`, **avec sa clé primaire et la RLS**. Son nom
+  finit par une date, donc elle ne descend pas.
+- **Le journal** : lot `parts_3647_2026-11-27`, 2 lignes, ligne d'origine 9Q0FHAKK n° 286, avec l'ancienne valeur.
+- **La règle 6** : les deux suppositions sont mises de côté, entières.
+- **La pose** : `classeur_reconstitue`, écrites par « classeur:9Q0FHAKK ».
+- **Les contrôles** :
+  - 3647 porte exactement ces deux parts, et leur somme fait 100 ;
+  - **son témoin : plus aucune part hektor sur 3647** ;
+  - 3646 et toutes les parts hors de 3647 sont inchangées, et le nombre de parts aussi (17 970) ;
+  - les deux suppositions sont mises de côté, entières ; le journal a ses 2 lignes ;
+  - 0 orpheline, 0 vente réglée sans part ;
+  - **l'empreinte d'après est exigée : 113c064e257b5c366fa2bfc2848bb9fe**.
+- Ses compagnons : `_INVERSE` (8b671f08), `_REPETITION` (lecture seule, b147c665), `_A_BLANC` (0b1ce9d1).
+
+**④ L'essai à blanc, joué chez Supabase à 10:21** dans une transaction que le patch annule lui-même par une erreur voulue :
+**VERT**.
+- Avant : 17 970 parts (96d757a1), 3647 = GENTES 50 + GENTES 50 en supposition.
+- Après le patch : 17 970 parts, 3647 = entrée 31 SIMON DECHAUD 50 + sortie 32 CHRISTELE GENTES 50, en classeur_reconstitue.
+  Empreinte d'après : 113c064e.
+- **La nuit rejouée par ses vraies fonctions**, avec les lignes mêmes qu'elle a écrites sur 3647 :
+  - l'absorbeur saute 3647 (`proteges_app` 1, `dossiers_ecrits` 0) ;
+  - la purge ne fait rien (tout à 0) ;
+  - 3647 et le registre sont inchangés.
+- **L'inverse** rend l'état d'avant, à l'identique.
+- **Le témoin inverse** : sur 3647 remise en supposition, le même absorbeur **écrit** (`dossiers_ecrits` 1, 2 lignes).
+  L'épreuve pouvait donc échouer.
+- Relu ensuite en lecture seule : pas de sauvegarde, 0 ligne au journal du lot, 0 mise de côté, registre 96d757a1, et 3647
+  porte toujours ses deux suppositions du 26/11. **Rien n'est resté.**
+- Le patch réel a été refabriqué avec l'empreinte d'après. Ses trois compagnons ressortent avec le même md5, donc l'état
+  n'avait pas bougé.
+
+⛔ Rien n'est écrit en base, dans le Sheet ni chez Hektor. **Le patch attend son accord.**
+- La garde G4 exige le registre de ce matin. Si la nuit le change, le patch refusera, et il faudra le refabriquer.
+- Le témoin du lendemain, après la répartition de 05:35 : `_REPETITION`. 3647 doit garder ses parts du classeur, avec
+  l'heure de la pose, et 0 part hektor.

@@ -6243,6 +6243,19 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   vides. Code 1 pour UNE cause : la constante LES_DEUX_DE_E du relecteur (P252U1JH, d2108609 attendues vides, sa
   decision du 25/11 levee par son ordre du 27/11) ; sans elle, TOUT EST JUSTE (code 0). Outil non touche.
 - Suite a son accord : DECHAUD 50 / GENTES 50 sur 3647.
+
+### 20.89 Le 27/11 (4) : DECHAUD 50 / GENTES 50 sur 3647 -- patch fabrique, a blanc VERT (10:21), a son accord
+
+- Mesure : 3647 = 3647+3648+3650 (D2024-0511), GENTES 50/50 hektor_partage_suppose (26/11 05:35) ; 3646 (427UDDSF) a ses
+  parts du classeur ; registre 17 970 / 96d757a1 ; 3 ecrivains en base lus (absorbeur, purge, saisie).
+- Generateur parts_3647_generer_patch_2026-11-27.py : Sheet en direct (ligne 286 DECHAUD 50 / GENTES 50) -> regles du 13/11 ->
+  entree 31 SIMON DECHAUD 50, sortie 32 CHRISTELE GENTES 50 ; protocole 82 : pieces 3647, 3648, 3650.
+- Patch 43411178 : gardes (membres, 2 suppositions, 3646 b8b0db64, registre 96d757a1), sauvegarde datee AVEC cle primaire et
+  RLS, journal 2 lignes (9Q0FHAKK n° 286), regle 6, pose classeur_reconstitue ; controles dont SON TEMOIN « plus aucune part
+  hektor sur 3647 » et l'empreinte d'apres 113c064e.
+- A blanc VERT chez Supabase : apres = DECHAUD/GENTES ; la vraie nuit (absorbeur) SAUTE 3647, purge a 0 ; inverse = avant ;
+  temoin inverse : l'absorbeur ECRIT sur 3647 en supposition. Relu : rien n'est reste.
+- Attend son accord (G4 : a poser avant que la nuit change le registre). Temoin : _REPETITION apres 05:35.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
