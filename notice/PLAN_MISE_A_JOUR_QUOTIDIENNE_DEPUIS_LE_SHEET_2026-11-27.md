@@ -50,9 +50,12 @@ compromis », et poserait la date du jour sur chacune.
 
 **⑥ Le plan suit ton ordre** (§ 6), revu le 27/11 au soir :
 1. l'audit (ce document) ;
-2. la règle des 334 ;
+2. la règle des 334 : ✅ **R30a validée le 27/11 au soir** (190 pièces, aucun dossier ne bouge) ;
 3. les dates d'annulation élargies ;
-4. la Commission TTC chez nous ;
+3 bis. **les écritures sans risque chez nous** (~840 cases : répartitions, COMMENTAIRES, En attente de,
+   avis) — ajoutée par lui le 27/11 au soir ;
+4. la Commission TTC chez nous, avec les **quatre** contrôles de D6. L'essai chez Hektor se fait sur
+   0bc98552 (son choix) ;
 5. la boucle, qui regarde seulement ;
 6. la boucle, qui écrit chez nous ;
 7. les lignes neuves ;
@@ -539,6 +542,14 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
     - ⭐ **R30a**, la forme restreinte aux pièces déjà dans le dossier de leur ligne : 190 pièces sur 186
       lignes, 0 verdict et 0 étiquette changés, les témoins de l'écrivain intacts. **C'est la forme
       sûre**, et elle est proposée à sa validation.
+  - ✅✅ **R30a VALIDÉE le 27/11 au soir** (son mot : « Oui, R30a. Tu as bien fait de reculer. »). Elle
+    est dans `REGLES_VALIDEES` et joue à chaque passage. Le rejeu de contrôle donne 190 pièces sur 186
+    lignes, 0 verdict et 0 étiquette changés.
+    - ⛔ **R30 complète est refusée** ; elle ne reste dans le code que pour la mesure.
+    - **Les 87 orphelins restent dehors.** Ils se reprendront comme un geste de chaînage, à part, et
+      seulement les 58 qui sont seules dans leur dossier.
+    - ⏰ **Le prochain passage officiel (83) portera R30a.** Il n'est pas joué : il change le passage que
+      lisent l'écrivain et la boucle, et il se recopie ensuite en base. Les deux gestes attendent ton accord.
 
 **Étape 3 — les dates d'annulation élargies.**
 - **Ce qu'elle fait** : s'il n'y a aucun compromis et seulement une offre refusée, la date va sur
@@ -550,6 +561,28 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
   recenser avant le patch.
 - **Ni Hektor ni l'état d'une pièce.** Les 109 « antérieures » attendent ta décision D3.
 - Environ ½ à 1 jour.
+
+**Étape 3 bis — les écritures sans risque, chez nous seulement** (ajoutée par lui le 27/11 au soir :
+« Je ne vois aucune raison d'attendre cinq étapes pour poser ce qui ne risque rien »).
+- **Les cases**, environ 840 :
+  - En attente de : 245 manquantes et 160 écarts ;
+  - les répartitions : 203 ;
+  - COMMENTAIRES : 94 manquants et 107 écarts ;
+  - les avis : 27 et 4 écarts.
+  Elles ne touchent ni Hektor ni la nuit (la nuit ne touche ni `app_affaire_note`, ni `app_classeur_avis`,
+  ni `app_affaire_repartition`).
+- **Sa règle, telle quelle** : une case vide prend le Sheet ; une case remplie qui diffère, le Sheet gagne.
+  - **Pour les notes, jamais d'écrasement** : une note neuve datée, et l'ancienne reste.
+  - **Pour une part de répartition qui diffère** : la règle 6, « on ne supprime pas une part, on la met de
+    côté ».
+  - **Pour un avis qui diffère** : la valeur d'avant est gardée au journal.
+  - Pour En attente de, sa décision du 17/11 tient : les « V » et les pictogrammes seuls restent dehors.
+    Les 84 textes abîmés par le nettoyage reviennent en notes neuves.
+- **La place de chaque note** : sur une pièce que le protocole donne à la ligne, avec R30a, donc après le
+  passage 83. C'est aussi ce qui règle les 62 notes que la garde (famille B) a trouvées hors de leur ligne.
+- **Le patron** : script, patch, inverse, répétition ; l'essai à blanc, puis ton accord.
+- Les 30 répartitions illisibles par la règle du 13/11 restent dehors.
+- Environ 1 jour.
 
 **Étape 4 — la Commission TTC, ta décision.**
 - **4a, chez nous** :
@@ -727,6 +760,21 @@ jours de lecture de la boucle. C'est une estimation.
 - Si Hektor porte un champ « charge » ou la répartition sur une transaction.
 - Tes chiffres 106, 43, 426, 386, 154 et 1 163 : je ne les reconstitue pas, faute de ta définition.
 - Les Apps Script du classeur (V1).
+- Si Hektor recalcule le hors-taxe au moment où l'on change le montant d'une vente. Ma déduction est oui :
+  l'essai sur 0bc98552 le dira, en relisant tous les champs avant et après.
+
+### 7.1 ⚠ Les réserves — ses aberrations, NOTÉES ET NON TOUCHÉES (son mot du 27/11 au soir)
+
+> « Le Prix est hors périmètre, mais je ne veux pas que ça se perde. » Rien de ce qui suit ne s'écrit : on le
+> signale.
+
+- **La colonne Prix porte 42, 43 ou 63 sur 990 lignes** (437 fois 43, 308 fois 42, 245 fois 63) : un numéro
+  de département, pas un prix.
+- **La colonne Prix porte 0 sur 12 lignes.**
+- **743 € sur la ligne VMSFVBJS**, ta saisie, que tu as vue toi-même.
+- **650e65c8 est réglée avant sa vente** : vente 3265 du 29/01/2026, « Vente Réglée » au 15/12/2025.
+- ⚠ Conséquence pour le contrôle ③ de D6 : sur ces lignes, le prix ne peut pas concorder. Le jour où leur
+  vente arrivera, elles sortiront en « écart de prix » et seront signalées, jamais écrites.
 
 ---
 
@@ -752,7 +800,12 @@ jours de lecture de la boucle. C'est une estimation.
 >   - **③ le prix doit concorder** : si le montant de Hektor diffère du Prix du Sheet, ce n'est pas un écart
 >     de commission mais un écart de prix. On le **signale à part**.
 >
->   Quand les trois passent, **le Sheet gagne et on corrige l'app** : « c'est mon montant qui sert à la
+>   - **④ le partage entre agences** (ajouté et accepté par lui le 27/11 au soir) : avant de corriger une
+>     commission, vérifier que le montant du Sheet n'est pas une **part** d'un partage entre agences, par
+>     exemple exactement la moitié ou les trois quarts du montant de Hektor. Si c'en est une, on ne corrige
+>     pas : on signale.
+>
+>   Quand les quatre passent, **le Sheet gagne et on corrige l'app** : « c'est mon montant qui sert à la
 >   paie ». Et tout ce qui paraît aberrant (un prix à 743 €) se **signale**, sans jamais s'écrire en
 >   silence.
 >   - ✅ **Mesuré aux trois contrôles** (carnet § 20.99) :
@@ -765,6 +818,27 @@ jours de lecture de la boucle. C'est une estimation.
 >     VMSFVBJS.
 > - **D7** : trois ventes candidates à lui proposer (réelles, récentes, avec un petit écart), chacune avec
 >   ses risques. C'est lui qui choisit. Proposées : 0bc98552, ba54cb6c et b7aabaf3 (carnet § 20.99).
+>   - ✅ **SON CHOIX : 0bc98552** (vente 23319, bien 43437, 23/09/2026, prix 96 000 ; Sheet 6 000 contre
+>     Hektor 5 000). Elle est dans l'index historique, et « je préfère qu'un premier essai monte un montant
+>     plutôt qu'il le baisse ». b7aabaf3 est écartée : elle a deux risques à la fois.
+>   - **Sa question avant l'essai** : Hektor recalcule-t-il son hors-taxe ou sa part admin quand on change
+>     le montant ? Mesuré le 27/11 dans nos copies de Hektor (9 292 ventes), sans rien écrire :
+>     - la **part admin** vaut 0 sur les 9 292 ventes : il n'y a rien à recalculer ;
+>     - la **rétrocession** vaut 0 partout ;
+>     - **`commission_agence`** vaut 0 sur 23319. Elle est vide depuis mai : 4 ventes sur 185 en portent
+>       une ;
+>     - le **hors-taxe** de 23319 vaut 4 166,67, soit exactement 5 000 / 1,2 : c'est la forme calculée, que
+>       portent les ventes récentes (sur 9 000 ventes anciennes, ce champ porte le TTC tel quel).
+>
+>     ⛔ **Ce que je ne sais pas** : si Hektor recalcule le hors-taxe au moment de la modification. La seule
+>     modification d'honoraires sur une vente date du 18/09, sur une vente d'essai supprimée depuis, et elle
+>     n'a rien gardé du hors-taxe avant et après. **Ma déduction** : le hors-taxe passera à 5 000 (6 000 /
+>     1,2).
+>
+>     **Le protocole proposé pour l'essai** : relire la vente par son numéro, en lecture seule, AVANT et
+>     APRÈS, et comparer **tous** ses champs, pas la seule case visée : prix, honoraires, hors-taxe,
+>     commission de l'agence, part admin, date, acquéreurs, mandants. Seul `seller_fees` part dans
+>     `champs_touches`, et jamais `transaction_date` (sinon la clôture du mandat est rejouée).
 > - **D8 OUI** : le Notaire et les colonnes non citées restent dehors.
 > - **D9** : déjà confirmé.
 > - **D10 NON** : on ne crée pas l'offre chez Hektor pour les 170 lignes. Leur date va chez nous.

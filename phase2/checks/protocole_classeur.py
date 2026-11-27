@@ -336,6 +336,13 @@ REGLES_VALIDEES = {
             "prendrait 3 autres lignes (la paire de R27, 5C80H7ZF) : il n'y joue pas",
             "son accord du 25/11 au soir : « R28 : d'accord [...] Garde-la enfermee dans son motif » -- et, avant : « je ne "
             "veux pas fixer un nombre de jours [...] un seul mandat, une seule vente »"),
+    "R30a": ("LE GESTE 6, DANS LE DOSSIER : une piece « a part sans effet sur l'etiquette » (son critere 2), nommee par UNE "
+             "SEULE ligne tranchee, possible pour elle seule, tenue par personne, plus grande que toutes les pieces de sa "
+             "ligne, jamais une de SES 20 a part, et DEJA dans le dossier de l'etiquette de sa ligne, rejoint les pieces de "
+             "sa ligne. Elle joue APRES tous les verdicts : aucun verdict, aucune etiquette, aucun dossier ne bouge. Mesuree "
+             "sur copie du 82 : 190 pieces sur 186 lignes, temoins de l'ecrivain de la colonne A intacts (4 733 et 4 731)",
+             "son mot du 27/11 au soir : « Oui, R30a. Tu as bien fait de reculer [...] Aucun dossier ne bouge : c'est "
+             "exactement ce que je veux. Les 87 orphelins restent dehors. »"),
 }
 #: ⛔ LES REGLES RETIREES -- elles ne jouent JAMAIS, pas meme en variante de mesure (joue() les refuse) ; leur texte et leur
 #  code restent ici, pour l'histoire et pour la mesure qui a justifie le retrait.
@@ -392,11 +399,13 @@ VARIANTES = {
     # R30 (27/11, son mot : « les 334 [...] c'est ton geste 6. Mesure cette variante dans le juge, sur copie. ») -- MESURE
     #   SEULEMENT. Le geste 6 du protocole des 717 (§ 17.5 R6 du carnet) : « s'il n'y a qu'une facon de la rattacher, on la
     #   rattache ». L'etiquette ne bouge pas par construction : elle reste celle de la plus petite piece PROUVEE (lab1[m]).
+    # ⛔ R30 SOUS SA FORME COMPLETE EST REFUSEE (27/11 au soir, son mot : « 73 lignes avec leurs pieces dans plusieurs
+    #   dossiers et ton temoin qui tombe de 4 733 a 4 660, c'etait non ») ; elle reste ici pour la mesure seulement. Les 87
+    #   orphelins se reprendront comme un geste de CHAINAGE, a part, et seulement les 58 seules dans leur dossier.
     "R30": "une piece « a part sans effet sur l'etiquette » (son critere 2) possible pour UNE SEULE ligne du bien, plus grande "
            "que la plus petite piece prouvee de sa ligne, rejoint les pieces de sa ligne (jamais une de SES 20 a part, jamais "
            "une mise de cote) -- le geste 6 : une seule facon de la rattacher",
-    "R30a": "R30 restreinte aux pieces DEJA dans le dossier de l'etiquette de leur ligne -- la colonne pieces les rattrape, aucun "
-            "dossier ne bouge (les pieces des dossiers orphelins restent a part : leur rattachement est un geste de chainage)",
+    # R30a a quitte cette liste le 27/11 au soir (son mot : « Oui, R30a ») : elle est dans REGLES_VALIDEES
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
     # R16 a quitte cette liste le 23/11 (son mot, et la preuve du passage 49) : elle est dans REGLES_VALIDEES
     # R17 a quitte cette liste le 23/11 (son message, et la preuve du passage 54) : elle est dans REGLES_VALIDEES

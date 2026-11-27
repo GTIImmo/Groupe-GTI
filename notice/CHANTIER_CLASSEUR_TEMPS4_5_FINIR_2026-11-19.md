@@ -6410,6 +6410,29 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - D7, trois ventes proposees (reelles, recentes, petit ecart) : 0bc98552 (vente 23319, +1 000), ba54cb6c (23211,
   -1 000), b7aabaf3 (1445, -200). Ecartees : 78bb247a (un de ses cas en attente), 650e65c8 (reglee le 15/12/2025,
   AVANT sa vente du 29/01/2026 : aberrant).
+
+### 20.100 Le 27/11 (15) : R30a VALIDEE ; le 4e controle ; l'etape 3 bis ; D7 = 0bc98552 ; ses reserves
+
+- Son mot : « Oui, R30a. Tu as bien fait de reculer [...] Aucun dossier ne bouge : c'est exactement ce que je veux. »
+  R30a est dans REGLES_VALIDEES (protocole_classeur.py), R30 complete reste en variante de mesure, REFUSEE. Rejeu de
+  controle sur copie, sans variante : 190 pieces sur 186 lignes, 0 verdict, 0 etiquette (vrai socle inchange).
+  ⏰ Le passage officiel 83 (avec R30a) N'EST PAS JOUE : il change le passage que lisent l'ecrivain et la boucle, et il
+  se recopie en base -- deux gestes a son accord.
+- Les 87 orphelins : un geste de CHAINAGE a part, plus tard, et seulement les 58 seules dans leur dossier.
+- D6, le 4e CONTROLE (le sien, accepte) : avant de corriger une commission, verifier que le montant du Sheet n'est pas
+  une PART d'un partage entre agences (la moitie, les trois quarts...). 10 vrais conflits restent, donnes en clair.
+  ⚠ Parmi les 10, Y8O4NJSY porte exactement 60 % de Hektor (6 000 / 10 000) : peut-etre un partage 60/40, a lui.
+- D7 : 0bc98552 (vente 23319). Sa question « Hektor recalcule-t-il son hors-taxe ou sa part admin ? » : part admin 0
+  sur les 9 292 ventes, retrocession 0 partout, commission_agence 0 sur 23319 (vide depuis mai, 4 ventes sur 185) ; le
+  hors-taxe de 23319 = 4 166,67 = 5 000 / 1,2 (la forme calculee des ventes recentes ; 9 000 anciennes y portent le
+  TTC). ⛔ NON MESURE : le recalcul AU MOMENT de la modification (la seule modification d'honoraires de vente, le 18/09,
+  sur une vente d'essai supprimee, n'a rien garde). Deduction : le hors-taxe passera a 5 000. Protocole propose : relire
+  la vente par son numero AVANT et APRES, TOUS ses champs ; seul seller_fees dans champs_touches, jamais transaction_date.
+- L'ETAPE 3 BIS (la sienne) : ~840 cases sans risque chez nous (En attente de 245 + 160 ecarts, repartitions 203,
+  COMMENTAIRES 94 + 107, avis 27 + 4), juste apres les dates d'annulation, par le meme patron ; notes JAMAIS ecrasees
+  (une note neuve datee) ; une part qui differe se met de cote (regle 6).
+- SES RESERVES, notees et non touchees (plan § 7.1) : Prix = 42 / 43 / 63 sur 990 lignes, 0 sur 12, 743 sur VMSFVBJS,
+  650e65c8 reglee avant sa vente.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
