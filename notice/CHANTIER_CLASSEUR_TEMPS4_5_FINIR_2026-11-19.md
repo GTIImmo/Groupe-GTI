@@ -6223,6 +6223,15 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Temoin : 3648 en chaine 3647 (local et Supabase), 0 piece sur D2024-0306, fusion D2024-0511 <- D2024-0306 au journal
   (05:23) ; 16/16 autres reunis ; journal de nuit 17 lues / 17 decide a la main / aucun autre [M] ; 8395 rejoue : un seul [M].
 - Suite, a son accord : la vague des six (9Q0FHAKK d'abord, --source neuf), puis le partage DECHAUD 50 / GENTES 50 sur 3647.
+
+### 20.87 Le 27/11 (2) : la vague des six (vague2a) preparee a blanc -- 6 / 0 / 0, empreintes 52b1cff3 / 3001cb4a
+
+- Classement neuf au 82 (fichier du 27/11, fiche 07:09 UTC, code 0, 6 temoins verts), sans toucher l'outil ni le
+  classement du 26/11. Seul changement : 9Q0FHAKK passe de PLUSIEURS_DOSSIERS a VAGUE_1. Deux lignes nees au Sheet
+  (2e08ac0e, 1d713a84, absentes du 82) ; trois changements d'etat a la main.
+- vague2a dans son ordre : 9Q0FHAKK, PEE1XTR8, HUY49KEC, P252U1JH, d2108609, a360d9e3. A blanc : 6 a ecrire, 0 sautee,
+  0 contre le protocole ; empreintes vague 52b1cff3442c952b, colonne A 3001cb4a01f72651.
+- Attend son accord. Puis DECHAUD 50 / GENTES 50 sur 3647.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

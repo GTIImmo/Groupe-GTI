@@ -2940,3 +2940,43 @@ table : la phrase de prudence n'a pas eu à servir.
 
 ⛔ Rien d'écrit en base, dans le Sheet ni chez Hektor. **La vague des six attend son accord** : 9Q0FHAKK en premier, puis
 PEE1XTR8, HUY49KEC, P252U1JH, d2108609, a360d9e3, avec un `--source` neuf. Puis le partage DECHAUD 50 / GENTES 50 sur 3647.
+
+### Le 27/11 (2) : la vague des six PRÉPARÉE à blanc (vague2a) sur un classement neuf — elle attend son accord sur les deux empreintes
+
+**Son mot** : « Oui » (préparer la vague des six, en lecture seule).
+
+**① Le classement neuf, au passage 82** : `notice/CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-27_PASSAGE_82.csv`, fiche de
+fabrication du 27/11 à 07:09:08 UTC, code 0.
+- L'outil n'est pas modifié : un appel depuis le dossier de travail change seulement sa sortie, pour ne pas écraser le
+  classement du 26/11 (celui qui criait sur 9Q0FHAKK). Le fichier du 26/11 est intact, même empreinte avant et après.
+- Ses six témoins sont verts :
+  - témoin 1 : 4 733 lignes tranchées sur 4 733 ont l'étiquette d'arrivée ;
+  - témoin 2 : les 4 725 cases A portent l'étiquette du protocole ;
+  - témoin 3 : VAGUE_1 = 6 lignes, 6 étiquettes distinctes, aucune déjà en A ;
+  - témoin 4 : ce que le gel écrirait contre le protocole, comme attendu ;
+  - témoin 5 : les quatre doubles, vides et nommés ;
+  - témoin 6 : 4 731 écrivables.
+- Le Sheet a 4 805 lignes : 4 725 A remplies, 70 non tranchées, 4 doubles, 6 VAGUE_1.
+- **Contre le classement du 26/11, une seule case change : 9Q0FHAKK, de PLUSIEURS_DOSSIERS à VAGUE_1** (3648 a rejoint
+  3647 cette nuit).
+- Deux lignes sont NÉES au Sheet depuis le 26/11 : 2e08ac0e (ligne 4810) et 1d713a84 (ligne 4811), deux offres d'achat,
+  absentes du passage 82, donc non tranchées.
+- Trois lignes ont changé d'état au Sheet, par la main humaine : fb243db5 (Vente prévue → Annulée), dad56e75 et fbf9799a
+  (Compromis en attente → Vente prévue).
+- Aucune ligne n'a changé de rang.
+
+**② La vague, vague2a** (`notice/CLASSEUR_VAGUE_vague2a_2026-11-27.csv`), dans son ordre :
+- 9Q0FHAKK, ligne 286 : D2024-0511 (42dd4d66), pièces 3647, 3648, 3650 ;
+- PEE1XTR8, ligne 1495 : D2021-0331 (6e528f04), pièces 26018 à 26022 ;
+- HUY49KEC, ligne 3248 : D2018-0476 (034b7eb1), pièces 3741 et 1001587 ;
+- P252U1JH, ligne 3832 : D2020-0592 (22609d0e), pièces 4126 et 4128 ;
+- d2108609, ligne 4259 : D2025-0427 (676ad1fa), pièces 21520 et 1001495 ;
+- a360d9e3, ligne 4809 : D2026-0400 (a8babdb4), pièce 30848.
+
+**③ L'à blanc** : un paquet de 6, **6 à écrire, 0 sautée, 0 contre le protocole**, code 0.
+- Empreinte de la vague **52b1cff3442c952b**, de la colonne A **3001cb4a01f72651**.
+- Rapport : `C:\Hektor\Backups\classeur_colonne_a\2026-11-27_080949_vague2a_A_BLANC`.
+- Après elle, la colonne A porterait 4 731 cases.
+
+⛔ Rien n'est écrit dans le Sheet, en base ni chez Hektor. **La vague attend son accord sur les deux empreintes.** Puis le
+partage DECHAUD 50 / GENTES 50 sur 3647.
