@@ -3272,3 +3272,50 @@ auraient refusé de jouer après une nuit. La comparaison « = avant » reste da
 
 **Les deux familles sont indépendantes l'une de l'autre**, et l'ordre de pose est libre. ⛔ Rien n'est écrit en base, dans le
 Sheet ni chez Hektor. **Elles attendent son accord.**
+
+### Le 27/11 (10) : les familles 3 et 2 POSÉES — les 47 (+2) sont faites, sauf les cas qui sont à lui
+
+**Son mot** : « Oui » (poser les deux, la 3 puis la 2).
+
+**① Les deux poses.** Chaque patch réel a été vérifié identique à son essai à blanc, contrôles compris, avant d'être joué
+chez Supabase.
+- La **famille 3** (`patch_dates_annulation_famille3_2026-11-27.sql`, a15bbc33) est passée sans erreur, empreinte d'après
+  ed9a346b comprise.
+- La **famille 2** (`patch_famille2_parts_et_ventes_2026-11-27.sql`, 37068526) est passée sans erreur, empreinte d'après
+  c2477fa3 comprise.
+
+**② Les quatre gestes du jour relus par leurs répétitions** (le pooler, en lecture seule, 11:53) :
+- **Famille 3** : les 23 compromis portent leur date ; 472 dates au registre ; journal 23 ; empreinte ed9a346b.
+- **Famille 2** :
+  - les 6 ventes portent leur règlement et leur facture ;
+  - les 4 chaînes portent leurs parts du classeur, et **0 part hektor** ;
+  - journal 20 ; mise de côté 8 ;
+  - 0 vente réglée sans part ; 20 sur supposition seule ; 0 orpheline ;
+  - empreinte c2477fa3.
+- **3647**, posée ce matin : DECHAUD entrée 50 + GENTES sortie 50, 0 part hektor, 3646 intacte.
+  - ⚠ L'empreinte globale de sa répétition est passée de 113c064e à 5c1fc93d. C'est attendu : la famille 2 a changé
+    4 autres chaînes. Le témoin de 3647 se lit donc sur **ses parts**, pas sur l'empreinte globale.
+- **Famille 1**, posée ce matin : inchangée (c283c736).
+- **Les trois sauvegardes de l'après-midi** ont chacune leur clé primaire et la RLS, et sont illisibles par authenticated et
+  par anon. Elles comptent 23, 8 et 6 lignes.
+- **La mise de côté** compte 168 parts : les 158 du 26/11, plus 2 pour 3647 et 8 pour la famille 2.
+
+**③ Le registre, au soir des 47 (+2)** :
+- 3 744 ventes réglées (3 729 + 9 + 6) et 3 686 factures (3 671 + 9 + 6) ;
+- 472 dates d'annulation (449 + 23) ;
+- 17 970 parts.
+
+**④ Les témoins de demain, après le run** : les quatre `_REPETITION` du 27/11, c'est-à-dire 3647, les familles 1, 3 et 2. Les
+colonnes `_app` ne doivent pas être réécrites par Hektor, et les 5 chaînes protégées ne doivent pas être recalculées par la
+nuit.
+
+**⑤ Ce qui reste des 47 (+2) est à lui.**
+- G8YSAI5Z : un 2e règlement sur un dossier déjà réglé.
+- df0ce30c et 78bb247a : des écarts d'honoraires.
+- MQ6H8TVQ : pas de facture, et PITIOT est absent de l'annuaire.
+- Les 3 dates antérieures à leur compromis (LKBO1TOH, 87QOXR64, 8NZ6V6XB).
+- O6R10ZQA : son double PAOLONE.
+
+**Puis la sentinelle** (trois gestes, chacun à son accord).
+
+⛔ Rien d'écrit chez Hektor ni dans le Sheet.

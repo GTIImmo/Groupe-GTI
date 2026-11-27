@@ -6300,6 +6300,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   temoin inverse 4/8.
 - Correction : les inverses ne jugent que leur part (lecon 31) ; celui de la famille 1 (pose) garde l'ancienne forme, stricte.
 - Rien reste apres les a blanc. Independantes, a son accord.
+
+### 20.95 Le 27/11 (10) : familles 3 et 2 POSEES -- les 47 (+2) faites, sauf ses cas
+
+- Patchs reels verifies identiques a leur a blanc, puis joues chez Supabase : famille 3 (a15bbc33, ed9a346b) et famille 2
+  (37068526, c2477fa3), sans erreur.
+- Relu (les 4 repetitions du jour) : 23 dates (472) ; 6 ventes + 4 chaines au classeur, 0 hektor, 0 sans part, 20 sur
+  supposition, 0 orpheline ; 3647 juste (empreinte globale bougee par la famille 2 : lire ses parts) ; famille 1 inchangee.
+  Mise de cote 168 = 158 + 2 + 8.
+- Registre : 3 744 ventes reglees, 3 686 factures, 472 dates, 17 970 parts. Temoins demain : les 4 repetitions.
+- A lui : G8YSAI5Z, df0ce30c, 78bb247a, MQ6H8TVQ, les 3 anterieures, O6R10ZQA. Puis la sentinelle.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
