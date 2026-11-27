@@ -3101,3 +3101,19 @@ l'identique en supposition ». Elle doit en sortir.
 
 ⛔ Rien d'écrit chez Hektor ni dans le Sheet. **Les trois étapes de son ordre du 27/11 sont faites** : le témoin de 3648, la
 vague des six, le partage de 3647.
+
+### Le 27/11 (6) : la constante périmée du relecteur levée — il sort en code 0, et son témoin inverse mord
+
+**Son mot** : « Oui » (mettre à jour la constante `LES_DEUX_DE_E` du relecteur).
+
+**① Le changement, une seule ligne** de `phase2/checks/relire_la_colonne_a_contre_le_protocole_2026-11-25.py` :
+`LES_DEUX_DE_E` passe de `["P252U1JH", "d2108609"]` à `[]`, avec la raison en commentaire. Son ordre du 27/11 a mis ces deux
+lignes dans la vague2a, et elles sont relues avec elle comme toutes les autres. Aucun autre fichier n'appelle cette constante.
+
+**② Le relecteur rejoué sur les sept vagues** (10:30) : **TOUT EST JUSTE, code 0**. 4 731 cases, 0 fausse, 0 hors des
+vagues, 0 manquante, 0 étiquette sur deux lignes ; les quatre doubles vides ; 0 ligne non tranchée remplie.
+
+**③ Le témoin inverse** : le même relecteur, sans la vague2a dans ses arguments, sort en **code 1**. Il voit les 6 cases
+« hors des vagues » (9Q0FHAKK, HUY49KEC, P252U1JH, PEE1XTR8, a360d9e3, d2108609). Il mord donc toujours.
+
+⛔ Rien d'écrit en base, dans le Sheet ni chez Hektor.

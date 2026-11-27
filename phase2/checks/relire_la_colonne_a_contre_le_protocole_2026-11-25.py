@@ -30,7 +30,7 @@ import protocole_classeur as P  # noqa: E402
 import piece_copie_ou_vraie as PC  # noqa: E402
 
 DOUBLES = ["3308P0UX", "YRUF0S9H", "T2GZOY5O", "O6R10ZQA"]
-LES_DEUX_DE_E = ["P252U1JH", "d2108609"]
+LES_DEUX_DE_E = []  # 27/11 : SON ordre a mis P252U1JH et d2108609 dans la vague2a (ecrites 10:09, relues avec elle) -- l'attente « vides » du 25/11 est levee
 
 
 def main() -> int:

@@ -6265,6 +6265,13 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   sauvegarde 2 lignes, cle primaire, RLS, illisible par authenticated et anon.
 - Temoin : _REPETITION apres 05:35 (memes parts, datees 27/11 09:27:49 UTC). Inverse pret (8b671f08).
 - Son ordre du 27/11 est fait en entier : temoin de 3648, vague des six, partage de 3647.
+
+### 20.91 Le 27/11 (6) : la constante LES_DEUX_DE_E du relecteur levee -- code 0 sur les 7 vagues, temoin inverse 1
+
+- Son « Oui ». Une ligne : LES_DEUX_DE_E = [] (P252U1JH et d2108609 sont dans la vague2a par son ordre du 27/11). Aucun autre
+  appelant.
+- Rejoue sur les 7 vagues : TOUT EST JUSTE, code 0 (4 731 cases, 0 fausse, 0 hors vague, 0 manquante).
+- Temoin inverse : sans la vague2a, code 1, ses 6 cases « hors des vagues ».
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
