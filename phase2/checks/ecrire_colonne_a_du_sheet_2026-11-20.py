@@ -96,7 +96,10 @@ SOCLE_PROTOCOLE = Path(r"C:\Hektor\chantier_classeur_q6_cache\protocole\socle.sq
 #: ⭐ SON MOT DU 26/11 : « l'ecrivain au passage 82 (il lit encore le 81, je l'ai vu ligne 95) » -- le passage OFFICIEL 82
 #  (26/11 10:22, juge v23.1, socle 5ca7c766, empreinte des verdicts b7dae92e ; temoin : il rend a l'identique les 4 725
 #  cases deja ecrites).
-PASSAGE_DU_PROTOCOLE = 82
+#: ⭐ SON MOT DU 27/11 AU SOIR : « fais passer l'ecrivain au 84 » -- le passage OFFICIEL 84 (R30a validee ; temoin d'apres
+#  VERT : 0 verdict, 0 etiquette changes contre le 82, 188 pieces rattachees ; temoins de l'ecrivain 4 733 et 4 731). Le 83
+#  (rouge) reste au socle comme trace : on ne le lit pas.
+PASSAGE_DU_PROTOCOLE = 84
 SORTIES = Path(r"C:\Hektor\Backups\classeur_colonne_a")
 SORTIES_SIMULATION = Path(r"C:\Hektor\chantier_classeur_q6_cache\ecrivain_colonne_a_simulation")
 

@@ -68,8 +68,10 @@ DDL = {
 DDL_FICHIER = ("nom text primary key, origine text not null, octets bigint not null, md5 text not null, "
                "contenu bytea not null")
 IMAGE_OFFICIELLE = "2026-11-26_094931"   # l'image du passage officiel 82
-FICHIERS = ([P.DOSSIER / "entrees_passage_81.json", P.DOSSIER / "entrees_passage_82.json",
-             P.DOSSIER / "mandants_des_biens_2026-11-23.json", P.DOSSIER.parent / "v3_calcul.json"]
+# 27/11 au soir : les entrees de CHAQUE passage officiel a partir du 81 (83 rouge, garde comme trace ; 84 vert) -- meme image
+FICHIERS = (sorted((f for f in P.DOSSIER.glob("entrees_passage_*.json") if int(f.stem.rsplit("_", 1)[1]) >= 81),
+                   key=lambda f: int(f.stem.rsplit("_", 1)[1]))
+            + [P.DOSSIER / "mandants_des_biens_2026-11-23.json", P.DOSSIER.parent / "v3_calcul.json"]
             + [P.IMAGES / IMAGE_OFFICIELLE / f for f in ("manifeste.json", "sheet.json", "gel.json", "t6_photo.json")])
 
 

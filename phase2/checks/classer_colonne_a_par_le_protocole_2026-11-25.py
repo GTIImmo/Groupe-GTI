@@ -51,9 +51,11 @@ SOCLE = P.DOSSIER / "socle.sqlite"
 #: ⭐ SON MOT DU 26/11 : « Pour 9Q0FHAKK, vas-y dans cet ordre : l'ecrivain au passage 82 (il lit encore le 81, je l'ai vu
 #  ligne 95) » -- le passage OFFICIEL 82 (26/11 10:22, socle 5ca7c766, empreinte des verdicts b7dae92e). Le classement du
 #  81 reste tel quel dans son fichier du 25/11 ; celui du 82 va dans un fichier NEUF (jamais d'ecrasement).
-PASSAGE = 82
+#  ⭐ 27/11 au soir (son mot : « fais passer l'ecrivain au 84 ») : le passage OFFICIEL 84 ; son classement va dans un
+#  fichier NEUF, celui du 82 reste tel quel.
+PASSAGE = 84
 PAR_LE_GEL = NOTICE / "CLASSEMENT_COLONNE_A_APRES_LA_VAGUE_2026-11-25.csv"
-SORTIE = NOTICE / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-26_PASSAGE_82.csv"
+SORTIE = NOTICE / "CLASSEMENT_COLONNE_A_PAR_LE_PROTOCOLE_2026-11-27_PASSAGE_84.csv"
 ORDRE = ["A_DEJA_REMPLIE", "PAS_TRANCHEE", "C5_SEULE", "PLUSIEURS_DOSSIERS", "ARRIVEE_NON_TENUE", "DOUBLE_DE_SAISIE",
          "ETIQUETTE_DEJA_EN_A", "DECISION_B", "DECISION_19", "VAGUE_1"]
 #: ⚠ 25/11 : 8NZ6V6XB est une des 19 de sa decision du 20/11 -- l'ecrivain la refusait DEJA (lire_hors_vague) ; le
