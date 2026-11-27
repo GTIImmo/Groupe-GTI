@@ -3186,3 +3186,31 @@ Sheet (vente_reglee_app, numero_facture_app : circulaires) ». Poser la famille 
 - **Puis la sentinelle** : trois gestes, chacun à son accord.
 
 ⛔ Rien n'est écrit en base, dans le Sheet ni chez Hektor. **La famille 1 attend son accord.**
+
+### Le 27/11 (8) : la famille 1 POSÉE (11:03) — 9 ventes réglées et leurs 9 factures, relues justes
+
+**Son mot** : « Oui » (poser la famille 1).
+
+**① La pose** : `supabase/patch_ventes_reglees_famille1_2026-11-27.sql` (md5 19d690d8), joué chez Supabase à 11:03:55.
+C'est le même corps que l'essai à blanc. Il est passé sans erreur, donc gardes et contrôles sont verts, l'empreinte d'après
+c283c736 comprise, et il s'est commité.
+
+**② La relecture** (le pooler, en lecture seule, `_REPETITION`, 11:04) :
+- les 9 ventes portent leur règlement et leur facture, mot pour mot ;
+- le registre compte **3 738 ventes réglées** (3 729 + 9) et **3 680 factures** (3 671 + 9) ;
+- 0 vente réglée sans part ; les ventes réglées sur des parts supposées seules restent 20 ;
+- le journal a ses 18 lignes ;
+- la sauvegarde datée a 9 lignes, toutes vides avant, avec sa clé primaire et la RLS, illisible par authenticated et anon.
+- Retour arrière : `_INVERSE` (f85cce2a). Il ne remet à vide que les cases qui portent encore la valeur du lot.
+
+**③ Le témoin du lendemain** : rejouer `_REPETITION` après le run. Les colonnes `_app` ne sont pas réécrites par Hektor, mais
+on le prouve.
+
+**Ce qui reste des 47 (+2), chacun à son mot.**
+- **La famille 2** : les 7 où seule la case « Prix » est fautive. 5 de leurs chaînes n'ont que des parts supposées : recopier
+  d'abord leurs parts du classeur (sa décision).
+- **La famille 3** : les 23 dates posables, à mesurer d'abord contre R27 ②.
+- **Les cas qui sont à lui** : G8YSAI5Z ; df0ce30c et 78bb247a ; les 3 dates antérieures ; O6R10ZQA.
+- **Puis la sentinelle.**
+
+⛔ Rien d'écrit chez Hektor ni dans le Sheet.

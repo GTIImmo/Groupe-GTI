@@ -6283,6 +6283,13 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   Patch 19d690d8 : gardes (cases vides, fe8ded18, 3 729), sauvegarde avec cle primaire + RLS, journal 18, controles
   (+9 / +9, 0 sans part, 20 sur supposition), empreinte d'apres c283c736. A blanc VERT (10:56), rien reste.
 - Suite a son mot : la famille 2 (5 chaines a parts supposees : recopier d'abord), la famille 3 (R27 d'abord), puis la sentinelle.
+
+### 20.93 Le 27/11 (8) : la famille 1 POSEE (11:03:55) -- 9 ventes reglees + 9 factures, relues justes
+
+- Patch 19d690d8 joue chez Supabase a son accord, sans erreur (empreinte d'apres c283c736), commite.
+- Relu au pooler : 3 738 ventes reglees (+9), 3 680 factures (+9), 0 vente reglee sans part, 20 sur supposition (inchange),
+  journal 18, sauvegarde 9 lignes avec cle primaire + RLS. Inverse pret (f85cce2a). Temoin : _REPETITION apres le run.
+- Reste a son mot : la famille 2 (recopier d'abord les parts de 5 chaines), la famille 3 (R27 d'abord), ses cas, la sentinelle.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
