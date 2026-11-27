@@ -3988,3 +3988,9 @@ vente signé » à 19 px ; « planCadastralNormalise.pdf » passait sous la past
 morceau 7 de `RecuManque.css`) : l'état passe SOUS le nom, un nom sans espace se coupe. Éprouvé en direct sur la fiche en ligne
 avant d'être écrit. `test_ged_telephone_v3.cjs` **7 VERT**, témoin 5 ROUGE. Commité, PAS POUSSÉ. Non vérifié : « Voir le suivi »
 cliqué au téléphone (il faut un document en signature Youtrust ; l'essai fixe le chemin).
+**✅ LE CORRECTIF EST EN LIGNE (27/11, « Oui, pousse »)** : `3beef02` était DÉJÀ sur `origin/main` -- une autre session l'a
+emporté avec son propre envoi (il est l'ancêtre de `2dc9f07`) ; rien n'a été poussé par moi ce jour. Le CSS en ligne
+(`index-D7EbXzRj.css`) porte les règles. Vu sur 18849 au téléphone (iframe 390 px, lecture seule ; seuls les 5 groupes ont été
+dépliés à l'écran) : **20 lignes pour 20 documents, chaque nom large de 178 px, 0 nom écrasé, 0 état sur le nom, 0 débordement**,
+l'état sous le nom sur les 20 lignes ; « Mandat de vente signé » entier, « planCadastralNormalise.pd/f » coupé à la ligne ; page
+373 px.
