@@ -1,0 +1,447 @@
+-- A BLANC de patch_3bis_lot_c_repartitions_2026-11-27 -- ETAPE 3 BIS, LOT C (les repartitions qui manquent), chez nous seulement, jamais chez Hektor
+-- Genere par phase2/checks/etape_3bis_lot_c_repartitions_generer_patch_2026-11-27.py (passage officiel 84, image 2026-11-26_094931)
+-- ⛔ SANS commit : il finit par une erreur VOULUE.
+
+begin;
+-- 1. LA GARDE : aucune de ces 203 chaines ne porte de part, et rien du lot n'est pose
+do $$ begin
+  if exists (select 1 from public.app_affaire_repartition where app_chaine_id in (21, 22, 26, 117, 178, 200, 1061, 1104, 1229, 1266, 1335, 2451, 2507, 2533, 2642, 3588, 4132, 4178, 4179, 4197, 4268, 4289, 4329, 4353, 4370, 4387, 4483, 4500, 4510, 4533, 4542, 4560, 4596, 4621, 4651, 4654, 4661, 4669, 4746, 4771, 4858, 6157, 6341, 6433, 6557, 7115, 7294, 7449, 7450, 7546, 7580, 7605, 7610, 7645, 7646, 7768, 7779, 7903, 7943, 8868, 11139, 11182, 11188, 11205, 11356, 11374, 11501, 11516, 11558, 11579, 11598, 11729, 11791, 11957, 14111, 14131, 14143, 14810, 14816, 14941, 15005, 15096, 16017, 16114, 16342, 16343, 16378, 16383, 16838, 16870, 17133, 17209, 17301, 17321, 17366, 17389, 17410, 17411, 17428, 17431, 17433, 17434, 17525, 17651, 19074, 19095, 19104, 19130, 19132, 19142, 19456, 19512, 19612, 19657, 19665, 19815, 19830, 20247, 20268, 20277, 20301, 20309, 20408, 20492, 20513, 21585, 21598, 21616, 21947, 21965, 22008, 22018, 22024, 22086, 22087, 22209, 22256, 23054, 23057, 23335, 23412, 23426, 23801, 23931, 24108, 24311, 24320, 24331, 24401, 24412, 24454, 24495, 24512, 24564, 24573, 24588, 24610, 25877, 25890, 26016, 26024, 26028, 26034, 26043, 26072, 26155, 26605, 26615, 27101, 27134, 27140, 27170, 27240, 27427, 27449, 27484, 27513, 27556, 27560, 27661, 27679, 27687, 28269, 28930, 30801, 30809, 30820, 30821, 30824, 30825, 30826, 30829, 30830, 30836, 30837, 30841, 30842, 30843, 30845, 30848, 1000105, 1000116, 1000126))
+     or exists (select 1 from public.app_affaire_repartition where ecrit_par = 'classeur:3bisC:2026-11-27') then
+    raise exception '⛔ garde : une de ces chaines porte deja une part (ou le lot est pose) -- rien n''est ecrit';
+  end if;
+end $$;
+-- 2. LES PARTS (419), origine classeur_reconstitue (celle du 13/11 : elle protege la chaine la nuit)
+insert into public.app_affaire_repartition (app_chaine_id, app_dossier_id, cote, rang, hektor_user_id,
+       nom_au_moment, pourcentage, origine, ecrit_par)
+values
+  (24512, 1377728, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0IS41BM1
+  (24512, 1377728, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0IS41BM1
+  (22256, 1373754, 'entree', 1, '173', 'BARDOTTI', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0L1C7AGG
+  (22256, 1373754, 'sortie', 1, '173', 'BARDOTTI', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0L1C7AGG
+  (24588, 1377798, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0OO1BEZD
+  (24588, 1377798, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0OO1BEZD
+  (26024, 1380013, 'entree', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0TECT361
+  (26024, 1380013, 'sortie', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0TECT361
+  (1000126, 5866846, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0V00SLEU
+  (1000126, 5866846, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0V00SLEU
+  (26034, 1380063, 'entree', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0V3UQ41Y
+  (26034, 1380063, 'sortie', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0V3UQ41Y
+  (24108, 1377167, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0VASTLW2
+  (24108, 1377167, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 0VASTLW2
+  (27513, 1383752, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 1D7EIYKW
+  (27513, 1383752, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 1D7EIYKW
+  (20247, 1370495, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 1P6VET6U
+  (20247, 1370495, 'sortie', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 1P6VET6U
+  (30825, 7589455, 'entree', 1, '51', 'PEREIRA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 1eec6575
+  (30825, 7589455, 'sortie', 1, '51', 'PEREIRA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 1eec6575
+  (27101, 1383252, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 25QYWG2U
+  (27101, 1383252, 'sortie', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 25QYWG2U
+  (27484, 1383705, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 265KVIXP
+  (27484, 1383705, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 265KVIXP
+  (6157, 1338037, 'entree', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2DUPM26R
+  (6157, 1338037, 'sortie', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2DUPM26R
+  (4654, 1392517, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2FOH8HE4
+  (4654, 1392517, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2FOH8HE4
+  (27140, 1383310, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2HOL5ISX
+  (27140, 1383310, 'sortie', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2HOL5ISX
+  (19095, 1368424, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2IK4EYXH
+  (19095, 1368424, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2IK4EYXH
+  (23801, 1376548, 'entree', 1, '75', 'RAYNAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2c2566d7
+  (23801, 1376548, 'sortie', 1, '75', 'RAYNAUD', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2c2566d7
+  (23801, 1376548, 'sortie', 2, '42', 'JOURGET', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 2c2566d7
+  (4771, 1336289, 'entree', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 3936NZOO
+  (4771, 1336289, 'sortie', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 3936NZOO
+  (17301, 1365096, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 39ZNKH9W
+  (17301, 1365096, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 39ZNKH9W
+  (17434, 1365554, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 3ID282Y1
+  (17434, 1365554, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 3ID282Y1
+  (4746, 1336237, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 3W10AEIK
+  (4746, 1336237, 'sortie', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 3W10AEIK
+  (4132, 1391714, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 43YX9GLG
+  (4132, 1391714, 'sortie', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 43YX9GLG
+  (22018, 1373265, 'entree', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 4D2J48XD
+  (22018, 1373265, 'sortie', 1, '199', 'SANGUIN', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 4D2J48XD
+  (22018, 1373265, 'sortie', 2, '77', 'BILLIG', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 4D2J48XD
+  (24454, 1377623, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 4PW2L3MG
+  (24454, 1377623, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 4PW2L3MG
+  (17428, 1365545, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 515RUEN3
+  (17428, 1365545, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 515RUEN3
+  (30830, 1384856, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 54376c72
+  (30830, 1384856, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 54376c72
+  (30837, 1344361, 'entree', 1, '42', 'JOURGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 55b49232
+  (30837, 1344361, 'sortie', 1, '42', 'JOURGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 55b49232
+  (30845, 7589154, 'entree', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 571ffe9e
+  (30845, 7589154, 'sortie', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 571ffe9e
+  (2507, 1387460, 'entree', 1, '31', 'DECHAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5H9BOKWJ
+  (2507, 1387460, 'sortie', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5H9BOKWJ
+  (4197, 1391820, 'entree', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5R6RC36Y
+  (4197, 1391820, 'sortie', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5R6RC36Y
+  (19657, 1369489, 'entree', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5SDJ4B0P
+  (19657, 1369489, 'sortie', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5SDJ4B0P
+  (30842, 1388373, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5b876774
+  (30842, 1388373, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5b876774
+  (30820, 1388303, 'entree', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5e4c8881
+  (30820, 1388303, 'sortie', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 5e4c8881
+  (17389, 1365377, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 60CLRO51
+  (17389, 1365377, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 60CLRO51
+  (19130, 1368491, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 61OW86CS
+  (19130, 1368491, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 61OW86CS
+  (4179, 1391793, 'entree', 1, '245', 'FARGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 61TDWJ65
+  (4179, 1391793, 'sortie', 1, '245', 'FARGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 61TDWJ65
+  (19612, 1369416, 'entree', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 644UYQNA
+  (19612, 1369416, 'sortie', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 644UYQNA
+  (20309, 1370553, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 676XP6GN
+  (20309, 1370553, 'sortie', 1, '70', 'BOUCHET', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 676XP6GN
+  (20309, 1370553, 'sortie', 2, '32', 'GENTES', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 676XP6GN
+  (14143, 1356287, 'entree', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 6D1WSAK8
+  (14143, 1356287, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 6D1WSAK8
+  (25890, 1379607, 'entree', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 6N2UPC4E
+  (25890, 1379607, 'sortie', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 6N2UPC4E
+  (2451, 1387178, 'entree', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 6W6F4A4R
+  (2451, 1387178, 'sortie', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 6W6F4A4R
+  (30824, 3824828, 'entree', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 70740f2f
+  (30824, 3824828, 'sortie', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 70740f2f
+  (11139, 1350554, 'entree', 1, '51', 'PEREIRA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 774aa002
+  (11139, 1350554, 'sortie', 1, '51', 'PEREIRA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 774aa002
+  (117, 10140, 'entree', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7HDK9XOG
+  (117, 10140, 'sortie', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7HDK9XOG
+  (7115, 1340968, 'entree', 1, '149', 'CAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7JXLR3JQ
+  (7115, 1340968, 'sortie', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7JXLR3JQ
+  (26016, 1379946, 'entree', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7MOMHHQ1
+  (26016, 1379946, 'sortie', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7MOMHHQ1
+  (22, 1100105, 'entree', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7NI4WKV5
+  (22, 1100105, 'sortie', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7NI4WKV5
+  (2533, 1387815, 'entree', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7PTB8Z3M
+  (2533, 1387815, 'sortie', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7PTB8Z3M
+  (24573, 1377787, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7T8CMWY6
+  (24573, 1377787, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 7T8CMWY6
+  (19104, 1368438, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 80MU6MMO
+  (19104, 1368438, 'sortie', 1, '68', 'GIRAUD', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 80MU6MMO
+  (19104, 1368438, 'sortie', 2, '72', 'VALLA A', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 80MU6MMO
+  (21, 1100105, 'entree', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 8GIIDS5T
+  (21, 1100105, 'sortie', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 8GIIDS5T
+  (11558, 1351504, 'entree', 1, '178', 'ALVES MENDES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 8NZ6V6XB
+  (11558, 1351504, 'sortie', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 8NZ6V6XB
+  (4387, 1392113, 'entree', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 8RWTD0YX
+  (4387, 1392113, 'sortie', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 8RWTD0YX
+  (23931, 1376844, 'entree', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9706WM9J
+  (23931, 1376844, 'sortie', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9706WM9J
+  (4268, 1391951, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9FP3UICY
+  (4268, 1391951, 'sortie', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9FP3UICY
+  (27560, 1383825, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9HPGTRWV
+  (27560, 1383825, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9HPGTRWV
+  (17525, 1365788, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9JHY3CPQ
+  (17525, 1365788, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9JHY3CPQ
+  (21598, 1372111, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9K4Y3S4N
+  (21598, 1372111, 'sortie', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9K4Y3S4N
+  (11957, 1351910, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9UO5NUN6
+  (11957, 1351910, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- 9UO5NUN6
+  (1061, 1349177, 'entree', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- AHKQI7MX
+  (1061, 1349177, 'sortie', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- AHKQI7MX
+  (7580, 1341915, 'entree', 1, '151', 'MALEYSSON', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- BUC1UXJH
+  (7580, 1341915, 'sortie', 1, '151', 'MALEYSSON', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- BUC1UXJH
+  (16870, 1363965, 'entree', 1, '175', 'BLACHIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CA2XNF38
+  (16870, 1363965, 'sortie', 1, '175', 'BLACHIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CA2XNF38
+  (4661, 1336073, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CBBZXB2O
+  (4661, 1336073, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CBBZXB2O
+  (19142, 1368511, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CC678DGO
+  (19142, 1368511, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CC678DGO
+  (16383, 1362132, 'entree', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CITFQGOB
+  (16383, 1362132, 'sortie', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CITFQGOB
+  (26043, 1380066, 'entree', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CPM9OKZE
+  (26043, 1380066, 'sortie', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CPM9OKZE
+  (26, 1100105, 'entree', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CW4IYXO2
+  (26, 1100105, 'sortie', 1, '29', 'FORLICO', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CW4IYXO2
+  (19512, 1369175, 'entree', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CYZA6GYS
+  (19512, 1369175, 'sortie', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- CYZA6GYS
+  (22086, 1373388, 'entree', 1, '73', 'FERNANDEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D3MEX415
+  (22086, 1373388, 'sortie', 1, '73', 'FERNANDEZ', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D3MEX415
+  (22086, 1373388, 'sortie', 2, '199', 'SANGUIN', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D3MEX415
+  (17433, 1365554, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D96KSCYQ
+  (17433, 1365554, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D96KSCYQ
+  (17366, 1365248, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D9MMB7OU
+  (17366, 1365248, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- D9MMB7OU
+  (11501, 1351325, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DA57BFXT
+  (11501, 1351325, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DA57BFXT
+  (17133, 1364619, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DEZQM9HM
+  (17133, 1364619, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DEZQM9HM
+  (20408, 1370633, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DHG4SD0N
+  (20408, 1370633, 'sortie', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DHG4SD0N
+  (7450, 1341620, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DN5U3GER
+  (7450, 1341620, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- DN5U3GER
+  (22008, 1373249, 'entree', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- E071BARG
+  (22008, 1373249, 'sortie', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- E071BARG
+  (20268, 1370524, 'entree', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- E1WD68ZB
+  (20268, 1370524, 'sortie', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- E1WD68ZB
+  (1104, 1351054, 'entree', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- E6RLLKMN
+  (1104, 1351054, 'sortie', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- E6RLLKMN
+  (27687, 1383976, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- EHQQU5U7
+  (27687, 1383976, 'sortie', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- EHQQU5U7
+  (27427, 1383659, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- EKRHN9WR
+  (27427, 1383659, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- EKRHN9WR
+  (27679, 1383974, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- F5GA770R
+  (27679, 1383974, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- F5GA770R
+  (14816, 1358179, 'entree', 1, '52', 'BERGER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FJS4IJGZ
+  (14816, 1358179, 'sortie', 1, '52', 'BERGER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FJS4IJGZ
+  (8868, 1344346, 'entree', 1, '42', 'JOURGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FMVORN8Y
+  (8868, 1344346, 'sortie', 1, '42', 'JOURGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FMVORN8Y
+  (4858, 1336422, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FP2KQU83
+  (4858, 1336422, 'sortie', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FP2KQU83
+  (20277, 1370532, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FUDJ9CJC
+  (20277, 1370532, 'sortie', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FUDJ9CJC
+  (4370, 1392090, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FWCFAN6O
+  (4370, 1392090, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- FWCFAN6O
+  (4329, 1392032, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- G41FTEZ8
+  (4329, 1392032, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- G41FTEZ8
+  (26605, 1381999, 'entree', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- G88ISQKI
+  (26605, 1381999, 'sortie', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- G88ISQKI
+  (4178, 1391793, 'entree', 1, '245', 'FARGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- GN8TANP8
+  (4178, 1391793, 'sortie', 1, '245', 'FARGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- GN8TANP8
+  (11598, 1351552, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- GUUVDY2S
+  (11598, 1351552, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- GUUVDY2S
+  (4669, 1336102, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- GYGF5F1X
+  (4669, 1336102, 'sortie', 1, '160', 'REMAUDIERE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- GYGF5F1X
+  (27449, 1383682, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- H78FD3YN
+  (27449, 1383682, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- H78FD3YN
+  (11729, 1351682, 'entree', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HBZQXR67
+  (11729, 1351682, 'sortie', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HBZQXR67
+  (23057, 1375147, 'entree', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HJTL7XCC
+  (23057, 1375147, 'sortie', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HJTL7XCC
+  (20301, 1370550, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HORVRQ6N
+  (20301, 1370550, 'sortie', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HORVRQ6N
+  (7449, 1341620, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HRRSO81C
+  (7449, 1341620, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- HRRSO81C
+  (19456, 1369094, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- I3R03A11
+  (19456, 1369094, 'sortie', 1, '68', 'GIRAUD', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- I3R03A11
+  (19456, 1369094, 'sortie', 2, '67', 'TEYSSONNIER', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- I3R03A11
+  (27134, 1383310, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- IEYXREWQ
+  (27134, 1383310, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- IEYXREWQ
+  (7943, 1342522, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- IQFPEZBB
+  (7943, 1342522, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- IQFPEZBB
+  (17321, 1365111, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- J1C9PJJP
+  (17321, 1365111, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- J1C9PJJP
+  (1000116, 5856679, 'entree', 1, '73', 'FERNANDEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JEK94D31
+  (1000116, 5856679, 'sortie', 1, '73', 'FERNANDEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JEK94D31
+  (21947, 1372960, 'entree', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JJPTIU4H
+  (21947, 1372960, 'sortie', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JJPTIU4H
+  (2642, 1388769, 'entree', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JTC1I5LJ
+  (2642, 1388769, 'sortie', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JTC1I5LJ
+  (19074, 1368398, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JYOLFY1A
+  (19074, 1368398, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- JYOLFY1A
+  (27170, 1383342, 'entree', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KAYC29B7
+  (27170, 1383342, 'sortie', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KAYC29B7
+  (24311, 1377458, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KODULWGN
+  (24311, 1377458, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KODULWGN
+  (22087, 1373388, 'entree', 1, '73', 'FERNANDEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KOYNCSYB
+  (22087, 1373388, 'sortie', 1, '73', 'FERNANDEZ', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KOYNCSYB
+  (22087, 1373388, 'sortie', 2, '199', 'SANGUIN', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KOYNCSYB
+  (11374, 1351208, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KZIM88QE
+  (11374, 1351208, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- KZIM88QE
+  (22024, 1373274, 'entree', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- L86MC4W7
+  (22024, 1373274, 'sortie', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- L86MC4W7
+  (14131, 1356274, 'entree', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- LFHUEPY8
+  (14131, 1356274, 'sortie', 1, '227', 'DESOUSA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- LFHUEPY8
+  (4289, 1391982, 'entree', 1, '36', 'DELAVAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- LKBO1TOH
+  (4289, 1391982, 'sortie', 1, '36', 'DELAVAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- LKBO1TOH
+  (24320, 1377467, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- LQ1AVB07
+  (24320, 1377467, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- LQ1AVB07
+  (26072, 1380263, 'entree', 1, '159', 'VIALETTE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- M1OIXLBA
+  (26072, 1380263, 'sortie', 1, '159', 'VIALETTE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- M1OIXLBA
+  (19830, 1369795, 'entree', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- M3LQT4JY
+  (19830, 1369795, 'sortie', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- M3LQT4JY
+  (11516, 1351376, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- M7P4FBYD
+  (11516, 1351376, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- M7P4FBYD
+  (7646, 1342051, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MAB7DN65
+  (7646, 1342051, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MAB7DN65
+  (7546, 1341852, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MCMUXOFP
+  (7546, 1341852, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MCMUXOFP
+  (27661, 1383956, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MDTBQXVO
+  (27661, 1383956, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MDTBQXVO
+  (24412, 1377578, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MEWRMGTU
+  (24412, 1377578, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MEWRMGTU
+  (20513, 1370701, 'entree', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MLUTE5I1
+  (20513, 1370701, 'sortie', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MLUTE5I1
+  (16114, 1361204, 'entree', 1, '54', 'LABBE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MMP3V5WF
+  (16114, 1361204, 'sortie', 1, '54', 'LABBE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MMP3V5WF
+  (7294, 1341419, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MPCRGJI1
+  (7294, 1341419, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MPCRGJI1
+  (11188, 1350731, 'entree', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MSL64YBY
+  (11188, 1350731, 'sortie', 1, '190', 'DIMARIA', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MSL64YBY
+  (15005, 1358644, 'entree', 1, '53', 'POMBAR', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MY2EIUFQ
+  (15005, 1358644, 'sortie', 1, '53', 'POMBAR', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- MY2EIUFQ
+  (28269, 1385124, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N4AQ2NQP
+  (28269, 1385124, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N4AQ2NQP
+  (11356, 1351161, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N62LJIBY
+  (11356, 1351161, 'sortie', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N62LJIBY
+  (24331, 1377473, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N8M7RKTN
+  (24331, 1377473, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N8M7RKTN
+  (4651, 1392517, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N9J2533O
+  (4651, 1392517, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- N9J2533O
+  (23412, 1375771, 'entree', 1, '178', 'ALVES MENDES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- NOPYBDHI
+  (23412, 1375771, 'sortie', 1, '178', 'ALVES MENDES', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- NOPYBDHI
+  (23412, 1375771, 'sortie', 2, '238', 'CHAMPAGNAC', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- NOPYBDHI
+  (21616, 1372124, 'entree', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- NYEXY2LL
+  (21616, 1372124, 'sortie', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- NYEXY2LL
+  (6341, 1338495, 'entree', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- O1099YC0
+  (6341, 1338495, 'sortie', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- O1099YC0
+  (1000105, 5834522, 'entree', 1, '189', 'ALILI', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- O8BY6AC8
+  (1000105, 5834522, 'sortie', 1, '189', 'ALILI', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- O8BY6AC8
+  (11791, 1351721, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- O9IYE0F0
+  (11791, 1351721, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- O9IYE0F0
+  (14810, 1358163, 'entree', 1, '53', 'POMBAR', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- OCI5ECK2
+  (14810, 1358163, 'sortie', 1, '53', 'POMBAR', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- OCI5ECK2
+  (17431, 1365545, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- OXQSBZ9V
+  (17431, 1365545, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- OXQSBZ9V
+  (4533, 1392378, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- PCDZXTIY
+  (4533, 1392378, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- PCDZXTIY
+  (14941, 1358465, 'entree', 1, '53', 'POMBAR', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Q3KTCMVB
+  (14941, 1358465, 'sortie', 1, '53', 'POMBAR', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Q3KTCMVB
+  (24495, 1377713, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QALNGM20
+  (24495, 1377713, 'sortie', 1, '77', 'BILLIG', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QALNGM20
+  (24495, 1377713, 'sortie', 2, '238', 'CHAMPAGNAC', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QALNGM20
+  (6557, 1339030, 'entree', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QJ9LLT05
+  (6557, 1339030, 'sortie', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QJ9LLT05
+  (4560, 1392417, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QV5AYD2K
+  (4560, 1392417, 'sortie', 1, '161', 'CHANTUREAU', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- QV5AYD2K
+  (19815, 1369747, 'entree', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- R7NU9NPM
+  (19815, 1369747, 'sortie', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- R7NU9NPM
+  (7605, 1341975, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- R90OQT16
+  (7605, 1341975, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- R90OQT16
+  (4596, 1392465, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RAQTPG0M
+  (4596, 1392465, 'sortie', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RAQTPG0M
+  (19665, 1369492, 'entree', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RD4LZYW0
+  (19665, 1369492, 'sortie', 1, '69', 'PEYRARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RD4LZYW0
+  (4542, 1392388, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RGCEC677
+  (4542, 1392388, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RGCEC677
+  (16378, 1362132, 'entree', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RX6J289Y
+  (16378, 1362132, 'sortie', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- RX6J289Y
+  (200, 18371, 'entree', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- S3J2JV0O
+  (200, 18371, 'sortie', 1, '30', 'LEGRAND', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- S3J2JV0O
+  (200, 18371, 'sortie', 2, '67', 'TEYSSONNIER', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- S3J2JV0O
+  (23054, 1375146, 'entree', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- SBH4QWDW
+  (23054, 1375146, 'sortie', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- SBH4QWDW
+  (25877, 1379588, 'entree', 1, '163', 'KUS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- T0WL4QE7
+  (25877, 1379588, 'sortie', 1, '163', 'KUS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- T0WL4QE7
+  (3588, 1390709, 'entree', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- T58W1AXB
+  (3588, 1390709, 'sortie', 1, '32', 'GENTES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- T58W1AXB
+  (6433, 1338682, 'entree', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TCB4ZNQO
+  (6433, 1338682, 'sortie', 1, '52', 'BERGER', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TCB4ZNQO
+  (6433, 1338682, 'sortie', 2, '149', 'CAVARD', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TCB4ZNQO
+  (4621, 1392482, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TND2I31B
+  (4621, 1392482, 'sortie', 1, '238', 'CHAMPAGNAC', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TND2I31B
+  (4621, 1392482, 'sortie', 2, '161', 'CHANTUREAU', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TND2I31B
+  (15096, 1358962, 'entree', 1, '52', 'BERGER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TO8OJMH3
+  (15096, 1358962, 'sortie', 1, '52', 'BERGER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TO8OJMH3
+  (23426, 1375800, 'entree', 1, '178', 'ALVES MENDES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TSIV5DTS
+  (23426, 1375800, 'sortie', 1, '178', 'ALVES MENDES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TSIV5DTS
+  (16838, 1363925, 'entree', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TZ7MOW1S
+  (16838, 1363925, 'sortie', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- TZ7MOW1S
+  (7903, 1342455, 'entree', 1, '171', 'LEGER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UAER0F0F
+  (7903, 1342455, 'sortie', 1, '171', 'LEGER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UAER0F0F
+  (11182, 1350727, 'entree', 1, '115', 'REYNAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UBISDN7Z
+  (11182, 1350727, 'sortie', 1, '115', 'REYNAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UBISDN7Z
+  (23335, 1375652, 'entree', 1, '75', 'RAYNAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UH6DNQHK
+  (23335, 1375652, 'sortie', 1, '75', 'RAYNAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UH6DNQHK
+  (21965, 1373083, 'entree', 1, '148', 'CATTIAUX', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UIM5TBKS
+  (21965, 1373083, 'sortie', 1, '148', 'CATTIAUX', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UIM5TBKS
+  (11579, 1351529, 'entree', 1, '157', 'BARBE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ULFVA1AQ
+  (11579, 1351529, 'sortie', 1, '157', 'BARBE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ULFVA1AQ
+  (17410, 1365519, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UV6YWU3W
+  (17410, 1365519, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UV6YWU3W
+  (24564, 1377781, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UWNRN6F2
+  (24564, 1377781, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- UWNRN6F2
+  (17209, 1364760, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- V0IDTREF
+  (17209, 1364760, 'sortie', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- V0IDTREF
+  (19132, 1368501, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- V3FO5NDA
+  (19132, 1368501, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- V3FO5NDA
+  (17411, 1365519, 'entree', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VBTXFSYD
+  (17411, 1365519, 'sortie', 1, '67', 'TEYSSONNIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VBTXFSYD
+  (7779, 1342279, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VEP1DVQ4
+  (7779, 1342279, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VEP1DVQ4
+  (4510, 1392281, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VHZ88PLB
+  (4510, 1392281, 'sortie', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VHZ88PLB
+  (7768, 1342275, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VKEQD9PH
+  (7768, 1342275, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VKEQD9PH
+  (4353, 1392061, 'entree', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VM0FHRB3
+  (4353, 1392061, 'sortie', 1, '35', 'JORAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VM0FHRB3
+  (16017, 1360922, 'entree', 1, '54', 'LABBE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VNPQZFM8
+  (16017, 1360922, 'sortie', 1, '54', 'LABBE', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- VNPQZFM8
+  (1266, 1358656, 'entree', 1, '174', 'THIVILLIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- W4P3UL48
+  (1266, 1358656, 'sortie', 1, '174', 'THIVILLIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- W4P3UL48
+  (7645, 1342051, 'entree', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- WBKHIDHS
+  (7645, 1342051, 'sortie', 1, '165', 'LIOGIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- WBKHIDHS
+  (26615, 1382024, 'entree', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- WW88Z2AC
+  (26615, 1382024, 'sortie', 1, '79', 'CROIZIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- WW88Z2AC
+  (20492, 1370674, 'entree', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XCAUACUJ
+  (20492, 1370674, 'sortie', 1, '70', 'BOUCHET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XCAUACUJ
+  (178, 15865, 'entree', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XCK96Z01
+  (178, 15865, 'sortie', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XCK96Z01
+  (27556, 1383822, 'entree', 1, '82', 'HERITIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XHITO8HE
+  (27556, 1383822, 'sortie', 1, '82', 'HERITIER', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XHITO8HE
+  (27556, 1383822, 'sortie', 2, '80', 'BRAVARD', 25.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XHITO8HE
+  (21585, 1372098, 'entree', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XHJF1CC2
+  (21585, 1372098, 'sortie', 1, '72', 'VALLA A', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XHJF1CC2
+  (7610, 1341978, 'entree', 1, '151', 'MALEYSSON', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XMWIRRAB
+  (7610, 1341978, 'sortie', 1, '151', 'MALEYSSON', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XMWIRRAB
+  (24610, 1377819, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XP8L3DAO
+  (24610, 1377819, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XP8L3DAO
+  (17651, 1366045, 'entree', 1, '68', 'GIRAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XVRCFWCK
+  (17651, 1366045, 'sortie', 1, '235', 'VALLA J', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- XVRCFWCK
+  (1229, 1358083, 'entree', 1, '168', 'TRIOLLIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YAML8MHS
+  (1229, 1358083, 'sortie', 1, '168', 'TRIOLLIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YAML8MHS
+  (16343, 1362067, 'entree', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YATQOEPB
+  (16343, 1362067, 'sortie', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YATQOEPB
+  (26028, 1380026, 'entree', 1, '163', 'KUS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YFITUAFH
+  (26028, 1380026, 'sortie', 1, '163', 'KUS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YFITUAFH
+  (27240, 1383430, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YIIWRP17
+  (27240, 1383430, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YIIWRP17
+  (4483, 1392245, 'entree', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YRUF0S9H
+  (4483, 1392245, 'sortie', 1, '238', 'CHAMPAGNAC', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- YRUF0S9H
+  (4500, 1392271, 'entree', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z1EU0WC6
+  (4500, 1392271, 'sortie', 1, '167', 'DEBULOIS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z1EU0WC6
+  (14111, 1356265, 'entree', 1, '180', 'MASSACRIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z3DYDC4X
+  (14111, 1356265, 'sortie', 1, '180', 'MASSACRIER', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z3DYDC4X
+  (22209, 1373641, 'entree', 1, '73', 'FERNANDEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z624CX4D
+  (22209, 1373641, 'sortie', 1, '199', 'SANGUIN', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z624CX4D
+  (1335, 1362958, 'entree', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z6P7KE5R
+  (1335, 1362958, 'sortie', 1, '162', 'CANTY', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- Z6P7KE5R
+  (16342, 1362067, 'entree', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZGNIYS1Z
+  (16342, 1362067, 'sortie', 1, '56', 'MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZGNIYS1Z
+  (24401, 1377575, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZM3XZ6DG
+  (24401, 1377575, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZM3XZ6DG
+  (26155, 1380460, 'entree', 1, '163', 'KUS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZOZ4VNMQ
+  (26155, 1380460, 'sortie', 1, '163', 'KUS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZOZ4VNMQ
+  (11205, 1350748, 'entree', 1, '247', 'THOMAS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZZ5WKMWM
+  (11205, 1350748, 'sortie', 1, '247', 'THOMAS', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ZZ5WKMWM
+  (30848, 7589465, 'entree', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- a360d9e3
+  (30848, 7589465, 'sortie', 1, '81', 'COUDERT', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- a360d9e3
+  (30826, 1387075, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b43e76f5
+  (30826, 1387075, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b43e76f5
+  (30841, 4052215, 'entree', 1, '115', 'REYNAUD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b6495f6a
+  (30841, 4052215, 'sortie', 1, '55', 'STEPHANIE MARTINEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b6495f6a
+  (30836, 5701204, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b72db9d5
+  (30836, 5701204, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b72db9d5
+  (30809, 7589284, 'entree', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b7439331
+  (30809, 7589284, 'sortie', 1, '30', 'LEGRAND', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b7439331
+  (30821, 1386619, 'entree', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b884cbd4
+  (30821, 1386619, 'sortie', 1, '77', 'BILLIG', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- b884cbd4
+  (30843, 1386927, 'entree', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- c214745f
+  (30843, 1386927, 'sortie', 1, '80', 'BRAVARD', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- c214745f
+  (30801, 7589442, 'entree', 1, '40', 'POUGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- c6233284
+  (30801, 7589442, 'sortie', 1, '40', 'POUGET', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- c6233284
+  (28930, 1388276, 'entree', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- fa06e4e5
+  (28930, 1388276, 'sortie', 1, '48', 'GONZALEZ', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- fa06e4e5
+  (30829, 1387873, 'entree', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27'),  -- ffcf30e6
+  (30829, 1387873, 'sortie', 1, '39', 'RIBBES', 50.0, 'classeur_reconstitue', 'classeur:3bisC:2026-11-27');  -- ffcf30e6
+-- 3. LES CONTROLES
+do $$ declare n int; begin
+  select count(*) into n from public.app_affaire_repartition where ecrit_par = 'classeur:3bisC:2026-11-27';
+  if n <> 419 then raise exception '⛔ controle : % parts posees (attendu 419)', n; end if;
+  select count(distinct app_chaine_id) into n from public.app_affaire_repartition where ecrit_par = 'classeur:3bisC:2026-11-27';
+  if n <> 203 then raise exception '⛔ controle : % chaines (attendu 203)', n; end if;
+  select count(*) into n from (select app_chaine_id from public.app_affaire_repartition where ecrit_par = 'classeur:3bisC:2026-11-27'
+   group by 1 having sum(pourcentage) > 100.001) x;
+  if n <> 0 then raise exception '⛔ controle : % chaine(s) au-dela de 100 %%', n; end if;
+  raise notice '✅ lot 3 bis C : 419 parts sur 203 chaines, origine classeur_reconstitue';
+end $$;
+do $$ begin raise exception 'A BLANC LOT 3 BIS C VERT -- RIEN N''EST ECRIT'; end $$;

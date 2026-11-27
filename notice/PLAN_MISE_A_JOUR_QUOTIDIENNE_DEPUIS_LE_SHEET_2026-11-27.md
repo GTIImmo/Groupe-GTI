@@ -583,8 +583,16 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
   - les répartitions : 203 ;
   - COMMENTAIRES : 94 manquants et 107 écarts ;
   - les avis : 27 et 4 écarts.
-  Elles ne touchent ni Hektor ni la nuit (la nuit ne touche ni `app_affaire_note`, ni `app_classeur_avis`,
-  ni `app_affaire_repartition`).
+  Elles ne touchent jamais Hektor. La nuit ne touche ni `app_affaire_note` ni `app_classeur_avis`.
+  ⚠ **Corrigé le 27/11 au soir** : la nuit **réécrit** les parts d'origine « hektor » de `app_affaire_repartition`.
+  Mais `app_repartition_absorber` **saute toute chaîne qui porte une part dont l'origine ne commence pas par
+  « hektor »** : une part `classeur_reconstitue` protège donc sa chaîne.
+- ✅ **Le 27/11 au soir** (carnet § 20.103 et § 20.104) :
+  - **lot A joué** (COMMENTAIRES et avis : 47 notes neuves, 78 paragraphes, 27 lignes d'avis) ;
+  - **lot B fabriqué**, à blanc vert (En attente de : 57 notes neuves, 285 paragraphes) ;
+  - **lot C fabriqué**, à blanc vert (419 parts sur 203 chaînes).
+  - ⭐ **Son constat** : avec R30a, les COMMENTAIRES manquants passent de 94 à 47. La moitié des trous
+    venaient de pièces mal rattachées, pas de valeurs absentes.
 - **Sa règle, telle quelle** : une case vide prend le Sheet ; une case remplie qui diffère, le Sheet gagne.
   - **Pour les notes, jamais d'écrasement** : une note neuve datée, et l'ancienne reste.
   - **Pour une part de répartition qui diffère** : la règle 6, « on ne supprime pas une part, on la met de

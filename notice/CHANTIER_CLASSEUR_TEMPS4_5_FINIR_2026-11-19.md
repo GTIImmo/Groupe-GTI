@@ -6497,6 +6497,24 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   0 texte d'avant abime, 9 saisies, sauvegardes 78 notes + 10 avis (RLS, 0 droit ouvert) ; 43 textes retrouvent un « + ».
 - ⭐ SON CONSTAT, A ECRIRE : la regle R30a a deja rapporte -- les COMMENTAIRES manquants passent de 94 (au 82) a 47 (au
   84). La moitie des trous venaient de PIECES MAL RATTACHEES, pas de valeurs absentes.
+
+### 20.104 Le 27/11 (19) : LOTS B ET C FABRIQUES, A BLANC VERTS -- a son accord
+
+- LOT B, « En attente de » (etape_3bis_lot_b_en_attente_de_generer_patch_2026-11-27.py, derive du lot A) : 57 notes
+  neuves (« [classeur F, suivi en cours au 26/11/2026] » seul, la forme du 17/11) + 285 paragraphes dates ; deja chez
+  nous 426, deja chez nous sans pictogrammes 290 (sa decision du 17/11 : on n'y touche pas) ; ecartees par sa decision du
+  17/11 : 1 537 « V » seuls, 424 pictogrammes seuls, 27 « V + prenom » (14 prenoms NOMMES dans le script ; « V directe »
+  est garde, une vente directe) ; 0 signal. ⚠ L'a blanc a d'abord CRIE (342 marques pour 285 attendues : les 57 notes
+  neuves portent la meme marque) -- le controle corrige, l'a blanc VERT.
+- LOT C, les repartitions (etape_3bis_lot_c_repartitions_generer_patch_2026-11-27.py, la regle du 13/11 telle quelle) :
+  419 parts sur 203 chaines (129 sur un compromis, 74 sur une offre), origine classeur_reconstitue ; 8 lignes illisibles
+  par la regle du 13/11 restent dehors. ⚠ Le 1er a blanc a echoue en SYNTAXE (le commentaire de fin de ligne avalait la
+  virgule) -- rien d'ecrit, corrige, a blanc VERT.
+- ⛔ CORRIGE DANS LE PLAN : « la nuit ne touche pas les repartitions » etait trop large -- la nuit reecrit les parts
+  d'origine hektor ; app_repartition_absorber saute toute chaine qui porte une part non-hektor : une part classeur
+  protege sa chaine.
+- LA PART QUI DIFFERE (hors du lot C, sa regle 6) : U0GQ3KTO, chaine 4385 -- le Sheet « CHAMPAGNAC 50 | JORAND 50 »,
+  chez nous la personne 35 a 100 % (entree 50 + sortie 50, classeur_reconstitue du 13/11).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
