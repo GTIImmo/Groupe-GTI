@@ -3969,3 +3969,62 @@ pas reproduire : ses parcours vivent en mémoire).
   par un lien signé du coffre (image chargée, 1920 px de large). Preuve : `notice/preuve_parcours_vignette_photo_reel_2026-11-20.png`.
 - En base : rouvrir la question n'écrit rien (`maj_le` inchangé à 18:02:59, photo toujours visible) ; 0 travail chez Hektor.
 - P6 est donc **complet en production**. Restent au plan : P5, P7, P8, puis l'épreuve case par case.
+
+## 101. P5-a — L'AVIS DE VALEUR PAR LE PARCOURS GUIDÉ (27/11) : écrit, éprouvé hors ligne et en maquette, NON poussé
+
+**Ses mots** : « Oui, P5 » puis, sur le découpage proposé (P5-a le moteur et les 6 questions à la main ; P5-b les
+propositions de la fiche et des services ; P5-c les points par règles ; P5-d les textes par le rédacteur), « Vas y ».
+La règle de lecture proposée et acceptée : le bien est gardé dans les RÉPONSES pendant les questions (la ligne reste
+« sans bien » : l'auteur seul la lit) ; il est rattaché à la ligne à l'ouverture de l'éditeur (le négociateur du bien et
+l'admin, décision du 19/11). Aucun patch : la table acceptait déjà le genre « avis ».
+
+### 101.1 Ce qui est écrit
+
+- **Les questions en données** : `backend/app/services/parcours_avis.json` — 6 questions (le bien, la valeur, l'état, les
+  points, les charges, les textes et l'envoi ; toile v27, planches 16 à 21) et 23 cases = le brouillon de l'éditeur (24)
+  moins le propriétaire et son e-mail, plus « destinataire » (le propriétaire ou personne : jamais une adresse). La parcelle
+  (hors brouillon) viendra avec P5-b.
+- **Le moteur** (`assistant_parcours.py`) : `questions_posees`, `suivante`, `enregistrer`, `appliquer_depart` prennent
+  `genre` ; sans genre (ou un genre de création) RIEN ne change. Les cases de l'avis sont contrôlées comme l'éditeur les
+  reçoit : montant entier (espaces et « € » retirés), choix de leur liste (contexte, DPE/GES A à G, 1 à 5 étoiles,
+  destinataire), la grille {poste: {niveau, label}} (un poste sans niveau = « je ne sais pas », non gardé), la fourchette
+  dans l'ordre. La vue rend `bien` ; aucun service public pour l'avis.
+- **Le geste** `parcours_avis` (outil `proposer_parcours_avis`, caché comme celui de la création quand l'interrupteur
+  ferme le parcours — `OUTILS_DU_PARCOURS`) : les mêmes cases que la carte directe, plus variante, dpe, ges, chauffage,
+  exposition ; le bien relu avec SON jeton à la carte ET au clic. La consigne : l'avis par le parcours ; la carte directe
+  `ouvrir_avis_de_valeur` reste, quand la personne veut ouvrir l'éditeur tout de suite.
+- **Les routes** : la réponse suit le genre de la ligne ; la fiche de visite, les services publics, les phrases libres et
+  « la fiche est créée » sont REFUSÉS à un avis (propres à la création). Nouvelle route `POST /parcours/{id}/editeur` :
+  l'auteur seul ; le bien RELU avec son jeton (celui gardé dans les réponses ne fait pas foi) ; le parcours rattaché au
+  bien et terminé par une écriture conditionnelle ; elle rend ce que l'éditeur reçoit (ses cases, le barème à part,
+  `sans_destinataire`). Une seconde fois : 409 ; l'écran rouvre l'éditeur depuis la pastille (`ouvertureAvisDeVue`).
+- **L'écran** (`ParcoursGuide.tsx`) : le catalogue de l'avis (les libellés et listes de l'éditeur), une seule forme
+  nouvelle, la GRILLE des 8 postes (planche 18 ; un clic = le niveau, un second = vide), la fourchette proposée à ±5 % de la
+  valeur tant qu'elle n'est pas corrigée à la main (planche 17), les pastilles « 260 000 € · 247 000 € à 273 000 € »,
+  « 4 étoiles · 3 postes » ; la fin « Ouvrir l'éditeur rempli » ; terminé : « Rouvrir l'éditeur rempli » et « Ouvrir la
+  fiche ». La zone du bas n'envoie pas de phrase libre à un avis. `AccueilAssistant.tsx` : la carte « Avis de valeur par
+  questions ». `App.tsx` : « Personne pour l'instant » vide l'e-mail du propriétaire dans l'éditeur (`sansDestinataire`).
+
+### 101.2 Les preuves
+
+- `backend/tests/test_assistant_parcours.py` : **210 verts** (171 + 39 de P5-a). Témoin inverse : le genre retiré de la
+  route des réponses -> l'essai casse à l'endroit attendu ; remis.
+- `apps/hektor-v1/test_etape4_parcours_avis.cjs` (nouveau, lecture seule) : **14 verts** — les cases du serveur = celles de
+  l'écran + la grille ; chacune est une case du brouillon de l'éditeur ; le brouillon n'a en plus que le propriétaire et son
+  e-mail ; les postes, les niveaux et les listes sont les mêmes partout.
+- Inchangés et verts : gestes 415 (45 gestes), socle 31, lecteur 77, traduction 39 (table à jour), fichiers 28, DPE 11,
+  catalogue et couverture de la création, `npm run build`.
+- **Maquette** (1400 × 900) : la carte, « Commencer les questions », le bien (Succession, DPE D), la valeur dite non
+  reposée, l'état (4 étoiles, 3 postes), les points, les charges, « Personne pour l'instant », « Tout est répondu » ;
+  l'éditeur s'ouvre rempli : « Pré-rempli par l'assistant : 14 cases », Succession, 290 000 (265 000 à 304 500), l'e-mail
+  du propriétaire VIDE ; « Rouvrir l'éditeur rempli » le rouvre pareil. La création, rejouée : inchangée.
+- ⚠ **Défaut trouvé en maquette, corrigé** : la grille calculait un clic sur l'état d'AVANT ; deux clics rapides
+  s'écrasaient. Elle part maintenant de la valeur à jour (le piège du compteur, réglé pareil).
+
+### 101.3 Ce que ça pourrait casser ailleurs, et ce qui reste
+
+- La création : mesurée inchangée (essais et maquette). La carte directe de l'avis : inchangée (ses 16 cases).
+- Le choix de l'IA entre la carte directe et le parcours : une phrase de la consigne ; à regarder à l'essai réel.
+- **Non éprouvé en réel** (il faut pousser) : la carte proposée par l'IA, l'ouverture de l'éditeur sur un vrai bien.
+- **Reste** : P5-b (propositions de la fiche et des services : DPE, chauffage, taxe, énergie, valeur du marché, parcelle),
+  P5-c (points et appréciation par règles), P5-d (les textes par le rédacteur), puis P7, P8 et l'épreuve.

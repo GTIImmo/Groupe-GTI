@@ -6518,7 +6518,7 @@ function EstimationDocumentEditor(props: {
   modal?: boolean  // rendu en modale (listing) : ouvert d'emblée, bouton « Retour » qui ferme
   onClose?: () => void
   // 18/11 (étape 4 §70) : ouvert par l'ASSISTANT -- sa dictée passe par-dessus tout, et « Tout générer » se lance seul
-  assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }> }
+  assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }>; sansDestinataire?: boolean }
 }) {
   const { dossier } = props
   const prix = dossier.prix != null && Number.isFinite(Number(dossier.prix)) ? Number(dossier.prix) : null
@@ -6591,7 +6591,7 @@ function EstimationDocumentEditor(props: {
       const estimeeAvis = Number((dernier?.payload.valeurs as Record<string, unknown> | undefined)?.estimee)
       setReprise(dernier ? { le: dernier.le, estimee: Number.isFinite(estimeeAvis) && estimeeAvis > 0 ? estimeeAvis : null } : null)
       setDicteeCases(Object.keys(props.assistant?.champs ?? {}).length + Object.keys(props.assistant?.postes ?? {}).length)
-      if (!Object.keys(scanDraft ?? {}).length && !Object.keys(avis).length && !Object.keys(dictee).length) return
+      if (!Object.keys(scanDraft ?? {}).length && !Object.keys(avis).length && !Object.keys(dictee).length && !props.assistant?.sansDestinataire) return
       setDraft((current) => {
         const merged = { ...current } as Record<string, unknown>
         const normPoste = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -6617,6 +6617,9 @@ function EstimationDocumentEditor(props: {
         if (scanDraft) poser(scanDraft, true)
         poser(avis, true)
         poser(dictee, false)
+        // P5-a (27/11) : le parcours a répondu « Personne pour l'instant » à « À qui l'envoyer ? » (une valeur vide ne
+        //   passe pas par poser) -- l'e-mail de la fiche n'est pas proposé ; la personne peut encore le taper
+        if (props.assistant?.sansDestinataire) merged.recipient = ''
         return merged as typeof current
       })
     })()
@@ -15374,7 +15377,7 @@ export default function App() {
   const [estimationPdfDetailsOpen, setEstimationPdfDetailsOpen] = useState(false)
   const [estimationPdfBusy, setEstimationPdfBusy] = useState(false)
   // Éditeur riche « Avis de valeur » ouvert depuis le listing (même composant que la fiche).
-  const [estimationEditorTarget, setEstimationEditorTarget] = useState<{ dossier: Dossier; detail: DossierDetailPayload; contacts: DetailContact[]; assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }> }; ouvertLe?: number } | null>(null)
+  const [estimationEditorTarget, setEstimationEditorTarget] = useState<{ dossier: Dossier; detail: DossierDetailPayload; contacts: DetailContact[]; assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }>; sansDestinataire?: boolean }; ouvertLe?: number } | null>(null)
   const [estimationEditorLoading, setEstimationEditorLoading] = useState(false)
   const [estimationPdfMsg, setEstimationPdfMsg] = useState<string | null>(null)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
@@ -18364,7 +18367,7 @@ export default function App() {
   // Ouvre l'éditeur riche « Avis de valeur » (même composant que la fiche) depuis le
   // listing : charge le détail complet du dossier + résout le contact propriétaire.
   // 18/11 (§70) : `assistant` = la dictée de la carte « avis de valeur » (l'éditeur la pose par-dessus et calcule seul)
-  async function openEstimationEditor(item: { app_dossier_id: number; hektor_annonce_id?: number | null }, assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }> }) {
+  async function openEstimationEditor(item: { app_dossier_id: number; hektor_annonce_id?: number | null }, assistant?: { champs: Record<string, string>; postes: Record<string, { niveau: string; label: string }>; sansDestinataire?: boolean }) {
     if (estimationEditorLoading) return
     setEstimationEditorLoading(true)
     setEstimationPdfMsg(null)
@@ -28339,7 +28342,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   detail: [l.agence_nom, l.commercial_nom].filter(Boolean).join(' · ') })))}
               onOuvrirAvis={(ouverture) => void openEstimationEditor(
                 { app_dossier_id: ouverture.app_dossier_id, hektor_annonce_id: ouverture.hektor_annonce_id },
-                { champs: ouverture.champs ?? {}, postes: ouverture.postes ?? {} })}
+                // P5-a (27/11) : « Personne pour l'instant » dans le parcours -> l'éditeur vide l'e-mail du propriétaire
+                { champs: ouverture.champs ?? {}, postes: ouverture.postes ?? {}, sansDestinataire: ouverture.sans_destinataire === true })}
               onOuvrirContact={(id) => openContactDirectory(id)}
               onGesteFait={(travail) => { signalerGeste(); if (travail) relireQuandLeTravailFinit({ id: travail }) }}
               onCiter={() => { setRechercheCiter(true); setRechercheGlobaleOuverte(true) }}

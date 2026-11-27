@@ -2748,6 +2748,102 @@ def executer_ouvrir_avis_de_valeur(ctx: ContexteAssistant, p: dict[str, Any]) ->
             "hektor_annonce_id": int(c["bien"]["hektor_annonce_id"]), "champs": c["champs"], "postes": c["postes"]}
 
 
+# ── 27/11 (étape 4 chap. 6, P5-a) : l'AVIS DE VALEUR par le PARCOURS GUIDÉ (toile v27, planches 16 à 21) ──
+# 6 questions à boutons, SANS l'IA (le bien, la valeur, l'état, les points, les charges, les textes et l'envoi), puis
+# l'éditeur s'ouvre rempli. La carte n'écrit que la mémoire du parcours (genre « avis ») ; rien n'est généré ni envoyé :
+# « Générer » reste le clic de la personne DANS l'éditeur.
+# ⛔ Le bien est gardé dans les RÉPONSES (`_bien`) pendant les questions : la ligne reste « sans bien », l'auteur seul la lit.
+#   Il n'est rattaché à la ligne qu'à l'ouverture de l'éditeur (le négociateur du bien et l'admin, règle du 19/11).
+# ⛔ Le propriétaire et son e-mail ne passent jamais ici : l'éditeur les prend sur la fiche ; « destinataire » dit seulement
+#   « le propriétaire » ou « personne ».
+AVIS_EN_PLUS = ("variante", "dpe", "ges", "chauffage", "exposition")  # les cases de l'éditeur que la carte directe n'a pas
+
+
+def _controler_parcours_avis(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    bien = _bien_vivant(ctx, p.get("hektor_annonce_id"))  # relu avec SON jeton : à sa portée
+    brutes = p.get("champs")
+    if isinstance(brutes, dict):
+        brutes = [{"cle": k, "valeur": v} for k, v in brutes.items()]
+    directs = [c for c in brutes or [] if str((c or {}).get("cle") or "").strip() not in AVIS_EN_PLUS]
+    champs = _champs_avis(directs)  # les 16 cases de la carte directe, contrôlées pareil (montants dictés, note 1 à 5)
+    for c in brutes or []:
+        cle = str((c or {}).get("cle") or "").strip()
+        if cle in AVIS_EN_PLUS:
+            try:
+                valeur = parcours_moteur._valeur_avis(cle, str((c or {}).get("valeur") or "").strip())
+            except parcours_moteur.RefusParcours as exc:
+                raise Refus(str(exc)) from None
+            if valeur:
+                champs[cle] = valeur
+    return {"bien": bien, "champs": champs, "postes": _postes_avis(p.get("postes"))}
+
+
+def _depart_avis(c: dict[str, Any], annee: int) -> dict[str, Any]:
+    bien = c["bien"]
+    reponses = {parcours_moteur.CLE_BIEN: {"hektor_annonce_id": int(bien["hektor_annonce_id"]),
+                                           "app_dossier_id": int(bien["app_dossier_id"]),
+                                           "titre": str(bien.get("titre_bien") or "")[:200]}}
+    valeurs: dict[str, Any] = dict(c["champs"])
+    if c["postes"]:
+        valeurs["etatPostes"] = c["postes"]
+    try:
+        return parcours_moteur.appliquer_depart(reponses, valeurs, "demande", annee, genre=parcours_moteur.GENRE_AVIS)
+    except parcours_moteur.RefusParcours as exc:
+        raise Refus(str(exc)) from None
+
+
+def preparer_parcours_avis(ctx: ContexteAssistant, p: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    _parcours_ouvert(ctx)
+    c = _controler_parcours_avis(ctx, p)
+    annee = parcours_moteur.annee_a_paris()
+    depart = _depart_avis(c, annee)
+    suivi = parcours_moteur.etats(depart)
+    posees = parcours_moteur.questions_posees(depart, annee, parcours_moteur.GENRE_AVIS)
+    connues = [q["titre"].lower() for q in posees if suivi.get(q["id"]) == parcours_moteur.ETAT_CONNUE]
+    reste = len(posees) - len(connues)
+    bien = c["bien"]
+    resume = (f"Préparer l'avis de valeur de l'annonce {bien['hektor_annonce_id']} « {bien.get('titre_bien') or ''} » par "
+              "questions guidées. "
+              + (f"Déjà dit, pas reposé : {', '.join(connues)}. " if connues else "")
+              + f"{reste} question{'s' if reste > 1 else ''} à boutons ensuite, sans l'IA. À la fin, l'éditeur de l'avis "
+              "s'ouvre rempli ; rien n'est généré ni envoyé avant ton clic « Générer » dans l'éditeur")
+    parametres: dict[str, Any] = {"hektor_annonce_id": int(bien["hektor_annonce_id"]), "champs": c["champs"],
+                                  "postes": c["postes"]}
+    return resume, parametres
+
+
+def executer_parcours_avis(ctx: ContexteAssistant, p: dict[str, Any]) -> dict[str, Any]:
+    _parcours_ouvert(ctx)  # re-vérifié AU CLIC
+    c = _controler_parcours_avis(ctx, p)  # le bien est-il toujours à sa portée ?
+    annee = parcours_moteur.annee_a_paris()
+    depart = _depart_avis(c, annee)
+    premiere = parcours_moteur.suivante(depart, annee, parcours_moteur.GENRE_AVIS)
+    store = parcours_moteur.ParcoursStore(ctx.settings)
+    ligne = store.creer(ctx.user_id, ctx.conversation_id, parcours_moteur.GENRE_AVIS, premiere["id"] if premiere else None,
+                        depart)
+    return {"ouvrir": "parcours", "parcours": parcours_moteur.vue(ligne, annee)}
+
+
+def ouverture_avis_du_parcours(reponses: dict[str, Any], app_dossier_id: int, hektor_annonce_id: int) -> dict[str, Any]:
+    """Ce que l'éditeur reçoit d'un parcours d'avis (la même forme que la carte directe, plus le destinataire)."""
+    champs = {k: str(v) for k, v in reponses.items()
+              if k in parcours_moteur.CASES_AVIS and k not in ("etatPostes", "destinataire") and str(v or "").strip()}
+    postes = reponses.get("etatPostes") if isinstance(reponses.get("etatPostes"), dict) else {}
+    return {"ouvrir": "avis_de_valeur", "app_dossier_id": app_dossier_id, "hektor_annonce_id": hektor_annonce_id,
+            "champs": champs, "postes": postes, "sans_destinataire": reponses.get("destinataire") == "personne"}
+
+
+def ouvrir_editeur_du_parcours(ctx: ContexteAssistant, ligne: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """La route « Ouvrir l'éditeur rempli » : le bien RELU avec son jeton (toujours à sa portée ?), puis le parcours est
+    rattaché au bien et terminé (une seule fois). Rend (l'ouverture de l'éditeur, la ligne écrite ou None si elle a bougé)."""
+    reponses = dict(ligne.get("reponses") or {})
+    garde = reponses.get(parcours_moteur.CLE_BIEN) if isinstance(reponses.get(parcours_moteur.CLE_BIEN), dict) else {}
+    bien = _bien_vivant(ctx, garde.get("hektor_annonce_id"))
+    app_dossier_id, hektor_annonce_id = int(bien["app_dossier_id"]), int(bien["hektor_annonce_id"])
+    ecrite = parcours_moteur.ParcoursStore(ctx.settings).terminer(ligne, app_dossier_id)
+    return ouverture_avis_du_parcours(reponses, app_dossier_id, hektor_annonce_id), ecrite
+
+
 # ── LOT 2c (17/11/2026) : créer un contact, ajouter une recherche, modifier une recherche ──
 # Note : notice/ETAPE3_AGENT_QUI_AGIT_AUDIT_2026-11-13.md §23-24. Les MÊMES fonctions de la base que l'écran :
 #   app_create_contact_optimistic (modale « Nouveau contact », App.tsx:43554 → api.ts:11774), qui contrôle l'appelant ;
@@ -4242,6 +4338,32 @@ GESTES: dict[str, Geste] = {g.nom: g for g in (
                                                        "label": {"type": "string", "description": "« refait 2019 », ou vide"}},
                                         "required": ["poste", "niveau", "label"], "additionalProperties": False}}}),
           preparer_ouvrir_avis_de_valeur, executer_ouvrir_avis_de_valeur),
+    # 27/11 (étape 4 chap. 6, P5-a) : l'AVIS DE VALEUR par le PARCOURS GUIDÉ (6 questions à boutons, puis l'éditeur rempli)
+    Geste("parcours_avis",
+          "Propose de PRÉPARER L'AVIS DE VALEUR d'un bien EXISTANT par le PARCOURS GUIDÉ : l'application pose ensuite 6 "
+          "questions À BOUTONS (sans toi) -- pour quoi faire, la valeur et sa fourchette, l'état poste par poste, les points "
+          "forts et de vigilance, les charges, les textes et à qui l'envoyer --, puis ouvre l'éditeur rempli ; c'est la "
+          "personne qui clique « Générer » DANS l'éditeur. Passe TOUT ce qu'elle a déjà dit (mêmes cases que "
+          "proposer_ouvrir_avis_de_valeur, plus variante = vente ou succession, dpe / ges = une lettre A à G, chauffage, "
+          "exposition) : une question dont l'essentiel est dit n'est pas reposée. Ne pose PAS toi-même les questions qui "
+          "manquent. Jamais le nom ni l'e-mail du propriétaire : l'éditeur les prend sur la fiche.",
+          TOUS_LES_ROLES,
+          _schema({"hektor_annonce_id": {"type": "string", "description": "le numéro d'annonce du bien"},
+                   "champs": {"type": "array", "description": "les cases dites, ou vide (basse / estimee / haute = euros, "
+                              "etatNote = 1 à 5, variante = vente ou succession, dpe / ges = A à G, taxeFonciere / energie / "
+                              "eau / assurance = euros par an, pointsForts / pointsVigilance = un par ligne, commentaire = "
+                              "avis du conseiller)",
+                              "items": {"type": "object", "properties": {"cle": {"type": "string",
+                                                                                 "enum": [*CHAMPS_AVIS, *AVIS_EN_PLUS]},
+                                                                         "valeur": {"type": "string"}},
+                                        "required": ["cle", "valeur"], "additionalProperties": False}},
+                   "postes": {"type": "array", "description": "l'état dit, poste par poste, ou vide",
+                              "items": {"type": "object",
+                                        "properties": {"poste": {"type": "string", "enum": list(POSTES_AVIS)},
+                                                       "niveau": {"type": "string", "enum": list(NIVEAUX_AVIS)},
+                                                       "label": {"type": "string", "description": "« refait 2019 », ou vide"}},
+                                        "required": ["poste", "niveau", "label"], "additionalProperties": False}}}),
+          preparer_parcours_avis, executer_parcours_avis),
     Geste("couverture_photo",
           "Prépare : mettre une photo VISIBLE en couverture d'une annonce (numéros donnés par lire_photos_bien).",
           TOUS_LES_ROLES,

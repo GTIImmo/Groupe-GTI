@@ -71,6 +71,8 @@ export type OuvertureAvis = {
   hektor_annonce_id: number | null
   champs: Record<string, string>
   postes: Record<string, { niveau: string; label: string }>
+  /** P5-a (27/11) : le parcours a répondu « personne » à « À qui l'envoyer ? » -> l'éditeur vide l'e-mail du propriétaire */
+  sans_destinataire?: boolean
 }
 
 export type ConversationAssistant = { id: string; titre: string; cree_le?: string; maj_le?: string }
@@ -296,7 +298,7 @@ export async function contactDeLaRecherche(cle: string): Promise<string | null> 
 export type ReponseCarte = { ok: boolean; etat: EtatCarte; detail?: string; resultat?: Record<string, unknown> }
 
 export async function validerCarte(id: string): Promise<ReponseCarte> {
-  if (MAQUETTE && id.startsWith('carte-parcours')) return attendre(600).then(() => ({ ok: true, etat: 'executee' as const, resultat: { ouvrir: 'parcours', parcours: parcoursFauxRempli() } }))
+  if (MAQUETTE && id.startsWith('carte-parcours')) return attendre(600).then(() => ({ ok: true, etat: 'executee' as const, resultat: { ouvrir: 'parcours', parcours: id.startsWith('carte-parcours-avis') ? parcoursFauxAvis() : parcoursFauxRempli() } }))
   if (MAQUETTE) return attendre(900).then(() => ({ ok: true, etat: 'executee' as const, resultat: id.startsWith('carte-creation') ? OUVERTURE_EXEMPLE : id.startsWith('carte-avis') ? AVIS_EXEMPLE : { relance_id: 1 } }))
   return appeler<ReponseCarte>(`/assistant/actions/${encodeURIComponent(id)}/valider`, 'POST')
 }
@@ -348,6 +350,8 @@ export type ParcoursVue = {
   publics?: { possible: boolean; a_jour: boolean; le?: string | null; propositions: PropositionPublique[] } | null
   /** P4-d : les phrases libres gardées (sans téléphone ni e-mail) et ce qu'elles ont rempli */
   phrases?: PhraseParcours[]
+  /** P5-a (27/11) : le bien d'un parcours d'AVIS (gardé dans les réponses jusqu'à l'ouverture de l'éditeur) */
+  bien?: { hektor_annonce_id: number; app_dossier_id?: number; titre?: string } | null
   /** P4-d, côté écran seulement : ce qu'une phrase lue met dans la CARTE de sa question (la personne valide) */
   remplir?: { question: string; cases: Record<string, unknown>; dire: DirePhrase; jeton: number } | null
   fin: boolean
@@ -406,6 +410,37 @@ export async function commencerParcours(genre: 'creation_estimation' | 'creation
   }
   const r = await appelerJson<{ parcours: ParcoursVue }>('/assistant/parcours', 'POST', { genre, conversationId })
   return r.parcours
+}
+
+/** P5-a (27/11) : ce que l'ÉDITEUR de l'avis reçoit d'un parcours d'avis (ses cases, le barème à part, « personne »).
+ *  Sert à ROUVRIR l'éditeur depuis un parcours déjà terminé (la route n'ouvre qu'une fois). */
+export function ouvertureAvisDeVue(vue: ParcoursVue): OuvertureAvis | null {
+  const appDossierId = vue.app_dossier_id ?? vue.bien?.app_dossier_id ?? null
+  if (vue.genre !== 'avis' || appDossierId == null) return null
+  const champs: Record<string, string> = {}
+  for (const [k, v] of Object.entries(vue.reponses)) {
+    if (k === 'etatPostes' || k === 'destinataire' || v === null || v === undefined || typeof v === 'object') continue
+    if (String(v).trim()) champs[k] = String(v)
+  }
+  const postes = vue.reponses.etatPostes && typeof vue.reponses.etatPostes === 'object' ? vue.reponses.etatPostes as OuvertureAvis['postes'] : {}
+  return { ouvrir: 'avis_de_valeur', app_dossier_id: appDossierId, hektor_annonce_id: vue.bien?.hektor_annonce_id ?? null, champs, postes,
+    sans_destinataire: vue.reponses.destinataire === 'personne' }
+}
+
+/** P5-a (27/11) : « Ouvrir l'éditeur rempli » à la fin d'un parcours d'avis. Le serveur relit le bien (toujours à ta
+ *  portée ?), rattache le parcours au bien et le termine ; rien n'est généré ni envoyé. */
+export async function ouvrirEditeurParcours(id: string): Promise<{ parcours: ParcoursVue; ouverture: OuvertureAvis }> {
+  if (MAQUETTE) {
+    await attendre(300)
+    const p = fauxParcours.find((x) => x.id === id)
+    if (!p) throw new RefusAssistant(404, 'Parcours introuvable')
+    p.etat = 'termine'
+    p.app_dossier_id = 32621
+    const vue = vueFausse(p)
+    return { parcours: vue, ouverture: ouvertureAvisDeVue(vue)! }
+  }
+  const r = await appelerJson<{ parcours: ParcoursVue; ouverture: OuvertureAvis }>(`/assistant/parcours/${encodeURIComponent(id)}/editeur`, 'POST', {})
+  return { parcours: r.parcours, ouverture: r.ouverture }
 }
 
 export async function repondreParcours(id: string, question: string, geste: 'repondre' | 'passer' | 'nsp', valeurs: Record<string, unknown>): Promise<ParcoursVue> {
@@ -529,7 +564,7 @@ export async function prendreCoordonneesMandant(parcoursId: string): Promise<Coo
 }
 
 // Mode maquette (sans base) : quatre questions pour dessiner chaque forme à l'écran (le vrai moteur en a 19, côté serveur)
-type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null; lus?: Record<string, string>; doutes?: Record<string, number>; fiche?: ParcoursVue['fiche']; publics?: PropositionPublique[]; publicsCle?: string | null; phrases?: PhraseParcours[] }
+type FauxParcours = { id: string; conversation: string | null; genre: 'creation_estimation' | 'creation_annonce' | 'avis'; reponses: Record<string, unknown>; etats: Record<string, EtatQuestionParcours>; etat: 'en_cours' | 'termine'; app_dossier_id?: number | null; lus?: Record<string, string>; doutes?: Record<string, number>; fiche?: ParcoursVue['fiche']; publics?: PropositionPublique[]; publicsCle?: string | null; phrases?: PhraseParcours[] }
 const fauxParcours: FauxParcours[] = []
 const FAUSSES_QUESTIONS: QuestionParcours[] = [
   { id: 'bien', titre: 'Le bien', phrase: "Quel bien, et où ?", forme: 'cases', champs: ['type', 'agence', 'adresse_haut', 'cp', 'ville'], essentiels: ['type', 'adresse_haut', 'cp', 'ville'] },
@@ -540,6 +575,22 @@ const FAUSSES_QUESTIONS: QuestionParcours[] = [
   { id: 'mandant', titre: 'Le mandant', phrase: 'Qui vend ?', forme: 'mandant', champs: ['mandant_choix', 'mandant'] },
   { id: 'photos', titre: 'Les photos du bien', phrase: 'Les photos du bien (la galerie de l’annonce) — pas la fiche de visite.', forme: 'fichiers', champs: ['photos'] },
 ]
+// maquette P5-a : les 6 questions de l'AVIS (les mêmes que backend/app/services/parcours_avis.json)
+const FAUSSES_QUESTIONS_AVIS: QuestionParcours[] = [
+  { id: 'bien', titre: 'Le bien', phrase: "Pour quoi faire ? Et, si la fiche se trompe, le DPE, le chauffage ou l'exposition à mettre dans ce rapport.", forme: 'cases', champs: ['variante', 'dpe', 'ges', 'chauffage', 'exposition'], essentiels: ['variante'] },
+  { id: 'valeur', titre: 'La valeur', phrase: 'Ta valeur, et sa fourchette ?', forme: 'cases', champs: ['basse', 'estimee', 'haute'], essentiels: ['basse', 'estimee', 'haute'] },
+  { id: 'etat', titre: "L'état", phrase: "L'état en étoiles, puis poste par poste.", forme: 'postes', champs: ['etatNote', 'etatLabel', 'toiture', 'menuiseries', 'etatPostes', 'etatTexte'], essentiels: ['etatNote', 'etatPostes'] },
+  { id: 'points', titre: 'Les points', phrase: 'Les points forts, et ceux de vigilance (un par ligne) ?', forme: 'cases', champs: ['pointsForts', 'pointsVigilance'], essentiels: ['pointsForts', 'pointsVigilance'] },
+  { id: 'charges', titre: 'Les charges', phrase: "Les charges de l'année, en euros ?", forme: 'cases', champs: ['taxeFonciere', 'energie', 'eau', 'assurance'], essentiels: ['taxeFonciere', 'energie', 'eau', 'assurance'] },
+  { id: 'envoi', titre: "Les textes et l'envoi", phrase: "L'argumentaire de prix, ton avis, et à qui l'envoyer ?", forme: 'cases', champs: ['argumentaire', 'commentaire', 'destinataire'], essentiels: ['destinataire'] },
+]
+/** maquette P5-a : le parcours d'avis qu'ouvre la carte, la valeur déjà dite */
+function parcoursFauxAvis(): ParcoursVue {
+  const p: FauxParcours = { id: `a${Date.now()}`.padEnd(36, '0'), conversation: null, genre: 'avis', etat: 'en_cours',
+    reponses: { basse: '247000', estimee: '260000', haute: '273000' }, etats: { valeur: 'connue' } }
+  fauxParcours.push(p)
+  return vueFausse(p)
+}
 /** maquette P4-a : le parcours qu'ouvre la carte, déjà rempli de la demande (le bien et l'intérieur « connus ») */
 function parcoursFauxRempli(): ParcoursVue {
   const p: FauxParcours = { id: `p${Date.now()}`.padEnd(36, '0'), conversation: null, genre: 'creation_estimation', etat: 'en_cours',
@@ -550,11 +601,14 @@ function parcoursFauxRempli(): ParcoursVue {
 }
 
 function vueFausse(p: FauxParcours): ParcoursVue {
-  const q = FAUSSES_QUESTIONS.find((x) => !p.etats[x.id]) ?? null
+  const avis = p.genre === 'avis'
+  const liste = avis ? FAUSSES_QUESTIONS_AVIS : FAUSSES_QUESTIONS
+  const q = liste.find((x) => !p.etats[x.id]) ?? null
   return {
-    id: p.id, genre: p.genre, etat: p.etat, app_dossier_id: p.app_dossier_id ?? null, profil: p.reponses.type === '1' ? 'house' : 'apartment',  // maquette : 1 = Maison, sinon un appartement
-    question: q, repere: { rang: q ? FAUSSES_QUESTIONS.indexOf(q) + 1 : FAUSSES_QUESTIONS.length, total: FAUSSES_QUESTIONS.length, faites: Object.keys(p.etats).length },
-    questions: FAUSSES_QUESTIONS.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
+    id: p.id, genre: p.genre, etat: p.etat, app_dossier_id: p.app_dossier_id ?? null, profil: avis ? null : p.reponses.type === '1' ? 'house' : 'apartment',  // maquette : 1 = Maison, sinon un appartement
+    bien: avis ? { hektor_annonce_id: 4, app_dossier_id: 32621, titre: 'Appartement T3' } : null,
+    question: q, repere: { rang: q ? liste.indexOf(q) + 1 : liste.length, total: liste.length, faites: Object.keys(p.etats).length },
+    questions: liste.map((x) => ({ ...x, etat: p.etats[x.id] ?? null })), reponses: { ...p.reponses }, fin: !q,
     sources: { ...Object.fromEntries(Object.keys(p.reponses).filter((k) => p.etats.bien === 'connue' && ['type', 'adresse_haut', 'cp', 'ville', 'surfappart', 'nbpieces'].includes(k)).map((k) => [k, 'demande'])), ...(p.lus ?? {}) },
     doutes: p.doutes ?? {}, fiche: p.fiche ?? null, phrases: p.phrases ?? [],
     publics: {  // maquette P4-c : même règle que le serveur (question posée, aucune de ses cases déjà dite)
@@ -644,10 +698,13 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     surEvenement({ type: 'erreur', detail: "L'assistant n'a pas pu répondre" })
     return true
   }
-  const avis = q.includes('avis de valeur')
-  const parcours = !avis && q.includes('questions')  // P4-a : « crée une estimation par questions »
+  const avisParcours = q.includes('avis de valeur') && q.includes('questions')  // P5-a : « l'avis de valeur par questions »
+  const avis = !avisParcours && q.includes('avis de valeur')
+  const parcours = !avis && !avisParcours && q.includes('questions')  // P4-a : « crée une estimation par questions »
   const creation = !avis && !parcours && q.includes('estimation')
-  const texte = parcours
+  const texte = avisParcours
+    ? "Je te propose de préparer l'avis de valeur de l'[annonce 4](annonce:4) par questions guidées : la valeur dite est déjà rangée, les questions suivent à boutons."
+    : parcours
     ? "Je te propose de la créer par questions guidées : ce que tu m'as dit est déjà rangé, les questions suivent à boutons."
     : avis
     ? "J'ai préparé l'avis de valeur de l'[annonce 4](annonce:4). L'éditeur reprendra le dernier avis, calculera le marché DVF et les autres sources ; rien ne sera généré avant ton clic sur « Générer »."
@@ -664,7 +721,15 @@ async function fauxFlux(question: string, conversationId: string | null, surEven
     await attendre(40, signal)
     if (q.includes('coupe') && mot.startsWith('annonces')) return false
   }
-  if (parcours) {
+  if (avisParcours) {
+    surEvenement({ type: 'outil', nom: 'proposer_parcours_avis' })
+    surEvenement({
+      type: 'carte', id: `carte-parcours-avis-${Date.now()}`, geste: 'parcours_avis',
+      resume: "Préparer l'avis de valeur de l'annonce 4 « Appartement T3 » par questions guidées. Déjà dit, pas reposé : la valeur. 5 questions à boutons ensuite, sans l'IA. À la fin, l'éditeur de l'avis s'ouvre rempli ; rien n'est généré ni envoyé avant ton clic « Générer » dans l'éditeur",
+      expire_le: new Date(Date.now() + 30 * 60_000).toISOString(),
+      cibles: [{ type: 'bien', id: '32621' }],
+    })
+  } else if (parcours) {
     surEvenement({ type: 'outil', nom: 'proposer_parcours_creation' })
     surEvenement({
       type: 'carte', id: `carte-parcours-${Date.now()}`, geste: 'parcours_creation',
