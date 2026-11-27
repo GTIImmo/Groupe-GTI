@@ -6256,6 +6256,15 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - A blanc VERT chez Supabase : apres = DECHAUD/GENTES ; la vraie nuit (absorbeur) SAUTE 3647, purge a 0 ; inverse = avant ;
   temoin inverse : l'absorbeur ECRIT sur 3647 en supposition. Relu : rien n'est reste.
 - Attend son accord (G4 : a poser avant que la nuit change le registre). Temoin : _REPETITION apres 05:35.
+
+### 20.90 Le 27/11 (5) : DECHAUD 50 / GENTES 50 POSE sur 3647 (10:27:49) -- relu juste ; temoin demain apres 05:35
+
+- Pose : patch 43411178, chez Supabase, sans erreur (gardes et controles verts, empreinte d'apres 113c064e), commite.
+- Relu au pooler (_REPETITION) : 3647 = 31 DECHAUD entree 50 + 32 GENTES sortie 50, classeur_reconstitue ; 0 part hektor ;
+  3646 intacte ; 17 970 parts ; 0 orpheline ; 0 vente reglee sans part ; journal 2 (9Q0FHAKK n° 286) ; mise de cote 734-735 ;
+  sauvegarde 2 lignes, cle primaire, RLS, illisible par authenticated et anon.
+- Temoin : _REPETITION apres 05:35 (memes parts, datees 27/11 09:27:49 UTC). Inverse pret (8b671f08).
+- Son ordre du 27/11 est fait en entier : temoin de 3648, vague des six, partage de 3647.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

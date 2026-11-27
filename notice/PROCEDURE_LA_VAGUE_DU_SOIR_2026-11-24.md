@@ -3075,3 +3075,29 @@ contournée. ⛔ **Leçon : regarder l'heure contre cette fenêtre AVANT de dema
 - La garde G4 exige le registre de ce matin. Si la nuit le change, le patch refusera, et il faudra le refabriquer.
 - Le témoin du lendemain, après la répartition de 05:35 : `_REPETITION`. 3647 doit garder ses parts du classeur, avec
   l'heure de la pose, et 0 part hektor.
+
+### Le 27/11 (5) : le partage DECHAUD 50 / GENTES 50 POSÉ sur 3647 (10:27) — relu juste, le témoin se lit demain après 05:35
+
+**Son mot** : « Oui » (poser le patch des parts de 3647, avant la nuit).
+
+**① La pose** : `supabase/patch_parts_3647_2026-11-27.sql` (md5 43411178), joué chez Supabase à 10:27:49. C'est le même
+corps que l'essai à blanc, jusqu'aux contrôles compris. Il est passé sans erreur, donc toutes ses gardes et tous ses contrôles
+sont verts, l'empreinte d'après 113c064e comprise. Il s'est commité.
+
+**② La relecture par un autre chemin** (le pooler, en lecture seule, `_REPETITION`, 10:28) :
+- 3647 = entrée 31 SIMON DECHAUD 50 + sortie 32 CHRISTELE GENTES 50, en classeur_reconstitue, écrites par
+  « classeur:9Q0FHAKK » le 27/11 à 09:27:49 UTC, sur le dossier 1390780 ;
+- **son témoin : 0 part hektor sur 3647** ;
+- 3646 intacte ; 17 970 parts ; empreinte 113c064e257b5c366fa2bfc2848bb9fe ; 0 orpheline ; 0 vente réglée sans part ;
+- le journal : 2 lignes, ligne d'origine 9Q0FHAKK n° 286, D2024-0511, avec l'ancienne valeur ;
+- la mise de côté : 2 parts (n° 734 et 735), les deux suppositions entières, avec leur date du 26/11 05:35 ;
+- la sauvegarde `app_affaire_repartition_avant_parts3647_20261127` : 2 lignes, clé primaire, RLS active, illisible par
+  authenticated et par anon.
+
+**③ Le témoin du lendemain**, après la répartition de 05:35 : rejouer `_REPETITION`. 3647 doit porter les mêmes deux parts,
+toujours datées du 27/11 à 09:27:49 UTC, et 0 part hektor. Ce matin, 3647 était dans la liste des chaînes « réécrites à
+l'identique en supposition ». Elle doit en sortir.
+- Retour arrière : `_INVERSE` (8b671f08). Il remet les deux suppositions depuis la mise de côté et retire le journal du lot.
+
+⛔ Rien d'écrit chez Hektor ni dans le Sheet. **Les trois étapes de son ordre du 27/11 sont faites** : le témoin de 3648, la
+vague des six, le partage de 3647.
