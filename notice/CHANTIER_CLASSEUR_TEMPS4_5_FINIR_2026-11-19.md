@@ -6352,6 +6352,33 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - D9 CONFIRME : une seule table de routage en base (app_champ_destination), pour les deux sens.
 - Ce qui survit a la coupure du Sheet et a celle de Hektor : § 6.1 du plan. Demain : l'etape 2 (la regle des 334
   sur copie du juge), pendant qu'il repond a D1-D8.
+
+### 20.98 Le 27/11 (13) : ETAPE 2 DU PLAN -- la regle des 334 (son geste 6) MESUREE dans le juge, sur copie : R30
+
+- Son mot : « Commence l'etape 2 -- la regle des 334 sur une copie du juge. Elle ne depend d'aucune de mes autres decisions
+  et elle n'ecrit rien. » Le geste 6 (§ 17.5 R6) : « s'il n'y a qu'une facon de la rattacher, on la rattache ».
+- LA VARIANTE R30, dans protocole_classeur.py (VARIANTES, eteinte par defaut) : une piece « a part sans effet sur
+  l'etiquette » nommee par UNE SEULE ligne tranchee, possible pour elle seule, tenue par personne, plus grande que toutes
+  les pieces de sa ligne, jamais une de SES 20 a part -> elle rejoint les pieces de sa ligne. Elle joue APRES tous les
+  verdicts (r30_apres_les_verdicts, comme R16) : aucun verdict, aucune etiquette ne peut bouger.
+- ⛔ LA PREMIERE FORME ETAIT FAUSSE, et le rejeu l'a dit : posee DANS le jugement du bien, elle faisait mordre la garde du
+  deja-rendu (elle compare aussi les pieces) -> les biens etaient juges sans R22 -> 40ELE6SQ et ARF57GC5, rendues,
+  RETOMBAIENT en attente. La garde n'est pas touchee : c'est la regle qui est sortie du jugement.
+- LE REJEU (rejouer_le_passage_82_avec_une_variante_sur_copie_2026-11-27.py, memes deux verrous que celui du 81) :
+  . TEMOIN sans variante, deux fois (avant et apres la reecriture) : 4 803 / 4 803 verdicts du 82 IDENTIQUES ; entrees
+    vivantes = celles du 82 ; vrai socle INCHANGE ;
+  . AVEC R30 : verdicts changes 0, etiquettes 0, motifs 0 ; pieces 258 lignes ; 277 pieces rattachees (106 offres
+    acceptees, 103 refusees, 12 proposees, 49 ventes, 6 compromis annules, 1 actif) ; 0 piece donnee a deux lignes.
+  . 334 = 277 rattachees + 57 qui RESTENT a part : 54 occurrences de 24 pieces nommees par 2 a 4 lignes (deux facons ou
+    plus : le geste 7, il s'abstient) + 3 possibles aussi pour une ligne non tranchee.
+- ⭐ CE QUE LE REJEU NE DIT PAS ENCORE -- avant de la valider :
+  . 190 des 277 sont deja dans le dossier de l'etiquette de leur ligne : la colonne pieces les rattrape, rien d'autre ;
+  . 87 sont dans un AUTRE dossier, et ce dossier est TOUJOURS ORPHELIN (aucune ligne ne le porte) : 58 seules, 29 avec 1 a
+    3 autres pieces. C'est exactement le « dossier orphelin qui comble un trou » du geste 6 -- mais le rattacher au dossier
+    de la ligne est un geste de CHAINAGE (la nuit, ou rattachements_manuels.csv : jamais sans lui) ;
+  . l'ecrivain de la colonne A LIT les pieces du verdict et signale une ligne a plusieurs dossiers : son effet sur ces 87
+    est A MESURER sur la copie avant toute validation (« on fait passer ses lecteurs »).
+- Rien en base, rien dans le Sheet, rien chez Hektor. Le vrai socle n'a pas bouge (temoin de fin).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

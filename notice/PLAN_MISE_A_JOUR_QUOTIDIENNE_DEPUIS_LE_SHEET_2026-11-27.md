@@ -522,6 +522,15 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
 - **Preuve** : rejouée dans le juge avec ses gardes (mémoire « une règle se mesure dans le juge »), et
   0 ligne déjà rendue ne change d'étiquette.
 - **Ni base ni Hektor.** Environ ½ jour.
+- ✅ **MESURÉE le 27/11 au soir** (carnet § 20.98). C'est la variante **R30** du juge, éteinte par défaut,
+  qui joue après tous les verdicts.
+  - **Le témoin**, rejoué deux fois sans la variante : 4 803 verdicts du 82 sur 4 803 identiques.
+  - **Avec R30** : 0 verdict et 0 étiquette changés. **277 pièces rattachées sur 258 lignes.** Les 57
+    autres restent à part : 24 pièces nommées par 2 à 4 lignes (plusieurs façons : on s'abstient), et 3
+    possibles aussi pour une ligne non tranchée.
+  - ⚠ **Avant de la valider** : 87 des 277 sont dans un dossier orphelin, qu'aucune ligne ne porte. Les
+    rattacher à leur ligne est un geste de chaînage. Et l'écrivain de la colonne A lit ces pièces :
+    son effet est à mesurer sur la copie.
 
 **Étape 3 — les dates d'annulation élargies.**
 - **Ce qu'elle fait** : s'il n'y a aucun compromis et seulement une offre refusée, la date va sur

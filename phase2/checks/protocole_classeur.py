@@ -389,6 +389,12 @@ VARIANTES = {
     # 14033 (sa B3 du 20/11) : ses DEUX options, mesurees a blanc cote a cote (son mot (15)) -- jamais appliquees
     "B3A": "14033 A PART POUR TOUJOURS : mise de cote comme R7b, avec son dossier d'aujourd'hui (elle garde son numero)",
     "B3B": "14033 A DONNADIEU (ea6a28a7) : son prix 140 500 et sa commission 9 500 sont ceux de DONNADIEU (critere 1)",
+    # R30 (27/11, son mot : « les 334 [...] c'est ton geste 6. Mesure cette variante dans le juge, sur copie. ») -- MESURE
+    #   SEULEMENT. Le geste 6 du protocole des 717 (§ 17.5 R6 du carnet) : « s'il n'y a qu'une facon de la rattacher, on la
+    #   rattache ». L'etiquette ne bouge pas par construction : elle reste celle de la plus petite piece PROUVEE (lab1[m]).
+    "R30": "une piece « a part sans effet sur l'etiquette » (son critere 2) possible pour UNE SEULE ligne du bien, plus grande "
+           "que la plus petite piece prouvee de sa ligne, rejoint les pieces de sa ligne (jamais une de SES 20 a part, jamais "
+           "une mise de cote) -- le geste 6 : une seule facon de la rattacher",
     # R7c a quitte cette liste le 23/11 (son message) : elle est dans REGLES_VALIDEES
     # R16 a quitte cette liste le 23/11 (son mot, et la preuve du passage 49) : elle est dans REGLES_VALIDEES
     # R17 a quitte cette liste le 23/11 (son message, et la preuve du passage 54) : elle est dans REGLES_VALIDEES
@@ -407,6 +413,48 @@ MANDANTS_R16_MD5 = "da3b63b6612813f29d66e4532008bac5"
 STOP_R16 = {"SAS", "SARL", "EURL", "SOCIETE", "SOCIÉTÉ"}
 # R7a et R7b ont quitte cette liste le 22/11 (son mot, reponses au rapport 21) : elles sont dans REGLES_VALIDEES
 VARIANTES_ACTIVES: set = set()
+# R30 (variante du 27/11) : piece neutre -> le plus grand nombre de lignes possibles vu pendant le passage ; et ce qu'elle a
+#   rattache (piece -> ligne)
+R30_POSSIBLES: dict = {}
+DONNEE_PAR_R30: dict = {}
+
+
+def r30_apres_les_verdicts(rangs: list) -> None:
+    """R30, LE GESTE 6, APRES tous les verdicts (comme R16) : une piece « a part sans effet sur l'etiquette » nommee par UNE
+    SEULE ligne tranchee, possible pour elle seule (R30_POSSIBLES == 1), tenue par aucune ligne, plus grande que TOUTES les
+    pieces de sa ligne, jamais une de SES 20 a part -> elle rejoint les pieces de sa ligne. Aucun verdict, aucune etiquette ne
+    change : seule la colonne pieces s'allonge, et la preuve le dit en clair."""
+    tenues = {a for x in rangs for a in (x.get("pieces") or [])} | set(PIECE_DONNEE_PAR_DECISION)
+    nommees = defaultdict(list)
+    for x in rangs:
+        if x["verdict"] != "TRANCHEE":
+            continue
+        for p in x.get("preuves") or []:
+            if p.startswith("a part sans effet sur l'etiquette"):
+                for q in p.rsplit(":", 1)[1].split():
+                    nommees[int(q)].append(x)
+    for a, xs in sorted(nommees.items()):
+        if len(xs) != 1 or a in tenues or R30_POSSIBLES.get(a, 99) != 1 or a in les_20_a_part():
+            continue
+        x = xs[0]
+        if a < min(x.get("pieces") or [a]):
+            continue
+        x["pieces"] = sorted(set(x["pieces"]) | {a})
+        DONNEE_PAR_R30[a] = x["id_unique"]
+    for x in rangs:
+        mien = sorted(a for a, i in DONNEE_PAR_R30.items() if i == x["id_unique"])
+        if mien:
+            reste = []
+            for p in x["preuves"]:
+                if p.startswith("a part sans effet sur l'etiquette"):
+                    q = [int(v) for v in p.rsplit(":", 1)[1].split() if int(v) not in mien]
+                    if q:
+                        reste.append("a part sans effet sur l'etiquette (son critere 2) : %s" % " ".join(map(str, q)))
+                else:
+                    reste.append(p)
+            x["preuves"] = reste + ["REGLE R30 (variante du 27/11, le geste 6) : a part sans effet sur l'etiquette, "
+                                    "nommee par cette seule ligne et possible pour elle seule -- rattachee : %s"
+                                    % " ".join(map(str, mien))]
 
 
 def joue(regle: str) -> bool:
@@ -2188,6 +2236,12 @@ def juger_bien(I: Image, b: str, a_juger: set, perimetre: str) -> list[dict]:
         neutres = sorted(a for a in r["apart"] if gl in r["possibles"][a] and a not in deja.get(gl, [])
                          and a not in isoles and not (a in recon and recon[a][0] not in gl and a < m))
         reconnues_ici = sorted(a for a in recon if recon[a][0] not in gl and a < m and gl in r["possibles"].get(a, []))
+        # R30 (variante du 27/11, le geste 6) : on NOTE seulement le nombre de lignes possibles de chaque piece neutre (le plus
+        #   grand vu, garde comprise) ; elle joue APRES tous les verdicts (r30_apres_les_verdicts), jamais ici -- poser des
+        #   pieces dans ce jugement faisait mordre la garde du deja-rendu sur R22 (40ELE6SQ, ARF57GC5 retombaient, 27/11)
+        if neutres and joue("R30"):
+            for a in neutres:
+                R30_POSSIBLES[a] = max(R30_POSSIBLES.get(a, 0), len(r["possibles"].get(a, [])))
         preuves = [preuve_nommee(I, a, gl, r["preuve"].get(a, "")) for a in ids]
         if neutres:
             preuves.append("a part sans effet sur l'etiquette (son critere 2) : %s" % " ".join(map(str, neutres)))
@@ -2286,6 +2340,8 @@ def juger_bien_garde(I: Image, b: str, a_juger: set, perimetre: str) -> list[dic
 def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set | None = None) -> int:
     VARIANTES_ACTIVES.clear()
     VARIANTES_ACTIVES.update(variantes or ())
+    R30_POSSIBLES.clear()
+    DONNEE_PAR_R30.clear()
     MISES_DE_COTE.clear()
     GARDE_DEJA_RENDU.clear()
     # R29 : un passage precedent sur la MEME image a deplace des lignes -- on les remet, et la 1re passe juge sans R29
@@ -2329,6 +2385,11 @@ def etape_passage(I: Image, note: str, perimetre: str = "bien", variantes: set |
                 len(DONNEE_PAR_R29), " . ".join("%s <- %d" % (l_, v_) for v_, (l_, _t) in sorted(DONNEE_PAR_R29.items()))
                 or "aucune", " . ".join("%s (%s)" % (i_, x_["pourquoi"]) for i_, x_ in sorted(R29_ABSTENUES.items()))
                 or "aucune"))
+    # R30 (variante du 27/11, le geste 6) : APRES tous les verdicts -- elle n'allonge que la colonne pieces
+    if joue("R30"):
+        r30_apres_les_verdicts(rangs)
+        dire("   R30 : %d piece(s) rattachee(s) a la seule ligne qui peut les prendre (le geste 6), sur %d ligne(s)" % (
+            len(DONNEE_PAR_R30), len(set(DONNEE_PAR_R30.values()))))
     # R16 (validee le 23/11) : APRES tous les verdicts -- les pieces tenues sont alors connues ; elle ne touche que SANS_BIEN
     if joue("R16"):
         tenues = {a for r in rangs for a in (r.get("pieces") or [])} | set(PIECE_DONNEE_PAR_DECISION)
