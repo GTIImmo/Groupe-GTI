@@ -3869,3 +3869,128 @@ conditions, le classic intact, le rangement (moment en cours d'abord, une pièce
 `recuManque`) ; témoin inverse (un espace ajouté dans la carte) : **2 ROUGE**. Les 15 autres essais GED verts (un « absent »
 dans un commentaire avait fait sonner 3 essais : reformulé) ; les 5 essais de la signature demandés par sa session VERTS
 (choix, état du mandat, expirée, pièces, suivi) ; `npm run build` passe. ⚠ **Pas vu à l'écran** : il faut le déploiement.
+**✅ EN LIGNE le 20/11 (« Oui, pousse »)** : les 15 commits GED rejoués SEULS sur `origin/main` (rien du Classeur), l'arbre
+rejoué essayé à part (essais GED et signature verts, build), poussé en `e1342f6` ; Vercel a servi la feuille neuve
+(`var(--bv-magenta, #c5005f)`, `gd3-dossier`). **Vu dans le Chrome de Frédéric sur 18849 (62850), lecture seule** : « Le
+dossier 20 », le Compromis ouvert, les pièces lues avec leurs pastilles, la carte d'aujourd'hui dans la ligne dépliée
+(Ouvrir, Signature, Supprimer). ⚠ **Un défaut vu à l'écran et corrigé** : trois fichiers du MÊME nom (« Copie AAE PROMESSE… »)
+revenaient chacun trois fois, et deux lignes se dépliaient ensemble -- le nom était répété dans la pièce. Corrigé (`9ba911a`,
+un contrôle de plus dans l'essai, 17 verts), poussé et revu : **20 lignes pour 20 documents**, aucun doublon, 9 pièces
+manquantes à leur place, **aucun élément ne déborde**. Restent à l'ancienne : « À remplir », « À regarder » et « Vrai / Faux /
+Déjà su » (morceau 4).
+
+### 12.62 VISUEL V3, MORCEAU 4 -- « À traiter » : Masquer à la place de la période de test (20/11, « Enchaîne ») -- ÉCRIT, PAS EN LIGNE
+
+**Le code** (`RecuManque.tsx`, `lib/gedMesure.ts`, `RecuManque.css` ; s'applique au cockpit ET au classic : c'est le même bloc) :
+- un en-tête **« À traiter »** magenta avec le NOMBRE (fenêtres « Ce que dit… » à ouvrir + propositions + points d'attention
+  visibles) ; « À remplir » devient « À corriger ou compléter » ; « Voir et trancher » devient **« Voir et corriger »** (une
+  valeur diffère) ou **« Voir et ajouter »** (cases vides) ;
+- « À regarder » devient **« Points d'attention »** : une alerte qu'une fenêtre « Ce que dit… » montre déjà N'A PLUS SA CARTE
+  (le même écart apparaissait deux fois, ex. 18849) ; **plus de « Vrai / Faux / Déjà su »** ; à la place **« Masquer »**
+  (verdict `masque`, pour tout le monde sur le bien, à côté de « Déposer la pièce ») et, en bas, « N point(s) d'attention
+  masqué(s) pour tout le monde -- Réafficher » (verdict `reaffiche` pour chacun) ;
+- **seul « masque » masque** (`estMasquee`) : les 8 jugements vrai / faux du 17-19/11 ne cachent RIEN ; ⛔ correction de ma
+  note du patch (§12.59), qui disait « tout autre dernier mot -> masqué » : c'est l'écran qui décide, et il ne masque que
+  sur « masque » ;
+- enregistrer une fenêtre « Ce que dit… » **n'écrit plus de note de mesure** (la boucle `verdictDesChoix` est retirée ; la
+  fonction et ses essais restent dans la lib).
+**Contrôles** : `test_ged_mesure.cjs` (§④ réécrit sur la décision : Masquer seulement si les jugements se lisent, plus de
+barre, masque / reaffiche, le doublon retiré, plus de note à l'enregistrement, les anciens verdicts ne masquent rien) **26
+VERT** ; témoin inverse (Masquer écrivant « vrai », doublon remis) **2 ROUGE**. Tous les autres essais GED et les 5 de la
+signature verts ; `npm run build` passe. ⚠ Pas vu à l'écran : il faut le déploiement.
+**✅ EN LIGNE (constaté le 26/11)** : le commit `7272556` était déjà dans `origin/main` -- une autre session a poussé la
+branche locale entière entre le 20 et le 24/11 ; rien à pousser. La production sert `gm2-traiter-h`, `gm2-masquees`,
+« Voir et corriger », « Masquage… ». **Vu dans le Chrome de Frédéric, lecture seule** : 18849 (62850) -- « À traiter 1 »,
+« À corriger ou compléter (1) », « Voir et corriger », et l'alerte en double de la date de l'acte a DISPARU (plus de bloc
+« Points d'attention ») ; EA32610 (59541) -- « Points d'attention (1) » : « Avenant : 2 mandants, 1 signature lue »,
+« Déposer la pièce » et **« Masquer »** à côté, plus aucune barre « Vrai / Faux / Déjà su ». ⚠ **« Masquer » n'a PAS été
+cliqué** : sur un bien réel il écrit dans le journal pour tout le monde ; l'essai demande une cible choisie par Frédéric.
+**✅ ESSAI RÉEL de « Masquer » / « Réafficher » (26/11, « Sur EA32610 »)** : avant, 8 jugements, aucun sur 59541. **Masquer**
+(09:14:10, heure de Paris) -> la carte « Avenant : 2 mandants, 1 signature lue » disparaît, « À traiter 0 », « Points
+d'attention (0) », « 1 point d'attention masqué pour tout le monde -- Réafficher » ; en base, une ligne L10 `masque` au
+nom de Frédéric. **Réafficher** (09:14:31) -> la carte revient avec « Déposer la pièce » et « Masquer », « À traiter 1 » ;
+en base, une ligne `reaffiche` (le journal garde les deux, le plus récent fait foi). Aucun message d'erreur. Le bien est
+revenu à son état d'avant l'essai (le point d'attention est visible). ⚠ Vu en passant : quand tout est masqué, l'en-tête
+dit « À traiter 0 » -- il pourrait se taire ; non corrigé, à trancher.
+**26/11 (« Oui, le cacher »)** : l'en-tête « À traiter » ne s'affiche plus quand il n'y a rien à traiter (tout masqué ou
+fait) -- condition `nbATraiter > 0` ; la ligne « N point(s) d'attention masqué(s) -- Réafficher » reste. `test_ged_mesure`
+27 VERT (un contrôle de plus), témoin inverse (`>= 0`) 1 ROUGE ; essais voisins verts ; build. Commité, PAS POUSSÉ.
+
+### 12.63 VISUEL V3, MORCEAU 5 -- « Ce que dit… » à l'habit de la V3 (26/11, « Enchaîne ») -- ÉCRIT, PAS EN LIGNE
+
+**Le code** (`BilanCompromis.tsx` : deux ajouts ; `BilanCompromis.css` : des règles AJOUTÉES en fin de fichier) :
+- la **page du document s'ouvre d'office** à la première ligne à trancher qui a une page (sinon la première qui en a une) --
+  plus de colonne vide « Touche « page » sur une ligne » ; ⚠ **pas au téléphone** (≤ 760 px), où la page remplace la liste ;
+  sans document retrouvé, rien (point 2 du §5 de l'audit graphique) ;
+- **en-tête clair** (blanc, titre encre) au lieu du bandeau noir ;
+- la **plaque du document** (« Le compromis », « Le DPE »…) marquée magenta : la classe `is-document` que le code pose
+  n'avait JAMAIS reçu de style (la CSS visait `is-compromis`, point 4 du §5) -- le papier beige n'est pas repris (V3) ;
+- une écriture **réussie se signe d'une coche tracée** dans le pied ; une erreur, non.
+**Rien de ce qu'elle écrit ne change** : `enregistrer` intact (un seul appel à `onEnregistrer`), mêmes chemins vers Hektor.
+**Contrôles** : `test_ged_bilan_v3.cjs` **9 VERT** ; témoin inverse (page jamais ouverte d'office) **1 ROUGE** ; tous les essais
+GED (bilan 137, socle 16…) et les 5 de la signature verts ; build. ⚠ Pas vu à l'écran : il faut le déploiement.
+**✅ EN LIGNE le 26/11 (« Oui, pousse »)** : rejoué seul sur `origin/main`, l'arbre exact essayé à part (bilan v3 9, bilan 137,
+socle 16, mesure 27, build), poussé en `c21ef1e` ; la production sert `bc-msg-coche`. **Vu dans le Chrome de Frédéric sur
+18849, sans rien enregistrer** : « Voir et corriger » ouvre « Ce que dit le compromis » avec l'en-tête CLAIR, la plaque « Le
+compromis : le 01/02/2027 » cadrée magenta (« correction ») face à « La transaction : le 23/01/2027 » barrée, et **la page 5
+sur 38 ouverte d'office** dans la colonne de droite, dessinée en quelques secondes. Fermée par « Fermer ». La coche de réussite
+n'a pas été vue (il aurait fallu enregistrer, donc écrire chez Hektor).
+
+### 12.64 VISUEL V3, MORCEAU 6 -- la fenêtre de dépôt à l'habit de la V3 (26/11, « Enchaîne ») -- ÉCRIT, PAS EN LIGNE
+
+**CSS seulement** (`DepotDocuments.css`, règles AJOUTÉES en fin de fichier ; `DepotDocuments.tsx` NON touché -- la fenêtre est
+ouverte aux négociateurs depuis le 18/11, seul l'habit bouge) : en-tête CLAIR (sauf la feuille du téléphone, dont la poignée
+blanche est faite pour un fond sombre) ; chaque fichier en petite page blanche à bande magenta ; les lignes en cartes (la
+liste perd son cadre). **Pas fait dans ce morceau** : les animations de la maquette (les pages qui s'écartent à la
+séparation, la barre qui se remplit fichier par fichier) -- elles demandent de toucher le composant, donc son code d'envoi ;
+à décider à part.
+**Contrôles** : `test_ged_depot_v3.cjs` **6 VERT** (dont « DepotDocuments.tsx non modifié ») ; témoin inverse (habit retiré)
+**5 ROUGE** ; tous les essais GED verts ; build. ⚠ Pas vu à l'écran : il faut le déploiement.
+**✅ EN LIGNE le 26/11 (« Oui, pousse »)** : rejoué seul sur `origin/main` avec la note du morceau 5, l'arbre exact essayé à part
+(dépôt 33, socle 16, classement 37, lecture 62, build), poussé en `8d13a3c` ; la production sert la feuille neuve. **Vu dans le
+Chrome de Frédéric sur 18849, sans rien déposer** : « Déposer des documents » s'ouvre avec l'en-tête CLAIR (titre encre,
+pastilles « Compromis » et « Mandat 18849 » sur fond brume, croix claire), la zone « Glisse les fichiers ici » et la liste des
+pièces non trouvées inchangées ; refermée par « Fermer ». Les lignes en cartes et les pages à bande magenta n'ont pas été vues
+(il faut déposer un fichier).
+
+### 12.65 VISUEL V3, MORCEAU 7 -- le téléphone (26/11, « A puis B », « Oui, les deux ») -- A EN LIGNE, B AUDITÉ
+
+**Le constat, vu à 390 px sur 18849 (iframe dans le Chrome de Frédéric)** : le téléphone affiche le panneau CLASSIQUE
+(`ConsoleDocumentsPanel` avec `compact`, un seul appelant, `App.tsx` ~l. 42863), rangé dans la section repliée « Contenu de
+l'annonce ». Rien ne sort de la page (371 px pour 386), le haut « À traiter » (morceau 4) et le dépôt (morceau 6) sont là. Mais :
+40 boutons de document sur 59 débordaient (« Signature », « Supprimer » : 67 et 69 px de texte pour 65, `flex: 1 1 0`) ; les
+10 cases « Non trouvée : déposer » étaient coupées (121 px pour 88) ; la grille des 10 pièces fait ~1 500 px ; la liste des 20
+documents en cartes de 160 px en fait ~3 300, sans rangement (les morceaux 3 et 6 ne jouent qu'au cockpit).
+**A, CSS seulement** (fin de `RecuManque.css`, sous `@media (max-width: 760px)`) : un bouton de document prend sa largeur
+(`flex: 1 1 auto; min-width: max-content`), « Supprimer » passe seul à la ligne ; « Non trouvée : déposer » passe à la ligne.
+⚠ Ma première règle touchait aussi la case d'une pièce REÇUE (un nom de fichier sans espace en serait sorti) : resserrée à
+`.gm2-ic:not(.is-recu) ~ .gm2-fd`. `test_ged_telephone_v3.cjs` **6 VERT**, témoin **4 ROUGE**. **EN LIGNE en `75096d6`**
+(rejoué seul sur `origin/main`, arbre exact essayé, build). **Vu en ligne sans injection** : 0 bouton sur 59 qui déborde,
+seule la case reçue garde ses points de suspension (voulu), page 371 px.
+**B, le rangement « Le dossier » au téléphone : AUDITÉ, PAS CODÉ.** Ce qu'il touche : `App.tsx`, la branche classique, sous
+`compact` seulement -- sortir `enriched` et `ouvrirPuisSuivi` de la branche cockpit (calcul pur), mettre la carte classique dans
+une fonction (JSX à l'identique), `ligneDocument` recevant la carte à monter, `rangeEnListe`/`onDossier` allumés aussi sous
+`compact`. Ce qu'il pourrait casser : « Voir le suivi » de la fenêtre classique (la ligne repliée n'a pas `sst-<id>`) -> passer
+par `ouvrirPuisSuivi` ; `test_ged_dossier_range.cjs` lit le texte d'App.tsx -> à adapter. Les styles `gd3-*` ne sont pas
+attachés au cockpit. **Session signature prévenue le 26/11** (« Audit signature électronique Youtrust », texte :
+`notice/PROMPT_AVERTIR_SESSION_SIGNATURE_GED_TELEPHONE_2026-11-26.md`). ⏳ B attend sa réponse et le « vas-y » de Frédéric.
+**Vu en passant, hors GED** : au téléphone, sur les tuiles photo, l'étiquette « Visible » est recouverte par le bouton de masquage.
+**✅ B EN LIGNE le 26/11 (« Oui, vas-y », « Oui, pousse »)** : rejoué seul sur `origin/main` avec les notes §12.64 et §12.65 (le
+commit de note s'appuyait sur §12.64, restée locale), l'arbre exact essayé (App.tsx et RecuManque.tsx identiques à ceux essayés,
+essais GED verts, build), poussé en `22eb636`. `test_ged_dossier_range.cjs` **25 VERT** : section ⑤ neuve, le code DÉPLACÉ
+comparé au caractère à la version d'avant (carte classique, enriched, ligne, groupes et « Déposer ») ; témoins 1 et 2 ROUGE.
+**Vu en ligne sur 18849 au téléphone (iframe 390 px, lecture seule, aucun bouton touché)** : « Le dossier » avec 5 groupes
+(Compromis en cours 1 sur 10, Offre, Mise en vente et visites, Prise de mandat complets, Autres documents 4), plus de grille ni
+de liste à plat, **20 lignes pour 20 documents**, une ligne dépliée montre la CARTE CLASSIQUE (Ouvrir, Signature, Supprimer, 0
+débordement), l'état « Signé le 22/09/2026 à 16:41 » visible ligne repliée, page 371 px.
+⚠ **La vérification a trouvé un défaut** : la ligne repliée a 4 colonnes, et au téléphone l'état écrasait le nom (« Mandat de
+vente signé » à 19 px ; « planCadastralNormalise.pdf » passait sous la pastille). Correctif CSS, téléphone seulement (bloc
+morceau 7 de `RecuManque.css`) : l'état passe SOUS le nom, un nom sans espace se coupe. Éprouvé en direct sur la fiche en ligne
+avant d'être écrit. `test_ged_telephone_v3.cjs` **7 VERT**, témoin 5 ROUGE. Commité, PAS POUSSÉ. Non vérifié : « Voir le suivi »
+cliqué au téléphone (il faut un document en signature Youtrust ; l'essai fixe le chemin).
+**✅ LE CORRECTIF EST EN LIGNE (27/11, « Oui, pousse »)** : `3beef02` était DÉJÀ sur `origin/main` -- une autre session l'a
+emporté avec son propre envoi (il est l'ancêtre de `2dc9f07`) ; rien n'a été poussé par moi ce jour. Le CSS en ligne
+(`index-D7EbXzRj.css`) porte les règles. Vu sur 18849 au téléphone (iframe 390 px, lecture seule ; seuls les 5 groupes ont été
+dépliés à l'écran) : **20 lignes pour 20 documents, chaque nom large de 178 px, 0 nom écrasé, 0 état sur le nom, 0 débordement**,
+l'état sous le nom sur les 20 lignes ; « Mandat de vente signé » entier, « planCadastralNormalise.pd/f » coupé à la ligne ; page
+373 px.

@@ -67,12 +67,21 @@ const ged = construire('src/lib/ged.ts', { hasSupabaseEnv: true, supabase: fauss
   console.log('④ le branchement à l\'écran')
   const rm = fs.readFileSync(path.join(__dirname, 'src/RecuManque.tsx'), 'utf8')
   voir(/if \(!regles\) return[\s\S]{0,120}loadGedJugements\(hektorAnnonceId\)/.test(rm), 'les jugements ne se lisent que si les lignes « À regarder » sont ouvertes (ged_propositions)')
-  voir(/\{jugements \? \(/.test(rm) && /role="group" aria-label=\{`Juger : \$\{a\.texte\}`\}/.test(rm), 'les boutons n\'existent que si la lecture a réussi')
+  // Visuel V3, morceau 4 (20/11, décision de Frédéric) : la période de test est retirée -- plus de « Vrai / Faux / Déjà
+  // su » ; « Masquer » (pour tout le monde sur le bien) et « Réafficher », écrits dans le MÊME journal.
+  voir(/\{jugements \? \(\s*<button type="button" className="gm2-lien gm2-masquer"/.test(rm) && !/aria-label=\{`Juger : /.test(rm) && !/VERDICTS\.map/.test(rm),
+    '« Masquer » n\'existe que si la lecture des jugements a réussi ; plus aucune barre « Vrai / Faux / Déjà su »')
+  voir(/onClick=\{\(\) => void juger\(a, 'masque'\)\}/.test(rm) && /verdict: 'reaffiche'/.test(rm) && /estMasquee\(jugements\.get\(cleJugement\(a\)\)\?\.verdict\)/.test(rm),
+    'Masquer écrit « masque », Réafficher écrit « reaffiche » ; seule une ligne dont le dernier mot est « masque » est masquée')
+  voir(/const alertesVisibles = alertes\.filter\(\(a\) => !lieeAUneCarte\(a\) && !masquees\.includes\(a\)\)/.test(rm), 'une alerte déjà montrée par une fenêtre « Ce que dit… » n\'a plus sa propre carte (le doublon)')
+  voir(!/verdictDesChoix/.test(rm), 'enregistrer une fenêtre n\'écrit plus de note de mesure')
+  voir(/\{nbATraiter > 0 \? \(\s*<div className="gm2-traiter-h"/.test(rm), 'rien à traiter (tout masqué) : pas d\'en-tête « À traiter 0 » (décision du 26/11)')
   voir(/const cle = cleJugement\(a\)[\s\S]{0,200}gedJuger\(\{ hektorAnnonceId, regle: a\.code, cle, texte: a\.texte, niveau: a\.niveau, verdict \}\)/.test(rm), 'le jugement garde la règle, la clé, le texte et le niveau TELS QU\'AFFICHÉS')
   // habillage H1 (16/11) : la ligne n'est plus un bouton ; « Déposer la pièce » est un bouton de la carte, la barre sa voisine
-  const bloc = rm.slice(rm.indexOf('{alertes.map((a, i) => {'), rm.indexOf('gm2-lus'))
-  voir(/>Déposer la pièce<\/button>[\s\S]*className="gm2-juge" role="group"/.test(bloc) && !/<button[^>]*>[^<]*<div className="gm2-juge"/.test(bloc),
-    'la barre de jugement est À CÔTÉ du bouton « Déposer », jamais dedans')
+  const bloc = rm.slice(rm.indexOf('{alertesVisibles.map((a, i) => {'), rm.indexOf('gm2-lus'))
+  voir(/>Déposer la pièce<\/button>[\s\S]*className="gm2-lien gm2-masquer"/.test(bloc), '« Masquer » est À CÔTÉ du bouton « Déposer », jamais dedans')
+  const gm = fs.readFileSync(path.join(__dirname, 'src/lib/gedMesure.ts'), 'utf8')
+  voir(/export const estMasquee = \(verdict: VerdictGed \| null \| undefined\): boolean => verdict === 'masque'/.test(gm), 'TÉMOIN : « vrai », « faux », « déjà su » (8 jugements du 17-19/11) ne masquent rien')
   voir(!/gedJuger|loadGedJugements/.test(fs.readFileSync(path.join(__dirname, 'src/lib/gedRegles.ts'), 'utf8')), 'TÉMOIN : les règles elles-mêmes ne savent rien des jugements (on mesure, on ne change pas les règles)')
 
   console.log(`\n${ok} verts, ${ko} rouges`)

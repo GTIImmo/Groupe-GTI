@@ -299,3 +299,23 @@
   .dd-feuille-voile, .dd-feuille, .dd-feuille * { animation: none !important; transition: none !important; }
   .dd-flash { display: none; }
 }
+
+/* ═══ Visuel V3, morceau 6 (26/11/2026) : la fenêtre de dépôt à l'habit de la V3 -- en-tête clair (sauf la feuille du
+   téléphone, dont la poignée est faite pour un fond sombre), la miniature de chaque fichier en petite page blanche à bande
+   magenta, les lignes en cartes. Règles AJOUTÉES en fin de fichier : aucune règle existante n'est réécrite, aucun geste ne
+   change (la fenêtre est ouverte aux négociateurs depuis le 18/11 : seul l'habit bouge). */
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) { background: var(--bv-surface, #ffffff); color: var(--bv-ink, #1f2121); border-bottom: 1px solid var(--bv-line, #e2e5e6); }
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) :focus-visible { outline-color: var(--bv-magenta, #c5005f); }
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) .dd-hd-t p { color: var(--bv-subtle, #7c8082); }
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) .dd-hd-t h2 { color: var(--bv-ink, #1f2121); }
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) .dd-hd-pil { background: var(--bv-brume, #f6f7f8); color: var(--bv-mute, #5c6163); }
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) .dd-hd-x { background: var(--bv-brume, #f6f7f8); color: var(--bv-ink, #1f2121); }
+.ged-depot.dd .dd-hd:not(.dd-feuille-hd) .dd-hd-x:hover { background: var(--bv-line, #e2e5e6); }
+.dd-vign { position: relative; overflow: hidden; padding-top: 10px; border-color: var(--bv-line-strong, #cfd3d4); box-shadow: 0 3px 8px -5px rgba(34, 35, 35, 0.3); }
+.dd-vign::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--bv-magenta, #c5005f); }
+.dd-vign span:first-child { background: var(--bv-line-strong, #cfd3d4); }
+.ged-depot-liste.dd-liste { background: transparent; box-shadow: none; border-radius: 0; }
+.ged-depot-ligne.dd-l { margin: 0 0 8px; border: 1px solid var(--bv-line, #e2e5e6); border-radius: 14px; transition: background-color 150ms, box-shadow 200ms, border-color 150ms; }
+.ged-depot-ligne.dd-l:hover { border-color: var(--bv-line-strong, #cfd3d4); }
+.ged-depot-ligne.dd-l.is-choisi { border-color: var(--bv-ink, #1f2121); box-shadow: 0 12px 26px -20px rgba(34, 35, 35, 0.55); }
+.ged-depot-ligne.dd-l.is-e-echec { border-color: var(--bv-framboise, #8c0044); }

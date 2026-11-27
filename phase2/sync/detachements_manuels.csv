@@ -1,0 +1,636 @@
+# BROUILLON -- jamais dans phase2/sync. Le protocole, passage 82 (image 2026-11-25_072625) : un morceau par ligne tranchee dont la porte n'est pas RIEN (rattachement et coupe ensemble : l'outil de coupe sait aussi reunir). Pour le rejeu E de protocole_portes.py, rien d'autre.
+transactions;bien;geste;pourquoi
+4195 1001518;9362;protocole_rattachement;01d21e1c
+22999 1001511;45753;protocole_rattachement;0241547a
+28908 1001548;62066;protocole_rattachement;037e509b
+14927 14928;30678;protocole_rattachement;05e8ddb5
+6340 6342;12246;protocole_coupe_deja_ecrite;08GV8OMZ
+1257 1259 1261;3084;protocole_coupe_neuve;0B1BG6FO
+7422 1001458;15018;protocole_rattachement;0FSCB6XY
+4745 4747 4749;10165;protocole_coupe_deja_ecrite;0GV2LNV2
+24512 24514;48249;protocole_coupe_neuve;0IS41BM1
+22256 22257;44638;protocole_coupe_deja_ecrite;0L1C7AGG
+24588;48311;protocole_coupe_neuve;0OO1BEZD
+26024 26025;50356;protocole_coupe_neuve;0TECT361
+8926 1001526;17746;protocole_rattachement;0TQB1SLL
+27100 27102;53290;protocole_coupe_neuve;0UDFLH74
+1000126;52937;protocole_coupe_deja_ecrite;0V00SLEU
+26034 26036;50400;protocole_coupe_neuve;0V3UQ41Y
+24108 24110;47744;protocole_coupe_deja_ecrite;0VASTLW2
+3689 1001512;8461;protocole_rattachement;0a733659
+23162 1001449;46055;protocole_rattachement;10MD21J7
+11110 1001452;23241;protocole_rattachement;11QCW55L
+16364;34048;protocole_coupe_deja_ecrite;1290IIOC
+11667;24484;protocole_coupe_deja_ecrite;13KBCS85
+27513;53740;protocole_coupe_neuve;1D7EIYKW
+24511 24513 24515;48249;protocole_coupe_neuve;1HFA7NUI
+20247 1001426;41672;protocole_coupe_deja_ecrite;1P6VET6U
+26604 26608 26609;52143;protocole_coupe_deja_ecrite;1TZEGF2D
+2166 2169;5620;protocole_coupe_deja_ecrite;1W9FJJLB
+24598 24603;48321;protocole_coupe_neuve;1X9W3VUF
+27806 27808 27810;54125;protocole_coupe_neuve;1ZYS3OG0
+28582 1001517;59029;protocole_rattachement;1b7b63c6
+28857 1001546;61667;protocole_rattachement;1bbfa76b
+21521 21522 21523;43050;protocole_coupe_neuve;1c7b38f9
+14007 14008 14009 1001593;28422;protocole_coupe_neuve;1cc703d9
+24010 1001494;47574;protocole_coupe_neuve;1f3d536a
+14034 14035 14036;28506;protocole_coupe_neuve;205f62be
+23003 1001487;45766;protocole_rattachement;21f6e095
+14032 1001488;28506;protocole_rattachement;232d82c0
+27101 1001455;53290;protocole_coupe_neuve;25QYWG2U
+21798 21799;43432;protocole_rattachement;26283bf9
+27484 27486;53699;protocole_coupe_deja_ecrite;265KVIXP
+11655 11656 11658;24479;protocole_coupe_deja_ecrite;29YBUBYA
+15901 1001509;32692;protocole_rattachement;29e4a022
+6157 1001430;11786;protocole_coupe_deja_ecrite;2DUPM26R
+7604 7607 7608;15449;protocole_coupe_neuve;2EX8MDJW
+1101 1103 1001539;2393;protocole_coupe_neuve;2FBR2M9U
+4654;9993;protocole_coupe_neuve;2FOH8HE4
+27140;53342;protocole_coupe_neuve;2HOL5ISX
+19095 19097;39776;protocole_coupe_neuve;2IK4EYXH
+7778 7780 7782;15722;protocole_coupe_deja_ecrite;2SCBZXMH
+24124 24125 29003;47776;protocole_coupe_neuve;305KAY9W -- avec sa piece a part deja dans son dossier (R7a) 24124
+14051 14055;28548;protocole_coupe_neuve;30898aa2
+4483;9748;protocole_coupe_neuve;3308P0UX
+19611 19613 19615;40679;protocole_coupe_deja_ecrite;34JO2UUN
+4771 4773;10211;protocole_coupe_deja_ecrite;3936NZOO
+17422 17425;37172;protocole_coupe_neuve;39USDYL2
+17301 17303;36780;protocole_coupe_deja_ecrite;39ZNKH9W
+7609 7612 7613;15451;protocole_coupe_neuve;3A2EL02E
+20748 20750 20752;42133;protocole_coupe_neuve;3B4CEGF9
+17434 17437;37192;protocole_coupe_neuve;3ID282Y1
+8839 1001463;17531;protocole_rattachement;3KK4Z1SJ
+17288 17290;36755;protocole_coupe_deja_ecrite;3LMG7EXA
+11956 11958 11960;24733;protocole_coupe_neuve;3S4ZWOFK
+176 179 180;500;protocole_coupe_neuve;3TLH0CNW
+4746 4748;10165;protocole_coupe_deja_ecrite;3W10AEIK
+19737 19739;40855;protocole_coupe_neuve;3WBNBNY4
+4509 4512 4514;9780;protocole_coupe_deja_ecrite;3X3UPF1Q
+3646 3649;8395;protocole_coupe_neuve;427UDDSF
+4132 4135;9247;protocole_coupe_deja_ecrite;43YX9GLG
+25626 1001445;49484;protocole_coupe_deja_ecrite;44ZVGG8Q
+24444 24446 24447;48149;protocole_coupe_neuve;45PERG6S
+25840 25841 25842;49850;protocole_coupe_deja_ecrite;46b0a92c
+22018 22019;44198;protocole_coupe_deja_ecrite;4D2J48XD
+19814 19819 19820;40977;protocole_coupe_neuve;4G2UHO35
+11111 1001465;23245;protocole_rattachement;4Z4M12JB
+3628 1001484;8377;protocole_rattachement;4a91a4b7
+21435 1001485;42976;protocole_rattachement;4b0f1b1c
+11145 1001516;23353;protocole_coupe_deja_ecrite;4f7b9749
+14052;28548;protocole_coupe_neuve;4fc6b33a
+22207 22208 22211;44536;protocole_coupe_neuve;50G3GV2U
+24631 24633;48353;protocole_coupe_neuve;50LQ2VSA
+17132 17134 17137;36320;protocole_coupe_neuve;510YKN3L
+2357 1001448;5838;protocole_coupe_deja_ecrite;515UT1WG
+16100 1001483;33144;protocole_rattachement;51bee548
+28762 1001545;59610;protocole_rattachement;545cf27f
+16341 16345 16346;34007;protocole_coupe_deja_ecrite;5494P9OV
+28115 1001440;54672;protocole_rattachement;54ZD3N3B
+987 988;1950;protocole_rattachement;566d1a48
+3697 1001551;8489;protocole_rattachement;5786a3cc
+14148 14149 14152;28677;protocole_coupe_neuve;5ELT15Q7
+17320 17322 17324;36794;protocole_coupe_deja_ecrite;5GZVT548
+14224 14227 14228;28918;protocole_coupe_neuve;5H70KQZA
+2507 2509;6151;protocole_coupe_deja_ecrite;5H9BOKWJ
+3587 3589 3590;8330;protocole_coupe_deja_ecrite;5L7GSXEB
+17300 17302 17304;36780;protocole_coupe_deja_ecrite;5Q2BQQU4
+20088 20090;41481;protocole_coupe_neuve;5QE9107L
+4197;9365;protocole_coupe_neuve;5R6RC36Y
+19657 19659;40744;protocole_coupe_deja_ecrite;5SDJ4B0P
+4595 4597 4599;9946;protocole_coupe_deja_ecrite;5SPO8UO2
+16329 1001479;33952;protocole_rattachement;5TGQ3A2Y
+15061 15062 29004;31045;protocole_coupe_deja_ecrite;5VZDGQC3
+17208 17210 17212;36477;protocole_coupe_deja_ecrite;5XWBF7OE
+28178 1001514;54776;protocole_coupe_neuve;5a4371b5
+28179 28180 28181;54776;protocole_coupe_neuve;5f47de79
+17389;37032;protocole_coupe_neuve;60CLRO51
+4179 4181;9340;protocole_coupe_neuve;61TDWJ65
+16223 1001550;33517;protocole_rattachement;62da86ce
+19408 1001502;40307;protocole_rattachement;6348ec91
+25839 1001500;49850;protocole_coupe_deja_ecrite;64225027
+19612 19614;40679;protocole_coupe_deja_ecrite;644UYQNA
+7448 7451 7454;15087;protocole_coupe_neuve;65M3RZSX
+20309 20311;41724;protocole_coupe_deja_ecrite;676XP6GN
+25709 1001499;49624;protocole_rattachement;693b76ff
+14143;28673;protocole_coupe_deja_ecrite;6D1WSAK8
+19131 19133;39845;protocole_coupe_neuve;6FQO29C8
+4770 4772 4774;10211;protocole_coupe_deja_ecrite;6JAO8UMD
+14516 14518 14520;29433;protocole_coupe_neuve;6KAKIMS4
+26041 26042 26044;50403;protocole_coupe_deja_ecrite;6KGSYGM2
+27039 1001471;53036;protocole_rattachement;6KRJ5GFV
+25890;49941;protocole_coupe_deja_ecrite;6N2UPC4E
+11654 11657;24479;protocole_coupe_deja_ecrite;6NOJ686I
+24450 24453 1001538;48154;protocole_coupe_neuve;6U5DQQ4J
+2451;6025;protocole_coupe_deja_ecrite;6W6F4A4R
+21584 21587;43114;protocole_coupe_deja_ecrite;71204JJ6
+11595 11597 11599;24410;protocole_coupe_deja_ecrite;717OUUED
+3676;8454;protocole_coupe_deja_ecrite;721e650c
+7232 1001467;14761;protocole_rattachement;723TVD5F
+3629 1001490;8381;protocole_rattachement;7241c9ce
+6103 1001505;11695;protocole_rattachement;729ba8dc
+16841 16843;35681;protocole_coupe_deja_ecrite;73FOXX2A
+14037 1001507;28517;protocole_rattachement;76fff930
+27483 27485 27487;53699;protocole_coupe_deja_ecrite;77VVY2X6
+6434 6435 6437;12414;protocole_coupe_deja_ecrite;7BPVD7K4
+30 1001429;61;protocole_rattachement;7C1ZQYFL
+117 120;376;protocole_coupe_deja_ecrite;7HDK9XOG
+19656 19658 19660;40744;protocole_coupe_deja_ecrite;7ITH92WI
+7115 7117;14472;protocole_coupe_neuve;7JXLR3JQ
+26016;50296;protocole_coupe_neuve;7MOMHHQ1
+22 24;53;protocole_coupe_deja_ecrite;7NI4WKV5
+24407 24408 24410;48112;protocole_coupe_deja_ecrite;7P1JJ2PP
+7599 7600;15439;protocole_rattachement;7PBRZJD8
+2533 2535;6184;protocole_coupe_deja_ecrite;7PTB8Z3M
+21439 1001427;42981;protocole_rattachement;7Q6O044E
+24573;48301;protocole_coupe_deja_ecrite;7T8CMWY6
+24411 24413 24415;48113;protocole_coupe_deja_ecrite;7TXZXESY
+23424 23425 23427;46500;protocole_coupe_deja_ecrite;7WC4GUJR
+19104 19105;39789;protocole_coupe_deja_ecrite;80MU6MMO
+16878 16879;35735;protocole_rattachement;80OY9IUH
+25898 25899 25901;49948;protocole_coupe_deja_ecrite;81LLHEM6
+15095 15098 15099;31164;protocole_coupe_neuve;84LAGWZR
+6156 6158 6159;11786;protocole_coupe_deja_ecrite;867f573c
+3670 3671 3672;8442;protocole_coupe_neuve;86ad8c0f
+24135 1001492;47790;protocole_rattachement;875e39cd
+17427 17429 1001534;37184;protocole_coupe_neuve;87QOXR64
+22085 22088 22091;44308;protocole_coupe_deja_ecrite;88PMHJRA
+11728 11730 11732;24528;protocole_coupe_deja_ecrite;89QMXNNH
+21659 21660 21662;43250;protocole_coupe_neuve;8BJKJ6XP
+12178 12180 12182;24969;protocole_coupe_neuve;8BUW2ZVH
+21 27;53;protocole_coupe_deja_ecrite;8GIIDS5T
+7942 7944 7945;15941;protocole_coupe_deja_ecrite;8I79G718
+24571 24572 24574;48301;protocole_coupe_deja_ecrite;8J3JDVHM
+11558 1001535;24368;protocole_coupe_neuve;8NZ6V6XB
+20511 20512 20514;41858;protocole_coupe_deja_ecrite;8O7W1KRD
+19070 19072;39745;protocole_coupe_neuve;8SZDU4F5
+24004 1001486;47571;protocole_coupe_deja_ecrite;8c7725f2
+4622 4624 4626;9961;protocole_coupe_neuve;910O0A2Q
+21933 1001513;43828;protocole_rattachement;9343bcb8
+25692 1001506;49573;protocole_rattachement;97e5a34d
+27558 27559 27561;53806;protocole_coupe_deja_ecrite;98ILQ6JE
+24157 24158 24159 24160 24161;47815;protocole_rattachement;9CQ325R6
+7710 7712;15672;protocole_coupe_neuve;9DK01H85
+4268 4272;9483;protocole_coupe_neuve;9FP3UICY
+6261 1001442;12060;protocole_rattachement;9G7N611Q
+19069 19071;39745;protocole_coupe_neuve;9HLRYNLE
+27560;53806;protocole_coupe_deja_ecrite;9HPGTRWV
+17913 17914 17916;38099;protocole_coupe_neuve;9JCIQYZX
+17525 17526;37402;protocole_coupe_deja_ecrite;9JHY3CPQ
+21598 21600;43126;protocole_coupe_deja_ecrite;9K4Y3S4N
+24380 24381 1001533;48093;protocole_coupe_neuve;9KHYVR1M
+11957 11959;24733;protocole_coupe_neuve;9UO5NUN6
+4480 4484 1001532;9748;protocole_coupe_neuve;9WQ204HP
+1875 1876 1878;5262;protocole_coupe_neuve;A07EC3DH
+16788 1001431;35482;protocole_rattachement;A4GWQGD5
+2641 2644 2645;6585;protocole_coupe_deja_ecrite;A5Y59R7M
+17154 17155 17158;36344;protocole_coupe_neuve;A6OS2TTJ
+19511 19513 19514;40453;protocole_coupe_deja_ecrite;A8LNQDOQ
+8857 8858 8860;17556;protocole_coupe_deja_ecrite;A94E7E0K
+19619 19622;40684;protocole_coupe_neuve;AA797XO0
+8840 1001454;17534;protocole_coupe_deja_ecrite;ABDXFMQC
+4328 4332 4333;9556;protocole_coupe_deja_ecrite;ACB4D8WI
+24330 24332 24334;48019;protocole_coupe_neuve;AD6SMTR5
+1061;2208;protocole_coupe_neuve;AHKQI7MX
+16337 16338 16340;34006;protocole_coupe_neuve;AIV9UI0I
+12012 12014 12017;24781;protocole_coupe_neuve;ANHQ1PK7
+126 127;378;protocole_coupe_neuve;AOPBUAOJ
+160 1001472;448;protocole_rattachement;AVO8HHFE
+14913 14915;30637;protocole_coupe_neuve;AVXWIZTU
+14109 14112 14115;28653;protocole_coupe_neuve;AYIHPHF5
+23056 23059 23060;45892;protocole_coupe_deja_ecrite;AYQ5SMMS
+24443 24445;48149;protocole_coupe_neuve;BEI93QZ2
+24451 24452 24455;48154;protocole_coupe_neuve;BETUXDEN
+7720 7721 7723;15682;protocole_coupe_deja_ecrite;BLKP7JFQ
+4561 4562 4564;9902;protocole_coupe_neuve;BNWNKPJH
+7580 7582;15395;protocole_coupe_deja_ecrite;BUC1UXJH
+24563 24565 24567;48297;protocole_coupe_deja_ecrite;BV4BJ0TU
+7068 1001434;14383;protocole_rattachement;BWEF58JV
+2211 2212 2214;5689;protocole_coupe_deja_ecrite;BZDTPD98
+19691 19692 19695;40792;protocole_coupe_deja_ecrite;C0U52ILC
+19736 19738 19740;40855;protocole_coupe_neuve;C6XFV1E5
+16870 16871;35716;protocole_coupe_deja_ecrite;CA2XNF38
+4661 4663;10017;protocole_coupe_neuve;CBBZXB2O
+19142;39854;protocole_coupe_neuve;CC678DGO
+26614 26616 26617;52166;protocole_coupe_deja_ecrite;CC8TJTBR
+22017 22020 22021;44198;protocole_coupe_deja_ecrite;CEOL50VM
+11500 11502 11503;24206;protocole_coupe_deja_ecrite;CKISRI2B
+26043;50403;protocole_coupe_deja_ecrite;CPM9OKZE
+16113 16115 16117;33209;protocole_coupe_neuve;CSL29RHC
+26 1001523;53;protocole_coupe_deja_ecrite;CW4IYXO2
+19512;40453;protocole_coupe_deja_ecrite;CYZA6GYS
+17408 17409 17412;37160;protocole_coupe_neuve;D070WYC9
+22086 22090;44308;protocole_coupe_deja_ecrite;D3MEX415
+7647 7648 7651;15517;protocole_coupe_deja_ecrite;D5KU9GNT
+24406 24409;48112;protocole_coupe_deja_ecrite;D7CZQBZG
+17433;37192;protocole_coupe_neuve;D96KSCYQ
+17366;36917;protocole_coupe_neuve;D9MMB7OU
+11501 1001468;24206;protocole_coupe_deja_ecrite;DA57BFXT
+23993 23996;47557;protocole_coupe_neuve;DAMOO7OU
+4177 4180 4183;9340;protocole_coupe_neuve;DBR6LG5W
+23051 23052 23055;45891;protocole_coupe_deja_ecrite;DBRDHEGH
+1228 1230 1232;3029;protocole_coupe_deja_ecrite;DCFLWTF3
+974 1001433;1925;protocole_rattachement;DCSKQ0CI
+28268 28270 28272;54976;protocole_coupe_neuve;DEZK3NBU
+17133 17135;36320;protocole_coupe_neuve;DEZQM9HM
+20408 20410;41797;protocole_coupe_deja_ecrite;DHG4SD0N
+26029 26032 29007;50368;protocole_coupe_deja_ecrite;DKH6IOKA
+14940 14942 14944;30717;protocole_coupe_neuve;DKTK22F2
+7450 7452;15087;protocole_coupe_neuve;DN5U3GER
+15895 1001432;32660;protocole_rattachement;DTL3BX47
+16842 16844 16845;35681;protocole_coupe_deja_ecrite;DY4JG42E
+22008 22010;44183;protocole_coupe_deja_ecrite;E071BARG
+20268;41699;protocole_coupe_neuve;E1WD68ZB
+27656 27657 27659;53922;protocole_coupe_deja_ecrite;E2JTIT1V
+24494 24496 24498;48235;protocole_coupe_neuve;E2ZYGRTL
+14130 14133 14134;28661;protocole_coupe_neuve;E5OPC7JN
+1104;2393;protocole_coupe_neuve;E6RLLKMN
+11412 11414;24119;protocole_coupe_neuve;E9GL6MUS
+14141 14142;28673;protocole_coupe_deja_ecrite;EC977D21
+6555 6556 6559;12728;protocole_coupe_neuve;EGR8KXOL
+27687;53942;protocole_coupe_deja_ecrite;EHQQU5U7
+27427;53657;protocole_coupe_neuve;EKRHN9WR
+20264 20267 1001522;41699;protocole_coupe_neuve;EO8MXFE9
+24650 24651 24654;48370;protocole_coupe_neuve;ESVJUR12
+24608 24609 24611;48330;protocole_coupe_deja_ecrite;EWHWFF0Y
+27679 27681;53940;protocole_coupe_deja_ecrite;F5GA770R
+14171 14173 14175;28692;protocole_coupe_neuve;F6TERQ8Z
+1161 1162 1164;2629;protocole_coupe_deja_ecrite;F6XBD2IU
+17567 1001481;37470;protocole_rattachement;FBOSPXJX
+20784 20787 20790;42208;protocole_coupe_neuve;FD08D263
+14816;30376;protocole_coupe_neuve;FJS4IJGZ
+1874 1877;5262;protocole_coupe_neuve;FLPUUSY3
+8868;17583;protocole_coupe_deja_ecrite;FMVORN8Y
+4125 4127 4129;9232;protocole_coupe_neuve;FOZ6HZLK
+4858 4860;10331;protocole_coupe_neuve;FP2KQU83
+24282 24284 24285;47983;protocole_coupe_neuve;FRROUPY0
+16362 16363;34048;protocole_coupe_deja_ecrite;FS22QU5G
+8856 8859;17556;protocole_coupe_deja_ecrite;FTRYKTSC
+20277 20279;41705;protocole_coupe_deja_ecrite;FUDJ9CJC
+23475 23477;46585;protocole_coupe_neuve;FVLMAQ63
+4370 4372 1001530;9608;protocole_coupe_neuve;FWCFAN6O
+14010 1001435;28440;protocole_rattachement;FYC1KCHQ
+4534 4535 4537;9868;protocole_coupe_neuve;FYNZEKI6
+1160 1163;2629;protocole_coupe_deja_ecrite;G1TVNXJ5
+4329 4330;9556;protocole_coupe_deja_ecrite;G41FTEZ8
+11578 11580 11582;24390;protocole_coupe_neuve;G58FN51A
+26605 26607;52143;protocole_coupe_deja_ecrite;G88ISQKI
+1000050 1000132 1000133 1000249 1000250;50119;protocole_rattachement;G8YSAI5Z
+23333 23334 23336;46346;protocole_coupe_deja_ecrite;G9TTO1MQ
+4909 4911 4912;10375;protocole_coupe_deja_ecrite;GD6CVLJB
+11167 11170;23530;protocole_coupe_deja_ecrite;GEQKYZCN
+17650 17653 17654;37634;protocole_coupe_deja_ecrite;GHLNXYFK
+21946 21948;43923;protocole_coupe_deja_ecrite;GHX4LA2G
+21597 21599 21601;43126;protocole_coupe_deja_ecrite;GM8VDVK2
+7545 7548 7549;15338;protocole_coupe_deja_ecrite;GMWSIZKV
+4178 4182;9340;protocole_coupe_neuve;GN8TANP8
+7719 7722;15682;protocole_coupe_deja_ecrite;GPO3PZ76
+27133 27137 27142;53342;protocole_coupe_neuve;GQCBSQNY
+21964 21967 21968;44033;protocole_coupe_deja_ecrite;GRUQHIOY
+11598 29005;24410;protocole_coupe_deja_ecrite;GUUVDY2S
+19620 19621 19623;40684;protocole_coupe_neuve;GWAP2ROG
+11557 11559 11562;24368;protocole_coupe_neuve;GWEROU6H
+4669 4672;10043;protocole_coupe_neuve;GYGF5F1X
+4131 4133 4136;9247;protocole_coupe_deja_ecrite;H1KYESMD
+19094 19096 19098;39776;protocole_coupe_neuve;H2GKG338
+21615 21617 21619;43138;protocole_coupe_neuve;H580GW09
+25876 25878 25881;49924;protocole_coupe_deja_ecrite;H5YNNNX9
+11413 11415 11416;24119;protocole_coupe_neuve;H6CTRVR6
+24122 24123;47776;protocole_coupe_neuve;H75WKJ6X
+27449;53678;protocole_coupe_neuve;H78FD3YN
+19103 19106 19107;39789;protocole_coupe_deja_ecrite;H8VX2LLI
+11729 11731;24528;protocole_coupe_deja_ecrite;HBZQXR67
+4277 4279;9491;protocole_coupe_deja_ecrite;HEQZW1KO
+16096 1001450;33134;protocole_rattachement;HF33Q6DM
+4649 4653;9993;protocole_coupe_neuve;HHQZC2QP
+23057 23058;45892;protocole_coupe_deja_ecrite;HJTL7XCC
+19664 19667 19668;40747;protocole_coupe_deja_ecrite;HMVS1CZT
+8918 1001524;17728;protocole_rattachement;HOJ11PVC
+10 11 12 13;36;protocole_rattachement;HOPCBVKM
+20301 20303;41721;protocole_coupe_deja_ecrite;HORVRQ6N
+28145 28147;54715;protocole_coupe_neuve;HPNJ32UM
+19828 19829 19831;41019;protocole_coupe_deja_ecrite;HPOCWXIR
+2210 2213;5689;protocole_coupe_deja_ecrite;HRC324JH
+7449;15087;protocole_coupe_neuve;HRRSO81C
+26603 26606;52143;protocole_coupe_deja_ecrite;HTFNZ9Z2
+24281 24283;47983;protocole_coupe_neuve;HW5D0412
+26023 26026;50356;protocole_coupe_neuve;I0K9TUCT
+19456 1001476;40378;protocole_coupe_deja_ecrite;I3R03A11
+27134 27138;53342;protocole_coupe_neuve;IEYXREWQ
+25888 25893;49941;protocole_coupe_deja_ecrite;IFNAD2KL
+7767 7770 7771;15719;protocole_coupe_deja_ecrite;IFQAPGOL
+958 1001464;1901;protocole_rattachement;IG4XNIZK
+26833 26835 29009;52741;protocole_coupe_neuve;II80B5HW
+7699 7702;15631;protocole_coupe_deja_ecrite;IPTGNTAL
+7943;15941;protocole_coupe_deja_ecrite;IQFPEZBB
+17432 17435;37192;protocole_coupe_neuve;IT0BF6M4
+7579 7581 7583;15395;protocole_coupe_deja_ecrite;IW3Y1ZZU
+17321 17323;36794;protocole_coupe_deja_ecrite;J1C9PJJP
+25897 25900;49948;protocole_coupe_deja_ecrite;J1JRBV76
+199 202 203;557;protocole_coupe_deja_ecrite;J62NO1EG
+1334 1336;3481;protocole_coupe_neuve;JAKQXFWK
+17024 17026;36165;protocole_coupe_deja_ecrite;JAW5U9OF
+19863 19864 19866;41091;protocole_coupe_neuve;JBCC1KBT
+1000116 1000148;43787;protocole_coupe_deja_ecrite;JEK94D31
+9497 9498 9500;19192;protocole_coupe_deja_ecrite;JHCF1D3M
+21947 21949;43923;protocole_coupe_deja_ecrite;JJPTIU4H
+27033 1001459;53015;protocole_rattachement;JNETQT3P
+27135 27139;53342;protocole_coupe_neuve;JRE23R1G
+27445 27448 1001541;53678;protocole_coupe_neuve;JRN2I7TM
+2642 2643;6585;protocole_coupe_deja_ecrite;JTC1I5LJ
+16379 16381 16384;34066;protocole_coupe_neuve;JUTS27P6
+19074 19076;39752;protocole_coupe_deja_ecrite;JYOLFY1A
+20265 20266 20269;41699;protocole_coupe_neuve;K013ZH03
+1000142 1001475;23841;protocole_rattachement;K4AAKJU8
+1000125 1000151;52937;protocole_coupe_deja_ecrite;KBW3J7DF
+4706 4708;10109;protocole_coupe_deja_ecrite;KCKQMFIL
+24311;48005;protocole_coupe_deja_ecrite;KODULWGN
+22087 22089;44308;protocole_coupe_deja_ecrite;KOYNCSYB
+16144 16145 16146;33255;protocole_coupe_neuve;KTZJRCR2
+23794 1001447;47133;protocole_rattachement;KWT1HIHM
+11374 11376;24100;protocole_coupe_deja_ecrite;KZIM88QE
+14808 14809 14811;30361;protocole_coupe_deja_ecrite;L1ZAEBNM
+26156 26157 26160;50759;protocole_coupe_deja_ecrite;L4HEO3NF
+22024;44205;protocole_coupe_deja_ecrite;L86MC4W7
+23983 1001521;47538;protocole_rattachement;LCQ8H7S0
+14131 14132;28661;protocole_coupe_neuve;LFHUEPY8
+4289 4290 1001531;9510;protocole_coupe_neuve;LKBO1TOH
+1000115 1000147 1000261;43787;protocole_coupe_deja_ecrite;LLQHD7MG
+24500 24501 24503;48239;protocole_coupe_deja_ecrite;LLR19GDU
+16031 16034;32960;protocole_coupe_deja_ecrite;LM6YKKZP
+24107 24109 24111;47744;protocole_coupe_deja_ecrite;LMV1HON9
+17203 17206;36471;protocole_rattachement;LNWLBVKG
+14006;28422;protocole_coupe_neuve;LPBAZ1D4
+14083 1001470;28633;protocole_rattachement;LPDGSX81
+24320 24322;48013;protocole_coupe_neuve;LQ1AVB07
+6363 1001436;12273;protocole_rattachement;LTJYTEVC
+20672 20674 1001579;42025;protocole_rattachement;LWZL8V5M
+26072 26074;50581;protocole_coupe_deja_ecrite;M1OIXLBA
+19830;41019;protocole_coupe_deja_ecrite;M3LQT4JY
+11516 11518;24252;protocole_coupe_neuve;M7P4FBYD
+17423 17424 17426;37172;protocole_coupe_neuve;M8QJWMBM
+7646 7649;15517;protocole_coupe_deja_ecrite;MAB7DN65
+7546 7547;15338;protocole_coupe_deja_ecrite;MCMUXOFP
+27661 27662;53924;protocole_coupe_deja_ecrite;MDTBQXVO
+24412 24414;48113;protocole_coupe_deja_ecrite;MEWRMGTU
+20795 20796 20798;42215;protocole_coupe_neuve;MFMR0U6A
+7067 1001460;14383;protocole_rattachement;MIO9L8C9
+20513;41858;protocole_coupe_deja_ecrite;MLUTE5I1
+16114 16116;33209;protocole_coupe_neuve;MMP3V5WF
+7294 7296;14879;protocole_coupe_deja_ecrite;MPCRGJI1
+1000127 1000150 1000263;52937;protocole_coupe_deja_ecrite;MPF7E8N7
+4796 4798 4801;10254;protocole_coupe_neuve;MQ9ZMSBS
+11188;23547;protocole_coupe_deja_ecrite;MSL64YBY
+14084 1001439;28633;protocole_rattachement;MVSINFVU
+15005;30879;protocole_coupe_neuve;MY2EIUFQ
+2532 2534 2536;6184;protocole_coupe_deja_ecrite;MYEK8UA6
+19816 19817 19821;40977;protocole_coupe_neuve;MYILWKZQ
+20308 20310 20312;41724;protocole_coupe_deja_ecrite;N0P2M218
+4481 4482 4485;9748;protocole_coupe_neuve;N1CUULMN
+28269 28271;54976;protocole_coupe_neuve;N4AQ2NQP
+11356 11358;24059;protocole_coupe_deja_ecrite;N62LJIBY
+8910 1001525;17717;protocole_rattachement;N67O7CLW
+24331 24333;48019;protocole_coupe_neuve;N8M7RKTN
+4651 4655;9993;protocole_coupe_neuve;N9J2533O
+2506 2508 2510;6151;protocole_coupe_deja_ecrite;NE17WKHG
+27554 27557;53803;protocole_coupe_neuve;NKUNH7SY
+23412 23415;46475;protocole_coupe_deja_ecrite;NOPYBDHI
+22979 22981 22983;45672;protocole_rattachement;NRZVKH85
+4267 4271;9483;protocole_coupe_neuve;NSRISB3C
+4931 4932;10396;protocole_rattachement;NTLQIZLO
+21462 1001441;42992;protocole_rattachement;NUBQNV1K
+21616 21618;43138;protocole_coupe_neuve;NYEXY2LL
+6341;12246;protocole_coupe_deja_ecrite;O1099YC0
+20407 20409 20411;41797;protocole_coupe_deja_ecrite;O1M5TV0O
+20073 20075 1001480 1001536;41467;protocole_coupe_neuve;O6R10ZQA
+11791 11793;24563;protocole_coupe_deja_ecrite;O9IYE0F0
+25627 25628 25629;49484;protocole_coupe_deja_ecrite;OAQDRTNC
+14810;30361;protocole_coupe_deja_ecrite;OCI5ECK2
+17524 17527 17528;37402;protocole_coupe_deja_ecrite;ODJRIJGW
+8845 1001456;17536;protocole_rattachement;OGVUGDXK
+22007 22009 22011;44183;protocole_coupe_deja_ecrite;OHRSRQ23
+4288 4291 4292;9510;protocole_coupe_neuve;OLXLY7GP
+19073 19075 19077;39752;protocole_coupe_deja_ecrite;OQHE2DK5
+2449 2450 2452;6025;protocole_coupe_deja_ecrite;OVNWXXNF
+19455 19457 19459;40378;protocole_coupe_deja_ecrite;OX1XQWC0
+17431;37184;protocole_coupe_neuve;OXQSBZ9V
+118 119 121;376;protocole_coupe_deja_ecrite;P0YMQODU
+16336 16339;34006;protocole_coupe_neuve;P0YWKL8J
+4126 4128;9232;protocole_coupe_neuve;P252U1JH
+27660 27663 27664;53924;protocole_coupe_deja_ecrite;P2CPKZZY
+928 1001438;1848;protocole_rattachement;P4LPJRUF
+23413 23414 23416;46475;protocole_coupe_deja_ecrite;PB3ASE0N
+4533 4536;9868;protocole_coupe_neuve;PCDZXTIY
+8866 8867 8869;17583;protocole_coupe_deja_ecrite;PHYXLBYD
+25965 1001446;50081;protocole_rattachement;PYOA2KMY
+4351 4352 4354;9582;protocole_coupe_deja_ecrite;Q20JKY62
+24499 24502;48239;protocole_coupe_deja_ecrite;Q23M98IX
+14941;30717;protocole_coupe_neuve;Q3KTCMVB
+7293 7295 7297;14879;protocole_coupe_deja_ecrite;Q5237UOE
+6554 6558;12728;protocole_coupe_neuve;Q602VZJX
+24495 24497;48235;protocole_coupe_neuve;QALNGM20
+6557;12728;protocole_coupe_neuve;QJ9LLT05
+17365 17367;36917;protocole_coupe_neuve;QJQ9M4OF
+12567 12568 12570;26131;protocole_coupe_neuve;QL70KV8I
+11790 11792 11794;24563;protocole_coupe_deja_ecrite;QPLE2162
+4560 4563;9902;protocole_coupe_neuve;QV5AYD2K
+20072 20074 20076;41467;protocole_coupe_deja_ecrite;QW7MPWOM
+2634 2635 2637;6555;protocole_coupe_deja_ecrite;QXOCABQG
+16377;34066;protocole_coupe_neuve;R0JRVFDC
+19711 19712;40811;protocole_rattachement;R2U574AC
+19815 19818;40977;protocole_coupe_neuve;R7NU9NPM
+7605 7606;15449;protocole_coupe_neuve;R90OQT16
+4851 4853 4854;10318;protocole_coupe_neuve;R9ANL92S
+4596 4598;9946;protocole_coupe_deja_ecrite;RAQTPG0M
+19665 19666;40747;protocole_coupe_deja_ecrite;RD4LZYW0
+24382 24383;48093;protocole_coupe_neuve;RF9KYWSY
+4542 4545;9877;protocole_coupe_neuve;RGCEC677
+1265 1267 1269;3089;protocole_coupe_deja_ecrite;RI0D8NZ6
+17377 1001527;36993;protocole_rattachement;RKWNRBV1
+24271 1001437;47975;protocole_rattachement;RL88RBTY
+26154 26159;50759;protocole_coupe_deja_ecrite;RP4HBTQN
+16378 16380;34066;protocole_coupe_neuve;RX6J289Y
+28175 1001425;54771;protocole_rattachement;S13Z3PIN
+20276 20278 20280;41705;protocole_coupe_deja_ecrite;S2B9H1VA
+17387 17390 1001537;37032;protocole_coupe_neuve;S3HOG6UL
+200 201;557;protocole_coupe_deja_ecrite;S3J2JV0O
+26883 26888 26891;52788;protocole_coupe_neuve;S9C3F07K
+27722 27723 27725;53964;protocole_coupe_neuve;SA7DWYEZ
+23054;45891;protocole_coupe_deja_ecrite;SBH4QWDW
+9496 9499;19192;protocole_coupe_deja_ecrite;SC55F4MV
+11709 11710 11712;24510;protocole_coupe_neuve;SC58GWXX
+24319 24323;48013;protocole_coupe_neuve;SCYKLY77
+1000094 1000166 1000277;23871;protocole_coupe_neuve;SD0JQ4DK
+11186 11187 11189;23547;protocole_coupe_deja_ecrite;SLHR5FHE
+17289 17292 17293;36755;protocole_coupe_deja_ecrite;SS4I5EZW
+7711 7713 7714;15672;protocole_coupe_neuve;SWDW99J5
+14813 14817 1001529;30376;protocole_coupe_neuve;SWSN80FQ
+11546 11548;24361;protocole_coupe_deja_ecrite;SXG8691T
+8016 8019;16073;protocole_coupe_neuve;SXJDHXKF
+7499 1001444;15220;protocole_rattachement;SYA8MH79
+25877 25879 1001474;49924;protocole_coupe_neuve;T0WL4QE7
+22255 22258 22259;44638;protocole_coupe_deja_ecrite;T46M1FP1
+3588 1001461;8330;protocole_coupe_deja_ecrite;T58W1AXB
+3627 1001466;8377;protocole_rattachement;TAG8IVT5
+6433 6436;12414;protocole_coupe_deja_ecrite;TCB4ZNQO
+27822 27824 27826;54179;protocole_coupe_neuve;TDZ8LI41
+27239 27242 27244;53450;protocole_coupe_neuve;TEXTOJLH
+17388 17391 29006;37032;protocole_coupe_neuve;TFK7BD9K
+4371 4373 4374;9608;protocole_coupe_neuve;TL9AFW0O
+4621 4625;9961;protocole_coupe_neuve;TND2I31B
+15096 15097;31164;protocole_coupe_neuve;TO8OJMH3
+2633 2636;6555;protocole_coupe_deja_ecrite;TQ17VW5I
+3719 3722;8544;protocole_coupe_deja_ecrite;TQYCQNY4
+24399 24400 24402;48110;protocole_coupe_neuve;TR1TVQCQ
+23994 23995 23997;47557;protocole_coupe_neuve;TRJ5Y59U
+23426;46500;protocole_coupe_deja_ecrite;TSIV5DTS
+19140 19141 19143;39854;protocole_coupe_neuve;TYLQESMU
+16838 1001478;35680;protocole_coupe_deja_ecrite;TZ7MOW1S
+4508 4513;9780;protocole_coupe_deja_ecrite;TZPT6V9Y
+4385 4388;9629;protocole_rattachement;U0GQ3KTO
+15059 15060;31045;protocole_coupe_deja_ecrite;U39MLAJD
+7700 7701 7703;15631;protocole_coupe_deja_ecrite;U43BNSQW
+24309 24310 24312;48005;protocole_coupe_deja_ecrite;U4O5Q370
+8841 8842 8843;17534;protocole_coupe_deja_ecrite;U8739KRW
+7903 7904 1001543;15881;protocole_rattachement;UAER0F0F
+11182 11184;23543;protocole_coupe_deja_ecrite;UBISDN7Z
+1911 1001428;5294;protocole_rattachement;UC9UOAXE
+23335;46346;protocole_coupe_deja_ecrite;UH6DNQHK
+16032 16033 16035;32960;protocole_coupe_deja_ecrite;UHVX3QH1
+21965 21966;44033;protocole_coupe_deja_ecrite;UIM5TBKS
+11579 11581;24390;protocole_coupe_neuve;ULFVA1AQ
+27607 27608 27611;53858;protocole_coupe_neuve;UM4ZU2SX
+2358 2359 2360;5838;protocole_coupe_deja_ecrite;USL9H5AJ
+5054 5055;10527;protocole_rattachement;UTLG66LE
+11373 11375 11377;24100;protocole_coupe_deja_ecrite;UV0JWYBL
+17410;37160;protocole_coupe_neuve;UV6YWU3W
+24564 24566;48297;protocole_coupe_deja_ecrite;UWNRN6F2
+4269 4270 4273;9483;protocole_coupe_neuve;UY443H27
+11168 11169 11171;23530;protocole_coupe_deja_ecrite;UZ7HB9VH
+17209 17211;36477;protocole_coupe_deja_ecrite;V0IDTREF
+19132;39845;protocole_coupe_neuve;V3FO5NDA
+17547 17548 17550;37449;protocole_coupe_neuve;V5NJER40
+16837 16839 16840;35680;protocole_coupe_deja_ecrite;V5TRCLJ8
+17411;37160;protocole_coupe_neuve;VBTXFSYD
+15961 1001469;32854;protocole_rattachement;VEL96ARW
+7779 7781;15722;protocole_coupe_deja_ecrite;VEP1DVQ4
+4660 4662 4664;10017;protocole_coupe_neuve;VFRHOV3Q
+4707 4709 4710;10109;protocole_coupe_deja_ecrite;VHE3HXC3
+4510 4511;9780;protocole_coupe_deja_ecrite;VHZ88PLB
+7768 7769;15719;protocole_coupe_deja_ecrite;VKEQD9PH
+4353;9582;protocole_coupe_deja_ecrite;VM0FHRB3
+23050 23053;45891;protocole_coupe_deja_ecrite;VMWFLLW4
+24599 24602 24604;48321;protocole_coupe_neuve;VNK6GU21
+16017;32929;protocole_coupe_neuve;VNPQZFM8
+27685 27686 27688;53942;protocole_coupe_deja_ecrite;VR1K2NJW
+4906 4907;10374;protocole_rattachement;VUNYM8UV
+11181 11183 11185;23543;protocole_coupe_deja_ecrite;VVMO1423
+4650 4652 4656;9993;protocole_coupe_neuve;VX5RZL6B
+11708 11711;24510;protocole_coupe_neuve;VYNGKCR0
+1266 1268;3089;protocole_coupe_deja_ecrite;W4P3UL48
+20305 1001473;41722;protocole_rattachement;W5YQIW28
+23476 23478;46585;protocole_coupe_neuve;W79RISV0
+23893 1001443;47353;protocole_rattachement;W9FCDFGX
+7645 7650;15517;protocole_coupe_deja_ecrite;WBKHIDHS
+4908 4910;10375;protocole_coupe_deja_ecrite;WBNLIAQD
+101 1001462;327;protocole_rattachement;WDY8CDXZ
+7114 7116 7118;14472;protocole_coupe_neuve;WECT3RIT
+22270 22271 22273;44653;protocole_coupe_neuve;WG8CG5T2
+26070 1001528;50574;protocole_rattachement;WI335HTC
+20300 20302 20304;41721;protocole_coupe_deja_ecrite;WIA7ITRD
+7122 7124 7126;14486;protocole_coupe_neuve;WJ8NY16C
+19575 19577 19579;40600;protocole_coupe_neuve;WO5IQTLW
+4501 4502 4504;9771;protocole_coupe_neuve;WPGZK930
+27426 27428 27429;53657;protocole_coupe_neuve;WPSKU3QA
+4278 4280 4281;9491;protocole_coupe_deja_ecrite;WVMPHHDQ
+26615;52166;protocole_coupe_deja_ecrite;WW88Z2AC
+20491 20493 20495;41833;protocole_coupe_deja_ecrite;X0U0B171
+17027 1001568;36165;protocole_coupe_deja_ecrite;X2714E92
+11547 11549 11550;24361;protocole_coupe_deja_ecrite;X89SXIQZ
+14912 14914 14916;30637;protocole_coupe_neuve;XBGMB7XP
+20492 20494;41833;protocole_coupe_deja_ecrite;XCAUACUJ
+24590 24592;48311;protocole_coupe_neuve;XH5KZ9LI
+27556;53803;protocole_coupe_neuve;XHITO8HE
+21585 21586;43114;protocole_coupe_deja_ecrite;XHJF1CC2
+26188 26189 26191 26192;50840;protocole_rattachement;XKW2DSA9
+7610 7611;15451;protocole_coupe_neuve;XMWIRRAB
+24610;48330;protocole_coupe_deja_ecrite;XP8L3DAO
+17651 17652;37634;protocole_coupe_deja_ecrite;XVRCFWCK
+17541 17543 17545;37446;protocole_coupe_neuve;XZRBWA33
+27655 27658;53922;protocole_coupe_deja_ecrite;Y38WOYGA
+1229 1231;3029;protocole_coupe_deja_ecrite;YAML8MHS
+16343;34007;protocole_coupe_deja_ecrite;YATQOEPB
+16869 16872;35716;protocole_coupe_deja_ecrite;YB35SKPR
+26028 26031;50368;protocole_coupe_deja_ecrite;YFITUAFH
+27240 27241;53450;protocole_coupe_neuve;YIIWRP17
+19690 19694;40792;protocole_coupe_deja_ecrite;YKSL5L2U
+26071 26073 26075;50581;protocole_coupe_deja_ecrite;YLAVM0I7
+11668 11669 11671;24484;protocole_coupe_deja_ecrite;YMEKXZK3
+1060 1062 1063;2208;protocole_coupe_neuve;YPNDHILU
+19576 19578;40600;protocole_coupe_neuve;YQG8CN5T
+27678 27680;53940;protocole_coupe_deja_ecrite;YRKPOEXD
+26027 26030;50368;protocole_coupe_deja_ecrite;YV95DVKD
+4857 4859 4861;10331;protocole_coupe_neuve;YZ1B0Q44
+11515 11517 11519;24252;protocole_coupe_neuve;Z0ARUJPP
+4541 4543 4546;9877;protocole_coupe_neuve;Z0BDVNBZ
+4500 4503;9771;protocole_coupe_neuve;Z1EU0WC6
+26033 26035 26037;50400;protocole_coupe_neuve;Z2FX1C7S
+14111 14113;28653;protocole_coupe_neuve;Z3DYDC4X
+22209;44536;protocole_coupe_neuve;Z624CX4D
+1335 1337;3481;protocole_coupe_neuve;Z6P7KE5R
+14939 14943;30717;protocole_coupe_deja_ecrite;ZE9WZW22
+16342 16344;34007;protocole_coupe_deja_ecrite;ZGNIYS1Z
+22022 22023 22025;44205;protocole_coupe_deja_ecrite;ZGY9VWTQ
+2167 2168 2170;5620;protocole_coupe_deja_ecrite;ZLY1CLKF
+24401;48110;protocole_coupe_neuve;ZM3XZ6DG
+4670 4671 4673;10043;protocole_coupe_neuve;ZMQZSE9Q
+3720 3721 3723;8544;protocole_coupe_deja_ecrite;ZOJDHHL9
+26155 26158;50759;protocole_coupe_deja_ecrite;ZOZ4VNMQ
+11355 11357 11359;24059;protocole_coupe_deja_ecrite;ZRHW9SPU
+17131;36320;protocole_coupe_neuve;ZV3QRSJG
+20089;41481;protocole_coupe_neuve;ZW7MKTWH
+16015 16016 16019;32929;protocole_coupe_neuve;ZYVO6KK1
+11205 11206;23562;protocole_coupe_neuve;ZZ5WKMWM
+20227 1001544;41629;protocole_rattachement;a277ccfe
+28905 1001547;62055;protocole_rattachement;a48e8a17
+7048 1001501;14355;protocole_rattachement;aa25807d
+6290 1001503;12107;protocole_rattachement;acfdcbca
+25710 1001552;49624;protocole_rattachement;af8d7986
+997 1001493;1968;protocole_rattachement;afc80c2e
+28907 1001549;62061;protocole_rattachement;b21b79f1
+28546 1001519;58907;protocole_coupe_neuve;b42affe7
+20246 20248 20249;41672;protocole_coupe_deja_ecrite;b4cbb54d
+28801 28802;61512;protocole_rattachement;b9dd4eeb
+28547 28548 30762;58907;protocole_coupe_neuve;beeaf847
+11144 1001496;23338;protocole_rattachement;bf3b08f8
+3677 3678 3679;8454;protocole_coupe_deja_ecrite;c08ff7cb
+11103 1001491;23238;protocole_rattachement;c24ea869
+28597 1001515;59068;protocole_rattachement;c3bbebc2
+30645 1001555;41433;protocole_rattachement;c4ef091c
+3669 1001497;8442;protocole_coupe_neuve;caea1510
+6146 1001508;11764;protocole_rattachement;cc9e67f3
+24011 24012 24013;47574;protocole_coupe_neuve;ccbbf3c8
+28831 28832 28834;61599;protocole_rattachement;d1cb8dd7
+21520 1001495;43050;protocole_coupe_neuve;d2108609
+28120 1001498;54684;protocole_rattachement;d6322f88
+1000316 1001554;49624;protocole_rattachement;d6cd8868
+7105 1001489;14446;protocole_rattachement;e1eec623
+24005 24006 24007;47571;protocole_coupe_deja_ecrite;e48a523c
+11146 11147 11148;23353;protocole_coupe_deja_ecrite;e9260960
+14033;28506;protocole_coupe_neuve;ea6a28a7
+28930 28931;62311;protocole_rattachement;fa06e4e5
+28214 1001504;54867;protocole_rattachement;fa4dc6e8
+29;61;protocole_mise_de_cote;garde son ancien numero D2024-0449 (50c8959e-7811-489a-944d-fc2d3888558a) -- regle R7b, pour 7C1ZQYFL
+258 262;822;protocole_mise_de_cote;garde son ancien numero D2022-0146 (341e502d-df4f-4246-87aa-058abd41277e) -- regle R7b, pour NOWFW5PO+NSSF8LGG
+6171;11820;protocole_mise_de_cote;garde son ancien numero D2025-0412 (14bd87a5-2ee7-4a12-88ac-09d4e27175bb) -- regle R7b, pour a5cb141f
+11138;23319;protocole_mise_de_cote;garde son ancien numero D2025-0415 (4b238ce1-ce1d-4a48-b541-47787ea085fe) -- regle R7b, pour 774aa002
+11204 11207;23562;protocole_mise_de_cote;garde son ancien numero D2019-0415 (10f0eeb8-dbb3-4efc-8a09-ffe8facef561) -- regle R7b, pour ZZ5WKMWM
+14110;28653;protocole_mise_de_cote;garde son ancien numero D2021-0025 (21a12a3e-5c1d-49a9-8354-0edca1db7cd6) -- regle R7b, pour L2B2WGCF+Z3DYDC4X
+16382;34066;protocole_mise_de_cote;garde son ancien numero D2020-0428 (baa8f240-6b63-437d-8dc7-735f68043bfe) -- regle R7b, pour CITFQGOB
+16774;35453;protocole_mise_de_cote;garde son ancien numero D2024-0464 (9d29c920-1c73-4181-9e8f-5ce1981e129c) -- regle R7b, pour HGXAVYKA
+17025;36165;protocole_mise_de_cote;garde son ancien numero D2022-0500 (d74f0eeb-d111-491c-9a99-fe21bc81def7) -- regle R7b, pour X2714E92
+17459 17460;37243;protocole_mise_de_cote;garde son ancien numero D2021-0326 (a0f43ed6-9d36-4b7f-89f6-bec1a6898793) -- regle R7b, pour ZFLFAQ0T
+24649;48370;protocole_mise_de_cote;garde son ancien numero D2018-0535 (4792dc3e-91df-4248-a5a1-5f9da5d5bdba) -- regle R7b, pour ESVJUR12+ULA087KO
+26848 26851;52754;protocole_mise_de_cote;garde son ancien numero D2019-0350 (0813119d-1bc3-425e-8d42-3ea3490f901a) -- regle R7b, pour Z0J8K6WT
+27609;53858;protocole_mise_de_cote;garde son ancien numero D2019-0511 (645b00bf-1403-4e84-adab-c48c25707623) -- regle R7b, pour OAUI9CKR
+28116;54676;protocole_mise_de_cote;garde son ancien numero D2024-0475 (c726287b-61ac-4a65-a77f-f21a88104122) -- regle R7b, pour 9a09e537
+28567;58957;protocole_mise_de_cote;garde son ancien numero D2026-0243 (b6121b2a-3504-4d6b-913a-14e292709588) -- regle R7b, pour 2a4a0c03

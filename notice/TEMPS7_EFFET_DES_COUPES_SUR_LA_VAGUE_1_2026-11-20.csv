@@ -1,0 +1,45 @@
+﻿etat;id_unique;ligne;dossier;plus_petite_du_dossier;transactions_du_dossier;sortantes;entrantes;l_etiquette_changerait
+reference;0bc98552;4510;21804;21804;21804 21806 30674;;21803(compromis active, dossier 21803) 21805(offre accepted, dossier 21803);OUI
+reference;1cc703d9;4225;14007;14007;14007 14009;;14008(offre refused, dossier 14008);non
+reference;2FBR2M9U;3886;1103;1103;1103;;1101(compromis cancelled, dossier 1101);OUI
+reference;3250892d;4331;25700;25700;25700 25701 25702;;25699(compromis active, dossier 25699);OUI
+reference;6U5DQQ4J;3865;24453;24453;24453;;24450(compromis cancelled, dossier 24450);OUI
+reference;87eb399e;4486;999;999;999 1001 1002;;998(compromis active, dossier 998);OUI
+reference;8NZ6V6XB;3841;11560;11560;11560;;11558(compromis cancelled, dossier 11557);OUI
+reference;9KHYVR1M;3788;24381;24381;24381;;24380(compromis cancelled, dossier 24380);OUI
+reference;E6RLLKMN;3959;1101;1101;1101 1104;1101(compromis cancelled -> 2FBR2M9U);;OUI
+reference;EO8MXFE9;3508;20267;20267;20267;;20264(compromis cancelled, dossier 20264);OUI
+reference;FJS4IJGZ;3689;14813;14813;14813 14816;14813(compromis cancelled -> SWSN80FQ);;OUI
+reference;FWCFAN6O;3663;4372;4372;4372;;4370(compromis cancelled, dossier 4370);OUI
+reference;GWEROU6H;1472;11557;11557;11557 11558 11559 11562;11558(compromis cancelled -> 8NZ6V6XB);;non
+reference;H78FD3YN;3985;27445;27445;27445 27449;27445(compromis cancelled -> JRN2I7TM);;OUI
+reference;JRN2I7TM;3911;27448;27448;27448;;27445(compromis cancelled, dossier 27445);OUI
+reference;LKBO1TOH;3697;4290;4290;4290;;4289(compromis cancelled, dossier 4288);OUI
+reference;OLXLY7GP;852;4288;4288;4288 4289 4291 4292;4289(compromis cancelled -> LKBO1TOH);;non
+reference;RF9KYWSY;1282;24380;24380;24380 24382 24383;24380(compromis cancelled -> 9KHYVR1M);;OUI
+reference;S3HOG6UL;3864;17390;17390;17390;;17387(compromis cancelled, dossier 17387);OUI
+reference;SWSN80FQ;3649;14817;14817;14817;;14813(compromis cancelled, dossier 14813);OUI
+reference;TL9AFW0O;825;4370;4370;4370 4371 4373 4374;4370(compromis cancelled -> FWCFAN6O);;OUI
+reference;dfb32f2b;4330;19544;19544;19544 19545;;19543(compromis active, dossier 19543);OUI
+mardi;0bc98552;4510;21804;21804;21804 21806 30674;;21803(compromis active, dossier 21803) 21805(offre accepted, dossier 21803);OUI
+mardi;1cc703d9;4225;14007;14007;14007 14009;;14008(offre refused, dossier 14008);non
+mardi;2FBR2M9U;3886;1103;1103;1103;;1101(compromis cancelled, dossier 1101);OUI
+mardi;3250892d;4331;25700;25700;25700 25701 25702;;25699(compromis active, dossier 25699);OUI
+mardi;6U5DQQ4J;3865;24453;24453;24453;;24450(compromis cancelled, dossier 24450);OUI
+mardi;87eb399e;4486;999;999;999 1001 1002;;998(compromis active, dossier 998);OUI
+mardi;8NZ6V6XB;3841;11560;11560;11560;;11558(compromis cancelled, dossier 11557);OUI
+mardi;9KHYVR1M;3788;24381;24381;24381;;24380(compromis cancelled, dossier 24380);OUI
+mardi;E6RLLKMN;3959;1101;1101;1101 1104;1101(compromis cancelled -> 2FBR2M9U);;OUI
+mardi;EO8MXFE9;3508;20267;20267;20267;;20264(compromis cancelled, dossier 20264);OUI
+mardi;FJS4IJGZ;3689;14813;14813;14813 14816;14813(compromis cancelled -> SWSN80FQ);;OUI
+mardi;FWCFAN6O;3663;4372;4372;4372;;4370(compromis cancelled, dossier 4370);OUI
+mardi;GWEROU6H;1472;11557;11557;11557 11558 11559 11562;11558(compromis cancelled -> 8NZ6V6XB);;non
+mardi;H78FD3YN;3985;27445;27445;27445 27449;27445(compromis cancelled -> JRN2I7TM);;OUI
+mardi;JRN2I7TM;3911;27448;27448;27448;;27445(compromis cancelled, dossier 27445);OUI
+mardi;LKBO1TOH;3697;4290;4290;4290;;4289(compromis cancelled, dossier 4288);OUI
+mardi;OLXLY7GP;852;4288;4288;4288 4289 4291 4292;4289(compromis cancelled -> LKBO1TOH);;non
+mardi;RF9KYWSY;1282;24380;24380;24380 24382 24383;24380(compromis cancelled -> 9KHYVR1M);;OUI
+mardi;S3HOG6UL;3864;17390;17390;17390;;17387(compromis cancelled, dossier 17387);OUI
+mardi;SWSN80FQ;3649;14817;14817;14817;;14813(compromis cancelled, dossier 14813);OUI
+mardi;TL9AFW0O;825;4370;4370;4370 4371 4373 4374;4370(compromis cancelled -> FWCFAN6O);;OUI
+mardi;dfb32f2b;4330;19544;19544;19544 19545;;19543(compromis active, dossier 19543);OUI

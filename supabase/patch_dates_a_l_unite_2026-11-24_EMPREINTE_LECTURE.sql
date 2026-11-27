@@ -1,0 +1,1 @@
+select (select md5(coalesce(string_agg(concat_ws('|', app_affaire_id, kind, state, coalesce(date_annulation_app, '-')), ';' order by app_affaire_id), '')) from public.app_affaire_ledger where app_affaire_id in (27195, 4385, 27134, 16377, 17387, 24450)) as empreinte;

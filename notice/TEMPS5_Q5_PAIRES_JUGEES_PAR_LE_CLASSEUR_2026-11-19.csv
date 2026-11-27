@@ -1,0 +1,63 @@
+bien,dossier_avant,classement,a,genre_a,date_a,noms_a,dossier_aujourd_hui_a,b,genre_b,date_b,noms_b,dossier_aujourd_hui_b,verdict,colonnes_a,colonnes_b,lignes_a,lignes_b,le_sheet_nomme,le_gel_dit
+1387,529,"A JUGER (noms differents, 31 j, meme montant)",529,compromis,2010-06-17,GAMBINO,529,531,offre,2010-06-10,BRUSC,531,AUCUNE,,,,,,aucune
+1387,529,"A JUGER (noms differents, 31 j, meme montant)",530,compromis,2010-06-11,GAMBINO,529,531,offre,2010-06-10,BRUSC,531,AUCUNE,,,,,,aucune
+1387,529,"A JUGER (noms differents, 31 j, meme montant)",531,offre,2010-06-10,BRUSC,531,532,offre,2010-05-17,GAMBINO,529,AUCUNE,,,,,,aucune
+1950,987,A JUGER (un cote sans acquereur),987,compromis,2025-09-19,FAQRAOUI,987,988,offre,2025-06-27,,988,MEME LIGNE,(T vide)+C+AB+AF,S+AF+C,566d1a48,566d1a48,566d1a48 : Mme M. EL FAQRAOUI Yassine et Imane (Annulée),meme ligne
+8053,3366,"A JUGER (noms differents, 31 j, meme montant)",3366,compromis,2010-01-15,CROZET,3366,3367,offre,2009-12-17,MONDY,3367,AUCUNE,,,,,,aucune
+8395,3646,"A JUGER (31 j, montants differents)",3646,compromis,2024-09-04,SOUCHON,3646,3648,offre,2024-08-23,POTTIER,3648,DEUX LIGNES,T+AB+C,S+AB,427UDDSF,9Q0FHAKK,9Q0FHAKK : nan POTTIER (Vente réglée) | 427UDDSF : nan SOUCHON (Annulée),meme ligne
+8395,3646,"A JUGER (noms differents, 31 j, meme montant)",3647,compromis,2024-09-11,SOUCHON,3646,3648,offre,2024-08-23,POTTIER,3648,UNE SEULE,,S+AB,,9Q0FHAKK,9Q0FHAKK : nan POTTIER (Vente réglée),une seule
+8395,3646,"A JUGER (31 j, montants differents)",3648,offre,2024-08-23,POTTIER,3648,3649,offre,2024-08-01,SOUCHON,3646,DEUX LIGNES,S+AB,S+AB+C,9Q0FHAKK,427UDDSF,9Q0FHAKK : nan POTTIER (Vente réglée) | 427UDDSF : nan SOUCHON (Annulée),une seule
+11501,5914,"A JUGER (noms differents, 31 j, meme montant)",5914,compromis,2011-05-30,BZDRENGA,5914,5915,offre,2011-05-23,MUNEGONI,5915,AUCUNE,,,,,,aucune
+11820,6171,A JUGER (un cote sans acquereur),6171,compromis,,TASSAN,6171,6172,offre,2025-10-15,,6172,UNE SEULE,"pas de date a nous comparer, et pas de ligne mandat+nom+prix",S+AF+C,,a5cb141f,a5cb141f : M. TASSAN TOFFOLA Bastien (Vente réglée),meme ligne
+12728,6554,"A JUGER (31 j, montants differents)",6554,compromis,2021-04-30,VALMY,6554,6556,offre,2021-04-12,GLAZIOU,6556,AMBIGU,"(T vide)+C+AB+AF,T+C",S+AB+AF+C,EGR8KXOL Q602VZJX QJ9LLT05,EGR8KXOL,EGR8KXOL : nan GLAZIOU PRULHIERE (Vente réglée) | Q602VZJX : nan BARDY (Annulée) | QJ9LLT05 : nan VALMY (Annulée),meme ligne
+12728,6554,"A JUGER (noms differents, 31 j, meme montant)",6555,compromis,2021-04-30,VALMY,6554,6556,offre,2021-04-12,GLAZIOU,6556,AMBIGU,"T+AF+C,T+C",S+AB+AF+C,EGR8KXOL Q602VZJX,EGR8KXOL,EGR8KXOL : nan GLAZIOU PRULHIERE (Vente réglée) | Q602VZJX : nan BARDY (Annulée),deux lignes
+12728,6554,"A JUGER (31 j, montants differents)",6556,offre,2021-04-12,GLAZIOU,6556,6558,offre,2021-03-18,BARDY,6554,DEUX LIGNES,S+AB+AF+C,S+AB+C,EGR8KXOL,Q602VZJX,EGR8KXOL : nan GLAZIOU PRULHIERE (Vente réglée) | Q602VZJX : nan BARDY (Annulée),deux lignes
+15722,7778,"A JUGER (noms differents, 31 j, meme montant)",7778,compromis,2021-06-01,COLOMBET,7778,7780,offre,2021-05-04,OLIVEIRA,7780,MEME LIGNE,T+AF+C,S+AB+AF+C,2SCBZXMH,2SCBZXMH,2SCBZXMH : nan DE OLIVEIRA (Vente réglée),deux lignes
+15722,7778,"A JUGER (31 j, montants differents)",7779,compromis,2021-05-07,COLOMBET,7778,7780,offre,2021-05-04,OLIVEIRA,7780,DEUX LIGNES,T+AB+AF+C,S+AB+AF+C,VEP1DVQ4,2SCBZXMH,2SCBZXMH : nan DE OLIVEIRA (Vente réglée) | VEP1DVQ4 : nan COLOMBET (Annulée),meme ligne
+16831,8321,"A JUGER (noms differents, 31 j, meme montant)",8321,compromis,2014-05-24,SERRA,8321,8322,offre,2014-05-01,CHEVALIER,8322,AUCUNE,,,,,,meme ligne
+17717,8910,A JUGER (un cote sans acquereur),8910,offre,2023-01-19,CELIKOZ,8910,1001525,compromis,2023-12-06,,1001525,UNE SEULE,S+AB+AF+C,creee depuis le Sheet,N67O7CLW,,N67O7CLW : nan CELIKOZ Abdil (Annulée),meme ligne
+17728,8918,A JUGER (un cote sans acquereur),8918,offre,2022-12-19,AVCI,8918,1001524,compromis,2023-12-06,,1001524,UNE SEULE,S+AB+AF+C,creee depuis le Sheet,HOJ11PVC,,HOJ11PVC : nan AVCI VELI (Annulée),meme ligne
+17746,8926,A JUGER (un cote sans acquereur),8926,offre,2022-12-20,CELIKOZ,8926,1001526,compromis,2023-12-06,,1001526,UNE SEULE,S+AB+C,creee depuis le Sheet,0TQB1SLL,,0TQB1SLL : nan CELIKOZ Ahmet&Dondu* (Annulée),meme ligne
+22589,10566,"A JUGER (noms differents, 31 j, meme montant)",10566,compromis,2009-09-10,FERNANDES,10566,10567,offre,2009-09-10,FERNANDES GONCALVES,10567,AUCUNE,,,,,,aucune
+22589,10566,"A JUGER (noms differents, 31 j, meme montant)",10567,offre,2009-09-10,FERNANDES GONCALVES,10567,10568,offre,2009-08-31,FERNANDES,10566,AUCUNE,,,,,,aucune
+22618,10582,"A JUGER (noms differents, 31 j, meme montant)",10582,compromis,2010-07-28,DJOUED,10582,10583,offre,2010-07-19,BRUN,10583,AUCUNE,,,,,,aucune
+22952,10849,"A JUGER (noms differents, 31 j, meme montant)",10849,compromis,2008-12-09,SAMUEL,10849,10852,offre,2008-11-28,BRUN,10852,AUCUNE,,,,,,aucune
+26220,12656,"A JUGER (noms differents, 31 j, meme montant)",12657,compromis,2015-04-10,MOUJTAHID,12656,12659,offre,2015-03-31,GHILAS,12659,AUCUNE,,,,,,aucune
+26726,12932,"A JUGER (noms differents, 31 j, meme montant)",12932,compromis,2012-10-02,CHORAIN,12932,12934,offre,2012-10-02,PEYRARD,12934,AUCUNE,,,,,,aucune
+26988,13026,"A JUGER (noms differents, 31 j, meme montant)",13026,compromis,2011-08-01,VACHER,13026,13027,offre,2011-07-08,CICERON,13027,AUCUNE,,,,,,aucune
+30678,14927,A JUGER (un cote sans acquereur),14927,compromis,,BEZIER GUILLEMIN,14927,14928,offre,2025-10-25,,14928,MEME LIGNE,(T vide)+C+AB+AF,S+AF+C,05e8ddb5,05e8ddb5,05e8ddb5 : Mme M. GUILLEMIN Jonathan et BEZIER Lorita (Annulée),meme ligne
+31704,15236,"A JUGER (noms differents, 31 j, meme montant)",15236,compromis,2016-12-10,,15236,15237,offre,2016-11-26,PORTAL,15237,AUCUNE,,,,,,aucune
+31727,15256,"A JUGER (noms differents, 31 j, meme montant)",15256,compromis,2016-08-10,VICENTE,15256,15257,offre,2016-08-04,GLAISE,15257,AUCUNE,,,,,,aucune
+32840,15955,"A JUGER (noms differents, 31 j, meme montant)",15955,compromis,2014-01-13,FAURE,15955,15956,offre,2013-12-14,ARSLAN,15956,AUCUNE,,,,,,aucune
+35716,16869,"A JUGER (noms differents, 31 j, meme montant)",16870,compromis,2021-02-10,MONTANER,16869,16871,offre,2021-01-15,,16871,AMBIGU,"T+AF,T+AF+C","S+AF,S+AF+C",Q57IC1SY CA2XNF38,Q57IC1SY CA2XNF38,Q57IC1SY : nan GAUFFI MICHELLET (Annulée) | CA2XNF38 : nan GAUFFI MICHELLET (Annulée),meme ligne
+36339,17147,"A JUGER (31 j, montants differents)",17147,compromis,2020-08-24,BAUER,17147,17151,offre,2020-08-21,ZUBELI,17149,DEUX LIGNES,T+AB+C,S+AB+C,3XMY2OG3,T9F26E45,T9F26E45 : nan ZUBELI (Annulée) | 3XMY2OG3 : nan BAUER (Annulée),deux lignes
+36339,17147,"A JUGER (31 j, montants differents)",17150,offre,2020-07-27,BAUER,17147,17151,offre,2020-08-21,ZUBELI,17149,DEUX LIGNES,S+AB+C,S+AB+C,3XMY2OG3,T9F26E45,T9F26E45 : nan ZUBELI (Annulée) | 3XMY2OG3 : nan BAUER (Annulée),deux lignes
+36794,17320,"A JUGER (noms differents, 31 j, meme montant)",17320,compromis,2022-12-12,CREVON,17320,17322,offre,2022-12-05,FAUVET,17322,MEME LIGNE,T+C,S+AB+C,5GZVT548,5GZVT548,5GZVT548 : FAUVET Guillaume DOREL Audrey (Vente réglée),meme ligne
+36993,17377,A JUGER (un cote sans acquereur),17377,offre,2023-09-16,,17377,1001527,compromis,2023-10-20,,1001527,AUCUNE,,creee depuis le Sheet,,,,meme ligne
+37184,17427,"A JUGER (noms differents, 31 j, meme montant)",17427,compromis,2022-02-11,CAGNARD,17427,17428,compromis,2022-02-24,LECOMTE,17428,DEUX LIGNES,T+AF+C,T+AF+C,87QOXR64,515RUEN3,515RUEN3 : nan LECOMPTE (Annulée) | 87QOXR64 : nan RIGAUD (Annulée),une seule
+37184,17427,"A JUGER (noms differents, 31 j, meme montant)",17427,compromis,2022-02-11,CAGNARD,17427,17430,offre,2022-02-10,LECOMTE,17428,DEUX LIGNES,T+AF+C,S+AF+C,87QOXR64,515RUEN3,515RUEN3 : nan LECOMPTE (Annulée) | 87QOXR64 : nan RIGAUD (Annulée),meme ligne
+37192,17432,"A JUGER (noms differents, 31 j, meme montant)",17432,compromis,2024-11-04,,17432,17435,offre,2024-10-18,BARAKAT MORSI,17435,MEME LIGNE,T+AF+C,S+AB+AF+C,IT0BF6M4,IT0BF6M4,IT0BF6M4 : nan MORSI BARAKAT (Annulée),meme ligne
+38332,18033,"A JUGER (noms differents, 31 j, meme montant)",18033,compromis,2017-04-12,GIRY,18033,18034,offre,2017-03-24,BRUYERE,18034,AUCUNE,,,,,,aucune
+38980,18552,"A JUGER (noms differents, 31 j, meme montant)",18552,compromis,2015-05-07,JALODIN TRISTAN,18552,18553,offre,2015-04-16,DESFOND,18553,AUCUNE,,,,,,aucune
+41999,20659,"A JUGER (noms differents, 31 j, meme montant)",20659,compromis,2019-10-18,LAVOISIER,20659,20661,offre,2019-10-11,PROST,20661,AUCUNE,,,,,,aucune
+41999,20659,"A JUGER (noms differents, 31 j, meme montant)",20660,compromis,2019-10-10,LAVOISIER,20659,20661,offre,2019-10-11,PROST,20661,AUCUNE,,,,,,aucune
+43114,21584,"A JUGER (noms differents, 31 j, meme montant)",21585,compromis,2023-10-24,BEIKES,21584,21586,offre,2023-09-28,BIGONNET,21586,MEME LIGNE,T+C,S+AB+C,XHJF1CC2,XHJF1CC2,XHJF1CC2 : nan DE VOS BIGONNET (Annulée),meme ligne
+43126,21597,"A JUGER (noms differents, 31 j, meme montant)",21598,compromis,2021-11-15,FERRARI,21597,21600,offre,2021-10-19,ZEMMA,21600,MEME LIGNE,T+AF+C,S+AB+AF+C,9K4Y3S4N,9K4Y3S4N,9K4Y3S4N : nan ZEMMA (Annulée),meme ligne
+43271,21666,"A JUGER (noms differents, 31 j, meme montant)",21666,compromis,2016-02-18,,21666,21667,offre,2016-02-01,OLLIER,21667,AUCUNE,,,,,,aucune
+43432,21798,A JUGER (un cote sans acquereur),21798,compromis,2025-11-10,BESSET,21798,21799,offre,2025-10-04,,21799,MEME LIGNE,(T vide)+C+AB+AF,S+AF+C,26283bf9,26283bf9,26283bf9 : M. BESSET Willy (Annulée),meme ligne
+43923,21946,"A JUGER (31 j, montants differents)",21947,compromis,2021-03-22,URSO,21946,21948,offre,2021-04-06,FAURE,21948,DEUX LIGNES,T+AB+AF+C,S+AB+AF+C,JJPTIU4H,GHX4LA2G,GHX4LA2G : nan FAURE (Annulée) | JJPTIU4H : nan URSO (Annulée),deux lignes
+44912,22378,"A JUGER (noms differents, 31 j, meme montant)",22378,compromis,2017-03-24,GRAICHE,22378,22379,offre,2017-03-03,BESSEYRIAS,22379,AUCUNE,,,,,,aucune
+44914,22380,"A JUGER (31 j, montants differents)",22382,compromis,2018-01-13,AZNAR,22380,22384,offre,2018-01-08,JANISSET,22384,AUCUNE,,,,,,aucune
+44914,22380,"A JUGER (noms differents, 31 j, meme montant)",22383,compromis,2018-01-13,AZNAR,22380,22384,offre,2018-01-08,JANISSET,22384,AUCUNE,,,,,,aucune
+45034,22430,"A JUGER (noms differents, 31 j, meme montant)",22430,compromis,2017-02-14,BRUSQ,22430,22431,offre,2017-01-21,FERNANDES PAIXAO ROCHA,22431,AUCUNE,,,,,,aucune
+45081,22444,"A JUGER (noms differents, 31 j, meme montant)",22444,compromis,2016-01-29,BONHOMME,22444,22446,offre,2016-01-22,CLEMENT,22446,AUCUNE,,,,,,aucune
+45081,22444,"A JUGER (noms differents, 31 j, meme montant)",22445,compromis,2016-01-29,BONHOMME,22444,22446,offre,2016-01-22,CLEMENT,22446,AUCUNE,,,,,,aucune
+45081,22444,"A JUGER (noms differents, 31 j, meme montant)",22446,offre,2016-01-22,CLEMENT,22446,22447,offre,2016-01-18,BONHOMME,22444,AUCUNE,,,,,,aucune
+46249,23269,"A JUGER (noms differents, 31 j, meme montant)",23269,compromis,2012-09-14,CIARAVOLA,23269,23271,offre,2012-09-14,FRECON,23271,AUCUNE,,,,,,aucune
+46404,23385,"A JUGER (noms differents, 31 j, meme montant)",23385,compromis,2011-04-19,PETROZINO,23385,23387,offre,2011-04-11,DELOMIER,23387,AUCUNE,,,,,,aucune
+46752,23503,"A JUGER (noms differents, 31 j, meme montant)",23504,compromis,2018-03-30,,23503,23505,offre,2018-02-28,CASAGRANDE,23505,AUCUNE,,,,,,aucune
+48618,24851,"A JUGER (noms differents, 31 j, meme montant)",24851,compromis,2016-07-07,MARTIN,24851,24852,offre,2016-06-23,ALAOUI ISMAILI,24852,AUCUNE,,,,,,aucune
+49941,25888,"A JUGER (noms differents, 31 j, meme montant)",25890,compromis,2024-06-10,MEMBRADO VIDAL VIDALMEMBRADO,25888,25891,offre,2024-05-18,YENER,25891,UNE SEULE,T+AF+C,,6N2UPC4E,,6N2UPC4E : nan SCI ESYENER (Annulée),meme ligne
+50165,25991,A JUGER (un cote sans acquereur),25991,compromis,2025-12-10,MAGAND,25991,25992,offre,2025-11-04,,25992,MEME LIGNE,(T vide)+C+AB+AF,S+AF+C,600f4e1c,600f4e1c,600f4e1c : M. MAGAND Jean-Louis (Annulée),meme ligne
+52067,26558,"A JUGER (noms differents, 31 j, meme montant)",26558,compromis,2017-12-27,BEAST MITTELETTE,26558,26559,offre,2017-11-28,KABAB,26559,UNE SEULE,T+AB,,MQ6H8TVQ,,MQ6H8TVQ : nan MITTELETTE (Vente réglée),aucune
+58724,28522,"A JUGER (noms differents, 31 j, meme montant)",28522,compromis,2015-04-01,DERRI,28522,28523,offre,2015-03-10,DESARMENIEN,28523,AUCUNE,,,,,,aucune

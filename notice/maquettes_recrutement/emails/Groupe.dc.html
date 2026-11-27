@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Écrire à plusieurs candidats</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#c5005f}a:hover{color:#8c0044}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid transparent}
+.btn-main{background:#c5005f;color:#fff}
+.btn-quiet{background:#fff;color:#222323;border-color:#cfd3d4}
+.nav{width:40px;height:40px;border-radius:10px;border:1px solid #cfd3d4;background:#fff;color:#222323;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.res{display:inline-block;padding:1px 8px;border-radius:6px;background:#f1f2f3;color:#3f4446;font-size:11.5px;font-weight:700}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; background: #f6f7f8; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #222323; position: relative; overflow: hidden;">
+
+  <div style="padding: 24px 28px 0; display: flex; flex-direction: column; gap: 10px; opacity: .55;" aria-hidden="true">
+    <p style="margin: 0; font-size: 22px; font-weight: 800;">Les candidats</p>
+    <div style="background: #ffffff; border: 1px solid #e2e5e6; border-radius: 18px; padding: 8px 0;">
+      <sc-for list="{{fond}}" as="f" hint-placeholder-count="6">
+        <div style="display: grid; grid-template-columns: 40px 260px 200px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 20px; border-bottom: 1px solid #eef0f1; font-size: 13px;">
+          <span style="{{f.case}}"></span>
+          <strong>{{f.nom}}</strong>
+          <span>{{f.commune}}</span>
+          <span class="res" style="justify-self: start;">{{f.reseau}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; top: 0; background: rgba(34,35,35,0.52); display: flex; align-items: center; justify-content: center;">
+    <div role="dialog" aria-labelledby="titre-groupe" style="width: 1180px; height: 820px; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(34,35,35,.35); display: flex; flex-direction: column; overflow: hidden;">
+      <div style="background: #222323; color: #ffffff; padding: 18px 24px;">
+        <h2 id="titre-groupe" style="margin: 0; font-size: 20px; font-weight: 800;">Écrire à 12 candidats</h2>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #c9cdcf;">Un e-mail par personne, à son prénom, avec sa source et son lien de désinscription. Personne ne voit les autres.</p>
+      </div>
+
+      <div style="flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 420px minmax(0, 1fr);">
+        <div style="padding: 20px 24px; border-right: 1px solid #e2e5e6; display: flex; flex-direction: column; gap: 14px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div style="background: #e8f5ee; border-radius: 14px; padding: 12px 14px;"><p style="margin: 0; font-size: 28px; font-weight: 800; color: #245f44;">9</p><p style="margin: 0; font-size: 12.5px; color: #245f44;">recevront l'e-mail</p></div>
+            <div style="background: #fff3df; border-radius: 14px; padding: 12px 14px;"><p style="margin: 0; font-size: 28px; font-weight: 800; color: #8a4f0f;">3</p><p style="margin: 0; font-size: 12.5px; color: #8a4f0f;">écartés, voici pourquoi</p></div>
+          </div>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+            <li style="border: 1px solid #f0c2c1; background: #fdf6f6; border-radius: 12px; padding: 10px 12px; font-size: 13px;"><strong>Marc Chapuis</strong> — opposé à la prospection au registre<span style="display: block; color: #7d2f2d; font-size: 12px; margin-top: 2px;">Écarté d'office.</span></li>
+            <li style="border: 1px solid #e2e5e6; border-radius: 12px; padding: 10px 12px; font-size: 13px;"><strong>Nadia Belkacem</strong> — pas d'e-mail public<span style="display: block; color: #5c6163; font-size: 12px; margin-top: 2px;">À appeler, ou à joindre autrement.</span></li>
+            <li style="border: 1px solid #f1d3a6; background: #fffaf2; border-radius: 12px; padding: 10px 12px; font-size: 13px;"><strong>Julien Perret</strong> — déjà écrit le 12/11, il y a 12 jours
+              <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: #6b3d0b;"><input type="checkbox" style="width: 16px; height: 16px; accent-color: #c5005f;">Lui écrire quand même</label>
+            </li>
+          </ul>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3f4446;">Modèle
+            <span style="min-height: 42px; padding: 10px 12px; border: 1px solid #cfd3d4; border-radius: 11px; font-weight: 500; color: #222323; box-sizing: border-box;">Premier contact</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3f4446;">Objet (le même pour tous)
+            <span style="min-height: 42px; padding: 10px 12px; border: 1px solid #cfd3d4; border-radius: 11px; font-weight: 500; color: #222323; box-sizing: border-box;">Une proposition de collaboration près de chez vous</span>
+          </div>
+          <div style="margin-top: auto; background: #f6f7f8; border-radius: 14px; padding: 12px 14px; font-size: 12.5px; color: #3f4446; line-height: 1.5;">
+            <strong>Envoi doux</strong> : un e-mail toutes les 5 secondes, 40 au plus par jour et par expéditeur (aujourd'hui : 22 envoyés). Les 9 partiront maintenant, en un peu moins d'une minute.
+          </div>
+        </div>
+
+        <div style="background: #f6f7f8; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button class="nav" type="button" aria-label="Destinataire précédent" onClick="{{avant}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+              <p style="margin: 0; font-size: 14px; font-weight: 700;" aria-live="polite">{{position}} — {{courant.nom}}</p>
+              <button class="nav" type="button" aria-label="Destinataire suivant" onClick="{{apres}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+            </div>
+            <button class="btn btn-quiet" type="button" style="min-height: 36px;">Retoucher ce message seulement</button>
+          </div>
+          <div style="background: #ffffff; border: 1px solid #e2e5e6; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(34,35,35,.08); max-width: 640px;">
+            <div style="padding: 12px 16px; border-bottom: 1px solid #eef0f1; font-size: 12.5px; color: #3f4446; line-height: 1.6;">
+              <div><strong>À :</strong> {{courant.email}}</div>
+              <div><strong>Objet :</strong> Une proposition de collaboration près de chez vous</div>
+            </div>
+            <div style="background: #222323; color: #ffffff; padding: 14px 20px; font-weight: 800; font-size: 15px;">GTI Immobilier</div>
+            <div style="padding: 18px 20px; font-size: 13.5px; line-height: 1.6; display: flex; flex-direction: column; gap: 10px;">
+              <p style="margin: 0;">Bonjour {{courant.prenom}},</p>
+              <p style="margin: 0;">Je suis [votre nom], chez GTI Immobilier, un groupe de 17 agences dans la Loire, la Haute-Loire, le Puy-de-Dôme et l'Ardèche. Nous cherchons des agents commerciaux autour de notre agence de {{courant.agence}}, et votre parcours dans l'immobilier nous a donné envie de vous écrire.</p>
+              <p style="margin: 0; color: #5c6163;">[Ce que GTI propose]</p>
+              <div style="border-top: 1px solid #eef0f1; padding-top: 10px; font-size: 11.5px; color: #5c6163; line-height: 1.5;"><strong style="color: #3f4446;">Pourquoi vous recevez ce message</strong> — Nous avons trouvé vos coordonnées professionnelles sur {{courant.source}}. Effacées au bout de trois ans sans échange. Vos droits et la CNIL : voir le détail.</div>
+              <a href="#" style="font-size: 12px; font-weight: 700;">Ne plus me contacter</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 24px; border-top: 1px solid #e2e5e6; background: #fbfbfc;">
+        <p style="margin: 0; font-size: 13px; color: #5c6163;">Chaque envoi se note dans le fil de la personne.</p>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-quiet" type="button">Annuler</button>
+          <button class="btn btn-main" type="button">Envoyer 9 e-mails</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { i: 2 }; }
+  renderVals() {
+    const D = [
+      { nom: 'Camille Roux', prenom: 'Camille', email: 'camille.roux@exemple.invalid', agence: 'Saint-Étienne', source: 'l’annuaire public des conseillers SAFTI' },
+      { nom: 'Thomas Giraud', prenom: 'Thomas', email: 'thomas.giraud@exemple.invalid', agence: 'Saint-Étienne', source: 'l’annuaire public des conseillers Capifrance' },
+      { nom: 'Inès Morel', prenom: 'Inès', email: 'ines.morel@exemple.invalid', agence: 'Saint-Étienne', source: 'l’annuaire public des conseillers Dr House Immo' },
+      { nom: 'Hugo Delmas', prenom: 'Hugo', email: 'hugo.delmas@exemple.invalid', agence: 'Issoire', source: 'l’annuaire public des conseillers Optimhome' },
+      { nom: 'Anaïs Roche', prenom: 'Anaïs', email: 'anais.roche@exemple.invalid', agence: 'Le Puy-en-Velay', source: 'l’annuaire public des conseillers BSK Immobilier' },
+      { nom: 'Patrick Vial', prenom: 'Patrick', email: 'patrick.vial@exemple.invalid', agence: 'Firminy', source: 'l’annuaire public des conseillers SAFTI' },
+      { nom: 'Lucie Faure', prenom: 'Lucie', email: 'lucie.faure@exemple.invalid', agence: 'Saint-Étienne', source: 'l’annuaire public des conseillers 42ème Avenue' },
+      { nom: 'Élodie Brun', prenom: 'Élodie', email: 'elodie.brun@exemple.invalid', agence: 'Saint-Just-Saint-Rambert', source: 'l’annuaire public des conseillers Orpi' },
+      { nom: 'Sophie Marcoux', prenom: 'Sophie', email: 'sophie.marcoux@exemple.invalid', agence: 'Saint-Étienne', source: 'l’annuaire public des conseillers Orpi' }
+    ];
+    const i = this.state.i;
+    const coche = 'width:18px;height:18px;border-radius:5px;background:#c5005f;display:block';
+    const fond = [
+      { nom: 'Camille Roux', commune: 'Saint-Étienne', reseau: 'SAFTI', case: coche },
+      { nom: 'Julien Perret', commune: 'Saint-Priest-en-Jarez', reseau: 'iad', case: coche },
+      { nom: 'Sophie Marcoux', commune: 'Saint-Étienne', reseau: 'Orpi', case: coche },
+      { nom: 'Nadia Belkacem', commune: 'Villars', reseau: 'Indépendant', case: coche },
+      { nom: 'Thomas Giraud', commune: 'La Talaudière', reseau: 'Capifrance', case: coche },
+      { nom: 'Marc Chapuis', commune: 'Sorbiers', reseau: 'iad', case: coche }
+    ];
+    return {
+      fond: fond, courant: D[i], position: (i + 1) + ' / ' + D.length,
+      avant: () => this.setState({ i: (i + D.length - 1) % D.length }),
+      apres: () => this.setState({ i: (i + 1) % D.length })
+    };
+  }
+}
+</script>
+</body>
+</html>

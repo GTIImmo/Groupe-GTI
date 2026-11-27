@@ -15,7 +15,7 @@ import { createConsoleDocumentSignedUrl, dateOffreFaite, loadAffairesForDossier,
 import { apercuPremierePage } from './lib/gedClassementIa'
 import { etatFiableDuDocument } from './lib/etatSignatureMandat'
 import { gedDecider, gedGarderLecture, gedJuger, lireCarnetDetailStrict, lireConditionsAffairesStrict, lireDernierEnvoiAffairesStrict, loadConjointsDesPremieres, loadContactsEtatCivil, loadGedClassements, loadGedDecisions, loadGedDecisionsDetail, loadGedJugements, useGedPropositions, useGedRemplir, type DecisionGed, type EtatCivilLu, type JugementGed } from './lib/ged'
-import { cleJugement, LIBELLE_VERDICT, VERDICTS, type VerdictGed } from './lib/gedMesure'
+import { cleJugement, estMasquee, type VerdictGed } from './lib/gedMesure'
 import { propositionsRemplir, type FaitsRemplir, type PropositionRemplir } from './lib/gedRemplir'
 import { bilansPersonnes, type ContactEtatCivil } from './lib/gedRemplirContact'
 import { dateEtatLue, FICHES_PERSONNES_LUES, loadGedLectures, resumeLecture, type LectureDocument } from './lib/gedLecture'
@@ -40,7 +40,7 @@ export type DossierRange = {
 import { deposeAuPlusTard, LIBELLE_A_DEPOSER, reglesSansIa, type AffaireRegle, type Alerte, type FaitsRegles } from './lib/gedRegles'
 import { lireDateIso, type PersonneDuBien } from './lib/gedComparer'
 import { reglesLues } from './lib/gedReglesLues'
-import { bilansDuDossier, estGenreFiche, verdictDesChoix, type BilanCompromis as Bilan, type CatalogueCondition, type GenreBilan } from './lib/gedBilanCompromis'
+import { bilansDuDossier, estGenreFiche, type BilanCompromis as Bilan, type CatalogueCondition, type GenreBilan } from './lib/gedBilanCompromis'
 import { bilansFiche } from './lib/gedBilanFiche'
 import { useFenetreDepotOuverte } from './lib/gedFenetreDepot'
 import BilanCompromis, { MOTS, type ChoixBilan, type ResultatBilan } from './BilanCompromis'
@@ -514,14 +514,30 @@ export function RecuManque({
   const enregistrerBilan = async (choix: Array<{ ligne: LigneBilan; choix: ChoixBilan }>): Promise<ResultatBilan> => {
     if (!bilan || !onBilan) throw new Error('Rien n\'a été écrit.')
     const r = await onBilan(bilan, choix)
-    // la mesure du morceau 10 : un choix vaut la note de la ligne « À regarder » qui disait la même chose
-    const carte = new Map(choix.map((c) => [c.ligne.cle, c.choix]))
-    for (const a of alertes.filter((x) => alerteDuBilan(bilan.genre, x))) {
-      const verdict = verdictDesChoix(a.texte, a.code, bilan.lignes, carte)
-      if (verdict) await gedJuger({ hektorAnnonceId, regle: a.code, cle: cleJugement(a), texte: a.texte, niveau: a.niveau, verdict }).catch(() => undefined)
-    }
+    // Visuel V3, morceau 4 (20/11) : la période de test est retirée -- un choix n'écrit plus de « note » de mesure. L'alerte
+    // liée à une fenêtre ne s'affiche plus à part (voir `alertesVisibles`) : elle se traite DANS la fenêtre.
     setRelire((n) => n + 1); setRelireJugements((n) => n + 1); setRelireAffaires((n) => n + 1)
     return r
+  }
+
+  // ── Visuel V3, morceau 4 (20/11/2026) : « À TRAITER ». Une alerte que montre déjà une fenêtre « Ce que dit… » n'a plus
+  // sa propre carte (le même écart apparaissait deux fois) ; un point d'attention s'écarte par « Masquer », POUR TOUT LE
+  // MONDE sur le bien (décision du 20/11), et revient par « Réafficher ». Lecture ratée des jugements (null) : rien n'est
+  // masqué, et le geste « Masquer » ne se montre pas.
+  const lieeAUneCarte = (a: Alerte) => cartesBilan.some(({ b }) => alerteDuBilan(b.genre, a))
+  const masquees = jugements ? alertes.filter((a) => estMasquee(jugements.get(cleJugement(a))?.verdict)) : []
+  const alertesVisibles = alertes.filter((a) => !lieeAUneCarte(a) && !masquees.includes(a))
+  const nbATraiter = cartesBilan.length + propositions.length + alertesVisibles.length
+  const reafficher = async () => {
+    if (jugeEnCours) return
+    setJugeEnCours('reafficher'); setMessageJuge(null)
+    try {
+      for (const a of masquees) await gedJuger({ hektorAnnonceId, regle: a.code, cle: cleJugement(a), texte: a.texte, niveau: a.niveau, verdict: 'reaffiche' })
+    } catch (e) {
+      setMessageJuge(e instanceof Error ? e.message : "Les points d'attention n'ont pas été réaffichés.")
+    } finally {
+      setJugeEnCours(null); setRelireJugements((n) => n + 1)
+    }
   }
 
   // le résumé de la lecture, à côté du nom d'un document reçu (« DPE 2024.pdf — Lu : énergie D… »)
@@ -678,11 +694,19 @@ export function RecuManque({
       {!rangeEnListe && precedent ? <p className="gm2-note" role="status">{`${LIBELLE_MOMENT[precedent.moment]} : les pièces obligatoires non trouvées.`}</p> : null}
       {!rangeEnListe ? <div className="gm2-feuilles" key={momentVu ?? 'courant'}>{feuillesVues.map(feuille)}</div> : null}
 
-      {propositions.length || faites.length || alertes.length || aTrancher.length ? (
+      {/* 26/11 (Frédéric : « Oui, le cacher ») : rien à traiter (tout masqué ou fait) -> pas d'en-tête « À traiter 0 » */}
+      {nbATraiter > 0 ? (
+        <div className="gm2-traiter-h" role="status">
+          <b>À traiter</b>
+          <span className="gm2-traiter-n" key={nbATraiter}>{nbATraiter}</span>
+          <small>{"Ce que l'IA a trouvé en lisant les pièces. Chaque correction s'écrit tout de suite, là où la carte le dit."}</small>
+        </div>
+      ) : null}
+      {propositions.length || faites.length || alertesVisibles.length || masquees.length || aTrancher.length ? (
         <div className="gm2-col2">
           {propositions.length || faites.length || aTrancher.length ? (
             <div className="gm2-bloc">
-              <p className="gm2-bt">{`À remplir (${propositions.length + aTrancher.length})`}</p>
+              <p className="gm2-bt">{`À corriger ou compléter (${cartesBilan.length + propositions.length})`}</p>
               {cartesBilan.map(({ b, lignes }) => (
                 <div key={b.genre} className="gm2-carte gm2-prop gm2-cpv">
                   <div className="gm2-c1"><span className="gm2-et is-remplir">{MOTS[b.genre].etiquette}</span><b>{`Ce que dit ${MOTS[b.genre].le} : ${[
@@ -694,7 +718,7 @@ export function RecuManque({
                     <span>{`lu dans ${b.nom}`}</span>
                   </div>
                   <div className="gm2-gestes">
-                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(cleBilan(b))}>Voir et trancher</button>
+                    <button type="button" className="gm2-b1" onClick={() => setBilanOuvert(cleBilan(b))}>{lignes.some((l) => l.etat === 'trancher') ? 'Voir et corriger' : 'Voir et ajouter'}</button>
                   </div>
                 </div>
               ))}
@@ -750,14 +774,13 @@ export function RecuManque({
               <small className="gm2-src">Une case déjà remplie n'est jamais réécrite : la proposition ne vient pas.</small>
             </div>
           ) : null}
-          {alertes.length ? (
+          {alertesVisibles.length || masquees.length ? (
             <div className={`gm2-bloc${ficheVisible ? ' gm2-large' : ''}`}>
-              <p className="gm2-bt">{`À regarder (${alertes.length})`}</p>
+              <p className="gm2-bt">{`Points d'attention (${alertesVisibles.length})`}</p>
               {messageJuge ? <p className="gm2-msg" role="status">{messageJuge}</p> : null}
-              {alertes.map((a, i) => {
-                // morceau 10 : la carte porte son geste « Déposer » ET la barre de jugement (plus de ligne-bouton)
+              {alertesVisibles.map((a, i) => {
+                // morceau 4 (20/11) : la carte porte son geste « Déposer » et « Masquer » (plus de Vrai / Faux / Déjà su)
                 const cle = cleJugement(a)
-                const juge = jugements?.get(cle)
                 return (
                   <div key={`${a.code}-${i}`} className="gm2-carte" style={{ animationDelay: `${120 + i * 80}ms` }}>
                     <div className="gm2-c1"><span className={`gm2-et is-${a.niveau}`}>{ETIQUETTE[a.niveau]}</span><b>{a.texte}</b></div>
@@ -768,20 +791,19 @@ export function RecuManque({
                       ) : null}
                       <span className="gm2-esp" />
                       {jugements ? (
-                        <div className="gm2-juge" role="group" aria-label={`Juger : ${a.texte}`}>
-                          <small>{juge ? `Jugé ${LIBELLE_VERDICT[juge.verdict]} le ${new Date(juge.jugeLe).toLocaleDateString('fr-FR')}` : 'Cette ligne est'}</small>
-                          <span className="gm2-seg">
-                            {VERDICTS.map((v) => (
-                              <button key={v.code} type="button" className={`gm2-v is-${v.code}${juge?.verdict === v.code ? ' is-pris' : ''}`} disabled={jugeEnCours !== null} aria-pressed={juge?.verdict === v.code}
-                                onClick={() => void juger(a, v.code)}>{jugeEnCours === cle ? '…' : v.libelle}</button>
-                            ))}
-                          </span>
-                        </div>
+                        <button type="button" className="gm2-lien gm2-masquer" disabled={jugeEnCours !== null} aria-label={`Masquer pour tout le monde : ${a.texte}`}
+                          onClick={() => void juger(a, 'masque')}>{jugeEnCours === cle ? 'Masquage…' : 'Masquer'}</button>
                       ) : null}
                     </div>
                   </div>
                 )
               })}
+              {masquees.length ? (
+                <p className="gm2-masquees">
+                  <span>{`${masquees.length} point${masquees.length > 1 ? 's' : ''} d'attention masqué${masquees.length > 1 ? 's' : ''} pour tout le monde`}</span>
+                  <button type="button" className="gm2-lien" disabled={jugeEnCours !== null} onClick={() => void reafficher()}>{jugeEnCours === 'reafficher' ? 'On réaffiche…' : 'Réafficher'}</button>
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>

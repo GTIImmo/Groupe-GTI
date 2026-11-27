@@ -1,3 +1,4 @@
+-- ⛔ 26/11/2026 : aux etapes PROPAGATION, FUSION et SCISSION de ce fichier, « la plus ancienne » veut dire le PLUS PETIT app_affaire_id, jamais la date ni le numero (l'ANNEE du numero, elle, vient bien de la date). La verite et ses deux chiffres (296 fusions ; zero etiquette posee avant la gardee absorbee jusqu'a la nuit du 26 au 27/11) : supabase/patch_journal_ancien_numero_2026-11-22.sql, bloc juste avant la fonction.
 -- ═══════════════════════════════════════════════════════════════════════════
 -- L'ANNÉE DE L'ÉTIQUETTE : LES DEUX LECTEURS, RÉPARÉS          12/11/2026
 -- ═══════════════════════════════════════════════════════════════════════════

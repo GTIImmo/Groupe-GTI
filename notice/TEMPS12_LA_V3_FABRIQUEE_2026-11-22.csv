@@ -1,0 +1,218 @@
+﻿partie;bien;transaction;genre;etat;montant;ligne du Sheet;numero de ligne;ce qui arrive;pourquoi;sa colonne : la place bouge une etiquette ?
+sans preuve;10043;4669;compromis;cancelled;16800.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (GYGF5F1X ZMQZSE9Q);OUI -- a part
+sans preuve;15672;7710;compromis;cancelled;135000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (9DK01H85 SWDW99J5);OUI -- a part
+sans preuve;2208;1059;compromis;cancelled;195000.00;;;A PART (seule, un dossier a elle);date 2023-12-18 sur aucune case, prix 195000.0 + honoraires 12000.0 : ceux d'aucune ligne;OUI -- a part
+sans preuve;28506;14033;compromis;cancelled;140500.00;;;A PART (seule, un dossier a elle);B3, sa decision du 20/11 soir;OUI -- a part
+sans preuve;28653;14110;compromis;cancelled;113000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (AYIHPHF5 L2B2WGCF Z3DYDC4X);OUI -- a part
+sans preuve;34066;16382;offre;refused;249000;;;A PART (seule, un dossier a elle);date 2020-09-23 sur aucune case, honoraires inconnus;OUI -- a part
+sans preuve;41481;20088;compromis;cancelled;50000.00;;;A PART (seule, un dossier a elle);sans date, prix 50000.0 + honoraires 5000.0 : ceux d'aucune ligne;OUI -- a part
+sans preuve;43050;21520;compromis;cancelled;282000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (1c7b38f9 d2108609);OUI -- a part
+sans preuve;47776;24124;offre;accepted;11800;;;A PART (seule, un dossier a elle);date 2023-04-17 sur aucune case, honoraires inconnus;OUI -- a part
+sans preuve;48321;24600;compromis;cancelled;39000.00;;;A PART (seule, un dossier a elle);date 2019-05-17 sur aucune case, prix 39000.0 + honoraires 4000.0 : ceux d'aucune ligne;OUI -- a part
+sans preuve;52166;26613;compromis;cancelled;210000.00;;;A PART (seule, un dossier a elle);sans date, honoraires inconnus;OUI -- a part
+sans preuve;53740;27512;compromis;cancelled;51000.00;;;A PART (seule, un dossier a elle);date 2021-02-17 sur aucune case, prix 51000.0 + honoraires 4000.0 : ceux d'aucune ligne;OUI -- a part
+sans preuve;54676;28116;compromis;cancelled;60000.00;;;A PART (seule, un dossier a elle);sans date, prix 60000.0 + honoraires 5000.0 : ceux d'aucune ligne;OUI -- a part
+sans preuve;8671;3741;vente;;54500.00;;;A PART (seule, un dossier a elle);date 2018-11-23 sur aucune case, honoraires inconnus;OUI -- a part
+sans preuve;9232;4126;compromis;cancelled;77000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (FOZ6HZLK P252U1JH);OUI -- a part
+sans preuve;9556;4327;compromis;cancelled;55000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (ACB4D8WI G41FTEZ8 PYG8JZ0C);OUI -- a part
+sans preuve;9868;4533;compromis;cancelled;99000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (FYNZEKI6 PCDZXTIY);OUI -- a part
+sans preuve;9877;4542;compromis;cancelled;108000.00;;;A PART (seule, un dossier a elle);sans date, prix 108000.0 + honoraires 8000.0 : ceux d'aucune ligne;OUI -- a part
+sans preuve;9902;4560;compromis;cancelled;60000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (BNWNKPJH QV5AYD2K);OUI -- a part
+sans preuve;9961;4621;compromis;cancelled;50000.00;;;A PART (seule, un dossier a elle);prix + honoraires de plusieurs acheteurs (0EMKY4ZS 910O0A2Q);OUI -- a part
+sans preuve;15087;7453;offre;refused;143000;;;ATTEND dans le morceau de HRRSO81C;date 2020-05-18 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;24484;11670;offre;refused;129000;;;ATTEND dans le morceau de 13KBCS85;date 2021-02-13 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;32929;16019;vente;;11000.00;;;ATTEND dans le morceau de ZYVO6KK1;date 2025-06-10 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;36320;17136;offre;refused;47500;;;ATTEND dans le morceau de ZV3QRSJG;date 2021-02-22 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;37192;17436;offre;refused;65700;;;ATTEND dans le morceau de D96KSCYQ;date 2024-04-17 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;45891;23054;offre;refused;75000;;;ATTEND seule, avec sa ligne SBH4QWDW (qui n'a aucun morceau);date 2021-01-26 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;47557;1001561;offre;accepted;;;;ATTEND dans le morceau de DAMOO7OU;C5 sans ligne d'origine;NON -- elle attend
+sans preuve;48013;24321;offre;accepted;9800;;;ATTEND dans le morceau de SCYKLY77;date 2021-08-04 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;48311;24591;offre;refused;19200;;;ATTEND dans le morceau de 0OO1BEZD;date 2019-08-29 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;48321;24601;offre;refused;39000;;;ATTEND dans le morceau de 1X9W3VUF;date 2019-04-03 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;49941;25891;offre;refused;80000;;;ATTEND dans le morceau de 6N2UPC4E;date 2024-05-18 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;53342;27136;offre;accepted;89000;;;ATTEND dans son dossier d'aujourd'hui (27136), tel quel;date 2024-08-29 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;53342;27141;vente;;89000.00;;;ATTEND dans son dossier d'aujourd'hui (27136), tel quel;date 2025-04-23 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;53803;27555;offre;accepted;112000;;;ATTEND dans le morceau de NKUNH7SY;date 2020-10-02 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;53803;27556;offre;refused;118000;;;ATTEND seule, avec sa ligne XHITO8HE (qui n'a aucun morceau);date 2020-05-23 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;54676;28118;offre;accepted;53000;;;ATTEND dans le morceau de 9a09e537;date 2026-03-23 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;55203;28363;offre;accepted;110000;;;ATTEND dans le morceau de TA5QUCD4;date 2018-12-11 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;61599;28833;offre;accepted;129000;;;ATTEND dans le morceau de d1cb8dd7;date 2026-04-15 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;9877;4543;offre;accepted;72000;;;ATTEND dans le morceau de Z0BDVNBZ;date 2022-03-16 sur aucune case, honoraires inconnus;NON -- elle attend
+sans preuve;9877;4544;offre;refused;108000;;;ATTEND seule, avec sa ligne 40ELE6SQ (qui n'a aucun morceau);date 2021-09-10 sur aucune case, honoraires inconnus;NON -- elle attend
+gel V3 : relier;8454;3678;offre;accepted;120000;c08ff7cb;4284;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;9993;4649;compromis;cancelled;32000.00;HHQZC2QP;3999;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;9993;4651;compromis;cancelled;31000.00;N9J2533O;4066;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;15087;7450;compromis;cancelled;143000.00;DN5U3GER;4037;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;24119;11415;offre;accepted;295000;H6CTRVR6;1841;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;28653;14113;offre;refused;113000;Z3DYDC4X;3990;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;28653;14115;vente;;113000.00;AYIHPHF5;1932;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;34007;16342;compromis;cancelled;175000.00;ZGNIYS1Z;3912;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;36165;17024;compromis;active;67500.00;JAW5U9OF;3731;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;36320;17131;compromis;cancelled;47500.00;ZV3QRSJG;3954;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;36917;17366;offre;accepted;213000;D9MMB7OU;3735;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;39845;19131;compromis;active;80000.00;6FQO29C8;589;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;39845;19133;vente;;80000.00;6FQO29C8;589;relier;la preuve interne la donne a cette ligne;
+gel V3 : relier;53342;27134;compromis;cancelled;90000.00;IEYXREWQ;3530;relier;la preuve interne la donne a cette ligne;
+gel V3 : delier;2208;1059;compromis;cancelled;195000.00;AHKQI7MX;3544;delier;pas dans son morceau;
+gel V3 : delier;8454;3678;offre;accepted;120000;721e650c;4252;delier;pas dans son morceau;
+gel V3 : delier;8671;3741;vente;;54500.00;HUY49KEC;3248;delier;pas dans son morceau;
+gel V3 : delier;9232;4126;compromis;cancelled;77000.00;P252U1JH;3832;delier;pas dans son morceau;
+gel V3 : delier;9556;4327;compromis;cancelled;55000.00;PYG8JZ0C;3744;delier;pas dans son morceau;
+gel V3 : delier;9868;4533;compromis;cancelled;99000.00;PCDZXTIY;3983;delier;pas dans son morceau;
+gel V3 : delier;9877;4542;compromis;cancelled;108000.00;RGCEC677;3900;delier;pas dans son morceau;
+gel V3 : delier;9902;4560;compromis;cancelled;60000.00;QV5AYD2K;3945;delier;pas dans son morceau;
+gel V3 : delier;9961;4621;compromis;cancelled;50000.00;TND2I31B;3998;delier;pas dans son morceau;
+gel V3 : delier;9993;4649;compromis;cancelled;32000.00;2FOH8HE4;4096;delier;pas dans son morceau;
+gel V3 : delier;10043;4669;compromis;cancelled;16800.00;GYGF5F1X;3946;delier;pas dans son morceau;
+gel V3 : delier;15672;7710;compromis;cancelled;135000.00;9DK01H85;3846;delier;pas dans son morceau;
+gel V3 : delier;24119;11415;offre;accepted;295000;E9GL6MUS;3958;delier;pas dans son morceau;
+gel V3 : delier;34007;16342;compromis;cancelled;175000.00;YATQOEPB;3996;delier;pas dans son morceau;
+gel V3 : delier;34066;16382;offre;refused;249000;R0JRVFDC;4014;delier;pas dans son morceau;
+gel V3 : delier;36165;17024;compromis;active;67500.00;X2714E92;1080;delier;pas dans son morceau;
+gel V3 : delier;36917;17366;offre;accepted;213000;QJQ9M4OF;1089;delier;pas dans son morceau;
+gel V3 : delier;39845;19131;compromis;active;80000.00;V3FO5NDA;3632;delier;pas dans son morceau;
+gel V3 : delier;39845;19133;vente;;80000.00;V3FO5NDA;3632;delier;pas dans son morceau;
+gel V3 : delier;41481;20088;compromis;cancelled;50000.00;5QE9107L;3935;delier;pas dans son morceau;
+gel V3 : delier;41699;20264;compromis;cancelled;324000.00;E1WD68ZB;3561;delier;pas dans son morceau;
+gel V3 : delier;43050;21520;compromis;cancelled;282000.00;d2108609;4259;delier;pas dans son morceau;
+gel V3 : delier;47776;24124;offre;accepted;11800;305KAY9W;845;delier;pas dans son morceau;
+gel V3 : delier;52166;26613;compromis;cancelled;210000.00;SHN6RKDI;3423;delier;pas dans son morceau;
+gel V3 : delier;53342;27141;vente;;89000.00;IEYXREWQ;3530;delier;pas dans son morceau;
+gel V3 : delier;53342;27134;compromis;cancelled;90000.00;2HOL5ISX;3605;delier;pas dans son morceau;
+gel V3 : delier;53740;27512;compromis;cancelled;51000.00;1D7EIYKW;4031;delier;pas dans son morceau;
+gel V3 : delier;54676;28116;compromis;cancelled;60000.00;C0HXVVCW;3417;delier;pas dans son morceau;
+gel V3 : delier;9748;4480;compromis;cancelled;87000.00;3308P0UX;3785;delier;lachee pour 9WQ204HP (exclusivite);
+gel V3 : reste sans lien;9748;4480;compromis;cancelled;87000.00;9WQ204HP;3763;dans le dossier de la ligne, sans lien;un lien par role (sa convention apres renegociation, ou une copie C5 tient deja le role);
+gel V3 : reste sans lien;37184;17427;compromis;cancelled;184000.00;87QOXR64;3829;dans le dossier de la ligne, sans lien;un lien par role (sa convention apres renegociation, ou une copie C5 tient deja le role);
+gel V3 : reste sans lien;41699;20264;compromis;cancelled;324000.00;EO8MXFE9;3508;dans le dossier de la ligne, sans lien;un lien par role (sa convention apres renegociation, ou une copie C5 tient deja le role);
+gel V3 : reste sans lien;62802;30656;offre;refused;230000;2dfa6ef3;4744;dans le dossier de la ligne, sans lien;un lien par role (sa convention apres renegociation, ou une copie C5 tient deja le role);
+gel V3 : reste sans lien;62905;30684;offre;refused;89000;5a956cad;4754;dans le dossier de la ligne, sans lien;un lien par role (sa convention apres renegociation, ou une copie C5 tient deja le role);
+purge de nuit sans la V3;;3670;;;;;;orpheline en conflit -> dossier 3669;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;11709;;;;;;orpheline en conflit -> dossier 11708;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;14034;;;;;;orpheline en conflit -> dossier 14033;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;14052;;;;;;orpheline en conflit -> dossier 14051;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;14913;;;;;;orpheline en conflit -> dossier 14912;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;19070;;;;;;orpheline en conflit -> dossier 19069;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;19576;;;;;;orpheline en conflit -> dossier 19575;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;19737;;;;;;orpheline en conflit -> dossier 19736;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;20089;;;;;;orpheline en conflit -> dossier 20088;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;24011;;;;;;orpheline en conflit -> dossier 24010;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;27135;;;;;;orpheline en conflit -> dossier 27133;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;28179;;;;;;orpheline en conflit -> dossier 28178;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit sans la V3;;28547;;;;;;orpheline en conflit -> dossier 28546;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;3670;;;;;;orpheline en conflit -> dossier 3669;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;4484;;;;;;orpheline en conflit -> dossier 4480;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;4653;;;;;;orpheline en conflit -> dossier 4649;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;11709;;;;;;orpheline en conflit -> dossier 11708;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;14052;;;;;;orpheline en conflit -> dossier 14051;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;14913;;;;;;orpheline en conflit -> dossier 14912;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;17136;;;;;;orpheline en conflit -> dossier 17131;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;17429;;;;;;orpheline en conflit -> dossier 17427;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;19576;;;;;;orpheline en conflit -> dossier 19575;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;19737;;;;;;orpheline en conflit -> dossier 19736;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;20267;;;;;;orpheline en conflit -> dossier 20264;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;23053;;;;;;orpheline en conflit -> dossier 23050;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;24011;;;;;;orpheline en conflit -> dossier 24010;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;28179;;;;;;orpheline en conflit -> dossier 28178;le dossier d'arrivee porte deja une part non-Hektor;
+purge de nuit avec la V3;;28547;;;;;;orpheline en conflit -> dossier 28546;le dossier d'arrivee porte deja une part non-Hektor;
+repartition qui reste sans sa ligne;;4533;;;;FYNZEKI6 PCDZXTIY;1923 3983;reste sur le dossier 4533;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;4560;;;;BNWNKPJH QV5AYD2K;1813 3945;reste sur le dossier 4560;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;4621;;;;910O0A2Q TND2I31B;1720 3998;reste sur le dossier 4621;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;4669;;;;GYGF5F1X ZMQZSE9Q;3946 1542;reste sur le dossier 4669;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;17131;;;;510YKN3L DEZQM9HM;1670 3931;reste sur le dossier 17131;lignes de ce dossier apres la V3 : ZV3QRSJG;
+repartition qui reste sans sa ligne;;1059;;;;AHKQI7MX YPNDHILU;3544 513;reste sur le dossier 1059;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;3741;;;;HUY49KEC;3248;reste sur le dossier 3741;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;4126;;;;P252U1JH;3832;reste sur le dossier 4126;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;4327;;;;PYG8JZ0C;3744;reste sur le dossier 4327;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;4480;;;;3308P0UX N1CUULMN;3785 1096;reste sur le dossier 4480;lignes de ce dossier apres la V3 : 9WQ204HP;
+repartition qui reste sans sa ligne;;4649;;;;2FOH8HE4 VX5RZL6B;4096 1946;reste sur le dossier 4649;lignes de ce dossier apres la V3 : HHQZC2QP;
+repartition qui reste sans sa ligne;;4850;;;;R9ANL92S;2408;reste sur le dossier 4850;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;7710;;;;9DK01H85 SWDW99J5;3846 1489;reste sur le dossier 7710;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;12011;;;;ANHQ1PK7;2597;reste sur le dossier 12011;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;12566;;;;QL70KV8I;3169;reste sur le dossier 12566;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;16382;;;;R0JRVFDC;4014;reste sur le dossier 16382;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;17153;;;;A6OS2TTJ;3073;reste sur le dossier 17153;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;17427;;;;OXQSBZ9V;3961;reste sur le dossier 17427;lignes de ce dossier apres la V3 : 87QOXR64;
+repartition qui reste sans sa ligne;;17546;;;;V5NJER40;2900;reste sur le dossier 17546;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;17912;;;;9JCIQYZX;3301;reste sur le dossier 17912;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;19131;;;;V3FO5NDA;3632;reste sur le dossier 19131;lignes de ce dossier apres la V3 : 6FQO29C8;
+repartition qui reste sans sa ligne;;19862;;;;JBCC1KBT;3020;reste sur le dossier 19862;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;20088;;;;5QE9107L ZW7MKTWH;3935 3863;reste sur le dossier 20088;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;20264;;;;E1WD68ZB K013ZH03;3561 402;reste sur le dossier 20264;lignes de ce dossier apres la V3 : EO8MXFE9;
+repartition qui reste sans sa ligne;;20794;;;;MFMR0U6A;2725;reste sur le dossier 20794;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;21520;;;;d2108609;4259;reste sur le dossier 21520;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;22269;;;;WG8CG5T2;2344;reste sur le dossier 22269;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;26613;;;;SHN6RKDI;3423;reste sur le dossier 26613;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;27136;;;;IEYXREWQ;3530;reste sur le dossier 27136;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;27512;;;;1D7EIYKW;4031;reste sur le dossier 27512;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;27721;;;;SA7DWYEZ;2460;reste sur le dossier 27721;lignes de ce dossier apres la V3 : aucune;
+repartition qui reste sans sa ligne;;28116;;;;C0HXVVCW;3417;reste sur le dossier 28116;lignes de ce dossier apres la V3 : aucune;
+valeur posee qui change de ligne;;3741;vente;;;HUY49KEC;3248;ligne apres la V3 : aucune;numero_facture_app=GTI43000065 chèqu reçu | vente_reglee_app=26/11/2018;
+valeur posee qui change de ligne;;4126;compromis;;;P252U1JH;3832;ligne apres la V3 : aucune;date_annulation_app=2022-01-22;
+valeur posee qui change de ligne;;4327;compromis;;;PYG8JZ0C;3744;ligne apres la V3 : aucune;date_annulation_app=2022-08-01 | motif_annulation_app=Retractation;
+valeur posee qui change de ligne;;4480;compromis;;;3308P0UX;3785;ligne apres la V3 : aucune;motif_annulation_app=Retractation;
+valeur posee qui change de ligne;;4533;compromis;;;PCDZXTIY;3983;ligne apres la V3 : aucune;date_annulation_app=2021-03-21;
+valeur posee qui change de ligne;;4542;compromis;;;RGCEC677;3900;ligne apres la V3 : aucune;date_annulation_app=2021-08-01;
+valeur posee qui change de ligne;;4560;compromis;;;QV5AYD2K;3945;ligne apres la V3 : aucune;date_annulation_app=2021-05-21;
+valeur posee qui change de ligne;;4621;compromis;;;TND2I31B;3998;ligne apres la V3 : aucune;date_annulation_app=2021-02-01;
+valeur posee qui change de ligne;;4669;compromis;;;GYGF5F1X;3946;ligne apres la V3 : aucune;date_annulation_app=2021-05-21;
+valeur posee qui change de ligne;;7710;compromis;;;9DK01H85;3846;ligne apres la V3 : aucune;date_annulation_app=2021-12-01;
+valeur posee qui change de ligne;;16382;offre;;;R0JRVFDC;4014;ligne apres la V3 : aucune;motif_annulation_app=Pret refuse;
+valeur posee qui change de ligne;;20088;compromis;;;5QE9107L;3935;ligne apres la V3 : aucune;date_annulation_app=2021-06-21;
+valeur posee qui change de ligne;;21520;compromis;;;d2108609;4259;ligne apres la V3 : aucune;date_annulation_app=2025-08-20;
+valeur posee qui change de ligne;;26613;compromis;;;SHN6RKDI;3423;ligne apres la V3 : aucune;date_annulation_app=2025-01-25;
+valeur posee qui change de ligne;;27134;compromis;;;2HOL5ISX;3605;ligne apres la V3 : IEYXREWQ;date_annulation_app=2023-08-01;
+valeur posee qui change de ligne;;28116;compromis;;;C0HXVVCW;3417;ligne apres la V3 : aucune;date_annulation_app=2025-01-25;
+note du Sheet qui change de ligne;;1059;compromis;;;AHKQI7MX;3544;ligne apres la V3 : aucune;"classeur:F+G : F : le texte de l'annulation -- PB pret
+G : le commentaire -- réglée";
+note du Sheet qui change de ligne;;3741;vente;;;HUY49KEC;3248;ligne apres la V3 : aucune;classeur:G : G : le commentaire -- réglée;
+note du Sheet qui change de ligne;;4126;compromis;;;P252U1JH;3832;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- Sauret/Detoqueville 20/1Retard CovidACQ // 07/1 ;
+note du Sheet qui change de ligne;;4327;compromis;;;PYG8JZ0C;3744;ligne apres la V3 : aucune;classeur:G : G : le commentaire -- réglée;
+note du Sheet qui change de ligne;;4480;compromis;;;3308P0UX;3785;ligne apres la V3 : aucune;classeur:G : G : le commentaire -- réglée;
+note du Sheet qui change de ligne;;4533;compromis;;;PCDZXTIY;3983;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- Sauret - attente conf écrite ACQ rétractation;
+note du Sheet qui change de ligne;;4542;compromis;;;RGCEC677;3900;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- PB de parcelle;
+note du Sheet qui change de ligne;;4560;compromis;;;QV5AYD2K;3945;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- Auboyer/Basin BVx dossX _ tournant courrier;
+note du Sheet qui change de ligne;;4621;compromis;;;TND2I31B;3998;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- FIN FEVRIER VENTE DIRECTE Sauret FIN SAFER 26/2 ;
+note du Sheet qui change de ligne;;4669;compromis;;;GYGF5F1X;3946;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- Desvages(61) cpmis proc ACQ envoyée 27/4 - TAE L;
+note du Sheet qui change de ligne;;16342;compromis;;;YATQOEPB;3996;ligne apres la V3 : ZGNIYS1Z;classeur:F : F : le texte de l'annulation -- BDH/? retractation acq att. conf écrite;
+note du Sheet qui change de ligne;;19133;vente;;;V3FO5NDA;3632;ligne apres la V3 : 6FQO29C8;"classeur:F+G : F : le texte de l'annulation -- trop long procs 15 proprio
+G : le commentaire --";
+note du Sheet qui change de ligne;;20088;compromis;;;5QE9107L;3935;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- CUb négatif redéposé 25/32mois  négatif à nouvea;
+note du Sheet qui change de ligne;;20264;compromis;;;E1WD68ZB;3561;ligne apres la V3 : aucune;"classeur:F+G : F : le texte de l'annulation -- acq ont changé d'avis
+G : le commentaire -- régl";
+note du Sheet qui change de ligne;;21520;compromis;;;d2108609;4259;ligne apres la V3 : aucune;"classeur:G : G : le commentaire -- 20.8 annulation mail pj.
+19.8 annulation orale des acq : f";
+note du Sheet qui change de ligne;;26613;compromis;;;SHN6RKDI;3423;ligne apres la V3 : aucune;"classeur:F+G : F : le texte de l'annulation -- achètent un autre bien
+G : le commentaire -- rég";
+note du Sheet qui change de ligne;;27134;compromis;;;2HOL5ISX;3605;ligne apres la V3 : IEYXREWQ;"classeur:F+G : F : le texte de l'annulation -- rupture d'anevrisme Acq
+G : le commentaire -- ré";
+note du Sheet qui change de ligne;;27141;vente;;;IEYXREWQ;3530;ligne apres la V3 : aucune;"classeur:F+G : F : le texte de l'annulation -- partage divorce pas favorable
+G : le commentaire";
+note du Sheet qui change de ligne;;27512;compromis;;;1D7EIYKW;4031;ligne apres la V3 : aucune;classeur:F : F : le texte de l'annulation -- attente diag  simul banque  refus de pret att. é;
+note du Sheet qui change de ligne;;28116;compromis;;;C0HXVVCW;3417;ligne apres la V3 : aucune;"classeur:F+G : F : le texte de l'annulation -- motif non précisé
+G : le commentaire -- réglée";
+correction 3 (V2) : les 25;;998;compromis;;;a8aaeb2b;4718;LAISSER (la ligne a8aaeb2b n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : hon_entree=1000 ; note : classeur:G : G : le commentaire -- 12.10 VENTE reportée le jeudi 10 décembre 2026 à 10 heures / 09.10 VENTE fixée";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;3650;vente;;;427UDDSF;3477;LAISSER (la ligne 427UDDSF n'a plus de vente : aucune place juste ou la mettre) -- a toi;" ; note : classeur:F+G : F : le texte de l'annulation -- 19/8 rdv18/8 expert ondes / G : le commentaire -- réglée";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;4385;compromis;;;8RWTD0YX;3795;LAISSER (la ligne 8RWTD0YX n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2022-04-22 ; note : classeur:F : F : le texte de l'annulation -- pb familiale acq";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;4496;compromis;;;61OW86CS;3938;LAISSER (la ligne 61OW86CS n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2021-06-21 ; note : classeur:F : F : le texte de l'annulation -- Rocher PB accès véhicule CUb négatif vendeur essaient de négocier av";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;6555;compromis;;;Q602VZJX;3970;DEPLACER vers 6554 (le compromis que la ligne Q602VZJX tient aujourd'hui, et tient encore apres la V3);" ; note : classeur:F : F : le texte de l'annulation -- Coulaud BVok dossOk";tenue aujourd'hui par : EGR8KXOL
+correction 3 (V2) : les 25;;8321;compromis;;;8Q3LHGZ4;3579;LAISSER (la ligne 8Q3LHGZ4 n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2023-10-23 | motif=Retractation ; note : classeur:G : G : le commentaire -- réglée";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;11138;compromis;;;774aa002;4606;LAISSER (la ligne 774aa002 n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2026-06-02 ; note : classeur:F+G : F : le texte de l'annulation -- rétractation  clôture du mandat expiré Guibert / G : le commentaire ";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;12952;compromis;;;1ESJE28Q;3464;LAISSER (la ligne 1ESJE28Q n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2024-09-24 | motif=Annule sans motif precise ; note : classeur:G : G : le commentaire -- réglée";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;16377;compromis;;;RX6J289Y;3968;DEPLACER vers 16378 (le compromis que la ligne RX6J289Y tient aujourd'hui, et tient encore apres la V3);"valeur : annulee_le=2021-04-21 ; note : classeur:F : F : le texte de l'annulation -- BDH/Aymonier(74) - prêt refusé";tenue aujourd'hui par : R0JRVFDC
+correction 3 (V2) : les 25;;16378;compromis;;;CITFQGOB;4067;LAISSER (la ligne CITFQGOB n'a plus de compromis : aucune place juste ou la mettre) -- a toi;valeur : motif=Changement de situation acquereur;tenue aujourd'hui par : RX6J289Y
+correction 3 (V2) : les 25;;17427;compromis;;;OXQSBZ9V;3961;LAISSER (la ligne OXQSBZ9V n'a plus de compromis : aucune place juste ou la mettre) -- a toi;" ; note : classeur:F : F : le texte de l'annulation -- Dumas  - simul et dossier  long : projet agricole";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;19277;offre;;;Y51UMZHY;3522;LAISSER (la ligne Y51UMZHY n'a plus de offre : aucune place juste ou la mettre) -- a toi;" ; note : classeur:F+G : F : le texte de l'annulation -- usines autour  gare / G : le commentaire -- réglée";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;23050;compromis;;;SBH4QWDW;4005;LAISSER (la ligne SBH4QWDW n'a plus de compromis : aucune place juste ou la mettre) -- a toi;" ; note : classeur:F : F : le texte de l'annulation -- Benoist - Retractation ACQ budget attente conf mail";tenue aujourd'hui par : VMWFLLW4
+correction 3 (V2) : les 25;;26395;compromis;;;NEFHS7JI;3991;LAISSER (la ligne NEFHS7JI n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2021-03-21 ; note : classeur:F : F : le texte de l'annulation -- Remplacement par LOT 3 3577-63";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;27195;compromis;;;739a0db1;4668;LAISSER (la ligne 739a0db1 n'a plus de compromis : aucune place juste ou la mettre) -- a toi;"valeur : annulee_le=2026-07-27 ; note : classeur:F+G : F : le texte de l'annulation -- C. Bravard / G : le commentaire -- 27.07 mail rétractation offre reç";tenue aujourd'hui par : TR42PT5H
+correction 3 (V2) : les 25;;27196;offre;;;TR42PT5H;173;LAISSER (la ligne TR42PT5H n'a plus de offre : aucune place juste ou la mettre) -- a toi;" ; note : classeur:G : G : le commentaire -- PB succ. européenne /  / 19.5 désistement acq. car pas de solution trouvée par";tenue aujourd'hui par : 739a0db1
+correction 3 (V2) : les 25;;1001477;offre;;;8RWTD0YX;3795;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan VAN ROSSUM. Reprise de l historique (ligne 8RWTD0YX, mandat 14065) -- no";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001482;offre;;;UTLG66LE;4131;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan STAUFFER. Reprise de l historique (ligne UTLG66LE, mandat 2544) -- non r";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001520;offre;;;739a0db1;4668;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : M. HALLAERT-THEYS Aurélien Mme MAURAIS Audrey. Reprise de l historique (lign";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001540;compromis;;;VMWFLLW4;3910;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan PARRELLA. Reprise de l historique (ligne VMWFLLW4, mandat 12755) -- non ";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001542;compromis;;;R0JRVFDC;4014;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan DUPONT PIPPIA. Reprise de l historique (ligne R0JRVFDC, mandat 12921) --";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001553;compromis;;;fa06e4e5;4674;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : M. BILDINICI Ihsam. Reprise de l historique (ligne fa06e4e5, mandat 18642) -";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001561;offre;;;TRJ5Y59U;457;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan MARTINEZ. Reprise de l historique (ligne TRJ5Y59U, mandat 16628) -- non ";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001563;offre;;;A07EC3DH;535;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan GUERIN. Reprise de l historique (ligne A07EC3DH, mandat 16362) -- non re";tenue aujourd'hui par : aucune
+correction 3 (V2) : les 25;;1001580;offre;;;3S4ZWOFK;2388;copie C5 : sa note est celle de la copie -- elle part AVEC la copie quand on retire les copies (regle du 19/11);" ; note : classeur : Acquereur au classeur : nan DI FORTI ROLLAND. Reprise de l historique (ligne 3S4ZWOFK, mandat 12864)";tenue aujourd'hui par : aucune

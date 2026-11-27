@@ -99,6 +99,8 @@ USAGE
 -----
   python phase2/sync/pull_from_supabase.py --dry-run    # affiche le plan, n'ecrit rien
   python phase2/sync/pull_from_supabase.py              # descend tout
+                                                        #   sauf les vues (VUES_NON_DESCENDUES) et, depuis le 26/11,
+                                                        #   les sauvegardes datees (NOM_DATE_EN_FIN) ; --table les force
   python phase2/sync/pull_from_supabase.py --table app_rapprochement   # une seule
 """
 from __future__ import annotations
@@ -107,6 +109,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -205,6 +208,145 @@ VUES_NON_DESCENDUES = frozenset({
 # ⚠ Le jour ou un gel depassera 15 000 lignes, le vrai remede sera de lui DONNER
 #   une cle primaire a la creation, pas de remonter ce chiffre encore une fois.
 RELECTURE_ENTIERE_MAX = 15000  # au-dela, on ne redemande pas une table en un seul bloc
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LES SAUVEGARDES DATEES NE DESCENDENT PLUS                        26/11/2026
+#
+# SON MOT (26/11) : « la regle des dates n'est pas la derniere corvee : c'est elle qui ferme ce risque, puisqu'elle sort
+#   ces tables de la descente » -- le risque des tables SANS CLE PRIMAIRE.
+# CE QU'ELLES SONT : des photos et des sauvegardes prises AVANT un geste de masse, datees par leur nom
+#   (« ..._avant_<geste>_<date> »), pour pouvoir revenir en arriere. Leur contenu ne change plus apres leur creation :
+#   les recopier chaque nuit ne rapporte rien.
+# CE QU'ELLES COUTAIENT (mesure du 26/11, chantier_classeur_q6_cache/prepa_25_11/110) : 69 tables, 334 738 lignes en
+#   base, toutes recopiees chaque nuit ; 67 sur 69 SANS cle primaire (CREATE TABLE ... AS SELECT). Le parcours par valeur
+#   s'y rabat sur la premiere colonne, qui se repete, et saute des lignes au bord des pages : elles passaient par CHANCE,
+#   pas par construction. Trois (17 907 lignes chacune, au-dessus de RELECTURE_ENTIERE_MAX) echouaient CHAQUE NUIT depuis
+#   le 25/11 -> la descente sortait en code 1 ; et le 26/11 a 16:36, app_affaire_repartition_avant_classeur_20261113 a
+#   encore rendu 7 344 / 7 346 au premier passage (rattrapee par rang).
+# LA REGLE : un nom qui finit par une date (_AAAAMMJJ, _AAAAMMJJ_HHMMSS ou _AAAA_MM_JJ) ne descend plus.
+#   . --table la force, comme pour les vues (c'est le chemin de la descente de controle du 26/11) ;
+#   . RIEN n'est supprime : ni en base, ni la copie locale deja descendue (elle reste, figee, et juste -- son contenu ne
+#     change plus) ; sb_pull_state garde sa derniere descente ;
+#   . la liste ecartee et son total de lignes (au dernier etat local) sont ECRITS a chaque passage : une exclusion
+#     deliberee se declare (regle du 14/10).
+# ⚠ Ce n'est pas une liste a tenir : c'est le NOM qui decide. Une sauvegarde neuve, nommee selon l'usage, est ecartee
+#   d'elle-meme. Le risque restant est du BON cote : une sauvegarde mal nommee descend comme avant -- du volume en trop,
+#   jamais une perte.
+# ⛔ NE JAMAIS donner a une table VIVANTE un nom qui finit par une date : elle cesserait de descendre. Le 26/11, les 69
+#   noms qui la portent sont tous des sauvegardes (tous des tables, aucune vue), et AUCUN autre des 279 noms du schema ne
+#   contient une annee (mesure).
+# Les VUES restent ecartees par VUES_NON_DESCENDUES, a part : une autre nature, une autre regle.
+NOM_DATE_EN_FIN = re.compile(r"(_20\d{6}(_\d{6})?$|_20\d{2}_\d{2}_\d{2}$)")
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLE 0 -- LA DATE D'UNE COPIE EST CELLE DE LA COPIE EN PLACE      26/11/2026
+#
+# LE DEFAUT. copy_table enregistrait `derniere_descente = <ce passage>` AVANT de copier
+#   (« enregistrer avant de copier », correctif du 21/08), et marquer_echec la laissait en
+#   place. Apres un refus, sb_pull_state disait donc « copiee aujourd'hui » pour une copie
+#   de LA VEILLE.
+# QUI S'Y FIE (audit du 26/11, notice/AUDIT_GARDE_DE_LA_DESCENTE_2026-11-26.md § 10.1) :
+#   . relation_ledger.py (l. ~587, run de nuit) ne leve un retrait que si la doublure est
+#     « du jour » -- trompe, il ferait REAPPARAITRE un lien retire la veille ;
+#   . relation_disparue.py, mandat_un_numero.py et check_gti_health.py jugent leur
+#     fraicheur sur la meme date.
+#   Jamais mordu en 34 descentes (aucune de leurs copies n'a echoue). Mais les gardes du
+#   compte et de la chute (regles 1 et 4) FABRIQUENT des refus : sans cette regle, elles
+#   armeraient le piege.
+# LA REGLE. La date n'avance qu'a une BASCULE reussie (fin de copy_table) ou a un delta
+#   reussi (copy_delta). L'enregistrement « copie en cours » ne touche plus la date d'une
+#   ligne existante ; une table neuve part avec une date VIDE.
+#   . « copie en cours » reste ecrit dans dernier_echec : ceux qui le guettent
+#     (mandat_un_numero, la sante) le voient comme avant ;
+#   . le maximum des dates (« heure du dernier passage », lu par la sante) avance des la
+#     premiere table reussie : toutes portent l'heure de DEPART du passage.
+# ⚠ Seul cas change pour la sante : si TOUTES les tables echouaient la meme nuit, le
+#   maximum resterait celui de la veille. La tache « GTI Descente » (critical) le dit deja.
+# Interrupteur : False = le comportement d'avant, a l'octet pres.
+# Epreuve : phase2/sync/test_garde_de_la_descente.py (temoin inverse compris).
+DATE_DE_LA_COPIE_EN_PLACE = True
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLE 1 -- PAS DE COMPTE, PAS DE BASCULE                           26/11/2026
+#
+# LE TROU (faille A de l'audit, § 3). La verification avant bascule etait
+#   `if attendu is not None and attendu != total` : quand SupabaseReader.count rendait None,
+#   la verification etait SAUTEE et la copie neuve remplacait l'ancienne quand meme.
+#   count rend None apres une panne plus longue que les 4 essais de get() (~9 s pour le
+#   reseau, ~36 s pour une passerelle 52x), sur tout refus 4xx (jamais reessaye), ou sur un
+#   Content-Range sans total chiffre.
+# CE QU'IL POUVAIT COUTER. Le compte est le SEUL juge d'une lecture courte : une reponse
+#   coupee qui ressemble a une fin de table, une colonne de parcours nulle, un plafond de
+#   lignes abaisse chez Supabase (« Max rows » < 1 000 : toute table plus grosse serait lue
+#   en une page). Exemple vecu chaque nuit : app_securite_droits_avant_20261008 se lisait
+#   1 000 lignes sur 2 546, et seul le compte la sauvait.
+# A-T-IL MORDU ? Jamais, mesure du 28/10 au 26/11 : 88 lectures courtes, le compte a
+#   repondu a chacune ; 149 deltas reussis sur les 5 plus grosses tables (un delta exige le
+#   compte) ; un comptage prend au plus 1,8 s au serveur, pour une limite de 8 s.
+# LA REGLE. Si le compte ne repond pas, la copie neuve est REFUSEE : l'ancienne reste, la
+#   table part en echec (nommee, code 1), et elle est retentee a la descente suivante.
+#   Le delta, lui, traitait deja None comme un doute (copy_delta, filet n°1) : inchange.
+# ⚠ Une table qui n'a encore AUCUNE copie locale attend la nuit suivante au lieu d'arriver
+#   sans verification. C'est voulu.
+# Interrupteur : False = le comportement d'avant (bascule sans verification).
+# Epreuve : phase2/sync/test_garde_de_la_descente.py.
+EXIGER_LE_COMPTE = True
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLES 2 ET 3 -- CE QUE LA DESCENTE DIT DOIT ETRE VRAI              26/11/2026
+#
+# REGLE 2 : UN MESSAGE NE PROMET PAS UNE COPIE QUI N'EXISTE PAS. Tout refus finissait par
+#   « l'ancienne copie est conservee ». Le 26/11, SIX lignes de sb_pull_state le disaient
+#   pour des tables qui n'ont JAMAIS eu de copie locale (les trois gels du classeur des
+#   29/10, 31/10 et 09/11, les trois sauvegardes de la vague du 25/11). Le message dit
+#   desormais l'un ou l'autre, selon ce qui existe en local (suite_du_refus).
+# REGLE 3 : UN OBJET SUIVI QUI DISPARAIT DU SERVEUR SE DECLARE. La liste des cibles vient de
+#   l'API : un objet que Supabase n'expose plus n'etait plus une cible, et rien ne se passait
+#   -- pas une ligne au journal, sa copie locale figee, sa ligne d'etat pour toujours. Le
+#   26/11, 5 des 284 objets suivis avaient disparu (tous par des gestes voulus :
+#   tmp_etape12_avant le 24/08, app_notaire_interlocuteur renomme le 06/11, les trois gels du
+#   classeur). Le jour ou une table disparaitrait PAR ERREUR, sa copie locale deviendrait la
+#   derniere, et personne ne le saurait. Chaque passage les nomme donc (objets_disparus).
+#   ⛔ RIEN N'EST SUPPRIME, ni la copie ni l'etat ; PAS de code 1 : une suppression voulue est
+#   normale. C'est une declaration, comme celle des sauvegardes ecartees.
+# Interrupteurs : False = le texte et le silence d'avant.
+# Epreuve : phase2/sync/test_garde_de_la_descente.py.
+UN_MESSAGE_DIT_VRAI = True
+DECLARER_LES_DISPARUS = True
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REGLE 4 -- UNE CHUTE NE SE CROIT PAS SANS GESTE HUMAIN              26/11/2026
+#
+# LE TROU (faille B de l'audit, § 4). Le compte et la lecture viennent de la MEME source :
+#   si une table est videe chez Supabase, 0 = 0 et la copie pleine est remplacee par du
+#   vide, sans un mot. service_role passe outre la RLS (rolbypassrls = true, mesure) : un
+#   zero de l'API veut dire que la source est VRAIMENT vide -- donc le vrai risque est une
+#   perte reelle en amont (un TRUNCATE, un DELETE de trop, un patch), recopiee le lendemain
+#   sur la seule copie hors de Supabase. Zero n'est que le cas extreme d'une chute.
+# LE TEMOIN POSITIF : LA COPIE D'HIER. Avant la bascule, la copie neuve est comparee a la
+#   copie en place. Elle est REFUSEE (l'ancienne reste, echec nomme, code 1) si elle a moins
+#   de CHUTE_FRACTION de l'ancienne ET que l'ancienne avait :
+#     (a) au moins CHUTE_SEUIL_GENERAL lignes -- toute table, toute vue ;
+#     (b) au moins CHUTE_SEUIL_TABLE_A_CLE lignes, pour une table A CLE PRIMAIRE dont le nom
+#         n'est pas celui d'une file d'attente (FILE_D_ATTENTE). C'est ce qui garde les
+#         petites saisies de l'app : le carnet des transactions (48 lignes au 26/11), les
+#         saisies de contact (46), les transactions supprimees (28)...
+# SON MOT (26/11) : « oui vas-y », sur le conseil d'ecarter les files d'attente de (b) --
+#   elles se vident par nature (app_relation_provisional 3 -> 1 le 20/11 aurait crie), et
+#   app_search_pending est lue en local par la sante : refuser sa copie la ferait crier une
+#   seconde fois. Elles restent gardees par (a) au-dela de 100 lignes. Le NOM decide : une
+#   FIN de nom _pending, _provisional ou _dirty (app_pending_resolution n'en est PAS une).
+# MESURE sur les 34 descentes du 28/10 au 26/11 (rejouees avec decision_de_chute) :
+#   0 fausse alerte. Les chutes legitimes au-dessus de 100 lignes font au plus 2,6 %.
+# UNE CHUTE VOULUE s'accepte par un geste humain, nomme : --accepter-chute <table>
+#   (repetable, avec --table). Elle est alors ecrite au journal.
+# Interrupteur : REFUSER_LES_CHUTES = False = le comportement d'avant.
+# Epreuve : phase2/sync/test_garde_de_la_descente.py.
+REFUSER_LES_CHUTES = True
+CHUTE_FRACTION = 0.5
+CHUTE_SEUIL_GENERAL = 100
+CHUTE_SEUIL_TABLE_A_CLE = 2
+FILE_D_ATTENTE = re.compile(r"_(pending|provisional|dirty)$")
 
 
 def load_env_file(path: Path) -> None:
@@ -515,6 +657,56 @@ def descendues(conn: sqlite3.Connection) -> set[str]:
     return {r[0] for r in conn.execute(f"SELECT table_name FROM {STATE_TABLE}")}
 
 
+def suite_du_refus(conn: sqlite3.Connection, table: str) -> str:
+    """REGLE 2 (26/11) : la fin d'un message de refus dit ce qui existe VRAIMENT en local.
+
+    Interrupteur eteint : le texte d'avant, a l'octet pres.
+    """
+    garde = " -- l'ancienne copie est conservee"
+    if not UN_MESSAGE_DIT_VRAI:
+        return garde
+    existe = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+    return garde if existe else (" -- AUCUNE copie locale n'existe encore : rien n'est remplace, "
+                                 "rien n'est garde")
+
+
+def decision_de_chute(distant: str, ancienne: int, neuve: int, a_cle: bool) -> str | None:
+    """REGLE 4 (26/11) : la chute de `ancienne` a `neuve` lignes doit-elle etre refusee ?
+
+    Fonction PURE (aucune base, aucun reseau) : c'est elle qu'on rejoue sur l'historique des
+    journaux. Rend le motif du refus, ou None si la copie peut basculer.
+    """
+    if neuve >= ancienne * CHUTE_FRACTION:
+        return None
+    generale = ancienne >= CHUTE_SEUIL_GENERAL
+    petite = (a_cle and ancienne >= CHUTE_SEUIL_TABLE_A_CLE
+              and not FILE_D_ATTENTE.search(distant))
+    if not (generale or petite):
+        return None
+    return (f"chute refusee : {neuve} lignes au serveur pour {ancienne} dans la copie en place "
+            f"(moins de {int(CHUTE_FRACTION * 100)} %) -- si elle est voulue : "
+            f"--table {distant} --accepter-chute {distant}")
+
+
+def objets_disparus(conn: sqlite3.Connection, schema: dict) -> list[tuple[str, int | None]]:
+    """REGLE 3 (26/11) : les objets suivis que l'API n'expose plus.
+
+    Rend [(nom local, lignes de la copie locale ou None s'il n'y en a aucune)]. Le nom chez
+    Supabase est le nom local sans son suffixe de doublure __sb. Ne supprime RIEN.
+    """
+    presentes = local_tables(conn)
+    disparus: list[tuple[str, int | None]] = []
+    for local in sorted(descendues(conn)):
+        distant = local[:-4] if local.endswith("__sb") else local
+        if distant in schema:
+            continue
+        n = (conn.execute('SELECT count(*) FROM "%s"' % local).fetchone()[0]
+             if local in presentes else None)
+        disparus.append((local, n))
+    return disparus
+
+
 def encode(value: Any) -> Any:
     """Scalaires tels quels ; objets et tableaux en texte JSON."""
     if isinstance(value, (dict, list)):
@@ -524,7 +716,7 @@ def encode(value: Any) -> Any:
 
 def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
                table: str, columns: list[str], cle: str, stamp: str,
-               cles: list[str] | None = None) -> tuple[int, int]:
+               cles: list[str] | None = None, accepter_chute: bool = False) -> tuple[int, int]:
     """Recopie une table. Renvoie (lignes ecrites, appels API).
 
     `distant` = le nom chez Supabase, celui qu'on interroge.
@@ -546,13 +738,23 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     # laissait une table PARTIELLE absente de sb_pull_state : au run suivant elle passait
     # pour une table NATIVE, le garde-fou la protegeait, et elle n'etait plus JAMAIS
     # retentee. Une copie tronquee se faisant passer pour de la donnee, en silence.
-    conn.execute(
-        f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
-        "VALUES(?, NULL, ?, 'copie en cours') "
-        "ON CONFLICT(table_name) DO UPDATE SET lignes=NULL, derniere_descente=excluded.derniere_descente, "
-        "dernier_echec='copie en cours'",
-        (table, stamp),
-    )
+    if DATE_DE_LA_COPIE_EN_PLACE:
+        # REGLE 0 (26/11) : la date ne bouge PAS ici. Seule une bascule reussie l'avance
+        # (plus bas) : apres un refus, elle dit encore le jour de la copie en place.
+        conn.execute(
+            f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
+            "VALUES(?, NULL, NULL, 'copie en cours') "
+            "ON CONFLICT(table_name) DO UPDATE SET lignes=NULL, dernier_echec='copie en cours'",
+            (table,),
+        )
+    else:
+        conn.execute(
+            f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
+            "VALUES(?, NULL, ?, 'copie en cours') "
+            "ON CONFLICT(table_name) DO UPDATE SET lignes=NULL, derniere_descente=excluded.derniere_descente, "
+            "dernier_echec='copie en cours'",
+            (table, stamp),
+        )
     conn.commit()
 
     total = 0
@@ -704,6 +906,13 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     # l'ancienne reste. Le serveur ne peut jamais se retrouver avec MOINS qu'avant.
     attendu = reader.count(distant)
 
+    # REGLE 1 (26/11) : PAS DE COMPTE, PAS DE BASCULE -- voir EXIGER_LE_COMPTE. Sans compte,
+    # les deux controles ci-dessous (relecture, refus) etaient sautes et la bascule avait lieu.
+    if attendu is None and EXIGER_LE_COMPTE:
+        raise RuntimeError(
+            "comptage impossible chez Supabase (le compte n'a pas repondu) -- bascule refusee"
+            + suite_du_refus(conn, table))
+
     # LE RATTRAPAGE PAR RANG -- correctif du 22/08, cas vu en vrai sur
     # app_mandat_broadcast_current (1 524 lues / 1 528 attendues).
     #
@@ -749,8 +958,20 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
         # le jour ou ca arrive, cette erreur le dira au lieu de laisser passer une copie
         # amputee.
         raise RuntimeError(
-            f"copie incomplete : {total} lignes lues, {attendu} attendues cote Supabase "
-            "-- l'ancienne copie est conservee")
+            f"copie incomplete : {total} lignes lues, {attendu} attendues cote Supabase"
+            + suite_du_refus(conn, table))
+
+    # REGLE 4 (26/11) : UNE CHUTE NE SE CROIT PAS SANS GESTE HUMAIN -- voir REFUSER_LES_CHUTES.
+    # Le temoin est la copie EN PLACE : une table neuve (aucune copie) n'a rien a comparer.
+    if REFUSER_LES_CHUTES and conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+        ancienne = conn.execute('SELECT COUNT(*) FROM "%s"' % table).fetchone()[0]
+        motif = decision_de_chute(distant, ancienne, total, bool(cles))
+        if motif and not accepter_chute:
+            raise RuntimeError(motif + suite_du_refus(conn, table))
+        if motif:
+            print(f"        {distant} : CHUTE ACCEPTEE par geste humain (--accepter-chute) : "
+                  f"{ancienne} -> {total} lignes")
 
     # LA BASCULE : l'ancienne n'est remplacee qu'ICI, copie verifiee complete.
     conn.execute('DROP TABLE IF EXISTS "%s"' % table)
@@ -1006,6 +1227,9 @@ def main() -> int:
                              "reponse qui casse, pas le nombre de requetes."
                              % PAGE_SIZE)
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
+    parser.add_argument("--accepter-chute", action="append", default=[],
+                        help="REGLE 4 (26/11) : accepter, par geste humain, la chute de cette table "
+                             "(plus de la moitie de ses lignes perdue). Repetable, avec --table.")
     args = parser.parse_args()
 
     # ─── --page-size ─────────────────────────────────────────────   01/10/2026
@@ -1087,11 +1311,16 @@ def main() -> int:
     cibles: list[tuple[str, str]] = []
     doublures: list[tuple[str, str]] = []
     vues_ecartees = 0
+    sauvegardes_ecartees: list[str] = []
     for nom in sorted(schema):
         if args.table and nom not in args.table:
             continue
         if not args.table and nom in VUES_NON_DESCENDUES:
             vues_ecartees += 1
+            continue
+        # LES SAUVEGARDES DATEES (26/11) : voir NOM_DATE_EN_FIN. --table les force.
+        if not args.table and NOM_DATE_EN_FIN.search(nom):
+            sauvegardes_ecartees.append(nom)
             continue
         if nom in natives:
             cibles.append((nom, nom + "__sb"))
@@ -1101,6 +1330,40 @@ def main() -> int:
 
     print(f"Supabase expose {len(schema)} tables/vues")
     print(f"  vues ecartees (VUES_NON_DESCENDUES) : {vues_ecartees}")
+    if sauvegardes_ecartees:
+        # ON LE DIT A CHAQUE PASSAGE : une exclusion deliberee se declare. Les lignes sont celles de la COPIE
+        #   LOCALE, comptees ici -- aucun appel de plus a l'API pour des tables qu'on ne copie pas.
+        # ⚠ SON MOT (26/11) : une sauvegarde qui n'a JAMAIS descendu entiere n'a AUCUNE copie locale, et le
+        #   message de son echec (« l'ancienne copie est conservee ») rassurait sur une copie qui n'existait pas.
+        #   La regle la retire de la descente : son absence devient definitive, et le code 1 qui la criait tombe.
+        #   Le cri passe donc ICI, nommement, a chaque passage : « AUCUNE COPIE LOCALE ».
+        presentes = local_tables(conn)
+        en_local: list[int | None] = []
+        for nom in sauvegardes_ecartees:
+            ici = nom if nom in presentes else (nom + "__sb" if nom + "__sb" in presentes else None)
+            en_local.append(None if ici is None else conn.execute('SELECT count(*) FROM "%s"' % ici).fetchone()[0])
+        sans_copie = sum(n is None for n in en_local)
+        print(f"  sauvegardes datees ecartees (NOM_DATE_EN_FIN, 26/11) : {len(sauvegardes_ecartees)} tables, "
+              f"{sum(n or 0 for n in en_local)} lignes en copie locale NON recopiees -- --table les force, rien "
+              f"n'est supprime")
+        if sans_copie:
+            print(f"  ⚠ dont {sans_copie} SANS AUCUNE COPIE LOCALE : l'original n'existe qu'au serveur")
+        for nom, n in zip(sauvegardes_ecartees, en_local):
+            print(f"     - {nom}  ({'⚠ AUCUNE COPIE LOCALE' if n is None else f'{n} lignes en local'})")
+    if not args.table and DECLARER_LES_DISPARUS:
+        # REGLE 3 (26/11) : voir DECLARER_LES_DISPARUS. Une declaration, pas un echec.
+        disparus = objets_disparus(conn, schema)
+        if disparus:
+            print(f"  objets suivis ABSENTS du serveur (regle 3, 26/11) : {len(disparus)} -- rien n'est "
+                  f"supprime, leur copie locale reste figee")
+            for nom, n in disparus:
+                print(f"     - {nom}  ({'⚠ AUCUNE COPIE LOCALE' if n is None else f'{n} lignes gardees en local'})")
+    if not args.table and REFUSER_LES_CHUTES:
+        # REGLE 4 (26/11) : l'exclusion des files d'attente du seuil de 2 lignes se DECLARE.
+        files = sorted(d for d, _ in cibles if FILE_D_ATTENTE.search(d))
+        if files:
+            print(f"  files d'attente ecartees du seuil de {CHUTE_SEUIL_TABLE_A_CLE} lignes (regle 4, 26/11) : "
+                  f"{len(files)} -- le seuil de {CHUTE_SEUIL_GENERAL} lignes les garde : {', '.join(files)}")
     print(f"  a descendre : {len(cibles)}")
     if doublures:
         print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")
@@ -1145,7 +1408,9 @@ def main() -> int:
                         print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes  (delta)")
                 if not fait_par_delta:
                     lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp,
-                                                cles=cles)
+                                                cles=cles,
+                                                accepter_chute=(distant in args.accepter_chute
+                                                                or local in args.accepter_chute))
                     marquer_complete(conn, local, stamp)
                     lignes_totales += lignes
                     appels_totaux += appels

@@ -1532,6 +1532,157 @@ def chainage_meme_acheteur_actif() -> bool:
     return os.environ.get("APP_CHAINAGE_MEME_ACHETEUR", "0") == "1"
 
 
+def chainage_sans_date_visible_actif() -> bool:
+    """REGLE E -- UNE TRANSACTION SANS DATE RESTEE SEULE DEVIENT VISIBLE (19/11/2026).
+
+        APP_CHAINAGE_SANS_DATE_VISIBLE=1   la regle joue
+        (absent ou 0)                      comportement d'avant, A L'IDENTIQUE
+
+    ⛔ POSEE ETEINTE, EN ATTENTE DU « VAS-Y » DE FREDERIC (temps 4 du chantier classeur,
+      notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_2026-11-19.md).
+
+    ─── LE TROU ──────────────────────────────────────────────────────────────
+    Une transaction sans date recoit sa propre chaine (`attribution[app_id] = app_id`)
+    mais n'entre JAMAIS dans `toutes`, la liste des dossiers du bien. Si les replis
+    § 2.6 / § 2.9 et la regle A ne la rattachent pas, elle reste seule ET INVISIBLE :
+    la regle D (« meme acheteur ») ne la compare a rien, et le fichier des
+    rattachements manuels la dit « introuvable ».
+    Le rejeu du temps 3 (19/11) l'a prouve sur quatre dossiers casses par nos refus
+    du 11/11 : DEBARD (bien 41481), POCHELON (39745), THEVENON (3481), GENOUX (28653)
+    -- un compromis annule SANS DATE, du MEME numero d'acquereur que le reste du
+    dossier, que la regle A rattachait tant que l'offre etait « acceptee ».
+
+    ─── LA REGLE ─────────────────────────────────────────────────────────────
+    Apres la regle A et AVANT la regle D : chaque transaction sans date encore seule
+    entre dans `toutes` comme un dossier d'un seul membre. Elle ne change RIEN par
+    elle-meme (la numerotation lui rend son propre numero) ; c'est la regle D, avec
+    SES DEUX GARDES (jamais deux ventes, jamais deux compromis vivants), qui la
+    reunit -- ou non -- au dossier du meme acheteur. Aucun nom, aucune date devinee.
+    ⚠ APRES A, PAS AVANT : la regle A saute ce qui est deja dans `toutes`.
+
+    ─── SA GARDE, DANS LA REGLE D ─────────────────────────────────────────────
+    « L'acheteur du compromis vivant » : un dossier fait SEULEMENT de transactions sans
+    date rendues visibles ne rejoint pas un dossier dont le compromis vivant est a un
+    AUTRE numero d'acquereur. Sans elle, la mesure du 19/11 reunissait a tort 4 compromis
+    annules d'acheteurs qui avaient echoue a l'affaire de l'acheteur suivant, par une
+    VENTE qui porte le mauvais nom chez Hektor (15220 GENILLON, 17536 Rouchon, 23238
+    Simonyan, 54867 PLANCHE). Elle coute une abstention juste : le couple PYOT (9629),
+    deux numeros pour un menage -- on reste alors comme aujourd'hui.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_SANS_DATE_VISIBLE", "0") == "1"
+
+
+# ⛔ LES EXCLUSIONS DECLAREES DE LA REGLE E -- decision de Frederic du 19/11/2026 :
+#   « exclus-la, et DECLARE l'exclusion dans le code et dans ton fichier. Une exclusion
+#   tacite s'oublie. » UNE REGLE NE TRANCHE PAS UNE QUESTION OUVERTE : une transaction
+#   ecrite ici n'est PAS rendue visible par la regle E -- elle reste seule, exactement
+#   comme avant E, et le compte rendu le DIT a chaque run (« [E] exclusion declaree »).
+#   ⚠ On retire la ligne quand la question a sa reponse, pas avant, pas en silence.
+#   Trace : notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_2026-11-19.md, § 1.10.
+EXCLUES_DE_LA_REGLE_E: dict[int, str] = {
+    26613: "bien 52166, compromis ANNULE SANS DATE (maison CHANUT, 210 000) = la ligne SHN6RKDI "
+           "du classeur, INCERTAINE : prepare pour MOSNIER, ou brouillon de CREPINGE/LAROUX ou "
+           "de LUTTENBACHER/CARRET ? Sans exclusion, E le reunirait au dossier CARRET + "
+           "LUTTENBACHER. Exclu le 19/11 -- a retirer apres sa reponse.",
+    # ─── 20/11/2026, decision de Frederic : « LES 3 RATTACHEMENTS (4126, 4496, 4720) : exclus de E aussi,
+    #     et declares comme 21520. Deux regles qui se contredisent et aucune des deux prouvee : on met de
+    #     cote, on ne tranche pas. » Les trois ont la MEME forme : un compromis annule sans date au nom de X ;
+    #     X aussi sur le compromis vivant et la vente du dossier, dont l'offre acceptee DATEE est a Y. E le
+    #     reunit au dossier (le nom) ; la garde G2 « l'offre acceptee datee bat le nom » (mesuree le 19/11 au
+    #     soir sur une copie, PAS codee) le laisse seul. Trace : notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_
+    #     2026-11-19.md, § 11.3 et chapitre ⑫. A retirer quand G2 sera codee et ses coupes relues.
+    4496: "bien 9769, compromis ANNULE SANS DATE (155 000, acquereur GALLOT 60182) -- E le reunirait au "
+          "dossier du compromis 4495 et de la vente 4499 (meme nom), dont l'offre acceptee DATEE est a "
+          "NOIRJEAN ET FAUCHEZ (4497) ; G2 le laisse seul. Exclu le 20/11 par decision de Frederic (« on "
+          "met de cote, on ne tranche pas »).",
+    4720: "bien 10129, compromis ANNULE SANS DATE (27 000, acquereur GARNIER 113265) -- E le reunirait au "
+          "dossier du compromis 4721 et de la vente 4724 (meme nom), dont l'offre acceptee DATEE est a "
+          "ROBERT (4723, la ligne SUVPN4BH du classeur) ; G2 le laisse seul. Exclu le 20/11 par decision "
+          "de Frederic (« on met de cote, on ne tranche pas »).",
+}
+
+
+def chainage_garde_g2_actif() -> bool:
+    """LA GARDE G2 DE LA REGLE D -- « L'OFFRE ACCEPTEE DATEE BAT LE NOM » (codee le 20/11/2026).
+
+        APP_CHAINAGE_GARDE_G2=1   la garde joue
+        (absent ou 0)             comportement d'avant, A L'IDENTIQUE
+
+    ⛔ POSEE ETEINTE. Frederic (20/11) : « CODE G2 ET L'OUTIL DE COUPE MAINTENANT, sans attendre mon mot :
+      ecrire le code ne touche rien. Je donnerai le « vas-y » pour les ALLUMER, avec leur compte avant. »
+
+    ─── LE DEFAUT DE HEKTOR ───────────────────────────────────────────────────
+    Le contact de l'acheteur PRECEDENT reste sur une piece de l'acheteur SUIVANT (son compromis, sa vente). La
+    boucle datee range la piece dans le bon dossier PAR SA DATE ; la regle D la recolle au dossier de l'ancien
+    acheteur PAR LE NOM. Voir la memoire « hektor-reutilise-le-contact-de-l-acheteur-precedent ».
+
+    ─── LA GARDE ──────────────────────────────────────────────────────────────
+    Dans la regle D, avant de reunir deux dossiers au meme nom : si l'un des deux porte une OFFRE ACCEPTEE DATEE
+    dont l'acquereur n'est PAS dans l'autre, D s'abstient (« [G2] ... abstention »). L'offre acceptee datee est la
+    piece la plus sure du dossier : c'est elle qui dit QUI achete.
+    MESUREE le 19/11 au soir sur une copie (variante « G2 » de temps6, chaines_g2.json) : 98 groupes de melanges
+    coupes sur 178, et 10 lignes de la vague 1 dont l'etiquette changerait (la decision B : vague 2). Le code
+    ci-dessous est celui de la mesure, a l'identique (affaire_ledger_AVEC_GARDE_mesure_seulement.py, branche G2).
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_GARDE_G2", "0") == "1"
+
+
+# LES DETACHEMENTS DECIDES A LA MAIN (l'outil de coupe, 20/11/2026) -- le symetrique des rattachements.
+FICHIER_DETACHEMENTS = Path(__file__).resolve().parent / "detachements_manuels.csv"
+
+
+def chainage_detachements_actif() -> bool:
+    """L'OUTIL DE COUPE -- DES TRANSACTIONS QUE FREDERIC A DECIDE DE METTRE ENSEMBLE, ET SEULES (20/11/2026).
+
+        APP_CHAINAGE_DETACHEMENTS=1   le fichier joue
+        (absent ou 0)                 comportement d'avant, A L'IDENTIQUE
+
+    ⛔ POSE ETEINT (meme mot de Frederic que G2 : le code maintenant, l'allumage sur son « vas-y »).
+
+    LE FICHIER (phase2/sync/detachements_manuels.csv), une ligne = UN MORCEAU = une affaire :
+        transactions;bien;geste;pourquoi
+        7778 7780 7782;15722;coupe_132_n12;DE OLIVEIRA -- la coupe validee le 20/11
+    Le morceau devient UN dossier a lui seul : ses transactions quittent leurs dossiers (meme s'ils sont deux --
+    c'est aussi une reunion), le reste de chaque dossier garde ses autres membres. Il joue EN DERNIER, apres les
+    rattachements a la main : il est construit sur l'etat qu'ils laissent.
+    LES REFUS, chacun compte et dit (jamais un arret du run) : le bien ne correspond pas ; une transaction
+    introuvable (disparue de chez Hektor, ou sans date restee invisible) -- le morceau ENTIER est ignore ; une
+    transaction dans deux lignes -- la seconde ligne est ignoree ; le morceau existe deja tel quel.
+    L'ETIQUETTE : la pose de nuit (app_poser_etiquettes_dossier) la donne au morceau de la plus petite transaction
+    qui la portait ; les autres morceaux recoivent une etiquette NEUVE, journalisee « scission ».
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_DETACHEMENTS", "0") == "1"
+
+
+def lire_detachements_manuels() -> list[tuple[frozenset, int, str, str]]:
+    """Le fichier -> [(transactions, bien, geste, pourquoi)]. Jamais d'exception (un CSV mal tape ne fait pas
+    tomber le run : on rend ce qu'on a pu lire)."""
+    sorties: list[tuple[frozenset, int, str, str]] = []
+    try:
+        texte = FICHIER_DETACHEMENTS.read_text(encoding="utf-8-sig")
+    except OSError:
+        return sorties
+    for brut in texte.splitlines():
+        ligne = brut.strip()
+        if not ligne or ligne.startswith("#"):
+            continue
+        parts = [x.strip() for x in ligne.split(";")]
+        if len(parts) < 2:
+            continue
+        try:
+            ids = frozenset(int(x) for x in parts[0].split())
+            bien = int(parts[1])
+        except ValueError:
+            continue                                  # l'en-tete, ou une ligne mal tapee
+        if not ids:
+            continue
+        sorties.append((ids, bien, parts[2] if len(parts) > 2 else "", parts[3] if len(parts) > 3 else ""))
+    return sorties
+
+
 # REGLE B : l'ecart maximal, en jours, entre un compromis et l'offre acceptee
 # qu'on lui rattache. MESURE le 10/11 -- voir chainage_offre_acceptee_seule_actif.
 FENETRE_OFFRE_REGULARISEE_JOURS = 31
@@ -1991,6 +2142,12 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     regle_offre_acceptee_seule = chainage_offre_acceptee_seule_actif()   # B (10/11)
     regle_compromis_annule_seul = chainage_compromis_annule_seul_actif() # A (10/11)
     regle_meme_acheteur = chainage_meme_acheteur_actif()                 # D (12/11)
+    regle_sans_date_visible = chainage_sans_date_visible_actif()         # E (19/11, ETEINTE)
+    garde_g2 = chainage_garde_g2_actif()                                 # G2 dans D (20/11, ETEINTE)
+    detachements_par_bien: dict[str, list[tuple]] = {}                    # l'outil de coupe (20/11, ETEINT)
+    if chainage_detachements_actif():
+        for _d in lire_detachements_manuels():
+            detachements_par_bien.setdefault(str(_d[1]), []).append(_d)
     # LES RATTACHEMENTS A LA MAIN (12/11) : ranges PAR BIEN une fois pour toutes,
     # pour que la boucle n'ouvre pas le fichier a chaque annonce.
     # ⚠ LA CLE EST UN TEXTE, comme celle de `par_annonce` (normalize_text).
@@ -2530,6 +2687,27 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     else:
                         signale("[A] aucune offre acceptee seule -- reste seul")
 
+            # --- REGLE E : UNE TRANSACTION SANS DATE RESTEE SEULE DEVIENT VISIBLE --
+            #     Voir chainage_sans_date_visible_actif. Elle ne reunit rien elle-meme :
+            #     elle met la transaction sous les yeux de D et du fichier manuel.
+            if regle_sans_date_visible:
+                deja_pris_e = {m for c in toutes for m in c["membres"]}
+                for app_id, kind, state, _d, acqs in sans_date_du_bien:
+                    if app_id in deja_pris_e:
+                        continue
+                    if app_id in EXCLUES_DE_LA_REGLE_E:
+                        # une question ouverte : on la laisse seule, et on le dit
+                        signale("[E] exclusion declaree -- laissee seule (EXCLUES_DE_LA_REGLE_E)")
+                        continue
+                    toutes.append({"membres": [app_id], "acquereurs": set(acqs),
+                                   "offre_acceptee": kind == "offre" and state in ETATS_OFFRE_ACCEPTEE,
+                                   "compromis": kind == "compromis",
+                                   "offres": [state] if kind == "offre" else [],
+                                   "a_une_vente": kind == "vente",
+                                   # lu par la GARDE de la regle E, dans la regle D
+                                   "sans_date_visible": True})
+                    signale("[E] transaction sans date restee seule -- rendue visible")
+
             # --- REGLE D : UN MEME ACHETEUR, UN MEME BIEN = UN SEUL DOSSIER ----
             #     Elle joue EN DERNIER : elle ramasse ce que A, B et C laissent.
             #     Voir chainage_meme_acheteur_actif pour le pourquoi et les gardes.
@@ -2595,6 +2773,47 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                             if compromis_vivants(a) and compromis_vivants(b):
                                 signale("[D] deux compromis vivants au meme nom -- abstention")
                                 continue
+                            # ─── LA GARDE DE LA REGLE E (19/11) -- « l'acheteur du compromis
+                            #     vivant ». Un dossier qui n'est fait QUE de transactions sans
+                            #     date rendues visibles ne rejoint pas un dossier dont le
+                            #     compromis VIVANT est a un AUTRE numero d'acquereur. Mesure du
+                            #     19/11 : sans elle, 4 compromis annules d'un acheteur qui avait
+                            #     echoue rejoignaient l'affaire de l'acheteur suivant, parce que
+                            #     la VENTE porte le mauvais nom chez Hektor (biens 15220, 17536,
+                            #     23238, 54867 -- la liste des « 11 ventes au nom du mauvais
+                            #     acquereur » du plan). Elle ne joue QUE si la regle E est allumee.
+                            if regle_sans_date_visible:
+                                garde = False
+                                for seul_, autre_ in ((a, b), (b, a)):
+                                    if not (seul_.get("sans_date_visible")
+                                            and all(m[3] is None for m in membres_de(seul_))):
+                                        continue
+                                    cp_autre: set = set()
+                                    for m in membres_de(autre_):
+                                        if m[1] == "compromis" and m[2] not in ETATS_COMPROMIS_MORTS:
+                                            cp_autre |= m[4]
+                                    if cp_autre and not (acqs_reels(seul_) & cp_autre):
+                                        garde = True
+                                if garde:
+                                    signale("[E] garde : le compromis vivant est a un autre "
+                                            "acheteur -- abstention")
+                                    continue
+                            # ─── LA GARDE G2 (20/11) -- « l'offre acceptee datee bat le nom ». Voir
+                            #     chainage_garde_g2_actif. Le code de la mesure du 19/11, a l'identique.
+                            if garde_g2:
+                                bloque_g2 = False
+                                for x_, y_ in ((a, b), (b, a)):
+                                    nx_ = acqs_reels(x_)
+                                    oa_: set = set()
+                                    for m in membres_de(y_):
+                                        if m[1] == "offre" and m[2] in ETATS_OFFRE_ACCEPTEE and m[3] is not None:
+                                            oa_ |= m[4]
+                                    if oa_ and not (nx_ & oa_):
+                                        bloque_g2 = True
+                                if bloque_g2:
+                                    signale("[G2] garde : l'offre acceptee datee est a un autre "
+                                            "acheteur -- abstention")
+                                    continue
                             # la cible garde le plus petit numero, comme la
                             # numerotation finale le ferait de toute facon.
                             cible, source = ((a, b) if min(a["membres"]) < min(b["membres"])
@@ -2636,6 +2855,39 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 absorber(ch_source, ch_cible)
                 signale("[M] rattachement decide a la main")
 
+            # --- LES DETACHEMENTS DECIDES A LA MAIN (l'outil de coupe, 20/11) ----
+            #     EN DERNIER, apres les rattachements. Voir chainage_detachements_actif.
+            deja_coupees: set = set()
+            for ids_, bien_attendu, _geste, _pourquoi in detachements_par_bien.get(str(annonce), []):
+                if str(bien_attendu) != str(annonce):
+                    signale("[X] detachement : le bien ne correspond pas")
+                    continue
+                if ids_ & deja_coupees:
+                    signale("[X] detachement : une transaction dans deux lignes -- la seconde est ignoree")
+                    continue
+                place = {m: c for c in toutes for m in c["membres"]}
+                if any(t not in place for t in ids_):
+                    signale("[X] detachement : transaction introuvable -- le morceau est ignore")
+                    continue
+                deja_coupees |= ids_
+                if any(set(c["membres"]) == set(ids_) for c in toutes):
+                    signale("[X] detachement deja obtenu")
+                    continue
+                for c in {id(place[t]): place[t] for t in ids_}.values():
+                    c["membres"] = [m for m in c["membres"] if m not in ids_]
+                    if not c["membres"]:
+                        toutes.remove(c)
+                        if c in ouvertes:
+                            ouvertes.remove(c)
+                mb_ = [info[t] for t in sorted(ids_) if t in info]
+                toutes.append({"membres": sorted(ids_),
+                               "acquereurs": set().union(*[m[4] for m in mb_]) if mb_ else set(),
+                               "offre_acceptee": any(m[1] == "offre" and m[2] in ETATS_OFFRE_ACCEPTEE for m in mb_),
+                               "compromis": any(m[1] == "compromis" for m in mb_),
+                               "offres": [m[2] for m in mb_ if m[1] == "offre"],
+                               "a_une_vente": any(m[1] == "vente" for m in mb_)})
+                signale("[X] detachement decide a la main")
+
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
         # plus bas peut la rejoindre APRES coup. Numeroter au fil de l'eau laissait
@@ -2646,6 +2898,13 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
             for membre in chaine["membres"]:
                 attribution[membre] = tete
 
+    # ⚠ UNE LIGNE DES DETACHEMENTS DONT LE BIEN N'EXISTE PAS n'est jamais lue par la boucle ci-dessus (elle va
+    #   d'annonce en annonce) : on le DIT, sinon une faute de frappe dans le bien se tairait. (20/11, trouve par le
+    #   temoin inverse de l'outil.)
+    for _bien, _lignes in detachements_par_bien.items():
+        if _bien not in par_annonce:
+            for _ in _lignes:
+                signale("[X] detachement : bien inconnu -- la ligne n'est jamais lue")
     con.executemany(f"UPDATE {LEDGER_TABLE} SET app_chaine_id=? WHERE app_affaire_id=?",
                     [(chaine, app_id) for app_id, chaine in attribution.items()])
     con.commit()
@@ -2663,6 +2922,9 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 "chainage_offre_acceptee_seule": regle_offre_acceptee_seule,
                 "chainage_compromis_annule_seul": regle_compromis_annule_seul,
                 "chainage_meme_acheteur": regle_meme_acheteur,
+                "chainage_sans_date_visible": regle_sans_date_visible,
+                "chainage_garde_g2": garde_g2,
+                "chainage_detachements_manuels": sum(len(v) for v in detachements_par_bien.values()),
                 "chainage_rattachements_manuels": sum(
                     len(v) for v in rattachements_par_bien.values())}
     resultat.update(anomalies)
@@ -2676,6 +2938,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
           f"{' + offre acceptee seule (B)' if regle_offre_acceptee_seule else ''}"
           f"{' + compromis annule seul (A)' if regle_compromis_annule_seul else ''}"
           f"{' + meme acheteur (D)' if regle_meme_acheteur else ''}"
+          f"{' + sans date visible (E)' if regle_sans_date_visible else ''}"
+          f"{' + garde G2' if garde_g2 else ''}"
+          f"{(' + %d detachement(s) a la main' % resultat['chainage_detachements_manuels'])
+             if resultat['chainage_detachements_manuels'] else ''}"
           f"{(' + %d rattachement(s) a la main' % resultat['chainage_rattachements_manuels'])
              if resultat['chainage_rattachements_manuels'] else ''})")
     return resultat
@@ -2695,7 +2961,8 @@ def poser_les_etiquettes_de_dossier(client) -> dict:
       `app_poser_etiquettes_dossier`, qui rend ses QUATRE gestes.
           pose          un groupe sans aucune etiquette en recoit une neuve
           propagation   une transaction nue dans un groupe deja etiquete
-          fusion        deux etiquettes dans un groupe -> on garde la plus ancienne
+          fusion        deux etiquettes dans un groupe -> on garde celle de la transaction
+                        au PLUS PETIT app_affaire_id (PAS « la plus ancienne » : voir plus bas)
           scission      une etiquette sur deux groupes -> l'autre part en recoit une neuve
 
     OU, DANS LE RUN, ET POURQUOI LA. Elle est appelee par
@@ -2716,6 +2983,26 @@ def poser_les_etiquettes_de_dossier(client) -> dict:
       (elle ne vit plus que dans le journal). Un matin ou le chainage a beaucoup
       bouge, on doit le voir TOUT DE SUITE, pas trois semaines apres : au-dela du
       seuil, la ligne est criee.
+
+    QUELLE ETIQUETTE GAGNE UNE FUSION -- CORRIGE LE 26/11/2026. Ce texte disait « on
+      garde la plus ancienne » ; c'etait FAUX. La RPC garde l'etiquette de la
+      transaction au PLUS PETIT app_affaire_id du groupe, parmi celles qui en portent
+      une (etape 3 : `distinct on (app_chaine_id) ... order by app_chaine_id,
+      app_affaire_id`) ; la propagation (etape 2) departage de la meme facon. Ni la
+      date de pose de l'etiquette, ni son numero, ni la date du dossier n'y entrent.
+      Mesure du 26/11 sur les 296 fusions du journal : AUCUNE n'avait absorbe une
+      etiquette posee avant la gardee (170 posees dans la meme seconde, departagees
+      par l'app_affaire_id) -- le commentaire et le code tombaient d'accord PAR
+      COINCIDENCE ; mais 107 avaient deja absorbe le numero le plus ancien. La
+      premiere a absorber une etiquette posee avant est prevue la nuit du 26 au
+      27/11 : 3648 rejoint 3647, D2024-0511 (nee d'une scission le 25/11) est gardee,
+      D2024-0306 (posee le 12/11) est absorbee -- c'est ce qu'attend le verdict du
+      protocole pour 9Q0FHAKK.
+      ⛔ LA REGLE DU CODE EST GARDEE, PAR DECISION DU 26/11. NE PAS « ALIGNER » LE CODE
+      SUR L'ANCIEN COMMENTAIRE : 9Q0FHAKK basculerait sur D2024-0306. La RPC en base
+      porte encore « On garde la plus ANCIENNE » (pas rejouee pour un commentaire,
+      expres) ; la verite est ecrite en tete de
+      supabase/patch_journal_ancien_numero_2026-11-22.sql.
 
     Mesure du 12/11, sur 11 441 dossiers : 318 ms. Les droits sont ceux de la RPC
     voisine, qui tourne deja dans ce meme run avec la meme cle.

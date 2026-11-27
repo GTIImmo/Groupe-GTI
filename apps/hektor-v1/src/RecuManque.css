@@ -234,3 +234,34 @@ button.gm2-f:hover, button.gm2-f:focus-visible { border-color: var(--bv-magenta,
 @keyframes gd3-monte { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) { .gd3-dl, .gd3-manque { padding-left: 16px; } .gd3-detail { padding-left: 16px; } }
 @media (prefers-reduced-motion: reduce) { .gd3-detail, .gd3-chev { animation: none !important; transition: none !important; } }
+
+/* Visuel V3, morceau 4 (20/11/2026) : « À TRAITER » -- l'en-tête magenta et son compteur ; « Masquer » / « Réafficher ».
+   Plus de barre « Vrai / Faux / Déjà su » (période de test retirée). Classes neuves, couleurs de la charte. */
+.gm2-traiter-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 16px 0 10px; padding: 16px 18px; border-radius: 18px; background: var(--bv-magenta, #c5005f); color: #ffffff; box-shadow: 0 18px 36px -24px rgba(197, 0, 95, 0.9); }
+.gm2-traiter-h b { font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.gm2-traiter-n { margin-left: auto; font-family: var(--bv-font-display, 'Plus Jakarta Sans', 'Hanken Grotesk', sans-serif); font-size: 34px; font-weight: 800; line-height: 0.9; font-variant-numeric: tabular-nums; animation: gm2-tic 360ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+.gm2-traiter-h small { flex: 1 0 100%; color: rgba(255, 255, 255, 0.86); font-size: 12.5px; line-height: 1.45; }
+@keyframes gm2-tic { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: none; } }
+.gm2-masquer { color: var(--bv-mute, #5c6163); }
+.gm2-masquer:hover { color: var(--bv-ink, #1f2121); }
+.gm2-masquees { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 2px 0; color: var(--bv-subtle, #7c8082); font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .gm2-traiter-n { animation: none !important; } }
+
+/* Visuel V3, morceau 7 (26/11/2026) : LE TÉLÉPHONE -- deux défauts mesurés à 390 px sur 18849, CSS seulement, rien ne
+   change à l'ordinateur ni aux gestes. (1) Les boutons d'un document partageaient la ligne à parts ÉGALES (flex: 1 1 0,
+   styles.css) : « Signature » et « Supprimer » sortaient de leur bouton (67 et 69 px de texte pour 65). Ils prennent
+   désormais leur largeur, puis se partagent le reste ; s'ils ne tiennent pas, le dernier passe à la ligne.
+   (2) « Non trouvée : déposer » était coupé en « Non trouvée : … » (121 px pour 88) : il passe à la ligne. La case d'une
+   pièce REÇUE garde sa ligne unique et ses points de suspension (un nom de fichier sans espace sortirait de la case). */
+@media (max-width: 760px) {
+  .mobile-console-documents .console-document-row .console-document-actions .ghost-button { flex: 1 1 auto; min-width: max-content; }
+  .gm2-f .gm2-ic:not(.is-recu) ~ .gm2-fd { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* (3) morceau 7 B, vu en ligne sur 18849 : la ligne repliée d'un document avait 4 colonnes, et l'état (« Signé » + « Signé le
+     22/09/2026 à 16:41 ») laissait 19 px au nom ; un nom sans espace (« planCadastralNormalise.pdf ») passait sous la pastille.
+     Au téléphone, l'état passe SOUS le nom, et un nom sans espace se coupe. */
+  .gd3-dl { grid-template-columns: 30px minmax(0, 1fr) 14px; row-gap: 6px; }
+  .gd3-dl .gd3-page { grid-row: 1 / span 2; align-self: start; }
+  .gd3-dl .gd3-chev { grid-column: 3; grid-row: 1; }
+  .gd3-dl .gd3-etat { grid-column: 2; grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; }
+  .gd3-dt b { overflow-wrap: anywhere; }
+}

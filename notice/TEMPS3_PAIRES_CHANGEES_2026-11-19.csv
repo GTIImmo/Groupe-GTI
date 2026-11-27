@@ -1,0 +1,197 @@
+geste,sens,classement,bien,a,genre_a,etat_a,date_a,b,genre_b,etat_b,date_b,touchee,dossier_avant_a,dossier_avant_b,dossier_apres_a,dossier_apres_b
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",1387,529,compromis,active,2010-06-17,531,offre,refused,2010-06-10,531,529,529,529,531
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",1387,530,compromis,cancelled,2010-06-11,531,offre,refused,2010-06-10,531,529,529,529,531
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",1387,531,offre,refused,2010-06-10,532,offre,refused,2010-05-17,531,529,529,531,529
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),1387,531,offre,refused,2010-06-10,533,vente,,2010-09-10,531,529,529,531,529
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),1950,987,compromis,cancelled,2025-09-19,988,offre,refused,2025-06-27,988,987,987,987,988
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",3481,1334,compromis,cancelled,2020-06-26,1336,offre,refused,2020-06-10,1336,1334,1334,1334,1336
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),3481,1334,compromis,cancelled,2020-06-26,1335,compromis,cancelled,,,1334,1334,1334,1335
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (une date manque),3481,1335,compromis,cancelled,,1336,offre,refused,2020-06-10,1336,1334,1334,1335,1336
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),3481,1335,compromis,cancelled,,1337,offre,refused,2020-02-10,,1334,1334,1335,1334
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),3481,1336,offre,refused,2020-06-10,1337,offre,refused,2020-02-10,1336,1334,1334,1336,1334
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",8053,3366,compromis,cancelled,2010-01-15,3367,offre,refused,2009-12-17,3367,3366,3366,3366,3367
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),8053,3367,offre,refused,2009-12-17,3368,offre,refused,2009-08-19,3367,3366,3366,3367,3366
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",8395,3646,compromis,cancelled,2024-09-04,3648,offre,refused,2024-08-23,3648,3646,3646,3646,3648
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",8395,3647,compromis,active,2024-09-11,3648,offre,refused,2024-08-23,3648,3646,3646,3646,3648
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",8395,3648,offre,refused,2024-08-23,3649,offre,refused,2024-08-01,3648,3646,3646,3648,3646
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),8395,3648,offre,refused,2024-08-23,3650,vente,,2025-01-22,3648,3646,3646,3648,3646
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),10374,4906,compromis,cancelled,2020-09-25,4907,offre,refused,2020-07-04,4907,4906,4906,4906,4907
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),10396,4931,compromis,cancelled,2019-08-01,4932,offre,refused,2019-06-15,4932,4931,4931,4931,4932
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",10955,5355,compromis,cancelled,2015-10-27,5356,offre,refused,2015-08-07,5356,5355,5355,5355,5356
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",11014,5407,compromis,cancelled,2016-10-20,5408,offre,refused,2016-09-22,5408,5407,5407,5407,5408
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",11501,5914,compromis,cancelled,2011-05-30,5915,offre,refused,2011-05-23,5915,5914,5914,5914,5915
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),11501,5915,offre,refused,2011-05-23,5916,offre,refused,2011-02-14,5915,5914,5914,5915,5914
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),11820,6171,compromis,cancelled,,6172,offre,refused,2025-10-15,6172,6171,6171,6171,6172
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",12728,6554,compromis,cancelled,2021-04-30,6556,offre,refused,2021-04-12,6556,6554,6554,6554,6556
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",12728,6555,compromis,active,2021-04-30,6556,offre,refused,2021-04-12,6556,6554,6554,6554,6556
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),12728,6556,offre,refused,2021-04-12,6557,offre,refused,2020-10-08,6556,6554,6554,6556,6554
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",12728,6556,offre,refused,2021-04-12,6558,offre,refused,2021-03-18,6556,6554,6554,6556,6554
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),12728,6556,offre,refused,2021-04-12,6559,vente,,2021-09-02,6556,6554,6554,6556,6554
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),15439,7599,compromis,cancelled,2023-07-17,7600,offre,refused,2023-06-05,7600,7599,7599,7599,7600
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",15722,7778,compromis,active,2021-06-01,7780,offre,refused,2021-05-04,7780,7778,7778,7778,7780
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",15722,7779,compromis,cancelled,2021-05-07,7780,offre,refused,2021-05-04,7780,7778,7778,7778,7780
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),15722,7780,offre,refused,2021-05-04,7781,offre,refused,2021-04-01,7780,7778,7778,7780,7778
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),15722,7780,offre,refused,2021-05-04,7782,vente,,2021-10-13,7780,7778,7778,7780,7778
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),16661,8193,compromis,cancelled,2017-04-14,8195,offre,refused,2017-03-06,8195,8193,8193,8193,8195
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),16661,8194,offre,refused,2015-06-09,8195,offre,refused,2017-03-06,8195,8193,8193,8193,8195
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",16831,8321,compromis,cancelled,2014-05-24,8322,offre,refused,2014-05-01,8322,8321,8321,8321,8322
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),17717,8910,offre,refused,2023-01-19,1001525,compromis,cancelled,2023-12-06,8910,8910,8910,8910,1001525
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),17728,8918,offre,refused,2022-12-19,1001524,compromis,cancelled,2023-12-06,8918,8918,8918,8918,1001524
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),17746,8926,offre,refused,2022-12-20,1001526,compromis,cancelled,2023-12-06,8926,8926,8926,8926,1001526
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",22589,10566,compromis,cancelled,2009-09-10,10567,offre,refused,2009-09-10,10567,10566,10566,10566,10567
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",22589,10567,offre,refused,2009-09-10,10568,offre,refused,2009-08-31,10567,10566,10566,10567,10566
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",22618,10582,compromis,cancelled,2010-07-28,10583,offre,refused,2010-07-19,10583,10582,10582,10582,10583
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),22618,10583,offre,refused,2010-07-19,10584,offre,refused,2009-10-27,10583,10582,10582,10583,10582
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",22952,10849,compromis,cancelled,2008-12-09,10852,offre,refused,2008-11-28,10852,10849,10849,10849,10852
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),22952,10850,compromis,cancelled,2008-07-30,10852,offre,refused,2008-11-28,10852,10849,10849,10849,10852
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),22952,10851,offre,refused,2008-07-25,10852,offre,refused,2008-11-28,10852,10849,10849,10849,10852
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),23754,11286,compromis,cancelled,2010-05-27,11288,offre,refused,2010-03-29,11288,11286,11286,11286,11288
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),23754,11287,compromis,cancelled,2009-12-30,11288,offre,refused,2010-03-29,11288,11286,11286,11286,11288
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),23754,11288,offre,refused,2010-03-29,11289,offre,refused,2009-12-09,11288,11286,11286,11288,11286
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),25788,12400,compromis,cancelled,2018-01-15,12401,offre,refused,2017-12-05,12401,12400,12400,12400,12401
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26160,12602,compromis,cancelled,2019-03-28,12603,offre,refused,2018-06-08,12603,12602,12602,12602,12603
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26160,12603,offre,refused,2018-06-08,12604,offre,refused,2018-04-05,12603,12602,12602,12603,12602
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26220,12656,compromis,cancelled,2014-12-09,12659,offre,refused,2015-03-31,12659,12656,12656,12656,12659
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",26220,12657,compromis,cancelled,2015-04-10,12659,offre,refused,2015-03-31,12659,12656,12656,12656,12659
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26220,12659,offre,refused,2015-03-31,12660,offre,refused,2014-11-26,12659,12656,12656,12659,12656
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",26726,12932,compromis,cancelled,2012-10-02,12934,offre,refused,2012-10-02,12934,12932,12932,12932,12934
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26726,12933,compromis,cancelled,2012-03-23,12934,offre,refused,2012-10-02,12934,12932,12932,12932,12934
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26726,12934,offre,refused,2012-10-02,12935,offre,refused,2012-02-22,12934,12932,12932,12934,12932
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",26988,13026,compromis,cancelled,2011-08-01,13027,offre,refused,2011-07-08,13027,13026,13026,13026,13027
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),26988,13027,offre,refused,2011-07-08,13028,offre,refused,2011-05-17,13027,13026,13026,13027,13026
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",27037,13055,compromis,cancelled,2011-06-21,13056,offre,refused,2011-05-06,13056,13055,13055,13055,13056
+etat (1 236 gestes),REUNIES par le geste,REUNION (acquereurs differents),28422,14006,compromis,cancelled,2025-07-07,1001593,offre,accepted,2025-06-28,,14006,1001593,14006,14006
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),28653,14109,compromis,active,2021-05-17,14112,offre,refused,2021-03-25,14112,14109,14109,14109,14112
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),28653,14109,compromis,active,2021-05-17,14110,compromis,cancelled,,,14109,14109,14109,14110
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (une date manque),28653,14110,compromis,cancelled,,14112,offre,refused,2021-03-25,14112,14109,14109,14110,14112
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),28653,14110,compromis,cancelled,,14113,offre,refused,2021-01-19,,14109,14109,14110,14109
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),28653,14110,compromis,cancelled,,14115,vente,,2022-02-28,,14109,14109,14110,14109
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),28653,14110,compromis,cancelled,,14111,compromis,cancelled,2021-04-06,,14109,14109,14110,14109
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",28653,14111,compromis,cancelled,2021-04-06,14112,offre,refused,2021-03-25,14112,14109,14109,14109,14112
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),28653,14112,offre,refused,2021-03-25,14113,offre,refused,2021-01-19,14112,14109,14109,14112,14109
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),28653,14112,offre,refused,2021-03-25,14115,vente,,2022-02-28,14112,14109,14109,14112,14109
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),28673,14141,compromis,cancelled,2021-09-30,14142,offre,refused,2021-08-23,14142,14141,14141,14141,14142
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),28673,14142,offre,refused,2021-08-23,14143,offre,refused,2021-04-19,14142,14141,14141,14142,14141
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),30678,14927,compromis,cancelled,,14928,offre,refused,2025-10-25,14928,14927,14927,14927,14928
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",31704,15236,compromis,cancelled,2016-12-10,15237,offre,refused,2016-11-26,15237,15236,15236,15236,15237
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",31727,15256,compromis,cancelled,2016-08-10,15257,offre,refused,2016-08-04,15257,15256,15256,15256,15257
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),32147,15481,compromis,cancelled,2015-11-19,15483,offre,refused,2015-10-08,15483,15481,15481,15481,15483
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),32147,15482,compromis,cancelled,2014-08-01,15483,offre,refused,2015-10-08,15483,15481,15481,15481,15483
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),32147,15483,offre,refused,2015-10-08,15485,offre,refused,2013-06-07,15483,15481,15481,15483,15481
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",32840,15955,compromis,cancelled,2014-01-13,15956,offre,refused,2013-12-14,15956,15955,15955,15955,15956
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),32840,15956,offre,refused,2013-12-14,15957,offre,refused,2013-01-15,15956,15955,15955,15956,15955
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),33250,16138,compromis,cancelled,2019-03-06,16139,offre,refused,2019-01-09,16139,16138,16138,16138,16139
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",35702,16865,compromis,cancelled,2020-11-06,16866,offre,refused,2020-10-07,16866,16865,16865,16865,16866
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),35716,16869,compromis,cancelled,2019-12-16,16871,offre,refused,2021-01-15,16871,16869,16869,16869,16871
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",35716,16870,compromis,cancelled,2021-02-10,16871,offre,refused,2021-01-15,16871,16869,16869,16869,16871
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),35716,16871,offre,refused,2021-01-15,16872,offre,refused,2019-11-18,16871,16869,16869,16871,16869
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),35735,16878,compromis,cancelled,2020-05-18,16879,offre,refused,2019-11-29,16879,16878,16878,16878,16879
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),36339,17147,compromis,cancelled,2020-08-24,17149,compromis,cancelled,2020-10-02,,17147,17147,17147,17149
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",36339,17147,compromis,cancelled,2020-08-24,17151,offre,refused,2020-08-21,17151,17147,17147,17147,17149
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),36339,17149,compromis,cancelled,2020-10-02,17150,offre,refused,2020-07-27,,17147,17147,17149,17147
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",36339,17150,offre,refused,2020-07-27,17151,offre,refused,2020-08-21,17151,17147,17147,17147,17149
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",36712,17277,compromis,cancelled,2023-06-02,17278,offre,refused,2023-04-07,17278,17277,17277,17277,17278
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",36794,17320,compromis,cancelled,2022-12-12,17322,offre,refused,2022-12-05,17322,17320,17320,17320,17322
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),36794,17321,compromis,cancelled,2022-09-30,17322,offre,refused,2022-12-05,17322,17320,17320,17320,17322
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),36794,17322,offre,refused,2022-12-05,17323,offre,refused,2022-07-02,17322,17320,17320,17322,17320
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),36794,17322,offre,refused,2022-12-05,17324,vente,,2023-03-24,17322,17320,17320,17322,17320
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),36993,17377,offre,refused,2023-09-16,1001527,compromis,cancelled,2023-10-20,17377,17377,17377,17377,1001527
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",37184,17427,compromis,cancelled,2022-02-11,17428,compromis,cancelled,2022-02-24,,17427,17427,17427,17428
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",37184,17427,compromis,cancelled,2022-02-11,17430,offre,refused,2022-02-10,17430,17427,17427,17427,17428
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),37184,17428,compromis,cancelled,2022-02-24,17431,offre,refused,2021-02-20,,17427,17427,17428,17427
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),37184,17430,offre,refused,2022-02-10,17431,offre,refused,2021-02-20,17430,17427,17427,17428,17427
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",37192,17432,compromis,cancelled,2024-11-04,17435,offre,refused,2024-10-18,17435,17432,17432,17432,17435
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),37192,17433,compromis,cancelled,2024-04-17,17435,offre,refused,2024-10-18,17435,17432,17432,17432,17435
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),37192,17434,compromis,cancelled,2023-09-07,17435,offre,refused,2024-10-18,17435,17432,17432,17432,17435
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),37192,17435,offre,refused,2024-10-18,17436,offre,refused,2024-04-17,17435,17432,17432,17435,17432
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",38332,18033,compromis,cancelled,2017-04-12,18034,offre,refused,2017-03-24,18034,18033,18033,18033,18034
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",38980,18552,compromis,cancelled,2015-05-07,18553,offre,refused,2015-04-16,18553,18552,18552,18552,18553
+etat (1 236 gestes),REUNIES par le geste,REUNION (acquereurs differents),39360,18984,compromis,active,2006-09-13,30580,vente,,2006-09-14,,18984,30580,18984,18984
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),39360,18984,compromis,active,2006-09-13,30581,vente,,2006-11-13,,18984,18984,18984,30581
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),39745,19069,compromis,cancelled,2024-03-15,19070,compromis,cancelled,,,19069,19069,19069,19070
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),39745,19069,compromis,cancelled,2024-03-15,19071,offre,refused,2024-02-05,19071,19069,19069,19069,19071
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),39745,19070,compromis,cancelled,,19072,offre,refused,2023-06-22,,19069,19069,19070,19069
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (une date manque),39745,19070,compromis,cancelled,,19071,offre,refused,2024-02-05,19071,19069,19069,19070,19071
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),39745,19071,offre,refused,2024-02-05,19072,offre,refused,2023-06-22,19071,19069,19069,19071,19069
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),40133,19267,compromis,cancelled,2013-03-21,19269,offre,refused,2013-01-24,19269,19267,19267,19267,19269
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),40133,19268,compromis,cancelled,2011-07-12,19269,offre,refused,2013-01-24,19269,19267,19267,19267,19269
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),40133,19269,offre,refused,2013-01-24,19270,offre,refused,2011-06-20,19269,19267,19267,19269,19267
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),41481,20088,compromis,cancelled,,20089,offre,refused,2021-07-20,20089,20088,20088,20088,20089
+etat (1 236 gestes),SEPAREES par le geste,CASSE (meme acquereur),41481,20088,compromis,cancelled,,20090,offre,refused,2021-02-20,,20088,20088,20088,20089
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",41584,20195,compromis,cancelled,2017-06-02,20196,offre,refused,2017-03-14,20196,20195,20195,20195,20196
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",41999,20659,compromis,cancelled,2019-10-18,20661,offre,refused,2019-10-11,20661,20659,20659,20659,20661
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",41999,20660,compromis,cancelled,2019-10-10,20661,offre,refused,2019-10-11,20661,20659,20659,20659,20661
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),41999,20661,offre,refused,2019-10-11,20662,offre,refused,2019-08-23,20661,20659,20659,20661,20659
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",42883,21337,compromis,cancelled,2017-12-13,21339,offre,refused,2017-11-24,21339,21337,21337,21337,21339
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",42883,21338,compromis,cancelled,2017-11-08,21339,offre,refused,2017-11-24,21339,21337,21337,21337,21339
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43114,21584,compromis,cancelled,2022-07-26,21586,offre,refused,2023-09-28,21586,21584,21584,21584,21586
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",43114,21585,compromis,cancelled,2023-10-24,21586,offre,refused,2023-09-28,21586,21584,21584,21584,21586
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43114,21586,offre,refused,2023-09-28,21587,offre,refused,2022-06-04,21586,21584,21584,21586,21584
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43126,21597,compromis,active,2021-07-26,21600,offre,refused,2021-10-19,21600,21597,21597,21597,21600
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",43126,21598,compromis,cancelled,2021-11-15,21600,offre,refused,2021-10-19,21600,21597,21597,21597,21600
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43126,21599,offre,refused,2021-04-15,21600,offre,refused,2021-10-19,21600,21597,21597,21597,21600
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43126,21600,offre,refused,2021-10-19,21601,vente,,2021-11-20,21600,21597,21597,21600,21597
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",43271,21666,compromis,cancelled,2016-02-18,21667,offre,refused,2016-02-01,21667,21666,21666,21666,21667
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),43432,21798,compromis,cancelled,2025-11-10,21799,offre,refused,2025-10-04,21799,21798,21798,21798,21799
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43923,21946,compromis,cancelled,2021-08-31,21948,offre,refused,2021-04-06,21948,21946,21946,21946,21948
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",43923,21947,compromis,cancelled,2021-03-22,21948,offre,refused,2021-04-06,21948,21946,21946,21946,21948
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),43923,21948,offre,refused,2021-04-06,21949,offre,refused,2021-01-15,21948,21946,21946,21948,21946
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",44276,22068,compromis,cancelled,2021-06-19,22069,offre,refused,2021-04-24,22069,22068,22068,22068,22069
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44886,22372,compromis,cancelled,2017-08-03,22374,offre,refused,2018-04-06,22374,22372,22372,22372,22374
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44886,22373,compromis,cancelled,2018-05-14,22374,offre,refused,2018-04-06,22374,22372,22372,22372,22374
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",44912,22378,compromis,cancelled,2017-03-24,22379,offre,refused,2017-03-03,22379,22378,22378,22378,22379
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22380,compromis,cancelled,2017-11-18,22384,offre,refused,2018-01-08,22384,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22380,compromis,cancelled,2017-11-18,22387,offre,refused,2017-07-20,,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22381,compromis,cancelled,2017-10-11,22384,offre,refused,2018-01-08,22384,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22381,compromis,cancelled,2017-10-11,22387,offre,refused,2017-07-20,,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (31 j, montants differents)",44914,22382,compromis,cancelled,2018-01-13,22384,offre,refused,2018-01-08,22384,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22382,compromis,cancelled,2018-01-13,22387,offre,refused,2017-07-20,,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",44914,22383,compromis,active,2018-01-13,22384,offre,refused,2018-01-08,22384,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22383,compromis,active,2018-01-13,22387,offre,refused,2017-07-20,,22380,22380,22380,22384
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22384,offre,refused,2018-01-08,22388,vente,,2018-04-17,22384,22380,22380,22384,22380
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),44914,22387,offre,refused,2017-07-20,22388,vente,,2018-04-17,,22380,22380,22384,22380
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",45034,22430,compromis,cancelled,2017-02-14,22431,offre,refused,2017-01-21,22431,22430,22430,22430,22431
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",45081,22444,compromis,cancelled,2016-01-29,22446,offre,refused,2016-01-22,22446,22444,22444,22444,22446
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",45081,22445,compromis,active,2016-01-29,22446,offre,refused,2016-01-22,22446,22444,22444,22444,22446
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",45081,22446,offre,refused,2016-01-22,22447,offre,refused,2016-01-18,22446,22444,22444,22446,22444
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),45081,22446,offre,refused,2016-01-22,22448,vente,,2016-04-08,22446,22444,22444,22446,22444
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",46249,23269,compromis,cancelled,2012-09-14,23271,offre,refused,2012-09-14,23271,23269,23269,23269,23271
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46249,23270,compromis,cancelled,2012-02-27,23271,offre,refused,2012-09-14,23271,23269,23269,23269,23271
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46249,23271,offre,refused,2012-09-14,23272,offre,refused,2012-01-23,23271,23269,23269,23271,23269
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",46404,23385,compromis,cancelled,2011-04-19,23387,offre,refused,2011-04-11,23387,23385,23385,23385,23387
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46404,23386,compromis,cancelled,2010-05-25,23387,offre,refused,2011-04-11,23387,23385,23385,23385,23387
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46404,23387,offre,refused,2011-04-11,23388,offre,refused,2010-04-15,23387,23385,23385,23387,23385
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46752,23503,compromis,cancelled,2017-11-17,23505,offre,refused,2018-02-28,23505,23503,23503,23503,23505
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",46752,23504,compromis,cancelled,2018-03-30,23505,offre,refused,2018-02-28,23505,23503,23503,23503,23505
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46752,23505,offre,refused,2018-02-28,23506,offre,refused,2017-09-14,23505,23503,23503,23505,23503
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),46798,23543,compromis,cancelled,2019-12-06,23544,offre,refused,2019-10-28,23544,23543,23543,23543,23544
+etat (1 236 gestes),REUNIES par le geste,REUNION (acquereurs differents),47557,23993,compromis,cancelled,2024-03-26,1001561,offre,accepted,2024-03-25,,23993,1001561,23993,23993
+etat (1 236 gestes),REUNIES par le geste,REUNION (acquereurs differents),47557,23994,compromis,active,2024-04-08,1001561,offre,accepted,2024-03-25,,23993,1001561,23993,23993
+etat (1 236 gestes),REUNIES par le geste,REUNION (acquereurs differents),47557,23996,offre,refused,2024-02-28,1001561,offre,accepted,2024-03-25,,23993,1001561,23993,23993
+etat (1 236 gestes),REUNIES par le geste,REUNION (acquereurs differents),47557,23997,vente,,2024-07-30,1001561,offre,accepted,2024-03-25,,23993,1001561,23993,23993
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),47815,24157,compromis,cancelled,2022-10-13,24159,offre,refused,2022-09-09,24159,24157,24157,24157,24159
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),47815,24158,compromis,active,2022-10-13,24159,offre,refused,2022-09-09,24159,24157,24157,24157,24159
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),47815,24159,offre,refused,2022-09-09,24161,vente,,2023-01-05,24159,24157,24157,24159,24157
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),48554,24802,compromis,cancelled,2016-03-15,24803,offre,refused,2015-12-02,24803,24802,24802,24802,24803
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",48618,24851,compromis,cancelled,2016-07-07,24852,offre,refused,2016-06-23,24852,24851,24851,24851,24852
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),49941,25888,compromis,cancelled,2023-05-12,25891,offre,refused,2024-05-18,25891,25888,25888,25888,25891
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",49941,25890,compromis,cancelled,2024-06-10,25891,offre,refused,2024-05-18,25891,25888,25888,25888,25891
+etat (1 236 gestes),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),49941,25891,offre,refused,2024-05-18,25893,offre,refused,2023-05-02,25891,25888,25888,25891,25888
+etat (1 236 gestes),SEPAREES par le geste,A JUGER (un cote sans acquereur),50165,25991,compromis,cancelled,2025-12-10,25992,offre,refused,2025-11-04,25992,25991,25991,25991,25992
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",52067,26558,compromis,cancelled,2017-12-27,26559,offre,refused,2017-11-28,26559,26558,26558,26558,26559
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",52724,26824,compromis,cancelled,2020-05-21,26825,offre,refused,2020-02-20,26825,26824,26824,26824,26825
+etat (1 236 gestes),SEPAREES par le geste,"CASSE PROBABLE (meme nom, deux fiches Hektor)",55040,28327,compromis,cancelled,2015-12-22,28328,offre,refused,2015-11-16,28328,28327,28327,28327,28328
+etat (1 236 gestes),SEPAREES par le geste,"A JUGER (noms differents, 31 j, meme montant)",58724,28522,compromis,cancelled,2015-04-01,28523,offre,refused,2015-03-10,28523,28522,28522,28522,28523
+C5 (190 creations),SEPAREES par le geste,"A JUGER (31 j, montants differents)",5262,1874,compromis,cancelled,2024-01-15,1875,compromis,active,2024-01-25,,1874,1874,1874,1875
+C5 (190 creations),SEPAREES par le geste,"A JUGER (31 j, montants differents)",5262,1874,compromis,cancelled,2024-01-15,1876,offre,accepted,2024-01-12,,1874,1874,1874,1875
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),5262,1874,compromis,cancelled,2024-01-15,1878,vente,,2024-04-10,,1874,1874,1874,1875
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),5262,1875,compromis,active,2024-01-25,1877,offre,refused,2023-12-08,,1874,1874,1875,1874
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),5262,1876,offre,accepted,2024-01-12,1877,offre,refused,2023-12-08,,1874,1874,1875,1874
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),5262,1877,offre,refused,2023-12-08,1878,vente,,2024-04-10,,1874,1874,1874,1875
+C5 (190 creations),SEPAREES par le geste,"A JUGER (31 j, montants differents)",24733,11956,compromis,active,2020-06-30,11957,compromis,cancelled,2020-06-12,,11956,11956,11956,11957
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),24733,11956,compromis,active,2020-06-30,11959,offre,refused,2020-05-28,,11956,11956,11956,11957
+C5 (190 creations),SEPAREES par le geste,"A JUGER (31 j, montants differents)",24733,11957,compromis,cancelled,2020-06-12,11958,offre,accepted,2020-06-12,,11956,11956,11957,11956
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),24733,11957,compromis,cancelled,2020-06-12,11960,vente,,2020-09-18,,11956,11956,11957,11956
+C5 (190 creations),SEPAREES par le geste,"A JUGER (31 j, montants differents)",24733,11958,offre,accepted,2020-06-12,11959,offre,refused,2020-05-28,,11956,11956,11956,11957
+C5 (190 creations),SEPAREES par le geste,CORRECTION (deux acheteurs successifs),24733,11959,offre,refused,2020-05-28,11960,vente,,2020-09-18,,11956,11956,11957,11956
+C5 (190 creations),SEPAREES par le geste,CASSE (meme acquereur),33458,16197,compromis,active,,16198,vente,,2021-03-30,,16197,16197,16197,16198

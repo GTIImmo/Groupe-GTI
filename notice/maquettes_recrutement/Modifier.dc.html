@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Recrutement — modifier une fiche</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#222323;-webkit-font-smoothing:antialiased}
+a{color:#c5005f}a:hover{color:#8c0044}
+button,input,select{font-family:inherit}
+.rangee{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0;border-top:1px solid #eef0f1}
+.rangee:first-of-type{border-top:0}
+.lib{font-size:13px;font-weight:600;color:#3f4446}
+.val{font-size:14px;font-weight:600}
+.saisie{min-height:40px;padding:0 12px;border:1px solid #c5005f;border-radius:11px;font-size:14px;box-shadow:0 0 0 3px rgba(197,0,95,.18);width:100%;box-sizing:border-box}
+.prov{display:inline-flex;align-items:center;gap:6px;font-size:12px;margin-top:4px}
+.lien{border:0;background:transparent;color:#c5005f;font-size:13px;font-weight:700;cursor:pointer;padding:8px 4px;min-height:36px}
+.lien:hover{color:#8c0044}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn-main{background:#c5005f;color:#fff}.btn-main:hover{background:#8c0044;color:#fff}
+.btn-quiet{background:#fff;color:#222323;border-color:#cfd3d4}
+.btn:focus-visible,.lien:focus-visible{outline:3px solid rgba(197,0,95,.45);outline-offset:2px}
+h3{margin:18px 0 4px;font-size:14px;font-weight:700}
+</style>
+</helmet>
+<div style="width: 1100px; height: 980px; box-sizing: border-box; background: rgba(34,35,35,0.52); display: flex; align-items: flex-start; justify-content: center; padding: 34px 0;">
+  <div role="dialog" aria-modal="true" aria-labelledby="titre-modif" style="width: 760px; max-height: 912px; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(34,35,35,.35); display: flex; flex-direction: column; overflow: hidden;">
+    <div style="background: #222323; color: #ffffff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+      <div>
+        <h2 id="titre-modif" style="margin: 0; font-size: 20px; font-weight: 800;">Modifier la fiche de Camille Roux</h2>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #c9cdcf; max-width: 60ch;">Ce qui vient des annuaires est relu chaque jeudi. Ce que tu corriges ici reste, même après la relecture.</p>
+      </div>
+      <a href="Candidat.dc.html" aria-label="Fermer" style="display: flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 10px; color: #ffffff; background: #2f3131;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+    </div>
+
+    <div style="padding: 8px 24px 12px; overflow-y: auto; flex: 1 1 auto;">
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 0 4px; font-size: 12px; color: #3f4446;">
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 99px; background: #9aa0a2;"></span>lu dans un annuaire</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 99px; background: #c5005f;"></span>corrigé par toi, la relecture n'y touche plus</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 99px; background: #222323;"></span>saisi par toi</span>
+      </div>
+
+      <h3>Qui et comment la joindre</h3>
+      <div class="rangee">
+        <span class="lib">Prénom et nom</span>
+        <div><div class="val">Camille Roux</div><div class="prov" style="color: #5c6163;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #9aa0a2;"></span>lu sur sa fiche SAFTI le 20/11</div></div>
+        <button class="lien" type="button">Corriger</button>
+      </div>
+
+      <div class="rangee">
+        <span class="lib">Téléphone</span>
+        <div>
+          <sc-if value="{{telEdite}}" hint-placeholder-val="{{false}}">
+            <input class="saisie" type="tel" value="06 39 98 77 03" aria-label="Téléphone corrigé">
+            <div class="prov" style="color: #8c0044; font-weight: 600;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #c5005f;"></span>ta correction remplacera le numéro lu chez SAFTI</div>
+          </sc-if>
+          <sc-if value="{{telLu}}" hint-placeholder-val="{{true}}">
+            <div class="val">06 39 98 12 41</div>
+            <div class="prov" style="color: #5c6163;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #9aa0a2;"></span>lu sur sa fiche SAFTI le 20/11</div>
+          </sc-if>
+        </div>
+        <button class="lien" type="button" onClick="{{basculerTel}}">{{libelleTel}}</button>
+      </div>
+
+      <div class="rangee">
+        <span class="lib">E-mail</span>
+        <div><div class="val">camille.r@exemple.fr</div><div class="prov" style="color: #8c0044; font-weight: 600;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #c5005f;"></span>corrigé par toi le 22/11 : elle préfère son adresse personnelle</div></div>
+        <button class="lien" type="button">Revenir à celle de SAFTI</button>
+      </div>
+
+      <h3>Ce que disent les annuaires</h3>
+      <p style="margin: 0 0 4px; font-size: 12.5px; color: #5c6163;">Ces lignes changent seules : si elle quitte SAFTI ou rejoint un autre réseau, tu le verras ici et dans son fil.</p>
+      <div class="rangee"><span class="lib">Réseau</span><div><div class="val">SAFTI</div><div class="prov" style="color: #5c6163;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #9aa0a2;"></span>relu le 20/11</div></div><span></span></div>
+      <div class="rangee"><span class="lib">Annonces et avis</span><div><div class="val">17 annonces, 4,6 sur 5 (28 avis)</div><div class="prov" style="color: #5c6163;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #9aa0a2;"></span>relu le 20/11</div></div><span></span></div>
+      <div class="rangee"><span class="lib">Commune</span><div><div class="val">Saint-Étienne (42000)</div><div class="prov" style="color: #5c6163;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #9aa0a2;"></span>lu sur sa fiche SAFTI, à 3,5 km de notre agence</div></div><button class="lien" type="button">Corriger</button></div>
+
+      <h3>Notre suivi</h3>
+      <div class="rangee">
+        <span class="lib">Agence envisagée</span>
+        <div><select class="saisie" style="border-color: #cfd3d4; box-shadow: none;" aria-label="Agence envisagée"><option>Saint-Étienne</option><option>Firminy</option><option>Saint-Just-Saint-Rambert</option></select><div class="prov" style="color: #3f4446;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 99px; background: #222323;"></span>saisi par toi</div></div>
+        <span></span>
+      </div>
+      <div class="rangee">
+        <span class="lib">Qui la suit</span>
+        <div><select class="saisie" style="border-color: #cfd3d4; box-shadow: none;" aria-label="Qui la suit"><option>Moi</option><option>Un autre administrateur</option></select></div>
+        <span></span>
+      </div>
+
+      <h3>Ce qui a changé sur cette fiche</h3>
+      <ol style="list-style: none; margin: 0; padding: 0; font-size: 13px; color: #3f4446;">
+        <li style="padding: 8px 0; border-top: 1px solid #eef0f1;"><strong>E-mail</strong> corrigé par toi, le 22/11 à 9 h 14</li>
+        <li style="padding: 8px 0; border-top: 1px solid #eef0f1;"><strong>Agence envisagée</strong> passée de Firminy à Saint-Étienne, le 21/11</li>
+        <li style="padding: 8px 0; border-top: 1px solid #eef0f1;"><strong>Fiche créée</strong> par la collecte SAFTI, le 20/11</li>
+      </ol>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e5e6; background: #fbfbfc;">
+      <a class="btn btn-quiet" href="Candidat.dc.html">Annuler</a>
+      <a class="btn btn-main" href="Candidat.dc.html">Enregistrer les modifications</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":980}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tel: false }; }
+  renderVals() {
+    return {
+      telEdite: this.state.tel, telLu: !this.state.tel,
+      libelleTel: this.state.tel ? 'Garder celui de SAFTI' : 'Corriger',
+      basculerTel: () => this.setState({ tel: !this.state.tel })
+    };
+  }
+}
+</script>
+</body>
+</html>

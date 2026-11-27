@@ -1,0 +1,55 @@
+bien,transaction,genre,etat,acquereurs,raison
+61,29,compromis,cancelled,568012,aucun autre dossier de cet acheteur sur le bien
+61,30,compromis,cancelled,12074,aucun autre dossier de cet acheteur sur le bien
+1968,997,compromis,cancelled,12352,aucun autre dossier de cet acheteur sur le bien
+8461,3689,compromis,cancelled,"29814,422477,466710,598039",aucun autre dossier de cet acheteur sur le bien
+9232,4126,compromis,cancelled,49384,EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
+9362,4195,compromis,cancelled,"381952,518971,518972",aucun autre dossier de cet acheteur sur le bien
+9629,4385,compromis,cancelled,31107,GARDE E : le compromis vivant du dossier est a un autre acheteur
+9769,4496,compromis,cancelled,60182,EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
+10129,4720,compromis,cancelled,113265,EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
+10527,5054,compromis,cancelled,111368,aucun autre dossier de cet acheteur sur le bien
+11764,6146,compromis,cancelled,"32950,32951,576333,576334",aucun autre dossier de cet acheteur sur le bien
+11820,6171,compromis,cancelled,33045,aucun autre dossier de cet acheteur sur le bien
+12107,6290,compromis,cancelled,38930,aucun autre dossier de cet acheteur sur le bien
+12273,6363,compromis,cancelled,38866,aucun autre dossier de cet acheteur sur le bien
+14355,7048,compromis,cancelled,39014,aucun autre dossier de cet acheteur sur le bien
+14383,7067,compromis,cancelled,38011,aucun autre dossier de cet acheteur sur le bien
+14446,7105,compromis,cancelled,39097,aucun autre dossier de cet acheteur sur le bien
+14674,7176,compromis,cancelled,36942,aucun autre dossier de cet acheteur sur le bien
+15220,7499,compromis,cancelled,41296,GARDE E : le compromis vivant du dossier est a un autre acheteur
+15881,7903,compromis,cancelled,52015,aucun autre dossier de cet acheteur sur le bien
+17536,8845,compromis,cancelled,41980,GARDE E : le compromis vivant du dossier est a un autre acheteur
+23238,11103,compromis,cancelled,413714,GARDE E : le compromis vivant du dossier est a un autre acheteur
+23319,11138,compromis,cancelled,413078,aucun autre dossier de cet acheteur sur le bien
+23331,11141,offre,proposed,,aucun numero d'acquereur : rien a comparer
+28440,14010,compromis,cancelled,411485,aucun autre dossier de cet acheteur sur le bien
+30678,14927,compromis,cancelled,"422364,422602,466834",aucun autre dossier de cet acheteur sur le bien
+32660,15895,compromis,cancelled,"79676,79824",aucun autre dossier de cet acheteur sur le bien
+32692,15901,compromis,cancelled,80398,aucun autre dossier de cet acheteur sur le bien
+33144,16100,compromis,cancelled,319379,aucun autre dossier de cet acheteur sur le bien
+35453,16774,compromis,cancelled,319142,aucun autre dossier de cet acheteur sur le bien
+35623,16829,compromis,cancelled,318824,aucun autre dossier de cet acheteur sur le bien
+36471,17203,compromis,cancelled,50396,aucun autre dossier de cet acheteur sur le bien
+37470,17567,compromis,cancelled,327201,aucun autre dossier de cet acheteur sur le bien
+40307,19408,compromis,cancelled,335294,aucun autre dossier de cet acheteur sur le bien
+40811,19711,compromis,cancelled,339732,aucun autre dossier de cet acheteur sur le bien
+43050,21520,compromis,cancelled,"353198,353200",EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
+43828,21933,compromis,cancelled,422012,aucun autre dossier de cet acheteur sur le bien
+45753,22999,compromis,cancelled,"357360,357363",aucun autre dossier de cet acheteur sur le bien
+46055,23162,compromis,cancelled,"357002,361661,532994",aucun autre dossier de cet acheteur sur le bien
+47133,23794,compromis,cancelled,359193,aucun autre dossier de cet acheteur sur le bien
+47174,23801,compromis,cancelled,"226708,515587",aucun autre dossier de cet acheteur sur le bien
+47790,24135,compromis,cancelled,"118663,474814",aucun autre dossier de cet acheteur sur le bien
+49573,25692,compromis,cancelled,536387,aucun autre dossier de cet acheteur sur le bien
+49624,25709,compromis,cancelled,"410820,410892",aucun autre dossier de cet acheteur sur le bien
+52166,26613,compromis,cancelled,"360833,361399",EXCLUSION DECLAREE : question ouverte (EXCLUES_DE_LA_REGLE_E)
+53015,27033,compromis,cancelled,392646,aucun autre dossier de cet acheteur sur le bien
+53036,27039,compromis,cancelled,385384,aucun autre dossier de cet acheteur sur le bien
+54672,28115,compromis,cancelled,382346,aucun autre dossier de cet acheteur sur le bien
+54676,28116,compromis,cancelled,393019,aucun autre dossier de cet acheteur sur le bien
+54726,28155,compromis,cancelled,382768,aucun autre dossier de cet acheteur sur le bien
+54771,28175,compromis,cancelled,393530,aucun autre dossier de cet acheteur sur le bien
+54867,28214,compromis,cancelled,393820,GARDE E : le compromis vivant du dossier est a un autre acheteur
+59029,28582,compromis,cancelled,"172311,501027",aucun autre dossier de cet acheteur sur le bien
+59172,28634,compromis,cancelled,,aucun numero d'acquereur : rien a comparer

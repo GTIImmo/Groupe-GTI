@@ -43,6 +43,11 @@ WORKER_STALE_POLICY: dict[str, int | None] = {
     "daemon_or_scheduled": 6 * 60,
     "service": 3 * 60,
     "watcher": 6 * 60,
+    # 2026-11-20 -> 24/11 : le run du recrutement (« GTI Recrutement »), le 1er dimanche TOUS LES DEUX
+    #   MOIS (decision de Frederic du 24/11 ; c'etait « monthly », 36 j, le 20/11). Il peut y avoir 9
+    #   semaines entre deux de ces dimanches : 64 jours. Sans cette ligne, une frequence inconnue
+    #   retombe sur le seuil par defaut et l'etape crierait « en retard » des le 2e jour.
+    "bimonthly": 64 * 24 * 60,
     "console_follow_up": None,
     "backend_or_manual": None,
     "manual": None,
@@ -68,6 +73,38 @@ WORKER_STALE_POLICY: dict[str, int | None] = {
 #   la liste. Les trois usages de `criticals` ont ete relus un par un, y compris le
 #   message de RETABLISSEMENT (`had_critical and not criticals`), qui ne change pas.
 CLES_HORS_ALERTE: frozenset[str] = frozenset({"monitor.summary"})
+
+# ⛔ REGLE 5 (27/11/2026) -- NE PAS VOIR N'EST PAS GUERIR.
+#   Deux familles n'ecrivent une ligne QUE pour ce qui va mal :
+#   `scheduledtasks:<tache>` et `workers.heartbeat:<worker>`. La reconciliation de
+#   `write_results` (03/09) en deduit que toute cle qui n'est PAS reemise est guerie, et
+#   ecrit « Retour a la normale ». Mais quand la sonde n'a PAS PU REGARDER (PowerShell qui
+#   depasse ses 15 s, Supabase illisible, sonde qui plante), aucune cle n'est reemise :
+#   la reconciliation prenait l'aveuglement pour une guerison.
+#
+#   MESURE au serveur (app_monitor_event, du 07/09 au 27/11) : 20 lectures des taches
+#   ratees, toutes « timed out after 15 seconds », dont 8 entre le 22 et le 27/11. Elles
+#   ont fabrique 24 faux « Retour a la normale » ; 21 ont ete re-criees dans les 4 heures.
+#   Le 26/11, la descente en code 1 a ainsi envoye TROIS alertes (10:49, 16:49, 20:49) et
+#   DEUX faux retablissements (14:52, 18:51) pour une seule cause. Le battement des
+#   workers n'a jamais ete illisible (0 fois), mais il a le meme trou.
+#
+#   LA REGLE : une famille n'est reconciliee que si sa VUE D'ENSEMBLE a ete vue a cette
+#   passe (cle presente, statut autre que « unknown », pas sautee). Sinon ses cles
+#   gardent leur etat, sans etre reecrites, et un retablissement n'est annonce que s'il
+#   ne reste aucun rouge, en comptant les etats gardes.
+#
+#   Ce que la regle NE fait PAS : elle ne rend pas la vue ; une lecture ratee retarde
+#   toujours la PREMIERE alerte jusqu'a la passe suivante (08:49 -> 10:49 le 26/11).
+#
+#   Retour arriere : False, et tout redevient comme avant, a l'octet pres.
+NE_PAS_VOIR_N_EST_PAS_GUERIR = True
+
+# prefixe de la famille -> cle de sa vue d'ensemble (celle qui dit si la sonde a vu)
+VUE_D_ENSEMBLE_DES_FAMILLES: dict[str, str] = {
+    "workers.heartbeat:": "workers.heartbeat",
+    "scheduledtasks:": "scheduledtasks",
+}
 
 # Criticite des taches planifiees Windows surveillees (defaut = warning).
 TASK_CRITICALITY: dict[str, str] = {
@@ -187,6 +224,21 @@ TASK_CRITICALITY: dict[str, str] = {
     #   attendent un jour de plus, rien ne se perd). Visible a l ecran Sante, sans e-mail.
     #   DECLAREE ICI AVANT d etre enregistree dans Windows (meme regle que ses soeurs).
     "GTI Menage Temporaires": "warning",
+    # 2026-11-20 -> 24/11 : « GTI Recrutement » (1er dimanche de decembre, fevrier, avril, juin, aout,
+    #   octobre, 10:00 ; elle s'appelait « GTI Recrutement Mensuel » jusqu'au 24/11) -- le run du
+    #   chantier recrutement (scheduled/run_recrutement.ps1) : il relit les annuaires publics des
+    #   mandataires de la region, calcule qui arrive et qui part, controle, sauvegarde. Il ne parle
+    #   jamais a Hektor. Note : notice/CHANTIER_RECRUTEMENT_ANNUAIRE_MANDATAIRES_2026-11-20.md §13.
+    # ⚠ "warning" ET PAS "critical" (decision du 20/11, meme raisonnement que « GTI Entretien
+    #   Photos ») : un passage rate se rejoue a la main sans rien perdre. Un e-mail d'alerte pour un
+    #   defaut qui attend deux mois, c'est du bruit. Visible a l ecran Sante et dans l e-mail du matin.
+    #   Il sort en 1 quand une source est en echec ou MALADE, ou que le controle est rouge.
+    #   DECLAREE ICI AVANT d etre enregistree dans Windows (meme regle que ses soeurs).
+    "GTI Recrutement": "warning",
+    # 2026-11-24 : sa petite soeur QUOTIDIENNE (R6.8 du chantier recrutement) -- copie datee de ce que l'app
+    #   ecrit au recrutement (suivi, fil, retraits...) + la descente. "warning" pour la meme raison : un jour
+    #   rate se rattrape le lendemain, rien n'est perdu (la base reste la source). DECLAREE AVANT.
+    "GTI Recrutement Sauvegarde": "warning",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -201,6 +253,24 @@ TASK_CRITICALITY: dict[str, str] = {
 
 # Codes LastTaskResult consideres comme sains : succes / en cours / jamais lance.
 ACCEPTABLE_TASK_RESULTS = {0, 267009, 267011}
+
+# ⛔ 27/11/2026 -- UNE TACHE EN COURS N'A PAS ENCORE DE VERDICT (suite de la regle 5).
+#   267009 veut dire « la tache tourne » : ce n'est pas un succes, c'est l'absence de
+#   resultat. Or il est accepte comme sain, donc une tache en anomalie qui REDEMARRE
+#   etait declaree « Retour a la normale » avant meme d'avoir fini.
+#   MESURE au serveur (07/09 -> 27/11) : sur 30 retours non aveugles, au moins 5 ont ete
+#   pris pendant que la tache tournait (la descente a 06:50-06:51 quatre fois, le
+#   quotidien a 05:49 une fois) ; 2 ont ete re-cries ensuite (18/09, 15/11), les 3
+#   autres se sont trouves justes par chance.
+#   LA REGLE : une tache lue en 267009 GARDE son etat precedent (sans etre reecrite)
+#   jusqu'a la passe qui lit son vrai resultat. Une tache saine qui tourne ne change
+#   rien : elle n'avait rien a garder. Le code reste accepte (aucune alerte nouvelle).
+#   Elle s'appuie sur la regle 5 : etats gardes, et vue d'ensemble seule sans envoi.
+#   ⚠ NON couvert, expres : 267011 (« jamais lancee ») reste une guerison -- c'est le
+#   cas d'une tache re-enregistree, un geste humain.
+#   Retour arriere : False.
+GARDER_LES_TACHES_EN_COURS = True
+TACHE_EN_COURS = 267009
 
 # Sentinelles de donnees : requetes read-only qui detectent les DERIVES SILENCIEUSES
 # (idnego, notifications orphelines, diffusion sans mandat, chute d'actives...) que le
@@ -1874,12 +1944,16 @@ class Monitor:
             " else { [pscustomobject]@{Name=$n;State='NotFound';LastResult=$null;AgeMin=$null} } };"
             "$out | ConvertTo-Json -Compress -Depth 3"
         )
+        # 27/11 : un delai PROPRE a cette lecture (--scheduled-tasks-timeout-seconds, 60 s),
+        # au lieu du delai global de 15 s fait pour les appels Supabase. Voir le parseur.
+        delai = getattr(self.args, "scheduled_tasks_timeout_seconds", None) or self.args.timeout_seconds
+        debut = time.monotonic()
         try:
             proc = subprocess.run(
                 ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
                 capture_output=True,
                 text=True,
-                timeout=self.args.timeout_seconds,
+                timeout=delai,
             )
             raw = (proc.stdout or "").strip()
             data = json.loads(raw) if raw else []
@@ -1891,13 +1965,16 @@ class Monitor:
                 "windows_tasks",
                 "unknown",
                 f"Impossible de lire les taches planifiees: {exc}",
-                {"error": str(exc)[:300]},
+                {"error": str(exc)[:300], "delai_s": delai,
+                 "duree_lecture_s": round(time.monotonic() - debut, 1)},
                 severity="unknown",
             )
             return
+        duree_lecture = round(time.monotonic() - debut, 1)
         if isinstance(data, dict):
             data = [data]
         problems: list[dict[str, Any]] = []
+        en_cours: list[str] = []
         for row in data:
             name = row.get("Name") or "?"
             state = row.get("State") or "?"
@@ -1911,6 +1988,8 @@ class Monitor:
             if result is not None and int(result) not in ACCEPTABLE_TASK_RESULTS:
                 severity = "critical" if criticality == "critical" else "warning"
                 problems.append({"name": name, "severity": severity, "reason": f"dernier resultat {result}", "result": result})
+            elif result is not None and int(result) == TACHE_EN_COURS:
+                en_cours.append(name)  # pas encore de verdict (voir GARDER_LES_TACHES_EN_COURS)
         for item in problems:
             slug = str(item["name"]).lower().replace(" ", "_")
             self.add(
@@ -1929,14 +2008,24 @@ class Monitor:
             summary_status = "warning"
         else:
             summary_status = "ok"
+        message = f"Taches planifiees: {len(data)} suivies, {len(problems)} en anomalie"
+        details: dict[str, Any] = {
+            "tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems],
+            "duree_lecture_s": duree_lecture, "delai_s": delai,
+        }
+        if GARDER_LES_TACHES_EN_COURS and en_cours:
+            # write_results garde l'etat precedent de ces cles (cles_en_cours)
+            message += f", {len(en_cours)} en cours (etat precedent garde)"
+            details["en_cours"] = en_cours
+            details["en_cours_cles"] = [f"scheduledtasks:{str(n).lower().replace(' ', '_')}" for n in en_cours]
         self.add(
             "scheduledtasks",
             "system",
             "scheduledtasks",
             "windows_tasks",
             summary_status,
-            f"Taches planifiees: {len(data)} suivies, {len(problems)} en anomalie",
-            {"tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems]},
+            message,
+            details,
         )
 
     def _sentinel_sample(self, sentinel: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
@@ -3634,6 +3723,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cron-stale-minutes", type=int, default=30)
     parser.add_argument("--document-storage-path", default=os.getenv("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
     parser.add_argument("--timeout-seconds", type=int, default=15)
+    # ⛔ 27/11/2026 -- LA CAUSE DES AVEUGLEMENTS (suite de la regle 5, sur son « oui, 60 s »).
+    #   La lecture des taches planifiees (PowerShell, Get-ScheduledTask) prenait le delai
+    #   GLOBAL de 15 s, fait pour les appels Supabase. Mesure le 27/11 a 17:48, au repos :
+    #   7,7 a 9,9 s pour 14 taches -- deja plus de la moitie du delai. Sous charge, elle le
+    #   depassait : 20 lectures ratees du 07/09 au 27/11, toutes « timed out after 15
+    #   seconds ». Elle a donc son propre delai, et la vue d'ensemble garde sa duree
+    #   (`duree_lecture_s`) pour voir venir le prochain mur. Le reste de la sonde garde 15 s.
+    #   Retour arriere : --scheduled-tasks-timeout-seconds 15.
+    parser.add_argument("--scheduled-tasks-timeout-seconds", type=int, default=60)
     parser.add_argument("--supabase-freshness-minutes", type=int, default=30 * 60)
     parser.add_argument("--delta-error-window-minutes", type=int, default=24 * 60)
     parser.add_argument("--worker-stale-default-minutes", type=int, default=28 * 60)
@@ -3677,11 +3775,14 @@ def build_parser() -> argparse.ArgumentParser:
         #   DECLAREE AVANT d'etre enregistree. Elle est "critical" -- raison au-dessus
         #   de TASK_CRITICALITY. 11 noms surveilles.
         #   18/11 : ajout de « GTI Menage Temporaires » (13:00), "warning", DECLAREE AVANT. 12 noms.
+        #   20/11 : ajout de « GTI Recrutement Mensuel » (1er dimanche, 10:00), "warning", DECLAREE AVANT. 13 noms.
+        #   24/11 : RENOMMEE « GTI Recrutement » (tous les deux mois) -- l'installeur retire l'ancienne. 13 noms.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
                  "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
                  "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
                  "GTI Entretien Documents,GTI Entretien Photos,"
-                 "GTI Balayage Photos Masquees,GTI Menage Temporaires"),
+                 "GTI Balayage Photos Masquees,GTI Menage Temporaires,"
+                 "GTI Recrutement,GTI Recrutement Sauvegarde"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
@@ -3721,11 +3822,39 @@ def configure_supabase(args: argparse.Namespace) -> SupabaseClient | None:
     return SupabaseClient(url, service_key, timeout_seconds=args.timeout_seconds)
 
 
+def familles_non_vues(results: list[CheckResult]) -> set[str]:
+    """Regle 5 : les prefixes de famille que la sonde n'a PAS vus a cette passe.
+
+    Vue d'ensemble absente (sonde plantee, rien a suivre), « unknown » (lecture ratee)
+    ou sautee (hors Windows) : la famille n'a pas ete regardee.
+    """
+    par_cle = {r.status_key: r for r in results}
+    aveugles: set[str] = set()
+    for prefixe, cle in VUE_D_ENSEMBLE_DES_FAMILLES.items():
+        vue = par_cle.get(cle)
+        sautee = isinstance(getattr(vue, "details", None), dict) and bool(vue.details.get("skipped"))
+        if vue is None or vue.status == "unknown" or sautee:
+            aveugles.add(prefixe)
+    return aveugles
+
+
+def cles_en_cours(results: list[CheckResult]) -> set[str]:
+    """Les cles `scheduledtasks:<tache>` lues « en cours » (267009) : pas encore de verdict."""
+    if not GARDER_LES_TACHES_EN_COURS:
+        return set()
+    cles: set[str] = set()
+    for r in results:
+        if r.status_key == "scheduledtasks" and isinstance(r.details, dict):
+            cles.update(str(c) for c in (r.details.get("en_cours_cles") or []))
+    return cles
+
+
 def dispatch_alerts(
     alerter: "Alerter | None",
     results: list[CheckResult],
     previous_status: dict[str, Any],
     previous_status_lu: bool,
+    etats_gardes: dict[str, Any] | None = None,
 ) -> None:
     """C.17 -- Envoi de l'alerte, INDEPENDANT de l'ecriture Supabase.
 
@@ -3756,10 +3885,21 @@ def dispatch_alerts(
         newly_critical = [
             r for r in criticals if previous_status.get(r.status_key) != "critical"
         ]
+        # Regle 5 : apres une passe aveugle, la VUE D'ENSEMBLE d'une famille revient de
+        # « unknown » a « critical » -- ce n'est pas un fait neuf. Elle n'est rouge que si
+        # une de ses cles l'est, et cette cle-la est dans la liste si elle est neuve (meme
+        # preuve que monitor.summary, 14/10). Seule, elle n'envoie donc rien ; avec un vrai
+        # nouveau rouge, l'e-mail part comme avant, elle comprise.
+        if (NE_PAS_VOIR_N_EST_PAS_GUERIR or GARDER_LES_TACHES_EN_COURS) and newly_critical and all(
+            r.status_key in VUE_D_ENSEMBLE_DES_FAMILLES.values() for r in newly_critical
+        ):
+            newly_critical = []
         had_critical = any(state == "critical" for state in previous_status.values())
+        # Regle 5 : un rouge GARDE parce que non revu reste un rouge -- pas de retablissement.
+        rouge_garde = any(state == "critical" for state in (etats_gardes or {}).values())
         if newly_critical:
             alerter.dispatch(newly_critical, kind="critical")
-        elif had_critical and not criticals:
+        elif had_critical and not criticals and not rouge_garde:
             alerter.dispatch([], kind="recovery")
     except Exception as exc:  # best-effort : jamais bloquant
         print(f"[alert] dispatch echoue: {exc}", file=sys.stderr)
@@ -3826,6 +3966,10 @@ def write_results(
     # verte immortelle.
     #
     # Rien n'est lu de plus : previous_status vient d'etre charge juste au-dessus.
+    #
+    # ⛔ REGLE 5 (27/11) : une famille que la sonde n'a pas pu regarder n'est PAS
+    # reconciliee -- ses cles gardent leur etat (voir NE_PAS_VOIR_N_EST_PAS_GUERIR).
+    etats_gardes: dict[str, Any] = {}
     if previous_status_lu:
         # TROIS familles, et la troisieme s'est revelee en nettoyant les deux
         # premieres : safe_check n'ecrit « monitor.<sonde> » QUE si la sonde
@@ -3836,6 +3980,9 @@ def write_results(
             ("monitor.",           "monitor",        "sonde"),
         )
         cles_emises = {r.status_key for r in results}
+        aveugles = familles_non_vues(results) if NE_PAS_VOIR_N_EST_PAS_GUERIR else set()
+        en_cours = cles_en_cours(results)
+        gardes_en_cours: dict[str, Any] = {}
         for cle, ancien in previous_status.items():
             if not isinstance(cle, str):
                 continue
@@ -3848,6 +3995,13 @@ def write_results(
             if cle in cles_emises or ancien == "ok":
                 continue
             prefixe, composant, sonde = famille
+            if prefixe in aveugles:
+                etats_gardes[cle] = ancien  # non revue : ni « ok », ni reecrite
+                continue
+            if cle in en_cours:
+                etats_gardes[cle] = ancien  # la tache tourne : pas encore de verdict
+                gardes_en_cours[cle] = ancien
+                continue
             quoi = cle[len(prefixe):] or cle
             results.append(CheckResult(
                 status_key=cle,
@@ -3859,8 +4013,23 @@ def write_results(
                 message=f"Retour a la normale : {quoi}",
                 details={"resolu": True, "etat_precedent": ancien},
             ))
+        gardes_aveugles = {c: e for c, e in etats_gardes.items() if c not in gardes_en_cours}
+        if gardes_aveugles:
+            print(
+                "[regle 5] sonde aveugle cette passe (" + ", ".join(sorted(aveugles)) + ") : "
+                f"{len(gardes_aveugles)} etat(s) GARDE(S) tel(s) quel(s), aucun « Retour a la normale » : "
+                + ", ".join(f"{c}={e}" for c, e in sorted(gardes_aveugles.items())),
+                file=sys.stderr,
+            )
+        if gardes_en_cours:
+            print(
+                f"[en cours] {len(gardes_en_cours)} tache(s) en cours (267009), sans verdict : "
+                "etat precedent GARDE, aucun « Retour a la normale » : "
+                + ", ".join(f"{c}={e}" for c, e in sorted(gardes_en_cours.items())),
+                file=sys.stderr,
+            )
 
-    dispatch_alerts(alerter, results, previous_status, previous_status_lu)
+    dispatch_alerts(alerter, results, previous_status, previous_status_lu, etats_gardes)
 
     try:
         supabase.upsert_status([result.status_row() for result in results])

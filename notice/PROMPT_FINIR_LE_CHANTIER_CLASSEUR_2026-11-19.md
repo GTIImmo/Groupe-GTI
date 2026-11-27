@@ -40,6 +40,13 @@ LA CHAINE DE CORRESPONDANCE, et c'est la clef de tout :
 Le gel est un ECHAFAUDAGE : il sert une fois de plus, pour la 5.2, puis il dort. Le
 REGISTRE DES TRANSACTIONS (app_affaire_ledger) et son CHAINAGE sont le MUR.
 
+⛔⛔ ET NE CONFONDS PAS LES DEUX, C'EST LE PIEGE N° 1 (je m'y suis fait prendre le 19/11,
+Frederic m'a corrige) : LE CHAINAGE BOUGE, L'ETIQUETTE NE BOUGE PAS. Les quatre gestes de
+la pose la preservent : une scission donne une etiquette NEUVE a la part DETACHEE et le
+dossier d'origine GARDE la sienne ; une fusion garde LA PLUS ANCIENNE ; une propagation
+fait PRENDRE l'etiquette existante. Ce qui bouge, c'est l'APPARTENANCE d'une transaction
+a un dossier -- jamais l'identifiant du dossier. Le § 13 ① le prouve, journal a l'appui.
+
 TA MISSION, EN CINQ TEMPS, ET L'ORDRE NE S'INVERSE PAS. Tu m'expliques clairement
 a la fin de CHAQUE temps, et tu ecris ton resultat dans un fichier de notice/ avant de
 passer au suivant (sinon tout meurt avec la conversation : c'est deja arrive).
@@ -533,26 +540,55 @@ les deux patchs ne défont que.
 > ⛔ Écrites le 19/11 à sa demande (*« as-tu des idées pour améliorer ma demande et le futur
 > chantier ? »*). **Aucune n'est engagée** : un périmètre ne se décide pas sans lui.
 
-### ① ⛔⛔⛔ LE RISQUE QUE PERSONNE N'A ENCORE SOULEVÉ : une étiquette écrite dans le Sheet peut changer la nuit suivante
+### ① ⭐⭐⭐ L'ÉTIQUETTE NE BOUGE PAS — **c'est le chaînage qui bouge.** La distinction est capitale
 
-À l'étape 5.2, nos `app_dossier_uuid` partent dans la colonne `affair_uuid` du Sheet. **Mais
-l'étiquette est le résultat d'une déduction refaite chaque nuit, et elle bouge** : 138
-scissions le 18/11, 6 fusions depuis le 12/11. Le jour où un UUID est écrit dans le Sheet et
-qu'une scission le change chez nous, **la correspondance est cassée des deux côtés, en
-silence, et personne ne le voit.**
+> ⛔⛔ **J'AI ÉCRIT LE CONTRAIRE LE 19/11, ET FRÉDÉRIC M'A CORRIGÉ** : *« il y a déjà une
+> étiquette posée, le chaînage peut bouger, l'id dossier étiquette ne bouge pas, revérifie »*.
+> **Il avait raison.** J'avais lu « 138 scissions » comme « 138 étiquettes changées ». C'est
+> faux, et le code le dit en quatre lignes. **Cette confusion est le piège n° 1 de l'étape 5.2 :
+> ne la refais pas.**
 
-⭐ **Et le projet a déjà payé cette faute sous un autre nom** : *« un identifiant calculé sur
-une valeur qui bouge »*, et la règle du 28/10 — *« un numéro de chaîne ne doit jamais servir
-de point d'accrochage, il bouge »*. Le gel s'accroche à la **transaction** pour cette raison
-exacte. **L'étape 5.2 referait, à l'échelle du Sheet, la faute que le gel a évitée.**
+**Les quatre gestes de la pose d'étiquette** (`poser_les_etiquettes_de_dossier`, l. 2691) sont
+tous construits pour **préserver l'étiquette existante** :
 
-➡ **Proposition :** avant d'écrire une seule ligne dans le Sheet, décider ce qui arrive à une
-étiquette **publiée**. Trois chemins possibles : la rendre immuable dès qu'elle est publiée
-(le chaînage peut tout rechaîner sauf elle) · la laisser bouger mais **crier** (une sentinelle
-compare le Sheet à l'étiquette du jour) · ou n'écrire dans le Sheet **que des étiquettes dont
-le dossier est clos** (vente réglée), qui ne bougeront plus.
-⛔ **Rien de tout cela n'existe aujourd'hui** : vérifié, aucune protection d'étiquette dans le
-code. Le « verrou des quatre tables » du 16/11 est un verrou de **droits**, pas d'immuabilité.
+```
+pose          un groupe SANS AUCUNE etiquette en recoit une neuve
+propagation   une transaction NUE arrive dans un dossier deja etiquete -> elle PREND
+              l'etiquette du dossier, qui ne change pas
+scission      une etiquette sur deux groupes -> LA PART DETACHEE recoit une etiquette
+              NEUVE, et le dossier d'origine GARDE LA SIENNE
+fusion        deux etiquettes dans un groupe -> ON GARDE LA PLUS ANCIENNE
+```
+
+**Le journal depuis sa naissance (12/11) le confirme, événement par événement :**
+
+```
+pose            11 452 evenements . 31 163 transactions
+scission           143 evenements .    147 transactions   <- la part DETACHEE change
+propagation          6 evenements .      6 transactions
+fusion               6 evenements .      9 transactions   <- LA SEULE EXCEPTION
+```
+
+Relevé sur une scission du 18/11 : `dossier = 027e832e (D2020-0605)` garde son étiquette,
+`autre_uuid = d555f86a` est la neuve, et la transaction détachée est **`1001543` — une de nos
+créations depuis le Sheet**. Autrement dit : nos 136 créations ont été détachées et **ce sont
+elles qui ont reçu une étiquette neuve** ; aucun dossier d'origine n'a changé d'identifiant.
+
+➡ **CE QUI BOUGE, C'EST L'APPARTENANCE D'UNE TRANSACTION À UN DOSSIER, jamais l'identifiant du
+dossier.** Pour l'étape 5.2, cela change tout : **un UUID écrit dans le Sheet reste valide.**
+Le vrai sujet n'est pas la stabilité de l'étiquette, c'est de savoir **laquelle écrire quand une
+ligne pointe vers des transactions réparties sur deux étiquettes** — ce sont les 255 lignes du
+§ 8.2, et c'est un problème connu et borné.
+
+⚠ **IL RESTE UNE SEULE EXCEPTION, ET LE CODE LA TRAITE DÉJÀ** : une **fusion** garde la plus
+ancienne des deux étiquettes, donc **l'absorbée disparaît** et ne vit plus que dans le journal.
+C'est irréversible, et c'est écrit : *« un matin où le chaînage a beaucoup bougé, on doit le
+voir TOUT DE SUITE »* — d'où le cri au-delà de `SEUIL_FUSIONS_QUI_INQUIETE = 10` par nuit.
+**Mesure : 6 fusions en sept jours, sur 11 590 dossiers.**
+
+➡ **Proposition, réduite à sa vraie taille :** après 5.2, ajouter **une seule ligne de
+contrôle** — un UUID écrit dans le Sheet qui n'existe plus chez nous (étiquette absorbée par
+une fusion) doit être signalé. Rien de plus. Le reste est déjà protégé par la conception.
 
 ### ② ⭐⭐ NE PAS LAISSER 9 % BLOQUER 91 % — écrire les UUID par vagues
 

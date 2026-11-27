@@ -216,3 +216,14 @@
    l'empreinte globale ne s'exige que si l'autre patch n'est pas là — sinon il **dit**
    pourquoi elle diffère et **nomme l'autre inverse à jouer**. ⚠ Et ça ne se voit qu'en
    **éprouvant la chaîne complète dans l'ordre réel**, pas chaque patch isolément.
+
+32. ⭐⭐⭐ **LE TÉMOIN D'APRÈS EST OBLIGATOIRE, MÊME POUR UNE RÈGLE PROUVÉE SUR COPIE** *(27/11)*. La règle
+   R30a avait été rejouée trois fois sur copie : 0 verdict changé, 0 étiquette changée, et les témoins de
+   l'écrivain intacts. Le **passage 83 officiel** est pourtant sorti **ROUGE** : elle ajoutait une pièce à
+   **deux lignes dont Frédéric avait fixé lui-même les pièces** (91IHSGNC, MQ6H8TVQ). Mes rejeux comparaient
+   les **verdicts**, jamais la table des **témoins** du passage. Le témoin d'après, que Frédéric exige avant
+   que l'écrivain et la boucle passent à un nouveau passage, compare les deux — et il a sauvé deux de ses
+   décisions. *« C'est pour ça que je l'exige. »*
+   ➡ **Un passage se juge par ses verdicts ET par ses témoins** (`temoin_d_apres_le_passage_83_2026-11-27.py`) ;
+   on corrige la règle (elle ne touche plus aucune ligne de SES décisions), on rejoue un passage neuf (le 84,
+   vert), et **le rouge reste au socle comme trace** : une règle refusée s'archive, elle ne s'efface pas.
