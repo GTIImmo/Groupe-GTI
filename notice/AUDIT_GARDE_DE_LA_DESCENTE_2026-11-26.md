@@ -799,6 +799,34 @@ normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
 - **Prend effet** à la prochaine passe de la sonde (« GTI Health Monitor », 18:48), sans
   aucun geste.
 - **Le retour arrière** : `NE_PAS_VOIR_N_EST_PAS_GUERIR = False`.
+- **Commit** : `7de733e` (27/11, 17:44, local).
 - **Deux suites possibles, à lui de trancher** :
-  - la cause : porter le délai de la seule lecture PowerShell de 15 à 60 s ;
-  - la tâche « en cours » : garder son état précédent tant qu'elle tourne.
+  - la cause : porter le délai de la seule lecture PowerShell de 15 à 60 s (**faite**,
+    ci-dessous) ;
+  - la tâche « en cours » : garder son état précédent tant qu'elle tourne (en attente).
+
+### La cause des aveuglements — la lecture des tâches a son propre délai (27/11)
+
+- **Sa décision** (27/11) : « Oui, 60 s ».
+- **La mesure**, le 27/11 à 17:48, au repos, avec la commande exacte de la sonde, en lecture
+  seule et cinq fois : **7,7 à 9,9 s** pour 14 tâches. La lecture prenait donc déjà plus de
+  la moitié du délai de 15 s, et sous charge elle le dépassait.
+- **Le code** : `monitoring/check_gti_health.py`.
+  - La nouvelle option `--scheduled-tasks-timeout-seconds` vaut **60** par défaut. Elle ne
+    sert qu'à cette lecture : le délai global `--timeout-seconds` reste à 15 s pour les appels
+    Supabase.
+  - La vue d'ensemble `scheduledtasks` garde désormais `duree_lecture_s` et `delai_s` dans ses
+    détails, aussi en cas d'échec, pour voir venir le prochain mur.
+  - La limite d'exécution de la tâche « GTI Health Monitor » est de 72 h, et le lanceur
+    n'impose aucun délai. Au pire, une passe dure 45 s de plus.
+- **Le banc** : **24 sur 24** (5 épreuves de plus, sur le vrai parseur et la vraie sonde).
+  - Par défaut, la lecture reçoit 60 s, et le délai global reste à 15 s.
+  - Une lecture de 20 s est vue.
+  - Au-delà de 60 s, la lecture reste aveugle, et la règle 5 prend le relais.
+  - **Le témoin inverse** : avec `--scheduled-tasks-timeout-seconds 15`, la même lecture de
+    20 s redevient aveugle (« timed out after 15 seconds »).
+- **Les anciens bancs** : inchangés, avec les 2 mêmes échecs déjà présents dans
+  `test_travaux_en_erreur_resolus`.
+- **Prend effet** à la prochaine passe de la sonde (18:48), sans aucun geste.
+- **Le retour arrière** : passer `--scheduled-tasks-timeout-seconds 15`, ou changer le
+  défaut.

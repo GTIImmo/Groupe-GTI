@@ -249,6 +249,51 @@ def cas_unitaires() -> None:
              envois, [("critical", [VUE_T, D])])
 
 
+def cas_du_delai() -> None:
+    """La cause (27/11) : la lecture des taches a son propre delai, 60 s."""
+    print()
+    print("Le delai de la lecture des taches (le VRAI parseur, la VRAIE sonde) :")
+
+    def lire(argv: list[str], duree: float):
+        """PowerShell imite qui met `duree` secondes ; rend (delai recu, vue d'ensemble)."""
+        args = cgh.build_parser().parse_args(argv)
+        args.scheduled_tasks = TACHES
+        recu = []
+
+        def run(cmd, **kw):
+            recu.append(kw.get("timeout"))
+            if duree > kw.get("timeout"):
+                raise subprocess.TimeoutExpired(cmd, kw.get("timeout"))
+            rows = [{"Name": n, "State": "Ready", "LastResult": 0, "AgeMin": 60} for n in TOUT_VA]
+            return FauxProcessus(json.dumps(rows))
+
+        mon = cgh.Monitor(args, None)
+        vrai_run = cgh.subprocess.run
+        cgh.subprocess.run = run
+        try:
+            mon.check_scheduled_tasks()
+        finally:
+            cgh.subprocess.run = vrai_run
+        vue = [r for r in mon.results if r.status_key == VUE_T][0]
+        return recu, vue
+
+    recu, vue = lire([], 9.9)
+    verifier("5j  par defaut, la lecture recoit 60 s, et le delai global reste 15 s",
+             (recu, cgh.build_parser().parse_args([]).timeout_seconds), ([60], 15))
+    verifier("5j' la vue d'ensemble garde le delai et une duree de lecture",
+             (vue.status, vue.details.get("delai_s"), isinstance(vue.details.get("duree_lecture_s"), float)),
+             ("ok", 60, True))
+    recu, vue = lire([], 20.0)
+    verifier("5k  une lecture de 20 s (au-dela des 15 s d'avant) est VUE", (recu, vue.status), ([60], "ok"))
+    recu, vue = lire(["--scheduled-tasks-timeout-seconds", "15"], 20.0)
+    verifier("5k-INVERSE  delai remis a 15 s : la meme lecture redevient aveugle",
+             (recu, vue.status, "timed out after 15 seconds" in vue.message, vue.details.get("delai_s")),
+             ([15], "unknown", True, 15))
+    recu, vue = lire([], 61.0)
+    verifier("5l  au-dela de 60 s : aveugle, et la regle 5 prend le relais (statut unknown)",
+             (recu, vue.status), ([60], "unknown"))
+
+
 def histoire_du_26_11(regle: bool):
     """Les passes reelles du 26/11 08:49 au 27/11 06:49 (heures mesurees au serveur)."""
     def lue(descente: int) -> dict[str, int]:
@@ -308,6 +353,7 @@ def main() -> int:
     if not cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR:
         print("⚠ l'interrupteur NE_PAS_VOIR_N_EST_PAS_GUERIR est eteint dans le code")
     cas_unitaires()
+    cas_du_delai()
     histoire()
     print()
     if rates:

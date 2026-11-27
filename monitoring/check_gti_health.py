@@ -1926,12 +1926,16 @@ class Monitor:
             " else { [pscustomobject]@{Name=$n;State='NotFound';LastResult=$null;AgeMin=$null} } };"
             "$out | ConvertTo-Json -Compress -Depth 3"
         )
+        # 27/11 : un delai PROPRE a cette lecture (--scheduled-tasks-timeout-seconds, 60 s),
+        # au lieu du delai global de 15 s fait pour les appels Supabase. Voir le parseur.
+        delai = getattr(self.args, "scheduled_tasks_timeout_seconds", None) or self.args.timeout_seconds
+        debut = time.monotonic()
         try:
             proc = subprocess.run(
                 ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
                 capture_output=True,
                 text=True,
-                timeout=self.args.timeout_seconds,
+                timeout=delai,
             )
             raw = (proc.stdout or "").strip()
             data = json.loads(raw) if raw else []
@@ -1943,10 +1947,12 @@ class Monitor:
                 "windows_tasks",
                 "unknown",
                 f"Impossible de lire les taches planifiees: {exc}",
-                {"error": str(exc)[:300]},
+                {"error": str(exc)[:300], "delai_s": delai,
+                 "duree_lecture_s": round(time.monotonic() - debut, 1)},
                 severity="unknown",
             )
             return
+        duree_lecture = round(time.monotonic() - debut, 1)
         if isinstance(data, dict):
             data = [data]
         problems: list[dict[str, Any]] = []
@@ -1988,7 +1994,8 @@ class Monitor:
             "windows_tasks",
             summary_status,
             f"Taches planifiees: {len(data)} suivies, {len(problems)} en anomalie",
-            {"tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems]},
+            {"tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems],
+             "duree_lecture_s": duree_lecture, "delai_s": delai},
         )
 
     def _sentinel_sample(self, sentinel: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
@@ -3686,6 +3693,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cron-stale-minutes", type=int, default=30)
     parser.add_argument("--document-storage-path", default=os.getenv("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
     parser.add_argument("--timeout-seconds", type=int, default=15)
+    # ⛔ 27/11/2026 -- LA CAUSE DES AVEUGLEMENTS (suite de la regle 5, sur son « oui, 60 s »).
+    #   La lecture des taches planifiees (PowerShell, Get-ScheduledTask) prenait le delai
+    #   GLOBAL de 15 s, fait pour les appels Supabase. Mesure le 27/11 a 17:48, au repos :
+    #   7,7 a 9,9 s pour 14 taches -- deja plus de la moitie du delai. Sous charge, elle le
+    #   depassait : 20 lectures ratees du 07/09 au 27/11, toutes « timed out after 15
+    #   seconds ». Elle a donc son propre delai, et la vue d'ensemble garde sa duree
+    #   (`duree_lecture_s`) pour voir venir le prochain mur. Le reste de la sonde garde 15 s.
+    #   Retour arriere : --scheduled-tasks-timeout-seconds 15.
+    parser.add_argument("--scheduled-tasks-timeout-seconds", type=int, default=60)
     parser.add_argument("--supabase-freshness-minutes", type=int, default=30 * 60)
     parser.add_argument("--delta-error-window-minutes", type=int, default=24 * 60)
     parser.add_argument("--worker-stale-default-minutes", type=int, default=28 * 60)
