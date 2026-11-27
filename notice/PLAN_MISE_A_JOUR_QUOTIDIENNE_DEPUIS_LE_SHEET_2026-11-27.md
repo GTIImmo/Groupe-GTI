@@ -576,6 +576,13 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
 - **Ni Hektor ni l'état d'une pièce.** Les 109 « antérieures » attendent ta décision D3.
 - Environ ½ à 1 jour.
 
+- ✅ **FABRIQUÉE le 27/11 au soir, à blanc vert** (carnet § 20.106).
+  - **229 dates** : 223 offres refusées, et ses 6 (3 offres acceptées, 3 compromis actifs), la date sans jamais l'état.
+  - **26 signalées** : 24 annulations antérieures à la 1re proposition (18 au 1er du mois), fa06e4e5 (deux offres
+    refusées), et YRUF0S9H (sa jumelle R27).
+  - Les 10 compromis du classeur sans date ne sont pas dans sa liste : ils attendent son mot.
+  - **À son accord.**
+
 **Étape 3 bis — les écritures sans risque, chez nous seulement** (ajoutée par lui le 27/11 au soir :
 « Je ne vois aucune raison d'attendre cinq étapes pour poser ce qui ne risque rien »).
 - **Les cases**, environ 840 :

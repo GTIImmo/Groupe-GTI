@@ -6534,6 +6534,51 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   reconnaissait que « saisie ») ne peut pas revenir. ⚠ RESERVE ECRITE AU PLAN (§ 7.1) : les 203 chaines sont soustraites
   POUR DE BON au recalcul de la nuit -- une part fausse ne se corrigera plus toute seule.
 - U0GQ3KTO (chaine 4385) dans SA LISTE A TRANCHER (plan § 8), avec les 6 conflits de commission.
+
+### 20.106 Le 27/11 (21) : L'ETAPE 3 FABRIQUEE, A BLANC VERT -- et LE POINT DE LA JOURNEE (a relire le 28/11 au matin)
+
+L'ETAPE 3 (dates d'annulation elargies, dates_annulation_etape3_generer_patch_2026-11-27.py, patron de la famille 3) :
+- 229 dates posables : 223 offres refusees (aucun compromis, seulement une offre refusee : sa regle), 3 offres acceptees et
+  3 compromis actifs (SES 6 : la date, JAMAIS l'etat). Les 109 anterieures restent dehors (sa decision).
+- 26 signalees, hors du patch : 24 annulations AVANT la 1re proposition de leur offre (18 tombent un 1er du mois -- le
+  Sheet note le MOIS -- et 6 a 2-5 jours de l'offre) ; fa06e4e5 (deux offres refusees : on ne choisit pas) ; YRUF0S9H (sa
+  jumelle R27 : son double PAOLONE, vide par decision). Et les 10 compromis annules sans date (nos copies du 16/11,
+  1001521, 1001527...) ne sont pas dans sa liste : NON poses, a lui.
+- Gardes : etat attendu de chaque piece, case VIDE, empreinte d'avant, Sheet du jour = l'image du 84 (un GET), R27.
+- A BLANC VERT : 229 dates, l'etat et le reste intacts, empreinte apres 61c73e1a ; relu apres : 472 dates, journal vide.
+  Le patch reel porte l'empreinte d'apres. A SON ACCORD.
+
+══ LE POINT DU 27/11 -- CE QUI EST FAIT, ET CE QUI L'ATTEND ══
+
+FAIT (en base, relu, et le plus souvent controle aussi par son propre chemin) :
+- le matin : la vague des six (colonne A, 4 731 cases relues justes, 10:09) ; le partage DECHAUD 50 / GENTES 50 sur la
+  chaine 3647 (10:27) ; la constante LES_DEUX_DE_E du relecteur levee ; LES 47 (+2) -- famille 1 (9 ventes reglees + 9
+  factures, 11:03), familles 3 (23 dates) et 2 (4 chaines + 6 ventes, 11:52) ;
+- le socle du protocole EN BASE (5 tables, RLS, 0 droit ouvert) : 82 passages l'apres-midi, puis 83 (rouge, la trace) et
+  84 (vert) le soir -- 84 passages, 403 055 verdicts, relus a l'octet ;
+- le PLAN de la mise a jour quotidienne (notice/PLAN_MISE_A_JOUR_QUOTIDIENNE_DEPUIS_LE_SHEET_2026-11-27.md), valide dans
+  sa structure, D1-D11 tranches, pousse ;
+- R30a VALIDEE (le geste 6 dans le dossier) : passage 83 ROUGE (deux de SES decisions touchees -- lecon 32), corrigee,
+  passage 84 VERT (188 pieces) ; l'ecrivain, son relecteur et son classement lisent le 84 ;
+- L'ETAPE 3 BIS, ses trois lots JOUES : A (COMMENTAIRES + avis, 19:28), B (En attente de, 20:17), C (419 parts sur 203
+  chaines, 20:18) -- 4 628 notes, 18 389 parts dont 9 665 du classeur, les 9 notes saisies intactes ; LES AVIS : PREMIERE
+  COLONNE DU CLASSEUR ENTIEREMENT FINIE (2 283 / 393 / 2 414).
+- pousse : origin/main = d7315b5 (deux fusions sans reecriture des autres sessions).
+
+⏰ DEMAIN MATIN, AVANT TOUTE CHOSE (son mot) -- APRES 07:45 :
+    python -X utf8 -u phase2\checks	emoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger
+  la photo du 27/11 a 20:35 (cache : temoin_de_la_nuit_2026-11-27.json) contre la base : les 4 628 notes A L'OCTET, les
+  9 665 parts du classeur (dont les 419 du lot C sur 203 chaines -- la nuit doit les avoir SAUTEES), les 9 notes saisies,
+  les avis 2 283 / 393 / 2 414. ⛔ SI UN SEUL BOUGE : ON S'ARRETE ET ON CHERCHE. (+ les 472 dates d'annulation, a titre
+  d'information.) Et le 3647 de la veille : ses parts, pas l'empreinte globale.
+
+CE QUI L'ATTEND (ses decisions) :
+- jouer l'etape 3 (229 dates) ; les 24 dates anterieures a la 1re proposition (18 au 1er du mois) ; fa06e4e5 ; les 10
+  compromis du classeur sans date ;
+- SA LISTE A TRANCHER (plan § 8) : U0GQ3KTO (la part qui differe) ; les 6 conflits de commission (78bb247a, 650e65c8,
+  b7aabaf3, ad8681cd, EAQJ9D0T, KO6QPUV7) ; ses cas en attente des 47 ;
+- plus tard : les 58 orphelins seuls dans leur dossier (geste de chainage) ; la Commission TTC chez nous (etape 4, ses six
+  controles) ; puis la boucle qui regarde (etape 5).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
