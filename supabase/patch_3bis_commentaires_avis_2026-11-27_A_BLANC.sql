@@ -4,6 +4,13 @@
 -- ⛔ SANS commit : il finit par une erreur VOULUE, tout est annule.
 
 begin;
+-- 0. ⛔ LES 9 NOTES SAISIES DANS L'APP, NOMMEES : 1001384, 1001388, 1001389, 1001390, 1001391, 1001392, 1001393, 1001394, 1001395 -- on prend leur empreinte AVANT
+create temp table _saisies_avant on commit drop as select app_affaire_id, md5(texte) m, origine
+  from public.app_affaire_note where origine = 'saisie';
+do $$ begin
+  if (select string_agg(app_affaire_id::text, ',' order by app_affaire_id) from _saisies_avant) <> '1001384,1001388,1001389,1001390,1001391,1001392,1001393,1001394,1001395' then
+    raise exception '⛔ garde : les notes saisies ne sont plus les 9 nommees -- rien n''est ecrit'; end if;
+end $$;
 -- 1. LA GARDE : rien de ce lot n'est deja pose, et les sauvegardes n'existent pas
 do $$ begin
   if exists (select 1 from public.app_affaire_note where ecrit_par = 'classeur:3bis:2026-11-27')
@@ -18,11 +25,11 @@ alter table public.app_classeur_avis_avant_3bis_20261127 enable row level securi
 -- 3. LES NOTES NEUVES (47)
 insert into public.app_affaire_note (app_affaire_id, app_dossier_id, app_chaine_id, origine, texte, ecrit_par)
 values
-  (30825, 7589455, 30825, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 19.11 PUV 8 Décembre à11h
+  (30825, 7589455, 30825, 'classeur:G', 'G : le commentaire -- 19.11 PUV 8 Décembre à11h
 17.11 OFFRE ok
 CI ok', 'classeur:3bis:2026-11-27'),
-  (17770, 1366312, 17769, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (1000313, 2407417, 30699, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 16.11 VENTE mercredi 16 décembre 2026 de 18:00
+  (17770, 1366312, 17769, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (1000313, 2407417, 30699, 'classeur:G', 'G : le commentaire -- 16.11 VENTE mercredi 16 décembre 2026 de 18:00
 29.10 ADP mess tél à NADEGE : FISE reçue par la cliente. ODP va suivre. La client ne veut signer que mi-décembre.
 ADP pj. Capital protect (Sophie Bernaud) du 16 oct.
 22.10 ADP demandée à Nadège
@@ -37,52 +44,52 @@ ok Sonia Chapignac
 CI ok
 Notaire : Barbier à Tence pour les deux parties . 
 "Je suis en attente du reste des signatures mais j’ai eu l’accord oral . J’ai également un accord de principe que je joindrais au dossier. "', 'classeur:3bis:2026-11-27'),
-  (30830, 1384856, 30830, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 18.11 OFFRE ok MDR car MDV 18053 expiré. Vu avec Franck 100% Nico
+  (30830, 1384856, 30830, 'classeur:G', 'G : le commentaire -- 18.11 OFFRE ok MDR car MDV 18053 expiré. Vu avec Franck 100% Nico
 CI ok
 Nico : "Le contrôle de raccordement tout à l''égout a eu lieu ce matin.
 En principe Maître BRISSON à Thiers, devrait s''occuper du dossier tout seul et on devrait faire une vente directe. J''attends que M. BELOEIL me confirme ça.
 Dès réception du rapport du contrôle, j''envoie le dossier complet au notaire"', 'classeur:3bis:2026-11-27'),
-  (30837, 1344361, 30837, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 24.11 OFFRE pas encore contresignée
+  (30837, 1344361, 30837, 'classeur:G', 'G : le commentaire -- 24.11 OFFRE pas encore contresignée
 19.11 OFFRE prix mandat signé 3 gérants de la SCI en attente acceptation vendeurs
 CI ok', 'classeur:3bis:2026-11-27'),
-  (30845, 7589154, 30845, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 24.11 OFFRE ok
+  (30845, 7589154, 30845, 'classeur:G', 'G : le commentaire -- 24.11 OFFRE ok
 CI ok', 'classeur:3bis:2026-11-27'),
-  (7910, 1342473, 7908, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (14228, 1356559, 14224, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (30842, 1388373, 30842, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 23.11 OFFRE ok CI-ok
+  (7910, 1342473, 7908, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (14228, 1356559, 14224, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (30842, 1388373, 30842, 'classeur:G', 'G : le commentaire -- 23.11 OFFRE ok CI-ok
 🅿 simul. en attente', 'classeur:3bis:2026-11-27'),
-  (30820, 1388303, 30820, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 20.11 PUV lundi 7 décembre 2026 à 11 h 00.
+  (30820, 1388303, 30820, 'classeur:G', 'G : le commentaire -- 20.11 PUV lundi 7 décembre 2026 à 11 h 00.
 16.11 OFFRE ok 🏠cpmis signé
 CI ok', 'classeur:3bis:2026-11-27'),
-  (19133, 1368501, 19131, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- ind.TROUILLET SOUVIGNHEC/POCHELON PARLANTI - 80 000 € -', 'classeur:3bis:2026-11-27'),
-  (30824, 3824828, 30824, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 17.11 OFFRE ok cdt : Cub + prêt + absence pollution des sols + absence cuves ou assainissement + absence servitude
+  (19133, 1368501, 19131, 'classeur:G', 'G : le commentaire -- ind.TROUILLET SOUVIGNHEC/POCHELON PARLANTI - 80 000 € -', 'classeur:3bis:2026-11-27'),
+  (30824, 3824828, 30824, 'classeur:G', 'G : le commentaire -- 17.11 OFFRE ok cdt : Cub + prêt + absence pollution des sols + absence cuves ou assainissement + absence servitude
 CI ok', 'classeur:3bis:2026-11-27'),
-  (6393, 1338568, 6391, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- BARRI/DELAUNAY - 254 000 €', 'classeur:3bis:2026-11-27'),
-  (4236, 1391873, 4234, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- ind.Ledda/Bonnefoi - 278 000 €', 'classeur:3bis:2026-11-27'),
-  (7115, 1340968, 7115, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (19154, 1368538, 19152, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (4783, 1336308, 4781, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (3650, 1390780, 3647, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- LAFFONT/POTTIER - 460 000 €', 'classeur:3bis:2026-11-27'),
-  (27987, 1384486, 27984, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (2490, 1387286, 2490, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (17366, 1365248, 17366, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (9372, 1345612, 9370, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- Blanchet/Vallentin et Charvolin - 200 000 €', 'classeur:3bis:2026-11-27'),
-  (27714, 1383988, 27712, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (6590, 1339151, 6588, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (28145, 1384835, 28145, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- Messadaa / Chambon - 92 000 €', 'classeur:3bis:2026-11-27'),
-  (24620, 1377830, 24618, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (4930, 1336492, 4928, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (15170, 1359102, 15169, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (27170, 1383342, 27170, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (14121, 1356267, 14119, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- Lucht/Simonet vendu avec réf 3955', 'classeur:3bis:2026-11-27'),
-  (2165, 1385496, 2163, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- RIVOLIER/sarl BEMATID (Berthaut) - 42 000 €', 'classeur:3bis:2026-11-27'),
-  (26698, 1382351, 26695, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (6341, 1338495, 6341, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (1029, 1347703, 1027, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (4414, 1392151, 4412, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- C02/3Reporté ok20/1 Auboyer déssaisie LONG Juge surendettement vend. > MDR', 'classeur:3bis:2026-11-27'),
-  (7122, 1340983, 7122, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- Losego Marthon/Lagrenee - 16 000 €', 'classeur:3bis:2026-11-27'),
-  (27528, 1383776, 27527, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- réglée', 'classeur:3bis:2026-11-27'),
-  (30827, 3654535, 30713, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 17.11 PUV ok
+  (6393, 1338568, 6391, 'classeur:G', 'G : le commentaire -- BARRI/DELAUNAY - 254 000 €', 'classeur:3bis:2026-11-27'),
+  (4236, 1391873, 4234, 'classeur:G', 'G : le commentaire -- ind.Ledda/Bonnefoi - 278 000 €', 'classeur:3bis:2026-11-27'),
+  (7115, 1340968, 7115, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (19154, 1368538, 19152, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (4783, 1336308, 4781, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (3650, 1390780, 3647, 'classeur:G', 'G : le commentaire -- LAFFONT/POTTIER - 460 000 €', 'classeur:3bis:2026-11-27'),
+  (27987, 1384486, 27984, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (2490, 1387286, 2490, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (17366, 1365248, 17366, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (9372, 1345612, 9370, 'classeur:G', 'G : le commentaire -- Blanchet/Vallentin et Charvolin - 200 000 €', 'classeur:3bis:2026-11-27'),
+  (27714, 1383988, 27712, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (6590, 1339151, 6588, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (28145, 1384835, 28145, 'classeur:G', 'G : le commentaire -- Messadaa / Chambon - 92 000 €', 'classeur:3bis:2026-11-27'),
+  (24620, 1377830, 24618, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (4930, 1336492, 4928, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (15170, 1359102, 15169, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (27170, 1383342, 27170, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (14121, 1356267, 14119, 'classeur:G', 'G : le commentaire -- Lucht/Simonet vendu avec réf 3955', 'classeur:3bis:2026-11-27'),
+  (2165, 1385496, 2163, 'classeur:G', 'G : le commentaire -- RIVOLIER/sarl BEMATID (Berthaut) - 42 000 €', 'classeur:3bis:2026-11-27'),
+  (26698, 1382351, 26695, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (6341, 1338495, 6341, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (1029, 1347703, 1027, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (4414, 1392151, 4412, 'classeur:G', 'G : le commentaire -- C02/3Reporté ok20/1 Auboyer déssaisie LONG Juge surendettement vend. > MDR', 'classeur:3bis:2026-11-27'),
+  (7122, 1340983, 7122, 'classeur:G', 'G : le commentaire -- Losego Marthon/Lagrenee - 16 000 €', 'classeur:3bis:2026-11-27'),
+  (27528, 1383776, 27527, 'classeur:G', 'G : le commentaire -- réglée', 'classeur:3bis:2026-11-27'),
+  (30827, 3654535, 30713, 'classeur:G', 'G : le commentaire -- 17.11 PUV ok
 p12 🅿80K 20a 3.7% < 13 JANV
 ****
 16.11 PUV copie demandée à Sandrine
@@ -93,26 +100,26 @@ p12 🅿80K 20a 3.7% < 13 JANV
 06.10 OFFRE : manque commune du bien et nom de Mme Boursier dans les propriétaires. 
 CI ok
 Etude de financement CM ok', 'classeur:3bis:2026-11-27'),
-  (30848, 7589465, 30848, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 25.11 OFFRE ok
+  (30848, 7589465, 30848, 'classeur:G', 'G : le commentaire -- 25.11 OFFRE ok
 CI ok 
 Le contrôle assainissement est prévu le mardi 1er décembre
 Le notaire en charge du dossier devrait être Maître LABIDOIRE à Thiers', 'classeur:3bis:2026-11-27'),
-  (30826, 1387075, 30826, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 25.11 PUV rdv demandé à Marion
+  (30826, 1387075, 30826, 'classeur:G', 'G : le commentaire -- 25.11 PUV rdv demandé à Marion
 17.11 OFFRE charge acq. avec MDR alors que MDV 18286 en cours et publié charge vendeur. Mess. tél. à Marion pour savoir pk ? Elle a vu avec Franck, pour éviter de négocier les honos.
 CI ok', 'classeur:3bis:2026-11-27'),
-  (30841, 4052215, 30841, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 23.11 OFFRE ok CI ok
+  (30841, 4052215, 30841, 'classeur:G', 'G : le commentaire -- 23.11 OFFRE ok CI ok
 Mme CHASTAGNER divorcée le 3sept.2026 de M. LINOSSIER signe la vente de sa maison avec Stéphanie le 17déc.2026', 'classeur:3bis:2026-11-27'),
-  (30836, 5701204, 30836, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 25.11 OFFRE ok
+  (30836, 5701204, 30836, 'classeur:G', 'G : le commentaire -- 25.11 OFFRE ok
 notaire Maître Latour à Craponne et envoi du dossier semaine dès réception des diags prévus vendredi. 
 20.11 Finalement M. Flory ne voulant pas régler les 4000€ préfère vendre. En attente offre contresignée
 19.11 Envoi à Marion d''un protocole d''accord prévoyant le règlement d''une indemnité à hauteur de nos honoraires pour qu''elle le fasse signer et récupère le chèque. Une facture d''indemnité lui sera envoyé acquittée une fois le chèque encaissé.
 18.11 Marion a eu le vendeur, il persiste et ne veut plus vendre, attendra le décès de son père, il s''agit de son ancien hangar de menuiserie, mais serait ok pour payer les honoraires d''agence.
 10.11 OFFRE prix mandat sans prêt.
 LITIGE : le père du vendeur ne veut pas que son fils vende à ce prix (donateur avec  interdiction de vendre sans son accord).', 'classeur:3bis:2026-11-27'),
-  (30809, 7589284, 30809, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 10.11 OFFRE 17000€ H1000€ signée
+  (30809, 7589284, 30809, 'classeur:G', 'G : le commentaire -- 10.11 OFFRE 17000€ H1000€ signée
 MANDAT 17000€ H1500€
 CI ok', 'classeur:3bis:2026-11-27'),
-  (30821, 1386619, 30821, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 24.11 PUV Mardi 8 décembre, à 15 heures.
+  (30821, 1386619, 30821, 'classeur:G', 'G : le commentaire -- 24.11 PUV Mardi 8 décembre, à 15 heures.
 17.11 Notaire : Maître  BIONDA / Tél : 04 66 57 00 25 / Mail : aramon@30013.notaires.fr.
 "Concernant la date de la signature de l'' acquisition, j''aimerais qu'' elle soit au 15 février 2027 ?
 Le dépôt de garantie serait de 3 % , soit la somme de 2382€ ?
@@ -121,21 +128,21 @@ Cordialement  Franck SICARD"
 16.11 OFFRE ok
 CI ok
 Notaire acq. en attente', 'classeur:3bis:2026-11-27'),
-  (30843, 1386927, 30843, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 23.11 OFFRE ok CI-A ok SIMUL BP
+  (30843, 1386927, 30843, 'classeur:G', 'G : le commentaire -- 23.11 OFFRE ok CI-A ok SIMUL BP
 BOREL Sebastien 0612211141 agnes.borel@live.fr
 Notaire  Maître Begon à Celles sur Durolle pour le dossier Serre : Vendeurs et acquéreurs', 'classeur:3bis:2026-11-27'),
-  (30801, 7589442, 30801, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 20.11 LISTE MOBILIER en attente : Elodie doit faire une liste de mobilier pour le 27 mais ses acq. sont partis de la région et elle devait voir avec eux les meubles restants. Je lui ai dit de le faire une visio.
+  (30801, 7589442, 30801, 'classeur:G', 'G : le commentaire -- 20.11 LISTE MOBILIER en attente : Elodie doit faire une liste de mobilier pour le 27 mais ses acq. sont partis de la région et elle devait voir avec eux les meubles restants. Je lui ai dit de le faire une visio.
 16.11 rdv C27/11-9h à confirmer
 M. Laurembourle achèterait également un PP par Elodie, en cours de négo.
 13.11 DOSSIER transmis aux notaires
 06.11 OFFRE SCI ok MDR ok mais en nom propre
 CI ok
 L''acquéreur (sci royale) sera représenté par Maître Monteiro Nuno (idem vente st etienne sur usson Lilou Martins), et le vendeur par Maître Rimoux Rogue Christelle à St Amand Tallende.', 'classeur:3bis:2026-11-27'),
-  (30829, 1387873, 30829, 'classeur:G', 'G : COMMENTAIRES du classeur, relu le 26/11/2026 -- 18.11 OFFRE ok sous réserve liste des matériaux (V) pour finir les travaux (A)
+  (30829, 1387873, 30829, 'classeur:G', 'G : le commentaire -- 18.11 OFFRE ok sous réserve liste des matériaux (V) pour finir les travaux (A)
 Ils ont rdv ce Dimanche ensemble pour lister.
 CI ok', 'classeur:3bis:2026-11-27');
 -- 4. LES PARAGRAPHES DATES AJOUTES (78 pieces) -- le texte d'avant reste intact au-dessus
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] PB parcelle d''accès au garage (AZ-430 10m²) CNPF non propriétaire (succ. de 7 propriétaires)
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] PB parcelle d''accès au garage (AZ-430 10m²) CNPF non propriétaire (succ. de 7 propriétaires)
 
 31.08.2026 rpse CNPF :
 vous avez pris contact avec notre ingénieur territorial Monsieur Geoffroy que je mets en copie et qui a pris la suite de Monsieur Couvin, parti à la retraite. J''ai tenté de vous joindre à l''instant mais votre ligne était occupée et la personne qui a pris l''appel m''a confirmé que je pouvais vous envoyer ce mail d''explication.
@@ -235,7 +242,7 @@ Delphine BLANCHARD
 15:14 20 mars 2025
 Christèle a repris contact avec CNPF et M. Machabert qui souhaitent toujours poursuivre l''affaire et sont ok pour changer de notaire. Elle envoie le dossier à Me Chalet
 Le dossier avait été annulé Me Bonnichon ne cherchant aucune solution.' where app_affaire_id = 3699;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 DP voisin : demande à Claire si elle a réussi à le voir ?
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 DP voisin : demande à Claire si elle a réussi à le voir ?
 >> "non après 2 courriers mis dans sa boite non plus mais Jean marc a contacté un avocat et un courrier va lui être envoyé cette semaine avec les mentions de l''avocat et les répercussions et préjudice causé s''il ne se manifeste pas..."
 16.11 DP voisin point demandé à Claire, recours tiers ? Claire a laissé des courriers dans la boîte aux lettres sans réponse. Elle doit y passer à nouveau ce jeudi. La DP a plus de 15ans donc pas de recours possible.
 04.11 AVNT signé pj.
@@ -270,7 +277,7 @@ CI ok
 18.06 OFFRE ok sans condition
 CI-A et notaire en attente
 MANDAT expiré 14mai2026' where app_affaire_id = 7106;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 AVNT signé de l''acq. et transmis à Me Regent pour signatures vendeurs. En attente.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 AVNT signé de l''acq. et transmis à Me Regent pour signatures vendeurs. En attente.
 06.11 AVNT tjrs pas signé car le notaire avait laissé un partie stabilotée non complétée, du coup il faut que les notaires se mettent d''accord. Me Regent est très difficilement joignable.
 30.10 AVNT signé ?
 23.10 AVNT signé ? Les vendeurs ne l''ont tjrs pas signé, Stéphanie a relancé le notaire.
@@ -310,7 +317,7 @@ En attente de la réponse officielle de la mairie
 01.10 PA déposé dans le délai. M. Lewandowski lui envoie les docs. Par contre, il a rdv avec la mairie car elle l''oblige à passer sur la voirie de l''OAP à côté (cogecoop+Loire Habitat) alors que le projet de l''OAP a été validé sans voirie... Cela modifierai tout le projet. + revoir le nbre de maison à la baisse (4) mais ça, ça ne poserait pas de pb.
 26.9 PA déposé ? Stéphanie l''appelle et me tient informée
 ind. Varona / Lewandowski Cie Immobilière d''Amenagement 415 000 €' where app_affaire_id = 9965;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 Dernière relance SMS. Franck n''engagera pas de frais de procédure si pas de réponse.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 Dernière relance SMS. Franck n''engagera pas de frais de procédure si pas de réponse.
 16.11 Fin des 15j pour paiement : Vu Franck : faire une relance d''ici fin de semaine
 30.10 AR ce jour
 26.10 LRAR Mise en demeure de paiement à Mme Bouthier et M. Guilloton
@@ -354,7 +361,7 @@ Par contre j''ai relancé le SGEB, mais le gars qui gère les assainissements in
 "Elle est un peu poussiéreuse depuis le temps que je la garde, mais voici ci-jointe l''offre d''achat de Mr Guilloton et Mme Bouthier pour le bien de Mr et Mme Staraci à Champagnac le Vieux.
 Dossier quasi complet, j''attends le retour du SPANC pour caler un rdv pour le contrôle d''assainissement.
 Je mets les CNI acquéreurs sous Hektor."' where app_affaire_id = 15854;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 16.11.2026 cf suivi sur Agenda Delph. PIECES sur Drive Delph. dossier "LITIGES"
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 16.11.2026 cf suivi sur Agenda Delph. PIECES sur Drive Delph. dossier "LITIGES"
 27.10.2026 RDV TEL HORDOT :
 Fuites toit terrasse p.15 : problème d''étanchéité évoqué au cpmis
 DPE D : présence d''une Pompe à chaleur déconnectée p19 "système de chauffage" prise en compte dans le DPE. DPE commandité par la fille de Mme Faurite titulaire d''une habilitation familiale pour représenter sa mère (pas commandé par GTI)
@@ -386,7 +393,7 @@ Les avis peuvent être envoyés aux deux parties.
 Delphine BLANCHARD 29 août 2024
 CI toutes ok
 Delphine BLANCHARD' where app_affaire_id = 16787;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 rdv GUY : relance Stéphanie.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 rdv GUY : relance Stéphanie.
 >> Je n''ai toujours pas eu de retour de sa part, et il ne me répond pas non plus suite au message vocal que je lui ai laissé.
 10.11 rdv VEND.+GUY+GTI pas fixé, Guy ne lui a pas encore répondu.
 03.11 rdv VEND.+GUY+GTI : 
@@ -509,7 +516,7 @@ Delphine BLANCHARD
 13:59 13 mars
 Stéph a eu Guy au tél : 
 PC retardé car études complémentaires demandées en cours d''execution.' where app_affaire_id = 16792;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 Les venderesses sont disponibles mais elles ne se déplaceront pas pour le rendez-vous
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 Les venderesses sont disponibles mais elles ne se déplaceront pas pour le rendez-vous
 Le notaire de l’acquéreur vient de reprendre contact avec moi, le rendez-vous est finalement décalé au 21 décembre prochain à 14 heures (en visio).
 J’informerai Mesdames VAGANAY-MARION ainsi que le liquidateur de cette modification.
 19.11 mess laissé aux Mmes Marion pour excuser GTI
@@ -540,7 +547,7 @@ p9 dépôt PC 30 sept. PC 30 janv.27
 01.04 OFFRE ok
 CI-A demandée à Sylvie
 ! MANDAT expire le 20 avril 2026' where app_affaire_id = 19409;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 17.11 ODP tél à M. Fuzier : il a passé les 10 jours ODP transmis à son notaire directemnt, mais il a demandé un avenant pour prolonger la promesse pour une signature en janvier 
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 17.11 ODP tél à M. Fuzier : il a passé les 10 jours ODP transmis à son notaire directemnt, mais il a demandé un avenant pour prolonger la promesse pour une signature en janvier 
 04.11 ODP redemandée à M. Fuzier (mail)
 30.10 ODP+VENTE : tél à Dumas : Caroline la clerc a bien eu mon mail et me répondra dès que possible...
 27.10 ODP+VENTE : mail à Me Dumas pour savoir si ODP ok et me prévenir dès qu''un rdv sera fixé ?
@@ -599,7 +606,7 @@ Et engagement du vendeur sur l''enlèvement des souches sur la totalité de la p
 09.01 Dossier envoyé à Me Rocher
 06.01 OFFRE en attente signature vendeur prix mandat
 Envoi LRAR à Monaco ce jour.' where app_affaire_id = 19415;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11.2026 PB après vente : les acq ne reproche plus que l''assainissement mais des vices cachés, notamment d''humidité, moisissures et demandent l''annulation de la vente. Nadège ne sait pas exactement où ils en sont de la procédure. Un expert, payé par acq. et vend. pour moitié chacun, est passé et a indiqué que les vendeurs ne pouvaient pas ignorer les vices. L''avocat des vendeurs est pessimiste suite au passage de l''expert 40K de travaux si vente pas annulée. Ils demandent à Nadège une attestation qui indiquerait qu''au moment des visites la maison était propre et saine, sans aucune odeur d''humidité. > FRANCK ne veut pas que l''on intervienne pour l''une ou l''autre partie tant que l''agence n''est pas sollicité par un juge.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11.2026 PB après vente : les acq ne reproche plus que l''assainissement mais des vices cachés, notamment d''humidité, moisissures et demandent l''annulation de la vente. Nadège ne sait pas exactement où ils en sont de la procédure. Un expert, payé par acq. et vend. pour moitié chacun, est passé et a indiqué que les vendeurs ne pouvaient pas ignorer les vices. L''avocat des vendeurs est pessimiste suite au passage de l''expert 40K de travaux si vente pas annulée. Ils demandent à Nadège une attestation qui indiquerait qu''au moment des visites la maison était propre et saine, sans aucune odeur d''humidité. > FRANCK ne veut pas que l''on intervienne pour l''une ou l''autre partie tant que l''agence n''est pas sollicité par un juge.
 
 16.01.2026 PB après vente : les acq demandent 10K aux vendeurs (amis de Nadège) car présence d''une fosse septique non indiquée au compromis : devis mise en conformité + indemnité suite dégradations débordement de la fosse et frais d''huissier.
 Ils étaient prêts à payer la moitié de la mise en conformité mais les acq n''ont pas attendu pour leur envoyer la LRAR.
@@ -666,7 +673,7 @@ verso Giry Ludovic
 verso Sagnol Julien
 - ADP
 - dépôt DP régul panneaux' where app_affaire_id = 19634;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 FOURNIER a demandé les coordonnées de l''acq. à Nico pour le bornage > transmis ce jour.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 FOURNIER a demandé les coordonnées de l''acq. à Nico pour le bornage > transmis ce jour.
 19.11 VENTE 03 décembre à confirmer car le notaire attend le PV de bornage de M. Fournier, géomètre pour une borne manquante en haut à droite de la parcelle. Nico l''a déjà relancé à plusieurs reprises. Christiane Salichon ne l''a tjrs pas signé (très particulière, ne veut plus rien signer, s''oppose à ses co-indivisaires systématiquement)
 18.11 VENTE rdv demandé à Nico mess. tél.
 03.11 AVNT DB30/10 > 11/12 signé Christiane pj. Nico a eu conf. que les autres vendeurs ont également signé mais n''aura pas le doc (rétention notaire Layet)
@@ -720,7 +727,7 @@ Je me suis pressé pour faire Tence / St Etienne chez Maître Gevrinchy.... Rdv 
 30.9 CI ok. PUV le 20oct. à confirmer
 24.9 CI tjrs manquante. Dossier envoyé aux notaires mais pas encore de rdv
 19.9 CI M. Grange demandée à Nico' where app_affaire_id = 23881;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 18.1 VENTE  8 décembre à 18H.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 18.1 VENTE  8 décembre à 18H.
 13.11 ODP ok pj. Transmise à Me Sauret par Nico pour rdv VENTE.
 Antoine : "Comme convenu au téléphone, voici en PJ l’offre de prêt concernant l’achat de Mme Da Silva et Mr Croze.
 Ils pourront la signer à partir du 24 novembre. Tous les feux sont donc aux verts pour une signature à partir du vendredi 27 novembre."
@@ -764,7 +771,7 @@ Céline : " le dossier est parti aujourd''hui chez Sauret. J''ai dû attendre ca
 CI ok
 SIMUL Vousfinancer du 21.04.2026 pj.
 CONTACTS : Gérard (n° de son épouse), Bernard (fixe à env. 9h), Sophie prévient son frère (Fréderic) et sa mère (Anita)' where app_affaire_id = 27285;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] CLE en agence CONTACT (V) Mme Tholy 0760231296 (A) M. Nicole (pasteur) 06.52.77.32.84
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] CLE en agence CONTACT (V) Mme Tholy 0760231296 (A) M. Nicole (pasteur) 06.52.77.32.84
 17.11 la clerc Mme Lhermet demande à L. Rocher de me rappeler
 17.11 Mme Tholy n''a aucune nouvelle, elle a eu confirmation que la demande a bien été transmise au Ministère mais à ce jour, n''a reçu aucune réponse.
 10.11 mess. tél à Mme Tholy pour faire un point
@@ -816,7 +823,7 @@ CI ok
 12.01 OFFRE en attente signature du DG de la fondation, la prieure générale (à Versaille) et la sœur (à Tence) qui s''occupe du dossier ont donné leur accord verbal mais le DG n''a tjrs pas signé. Sylvie a envoyé le dossier à Lucas Rocher qui prépare le projet de la PUV, il fera signer directement la PUV.
 HONO. divisés par 2 car acq. trouvé par le vend.
 CI-A demandées à Sylvie' where app_affaire_id = 28569;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 VENTE 1er décembre à 17h. Date confirmée seulement ce matin.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 VENTE 1er décembre à 17h. Date confirmée seulement ce matin.
 19.11 VENTE reportée au 01 décembre à confirmer par le notaire.
 Cause : SCI soumise à la loi Scrivener, fonds pas dispos pour le 20 nov.
 13.11 VENTE 20 novembre 10h
@@ -874,7 +881,7 @@ notaire: Maître M. LETESSIER Norbert 42570 à St-Héand
 Date promesse de vente à confirmer par les parties, a priori le 11 mai à 15h.
 20.04  OFFRE ok
 Choix notaire à définir. CI acquéreurs en attente de réception.' where app_affaire_id = 28703;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 17.11 VENTE confirmée  lundi 23 novembre. Le notaire dit qu''il n''y a pas d''erreur de sa part concernant la succession et que le vendeur a pour obligation de signer au plus tard le 30 NOV.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 17.11 VENTE confirmée  lundi 23 novembre. Le notaire dit qu''il n''y a pas d''erreur de sa part concernant la succession et que le vendeur a pour obligation de signer au plus tard le 30 NOV.
 13.11 VENTE à confirmer le 23 novembre mais 1 des frères qui a proc pour la gd mère et la soeur ne veut pas signer car le notaire aurait fait des erreurs sur la succession et leur devrait de l''argent. Il ne veut pas signer tant que le notaire n''a pas réglé le problème. Maubert et Meyer sont dans la même étude mais ont chacun un clerc qui s''occupe du dossier, Tatiana essaie d''appeler celui de Meyer car celle de Maubert ne lui a pas répondu.
 09.11 ODP CA reçue par les clients et transmis directement au notaire sans passer par le courtier ni Tatiana. Tatiana a essayé d''appeler le notaire + envoyé un mail pour RDV VENTE
 05.11 ODP pas encore éditée car Mme Richter a pris un nouvel emploi et a terminé sa période d''essai le 29 oct. La banque attend l''embauche définitive pour éditer l''ODP.
@@ -913,7 +920,7 @@ CI ok
 Je vais récupérer la CI ce soir normalement 
 27.04 OFFRE ok
 CI demandées à Tatiana Mme DESPIERRES ok manque M. RICHTER' where app_affaire_id = 28764;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11.2026 rpse VENDEURS ci-dessous transmise à M. VERNET 
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11.2026 rpse VENDEURS ci-dessous transmise à M. VERNET 
 isabelle.cros-1@orange.fr  "Bonjour, je suis la nièce de Mr Paul Jourdy . J’ai contacté EDF OA pour la résiliation du contrat. Les démarches sont en cours. J’ai dû contacter Enedis qui me dit qu’ils ont relancé plusieurs fois Mr Vernet pour une attestation de propriété qu’ils n’avaient toujours pas ( depuis août).Ils vont de nouveau le relancer je ne possède pas ce document. Le contrat de production photovoltaïque déclenche une prime de 900 euros qu’il touchera puisque mon oncle n’avait pas terminé les démarches sinon il faut passer le contrat à notre nom puis le transférer au sien.
 Je vous tiendrais informé de la suite.
 10.11.2026 PB étanchéité : M. Vernet a visité uniquement par beau temps pendant la canicule, n''a pas relevé de trace d''humidité. N''a pas fait de déclaration à l''assurance. L''eau s''infiltre par le faîtage et la cheminée dans la maison et par la véranda dans le garage au niveau du tableau électrique. M. Vernet vit dans des bâches et voudrait être mis en relation avec les vendeurs. FRANCK : demander à Sylvie (en arrêt) de contacter les vendeurs
@@ -937,7 +944,7 @@ p16 (V) réparation volets roulants < 12 juin
 29.04 CI-A + envoi Rocher demandé à Sylvie OK
 28.04 OFFRE ok
 CI M. VERNET demandée à Sylvie' where app_affaire_id = 28853;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 ODP demandée à Christèle ?
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 ODP demandée à Christèle ?
 04.11 AVNT signé pj. DB15nov.> 15DEC. ODP15oct.>15NOV.
 ODP : sms de Acq. "Oui les devis sont passés auprès de Nicolas et à la banque. Nous signons l’offre de prêt jeudi 12. Si tout va bien suite à cela la SCM sera créée avec le compte bancaire les statuts sont ok en attente. Voilà tout roule je vous tient informer suite au jeudi 12. Merci bonne journée"
 30.10 AVNT demandé à Christele
@@ -959,7 +966,7 @@ Je n’ai pas reçu l’extrait Kbis et les statuts. Je vous précise que cela n
 26.06 CI ok
 22.06 OFFRE ok
 CI-A + simul en attente' where app_affaire_id = 28897;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 VENTE reportée MARDI 15 DECEMBRE à 16 H 00 en VISIO.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 VENTE reportée MARDI 15 DECEMBRE à 16 H 00 en VISIO.
 06.11 VENTE fixée  lundi 23 novembre à 15H
 02.11 relance ARNAUD
 >> le notaire de banque doit contacter Me Breuil pour le RDV
@@ -978,7 +985,7 @@ CLAUSE SUBSTITUTION bien prévue p28
 03.07 PUV vendredi 17 juil.
 01.07 OFFRE ok
 CI ok' where app_affaire_id = 28914;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 ODP pj.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 ODP pj.
 19.11 idem relance Christine par mail
 >> offre reçue qui doit se signer à partir du 29.11..... Date de vente à définir
 18.11 AVNT signé ? mess tél à Christine 
@@ -1009,7 +1016,7 @@ congés Christine jusqu''au 5 juillet
 🅿 SIMUL AC COURTAGE GREGORY BASTY 04 73 92 25 19 du 07 mai 2026
 "Il me manque encore quelques documents pour envoyer les 2 dossiers chez Maître Labidoire."
 CI ok' where app_affaire_id = 28921;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 PC dépôt en attente SPANC :
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 PC dépôt en attente SPANC :
 " Bonjour Madame Reynaud,
 Merci pour votre message et pour votre suivi concernant le terrain à Ponsas.
 Nous comprenons tout à fait l''enjeu lié à l''échéance du 30 novembre prévue au compromis de vente et tenons à vous rassurer sur notre pleine mobilisation. Pendant la période estivale de juillet-août, l''avancement a été ralenti car, comme c''est souvent le cas à cette période, les architectes n''étaient pas disponibles pour répondre à nos consultations.
@@ -1022,7 +1029,7 @@ Nous ne manquerons pas de vous tenir informée dès que nous aurons le retour de
 21.07 mail à Corinne : est-ce que le notaire a tous les éléments pour fixer une date de compromis ?
 13.07 OFFRE ok VENTE 18406 + 18393
 CI ok' where app_affaire_id = 28944;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 PC mail à Nico pour qu''il relance son acq.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 PC mail à Nico pour qu''il relance son acq.
 23.10 PC pas encore déposé car l''architecte a fait des erreurs. Ne sera déposé que mi novembre
 EAU : le déplacement sera accordé avec permis
 🏡 Vfixée 4 novembre
@@ -1045,12 +1052,12 @@ rpse Me Barre : l''attend copie de la PUV par son confrère
 21.07 Promesse de vente le 5 août à 18h. 
 OFFRE+CNI ok
 Conditions : obtention PC+accord service des eaux déplacement conduite d''eau' where app_affaire_id = 28964;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 VENTE vendredi 4 décembre à 11h30 à l’Etude avec Maître BARRE.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 VENTE vendredi 4 décembre à 11h30 à l’Etude avec Maître BARRE.
 21.09 Vente Bien Mme M. REGNIER 18711 : C14sept. ODP14nov. DB14déc.
 25.06 PUV mercredi 5 août à 17h à l’Etude avec Maître BARRE.
 22.06 OFFRE ok
 CI ok' where app_affaire_id = 28970;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] M. Rosinski 06.40.64.48.16
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] M. Rosinski 06.40.64.48.16
 
 25.11 APPEL de CEGELEC pour avoir les coordonnées du nouveau propriétaire afin de signer une convention pour installer une armoire électrique à l''angle de la maison devant la haie.
 M. ROSINSKI : le rappeler vers 17h.
@@ -1073,7 +1080,7 @@ Prêt relais sur maison à Ste Sigolène pas GTI car c''est le père Rosinski qu
 15.07 offre Géraldine + CNI ok. Dossier envoyé ce jour à Me Lucht 
 13.07 OFFRE manque la signature de Géraldine
 CI-A en attente' where app_affaire_id = 28972;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] NE PAS APPELER Mme GARCIA (souffre de bipolarité), son mari se charge de venir signer avec elle ou proc.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] NE PAS APPELER Mme GARCIA (souffre de bipolarité), son mari se charge de venir signer avec elle ou proc.
 18.11 VENTE bien signée. ATTESTATION pj.
 28.10 VENTE 17 novembre 14 ou 16h à confirmer l''heure.
 20.10 rdv VENTE : relance Alice
@@ -1100,7 +1107,7 @@ Alice : J''ai eu une offre concernant le mandat 18645 qui a été acceptée par 
 Toutefois ils n''ont pas de mail, je leur ai envoyé par courrier l''offre à contresigner mais ils ne l''ont pas reçu donc je leur ai demandé de me faire un petit courrier d''acceptation qu''ils m''ont transmis par sms.
 Je vous joins donc l''offre des acquéreurs et l''acceptation à part.
 Je prépare les éléments pour le notaire.' where app_affaire_id = 28978;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 ODP : relance Nico > refusé car taux d''usure trop haut suite 300€ d''assurance pour Monsieur.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 ODP : relance Nico > refusé car taux d''usure trop haut suite 300€ d''assurance pour Monsieur.
 Demande de prêt refaite assurance au nom de Mme uniquement, attend un retour dans la semaine du CA
 AVNT pas nécessaire car CPMIS 
 12.11 ODP : Nico n''a pas rappelé, il s''en occupe
@@ -1123,7 +1130,7 @@ AVNT pas nécessaire car CPMIS
 28.07 mail à Nico pour attestation TAE + notaire vendeurs ?
 Il ne me manque que le test de raccordement au tout à l''égout qui est prévu le 23 juillet
 Vendeurs ne savent pas encore s''ils prennent Me Labidoire, Nico nous tient au courant' where app_affaire_id = 28979;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 G1 : rdv pas encore fixé. Sandrine avait bien prévenu son vendeur de l''obligation de la réaliser mais n''a pas voulu le faire tant que le notaire ne lui a pas confirmé.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 G1 : rdv pas encore fixé. Sandrine avait bien prévenu son vendeur de l''obligation de la réaliser mais n''a pas voulu le faire tant que le notaire ne lui a pas confirmé.
 PC : Sandrine relance Mme Klaja, car n''a pas encore eu le retour.
 16.11 rdv G1 + rpse PC demandés à Sandrine
 06.11 copie demandée à Sandrine
@@ -1139,7 +1146,7 @@ CI ok
 14.09 Mme Klaja veut voir d''abord le maire pour savoir si la construction est réalisable ou pas, la mairie aurait dit au vendeur et à Sandrine qu''elle ne répondrait pas à une demande de CU !?
 02.09 MANDAT exp. le 5 sept. 2026
 Conditions PC+en att. CU + zone Ub mais SEVEZO' where app_affaire_id = 28985;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 17.11 VENTE fixée 27 Novembre. La notaire s''est renseignée auprès du CRIDON pour passer la vente en l''état.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 17.11 VENTE fixée 27 Novembre. La notaire s''est renseignée auprès du CRIDON pour passer la vente en l''état.
 17.11 DP maison revenue négative. Stéphanie demande la DP de division à la mairie pour savoir exactement ce qui a été demandé car la notaire dit que la DP de division est lié à la construction de la parcelle voisine et à notre vente
 06.11 DP rpse mairie ? >> J''ai demandé a caler la date de vente quand meme.  On devrait tout a voir d ici 15 jours. J attends le retour du notaire.
 27 NOVEMBRE A 14H , soit pour la vente ou pour rediger la convention d''occupation 
@@ -1161,7 +1168,7 @@ p24 contrôle TAE avant vente
 CI-A relance Stéphanie
 31.07 OFFRE: adresse du bien vendu incomplète, manque code postal et ville
 MANQUE CNI A' where app_affaire_id = 28989;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 VENTE signée att. pj.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 VENTE signée att. pj.
 15.10 VENTE fixée 20 NOV. 9h30 > Emmanuelle a remplacé Vince''.
 08.10 Eu Mme VEROT, Mme DAVID, clerc Me Macret. RDV 20 nov. dans le matin, à confirmer Me Pauze
 07.10 ODP reçue
@@ -1180,7 +1187,7 @@ Me Pauze clerc : nicole.varlet@42031.notaires.fr
 (V) Madame Isabelle VEROT Téléphone mobile : 07.60.32.19.40 Courriel : isa.777@hotmail.fr
 (A) Monsieur Thomas EPALLE Téléphone mobile : 06.66.82.91.17 Courriel : thomas.epalle@icloud.com
 Madame Kathleen DAVID Téléphone mobile : 07.63.00.87.14 Courriel : kathleen_david@outlook.fr' where app_affaire_id = 28991;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 26.11 PUV ok M. Chauvet assisté de son curateur M. Bresson
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 26.11 PUV ok M. Chauvet assisté de son curateur M. Bresson
 p34 (V) enlèvement cuve fioul
 23.11 PUV copie demandée à Arnaud
 02.11 PUV fixée 20 novembre 14h30
@@ -1191,7 +1198,7 @@ M. Chauvet est en fait divorcé depuis le 13 nov. 2018, a acquis le bien le 8 ju
 11.09 Arnaud relance Me Latour
 04.09 OFFRE ok
 CI ok' where app_affaire_id = 28995;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 VENTE décalée au 4 décembre
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 VENTE décalée au 4 décembre
 13.11 VENTE 25 novembre à 18h30.
 12.11 ODP ok pj. p1 
 VENTE : "la date de la vente reste à confirmer pour le 27 novembre, je te le confirme rapidement.
@@ -1209,7 +1216,7 @@ p31 (V) accord mairie panneaux photovoltaiques
 07.08 PB HEKTOR ticket car l''offre n''apparaît pas sur le bien.
 La date de la promesse de vente est fixée au 4/09 à 17h chez Maître Robin
 CI-A' where app_affaire_id = 29001;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 CUb ok pj.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 CUb ok pj.
 19.11 VENTE 09 décembre à 11h chez Chassaint
 13.11 CUb + VENTE : relance Christele
 10.11 CUb : Christèle n''a pas reçu l''accord du CUb, il est indiqué sur le récépissé de dépôt, qu''en l''absence de réponse sous 2 mois, le récépissé vaudra CU d''information tacite (aucun intérêt puisque pas d''info...). Christèle a envoyé un mail au notaire ce jour et rappelle la clerc jeudi.
@@ -1220,7 +1227,7 @@ p12 CUb construction maison 120m²
 12.08 CI ok
 11.08 OFFRE ok
 CI acq en attente' where app_affaire_id = 29022;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 VENTE vendredi 4 décembre à 11h à l’Etude avec Maître BARRE.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 VENTE vendredi 4 décembre à 11h à l’Etude avec Maître BARRE.
 20.11 VENTE relance Christèle pour date rdv ?
 13.11 VENTE rdv fixé ? > pas de réponse
 05.11 ODP ok pj.
@@ -1233,7 +1240,7 @@ Mme M. REGNIER achètent 18638
 27.08 PUV lundi 14 septembre à 17h30
 27.08 OFFRE ok
 CI ok' where app_affaire_id = 30661;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 PRET VENDEUR accepté par notaire et parties ?
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 PRET VENDEUR accepté par notaire et parties ?
 18.11 PRET : Monsieur Meunier a eu trois refus prêts . Monsieur lui propose de faire un "prêt vendeur " . Il étudie sa proposition pour nous faire un retour définitif fin de semaine
 [*CREDIT VENDEUR l''accord est officialisé dans l''acte authentique de vente qui fixe les échéances, le taux et les garanties. Les intérêts (V) sont taxé à 31.4% Flat Tax ou 18.6%+barème impôt sur le revenu si intégrés dans les revenus.
 Obligation de déclarer le prêt Cerfa 2062.
@@ -1247,12 +1254,12 @@ Apport versé à la vente.]
 10.09 Puv fixée le 24 septembre 
 03.09 OFFRE ok
 CI en attente' where app_affaire_id = 30676;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 VENTE confirmée Jeudi 10 décembre à 15H.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 VENTE confirmée Jeudi 10 décembre à 15H.
 25.09 CPMIS ok "Je vous informe que la signature de l’acte de vente a été fixé au 10 décembre à 15h."
 SAFER à purger
 15.09 Compromis prévu le 24 septembre à 15H.
 OFFRE ok  CI ok' where app_affaire_id = 30681;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 La notaire a eu M. Celik, il a rdv ce mardi avec une autre banque.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 La notaire a eu M. Celik, il a rdv ce mardi avec une autre banque.
 12.11 rétractation : relance Manue pour qu''elle demande au notaire d''intervenir.
 09.11 rétractation : M. CELIK n''a pas encore transmis les refus. J''ai dit à Manue de passer par le notaire pour les obtenir si nécessaire.
 05.11 rétractation : M. CELIK a laissé un mess à Manue pour lui dire qu''un artisan a fait un devis à 70K et qu''il ne peut emprunter que 36K. 
@@ -1266,7 +1273,7 @@ p31 SERVITUDE CHAUDIERE "De plus, les parties déclarent que la chaudière se tr
 24.09 M. Celik achète finalement avec sa compagne Mme YILMAZ Médine 
 02.09 Condition sur offre : déplacement chaudière
 Compromis 28.09 à 17h' where app_affaire_id = 30687;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 VENTE 14 décembre à 14H
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 VENTE 14 décembre à 14H
 17.11 ODP pj.
 16.11 FISE CA pj. Nico averti qu''il ne s''agit pas de l''ODP mais les acq ont dû la recevoir à la suite.
 rappel CI-V à récupérer
@@ -1288,14 +1295,14 @@ Les diags sont prévus le 28 juillet et le test tout à l''égout le 21
 Notaire acq? : Je ne sais pas encore au sujet du notaire mais ils vont probablement prendre le leur.
 Je te tiens au courant.
 MANDAT DE RECHERCHE 18730 sur EM70300' where app_affaire_id = 30688;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 délai ODP rappelé à Christèle : elle a laissé un mess à Mme Abrial
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 délai ODP rappelé à Christèle : elle a laissé un mess à Mme Abrial
 30.10 PRET déposé à la BP
 30.09 PUV ok
 23.09 PUV mardi 29 septembre 2026 à 14h00 au bureau de Pradelles
 - congés Christèle 7 au 21 sept. -
 04.09 OFFRE ok
 CI ok' where app_affaire_id = 30691;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 PUV copie : mess tél relance Claire > REPORTÉ
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 PUV copie : mess tél relance Claire > REPORTÉ
 >> "nous avons reculé la date de signature car il s''est avéré qu''une cuve au fioul est tjours présente couplé à un systeme de chauffage au gaz, nous n''avions pas connaissance qu''elle était tjrs en service...
 La notaire de l''acquéreur souhaite que des devis soient faits rapidement et voire pour renégocier.
 Avec Mr Paillasseur nous nous occupons de faire intervenir plombier et pour la cuve de toute urgence pour rapidement signer , ce qui est la volonté de tous.
@@ -1313,7 +1320,7 @@ CI ok
 manque signature de M. Gaillard + CNI-A : mess tél à Claire
 18.09 OFFRE ok
 CI-A en attente' where app_affaire_id = 30692;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 26.11 FIN MANDAT
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 26.11 FIN MANDAT
 19.11 ADP x rappel délai ODP à Nico
 04.11 ADP : rdv CA 16 nov. PTZ
 29.10 Congés Nico retour semaine pro
@@ -1325,7 +1332,7 @@ p5 Lié à l''achat du bien Genestoux 18790
 04.08 OFFRE ok liée à Genestoux / Chataigner
 rdv diags 8/09
 CI ok BV ok' where app_affaire_id = 30701;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 ADP x
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 ADP x
 04.11 ADP : rdv CA 16 nov. PTZ
 CHAUDIERE : Nico demande la fact. d''entretien
 SERVITUDES :  OK formulaires signés par voisins transmis au notaire par Nico
@@ -1350,7 +1357,7 @@ diags rdv 8 sept.
 rdv ANC en attente SPANC
 CI ok BV ok MDR ok
 BIEN V810062813' where app_affaire_id = 30702;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 PUV copie relance Arnaud
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 PUV copie relance Arnaud
 23.11 PUV copie redemandée à Arnaud
 20.11 PUV copie demandée à Me Didier directement
 18.11 PUV copie tél à Arnaud : bien signé mais n''a tjrs pas reçu la copie. La secrétaire qui remplace celle partie en maternité est incompétente et fait beaucoup d''erreurs. Je lui ai dit de demander la copie à Mme Faudon si c''est plus rapide.
@@ -1363,7 +1370,7 @@ Il y a eu un décès dans la famille de Mme Chareyron."
 En attente de confirmation
 05.10 OFFRE ok 🅿+cub
 CI ok' where app_affaire_id = 30706;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] CLE à l''agence ACQ ne parlent pas français.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] CLE à l''agence ACQ ne parlent pas français.
 25.11 PRET relance mail M. Corjan rpse banque ?
 >> en attente réponse du CIC 
 mail de Mme Lhermet : "Madame, Bonjour,
@@ -1399,7 +1406,7 @@ Madame Monique VILATE, les acquéreurs et la traductrice seront présents. Je n�
 10.06 rdv PUV demandé à Sylvie
 04.06 OFFRE ok Acq. Ukrainiens offre signée en présence d''un traducteur.
 Financement prêt : ont pris rdv au CIC de Tence > refus' where app_affaire_id = 30709;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 VENTE 18 décembre à 11h.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 VENTE 18 décembre à 11h.
 16.11 retrait reçu en attente recours à l''agglo. puis rdv Vente
 04.11 retrait DP : LRAR rédigée pour M. Brechet à l''attention de la Mairie pour retrait de la DP envoyée à Elodie 
 03.11 retrait DP ok ? Non, la mairie n''a rien reçu.
@@ -1412,7 +1419,7 @@ M. CHEVALLIER doit retirer sa DP qui a été accordé par la mairie pour un chan
 03.09 OFFRE ancienne version + adresse incomplète bien vendu + manque nom du propriétaire. Elodie avertie
 CI ok
 MANDAT exp. 29 OCT. 2026' where app_affaire_id = 30715;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 PRET : M. Sauvadet vend sa ferme et souhaite acheter sans emprunt car le prêt relais lui couterait trop cher. Il signe sa PUV dans 15 jours, son acheteur ne sollicite pas de prêt. Il demande à reporter l''achat à courant février. Me Brion fera les 2 ventes (fermé le lundi). Sandrine la rappelle demain.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 PRET : M. Sauvadet vend sa ferme et souhaite acheter sans emprunt car le prêt relais lui couterait trop cher. Il signe sa PUV dans 15 jours, son acheteur ne sollicite pas de prêt. Il demande à reporter l''achat à courant février. Me Brion fera les 2 ventes (fermé le lundi). Sandrine la rappelle demain.
 16.11 ADP relance Sandrine
 08.11 ADP demandée à Sandrine
 08.10 CPMIS ok
@@ -1423,7 +1430,7 @@ CI : n''a pas mis les bonnes sur Hektor. Mess tél à Sandrine.
 21.09 DOSSIER envoyé début sem. dernière. Sandrine relance Me Brion pour le rdv de CPMIS. Elle a la CNI, les ajoute
 08.09 OFFRE ok
 CI en attente' where app_affaire_id = 30722;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 18.11 ADP redemandée à M. Palazon > il voit avec sa banque. Il souhaite refaire une visite pour reprendre des mesures > dit d''appeler Emmanuelle pour qu''elle l''organise et transmis à Emmanuelle.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 18.11 ADP redemandée à M. Palazon > il voit avec sa banque. Il souhaite refaire une visite pour reprendre des mesures > dit d''appeler Emmanuelle pour qu''elle l''organise et transmis à Emmanuelle.
 09.11 ADP demandée à M. Palazon mess tél. 07 81 46 93 42
 pierrickpalazon90@gmail.com
 >> M. Palazon a rdv ce samedi au CA. Il vient de perdre son grand-père et a repoussé le 1er rdv prévu. Il m''envoie l''attestation par mail.
@@ -1432,7 +1439,7 @@ pierrickpalazon90@gmail.com
 CI-V en attente
 Il faut trouver un logement à Mme Peyrache. Intéressée par l''apt de Vince > trop cher
 pas de MDV bien Hektor V480062922' where app_affaire_id = 30729;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 PUV ok
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 PUV ok
 - p7 DIA sera adressée dans les 30 jours suivant l''accord de PC.
 - p8 SERVITUDE de passage sur BO-274 accord de la mairie ou commune
 - p8 RACHAT Comcom : accord du conseil communautaire de l''achat à 5€/m² d''une partie du terrain à détacher purgé de recours (+2mois)
@@ -1461,7 +1468,7 @@ dPC M+4 (=février27)
 oPC M+8 (=juin27)
 oConvention de raccordement M+16 (février28)
 Vente définitive M+24 (octobre28)' where app_affaire_id = 30735;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 idem relance Christine par mail
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 idem relance Christine par mail
 >> "Rien de nouveau . L''édition de l''offre de prêt de Mme Lerest ne devrait pas tarder"
 >>> Demande à Christine de ne pas attendre le dernier moment pour s''assurer que les docs de la DP ont bien été transmis par M. Caulier au notaire.
 18.11 ADP + Daact et non opp. : relance Christine mess. tél.
@@ -1474,7 +1481,7 @@ p9 DP Obtention d’une attestation de non-contestation de la conformité en ce 
 08.09 OFFRE ok CI ok
 Christine va essayer de ne prendre que Me Labidoire pour aller plus vite.
 Mme LEREST a une maison à la vente avec Nico n°18615, se sépare de son compagnon M. GENESTAT mais Christine me dit qu''il n''est pas nécessaire de vendre pour acheter. Financement vérifié.' where app_affaire_id = 30736;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 18.11 PUV ok
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 18.11 PUV ok
 30.10 rdv PUV : mail à Nadège
 >> Il y a eu un peu de changement cette semaine. MR VEYRAT achète finalement la maison seul ( car il va financer avec la vente d’un bien personnel)
 Nous signerons la promesse le mardi 17/11 à 11h .
@@ -1486,7 +1493,7 @@ CI-A ok
 💰 attestation de disposition des fonds conseillé à Nadège :
 >> Je viens de leur faire acheter leur résidence principale à Riotord 17953 où tout s’est bien passé. Ils sont en train de vendre leur maison: signature de la vente définitive courant novembre .
 Ils ne pourront pas verser les 5% car ils auront les fonds que quelques semaines plus tard mais les vendeurs sont au courant' where app_affaire_id = 30741;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 PUV ok VENTE le 14 décembre à 15H.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 PUV ok VENTE le 14 décembre à 15H.
 16.11 Les parties souhaitent signer la vente le 20 décembre. Claire en a fait la demande aux notaires
 PUV rédigée, la notaire a anticipé les demandes en mairie afin de pouvoir signer la vente dans le délai.
 28.10 PUV fixée 19 novembre à 16h30.
@@ -1503,7 +1510,7 @@ Recherche : une SCI ne peut pas consentir de prêt. Financement possible soit pa
 >>> Claire : "Il y aura une liste de mobilier ventilée mais la mention n''a pas à être nommée dans l''offre sinon garde l''ancienne offre"
 CI-ok
 💰 Attestation bancaire de disposition des fonds demandée à Elodie + Claire' where app_affaire_id = 30744;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 VENTE signée. Attestation pj.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 VENTE signée. Attestation pj.
 06.11 VENTE mardi 24 novembre à 15h30
 06.11 ODP pj. Manue l''envoie au notaire et demande un rdv de VENTE.
 04.11 FISE pj. en attente ODP
@@ -1512,7 +1519,7 @@ update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, rel
 30.09 PUV jeudi 15 octobre 2026 à 15h30.
 29.09 RDV en attente règlement de copro demandé à l''étude Zilic
 25.09 OFFRE ok CI ok' where app_affaire_id = 30746;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 ADP : eu Alice, Mme Gissinger rappelle M. Bakri car a pris rdv mercredi prochain avec 2 artisans pour les 2 derniers devis pour le PTZ. M. Bakri n''habite pas dans les lieux et c''est le voisin qui a la clé. Si M. Bakri refuse, Alice l''appellera et si tjrs réticent, on fera un mail.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 ADP : eu Alice, Mme Gissinger rappelle M. Bakri car a pris rdv mercredi prochain avec 2 artisans pour les 2 derniers devis pour le PTZ. M. Bakri n''habite pas dans les lieux et c''est le voisin qui a la clé. Si M. Bakri refuse, Alice l''appellera et si tjrs réticent, on fera un mail.
 19.11 ADP : mess tél à Alice suite à son mail ci-dessous :
 "J''ai échangé hier avec Mme Gissinger qui a eu 2 refus de prêt sur sa demande initiale mais la banque lui conseille de faire une demande de prêt à taux 0 avec l''aide de l''Anah pour que ça passe éventuellement, pour cela elle a besoin de retourner mercredi prochain pour des devis et Mr Bakri refuse cela.
 Elle va essayer de voir avec lui à nouveau et contacter le notaire pour avoir son avis. Qu''en penses-tu ? 
@@ -1542,7 +1549,7 @@ CI ok, liste de mobilier adressée au notaire par le vendeur directement.
 MDR car pas de MDV
 PRET + apport 50% (autoentrepreneur)
 CPMIS fin sept. début oct. à la demande du vendeur.' where app_affaire_id = 30747;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 VENTE 17 décembre à 15H30.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 VENTE 17 décembre à 15H30.
 24.11 ODP + rdv VENTE demandé au notaire par Claire :
 "J''ai eu Antoine le Courtier, les ODP sont éditées ce vendredi Sachant que les agendas sont plein sur décembre, pensez vous que nous puissions bloquer une date de signature entre le 15/12 et le 20/12 s''il vous plaît?
 16.11 Plomb bien transmis au notaire + acq. + PRET déposé en banque par Antoine ? >> "tout est ok , les ODP arrivent sous 10 jours pour réitérer  vers le 15/12"
@@ -1610,7 +1617,7 @@ CI-A demandée à Claire
 01.06  Ce sera un peu long car la curatrice ne peut pas se déplacer rapidement pour faire signer M. Chabaud.
 27.05 OFFRE en attente signature M. Serge Chabaud et sa curatrice (ok oralement).
 CI-A en attente' where app_affaire_id = 30754;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 VENTE 30 Novembre. 
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 VENTE 30 Novembre. 
 28.10 Il n''y a pas de droit de préemption à purger mais Me Pailhès n''a pas voulu fixer de rdv le jour du compromis. On attend donc qu''il veuille bien fixer un rdv pour la vente.
 16.10 copie PUV demandée à Lucile
 05.10 PUV fixée 15 oct.
@@ -1622,7 +1629,7 @@ congé Lucile 21 au 27 sept.
 09.09 CI ok
 07.09 OFFRE ok
 CI en attente :  je le vois mercredi il doit venir avec ses documents.' where app_affaire_id = 30755;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 PUV ok sans condition
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 PUV ok sans condition
 18.11 PUV copie demandée à Claire
 17.11 VENTE rdv fixé au cpmis :  "Nous sommes en cours de signature, la date de réitération est prévue le mercredi 20/01 à 11h. Mme Ottavi sera sous procuration .
 Pour info , je serai en congés en Thailande, Elodie s''occupera des relevés et présence chez notaires."
@@ -1632,26 +1639,26 @@ Pour info , je serai en congés en Thailande, Elodie s''occupera des relevés et
 CI-A ok
 Achat comptant suite à la vente de leur maison (réitération déjà passée)
 Attestation bancaire de disposition des fonds conseillée à Elodie' where app_affaire_id = 30756;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 ADP demandée à Arnaud
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 ADP demandée à Arnaud
 21.09 PUV lundi 19 octobre. TAE ok
 p18 🅿 245535 4% 20a < 18 JANV.
 11.09 manque contrôle TAE
 09.09 OFFRE ok
 CI ok en attente de rdv' where app_affaire_id = 30757;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 PUV ok
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 PUV ok
 p14 (V) Retrait cuve de gaz
 02.11 PUV mardi 24 novembre à 11h chez Caroline BARRE
 21.10 OFFRE ok
 CI ok
 Attestation bancaire de disposition des fonds conseillé à Christèle' where app_affaire_id = 30759;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 26.11 PUV ok
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 26.11 PUV ok
 p16 🅿218K 20a 3% < 25 JANV.27
 25.11 PUV copie demandée à Simon
 03.11 PUV 23 Novembre à 16h chez Maitre CHALET
 30.10 CNI ok Noms notaires + envoi demandé à Simon
 23.10 OFFRE ok
 "Notaires à définir.  Les cartes d''identités arrivent."' where app_affaire_id = 30763;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 PUV avancée au 25 novembre
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 PUV avancée au 25 novembre
 05.11 PUV fixée vendredi 4 décembre
 03.11 Notaire-A + envoi DOSSIER redemandé à Lucile ?
 >> " leur notaire est Maitre Cyrille Prebost à Cremieu. 
@@ -1661,7 +1668,7 @@ Notaire Acq. à Lyon, elle envoie le dossier demain et me donnera son nom car ne
 23.10 OFFRE ok mais nom vendeur pas repris en haut
 ! MANDAT expiré depuis le 1er octobre.
 CI-ok' where app_affaire_id = 30764;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 VENTE 11 décembre à 18h Me Goutorbe
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 VENTE 11 décembre à 18h Me Goutorbe
 ODP ok ? Oui, ils ont reçu leur offre.
 Dossier rapide car seulement 2 visites et pas gagné... car juste au-dessus de la double voie à St Just Malmont...
 Transmise directement au notaire même si j''avais ddé une copie...
@@ -1676,7 +1683,7 @@ p25 fact. entretien cuve fuel
 Les deux parties prennent Maître Goutorbe. Relancé deux fois pour la date... encore aujourd''hui. Je te communique la date dès confirmation.
 22.09 OFFRE ok
 CI-A et notaires en attente' where app_affaire_id = 30765;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 17.11 VENTE reportée car refus CA alors que validé en amont par la conseillère mais changement de Directeur et endettement trop haut.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 17.11 VENTE reportée car refus CA alors que validé en amont par la conseillère mais changement de Directeur et endettement trop haut.
 l''acq redépose au CM.
 23.10 PUV ok Vente fixée 2 décembre 14h
 p13 ODP avant 20 déc.
@@ -1686,14 +1693,14 @@ p38 entretien chaudière
 24.09 OFFRE ok
 CI ok
 Notaire A : Me Sauret (Del Barco)' where app_affaire_id = 30766;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 CPMIS ok
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 CPMIS ok
 p6 🅿100K 25a 3.75% dépôt < 20DEC - ODP< 20JANV.
 05.11 CPMIS 20 novembre à 11h chez Maître Tessier
 29.10 SIMUL Vousfinancer ok pj.
 rappel CI OK
 26.10 OFFRE ok 🅿
 CI + notaires + simul en attente' where app_affaire_id = 30768;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 ADP demandée à Corinne.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 ADP demandée à Corinne.
 >> "Mon client envoie sa courtière ce soir pour valider son prêt."
 26.10 PUV ok
 SIMUL x 🅿85K 25a 4.2% < 31DEC.
@@ -1702,7 +1709,7 @@ CI ok
 🅿 simul demandée à Corinne > RDV courtier 20 oct.
 "Pour répondre à ta demande, je n''ai pas encore la simulation bancaire.
 Sache toutefois que le client avait déjà consulté cette banque par le passé. Je connais très bien cette personne et sa famille, il n''y aura donc aucun souci de financement. Je l''ai d''ailleurs dirigé vers un courtier qui le reçoit en rendez-vous le 20 octobre prochain."' where app_affaire_id = 30770;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 18.11 VENTE  11 décembre à 17h
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 18.11 VENTE  11 décembre à 17h
 14.10 CPMIS fixé 23 octobre à 14H30. Le compromis est fixé le 23 octobre à 16 h et non 14H30
 12.10 rdv CPMIS :
 "Je viens d''avoir Julie Barbier pour le compromis de vente Goguely, elle m''a transmis 3 créneaux à demander au notaire acquéreur, et ce parce que je l''ai appelé ce matin afin de la presser depuis le 4 septembre envoi des documents.
@@ -1719,7 +1726,7 @@ congés Alice 17 au 27 sept.
 CI ok
 02.09 Prêt bancaire
 Manque notaire vendeur' where app_affaire_id = 30771;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 ADP demandée à Nico
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 ADP demandée à Nico
 28.10 PUV ok
 p14 🅿224300€ 25a 4% < 05 JANV.
 ****
@@ -1744,7 +1751,7 @@ A priori le lundi 19/10 mais à confirmer.
 24.09 OFFRE ok
 CI en attente
 MANDAT Philippine sous habilitation familiale' where app_affaire_id = 30779;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11 VENTE : le report serait maintenu au 4 car le notaire n''aurait pas purgé la SRU des enfants qui voulaient intervenir à la vente puis ont renoncé, ne sont ni sur l''offre, ni sur le compromis. Alice appelle le notaire pour comprendre car Mme Connan veut vraiment signer le 27.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11 VENTE : le report serait maintenu au 4 car le notaire n''aurait pas purgé la SRU des enfants qui voulaient intervenir à la vente puis ont renoncé, ne sont ni sur l''offre, ni sur le compromis. Alice appelle le notaire pour comprendre car Mme Connan veut vraiment signer le 27.
 Alice a eu l''étude du notaire acq. qui lui a dit que c''était Mme Connan qui voulait reporté ce qui est faux, elle a fait un mail à la clerc en le lui indiquant. La clerc de Sauret l''a rappelée en lui disant que les enfants ont fait jouer la clause de substitution et qu''elle n''a pas envoyé la SRU et que de ce fait on ne peut pas signer avant le 4. Elle n''a certainement pas voulu assumer son erreur devant le notaire acquéreur et lui a dit que c''était la vendeuse qui ne voulait pas signer avant le 4.
 18.11 VENTE à confirmer car mail d''Alice à Sauret : "Je viens d''avoir Mme CONNAN pour l''informer du changement de date, elle n''est pas du tout contente ni d''accord de changer de date car elle s''est déjà organisée, elle est à 500 km et a déjà prévenu l''assurance pour stopper au 27 novembre l''assurance de la maison.
 Elle va vous appeler directement pour voir tout cela avec vous.
@@ -1780,7 +1787,7 @@ AR >>> Finalement elle va demander une procuration. On maintient le rdv
 05.08 OFFRE complétée envoyée à l''acq. 
 DOSSIER envoyé notaires ce jour
 04.08 OFFRE manque charge honos. Mail à Alice pour qu''elle l''ajoute et envoie une copie aux parties en précisant la modif apportée.' where app_affaire_id = 30780;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 CPMIS ok
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 CPMIS ok
 p5 entretien chaudière
 p9 (A) dépôt DP < 30NOV. non opp. DP changement fenêtres conformes ABF < 31JANV.
 p9 🅿110K 20a 3.9% <31JANV.
@@ -1793,7 +1800,7 @@ p18 actualisation PLOMB exp. 21.12.2026
 CI ok
 SIMUL ok
 DOSSIER envoyé aux notaires' where app_affaire_id = 30784;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 ADP demandée à Sandrine
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 ADP demandée à Sandrine
 02.11 PUV ok
 p11 🅿120K 20 4.2% < 8 janv.
 19.10 PUV reporté au 30 oct. p/r dispos acq.
@@ -1802,7 +1809,7 @@ p11 🅿120K 20 4.2% < 8 janv.
 28.09 Alice demande l''attestation immobilière au décès de Serge Durand pour vérifier qu''il n''y a pas d''héritier.
 23.09 OFFRE ok CI ok
 MANDAT Alice : Mme a acheté mariée en communauté avec M. Serge Durand mais Sandrine ne sait pas si les enfants sont ceux de M. Durand ou ceux de M. Averty mari prédécédé.' where app_affaire_id = 30789;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 17.11 DP déposée ce jour. Récépissé pj.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 17.11 DP déposée ce jour. Récépissé pj.
 PRET déposé ? >> Marion : "Oui il a rdv dans 15 jours je crois (il me la dit hier au tel mais je ne me souviens plus de la date)"
 03.11 PUV ok
 p14 DP agrandissement entre les 2 chalets dépôt <16DEC (ABF) accord<31JANV.
@@ -1814,19 +1821,19 @@ Signature M. HUYNH par proc. : "Je vous confirme que je vais recevoir mon client
 18.09 OFFRE ok 
 *PC pour agrandissement entre les 2 chalets
 CI ok' where app_affaire_id = 30791;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 compromis le vendredi 27 novembre à 10h chez Sauret à Cunlhat
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 compromis le vendredi 27 novembre à 10h chez Sauret à Cunlhat
 19.11 PUA rdv : relance Christine par mail
 18.11 PUA rdv demandé à Christine sur mess. tél.
 12.11 Christine a bien reçu l''attestation de solde du CA + épargne Bfor banque. (env.300K) Le dossier a été envoyé à Me Sauret, elle lui précise de signer une PUA pour obtenir l''accord du juge (en congé mat)
 05.11 OFFRE ok Roger étant sous HABILITATION familiale de Michel
 CI-A ok
 💰 attestation bq disposition des fonds conseillée à Christine' where app_affaire_id = 30796;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 Ci joint le passeport de l''acquéreur la date de signature de promesse est demain le 24 Novembre. 
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 Ci joint le passeport de l''acquéreur la date de signature de promesse est demain le 24 Novembre. 
 19.11 CI-A + PUV demandés à Lucile
 09.11 PUV en attente visite avec artisans
 05.11 OFFRE ok
 CI-A + SIMUL en attente' where app_affaire_id = 30797;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 17.11 VENTE mercredi 16 décembre à 16H30.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 17.11 VENTE mercredi 16 décembre à 16H30.
 05.11 PUV ok
 ACHAT en usufruit pour Mme M. Gutierrez et en nue-propriété pour leur fils Charlélie.
 rdv VENTE : pour fin d''année car paiement de la SAFER
@@ -1844,36 +1851,36 @@ J’adresse ce mail en copie à l’agence,
 31.08 OFFRE en attente signature Mme Bonin, envoyée par courrier le 26 août.
 SCI à créer 
 CI ok' where app_affaire_id = 30798;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 23.11 PUV lundi 7 décembre a 17h.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 23.11 PUV lundi 7 décembre a 17h.
 19.11 PUV en attente diag TAE, alors que la maison a été construite en 2020 et raccordé en réseaux séparatifs conformes... Le Diag passe lundi. Stéph devrait avoir un rdv sous peu pour la PUV.
 13.11 PUV rdv demandé à Stéph. >>rpse "J''ai relancé ce matin"
 06.11 OFFRE ok 🅿🏠vente apt. cpmis signé ? 
 >> Il passe la vente le 19 novembre Cpmis signé 3pages pj. 40K
 CI-A ok' where app_affaire_id = 30804;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] Arrêt Lucile > 25NOV. inclu
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] Arrêt Lucile > 25NOV. inclu
 23.11 ANNULATION : Mme Poliakova se rétracte. Conf. écrite demandée à Lucile avant remise en pub. OK
 18.11 nom du notaire vendeur + rdv CPMIS demandés à Lucile
 09.11 OFFRE ok
 CI-A ok Ukrainiens
 Lucile demande une vente directe
 Attestation bancaire de disponibilité des fonds conseillée à Lucile' where app_affaire_id = 30806;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 19.11CI ok PUV 30 novembre
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 19.11CI ok PUV 30 novembre
 17.11 CI-A + rdv PUV demandés à Nico mess. tél.
 10.11 OFFRE ok
 CI-A en attente' where app_affaire_id = 30808;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 25.11 PUV copie relance Arnaud
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 25.11 PUV copie relance Arnaud
 23.11 PUV copie demandée à Arnaud
 12.11 OFFRE ok CI ok
 la promesse devrait être signée le vendredi 20/11 chez Me Didier.
 Me Josserand représente les acquéreurs.' where app_affaire_id = 30815;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 20.11 ANNULATION offre pj. MANDAT expire 21.11.2026 Demande à Nico de signer un nouveau mandat.
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 20.11 ANNULATION offre pj. MANDAT expire 21.11.2026 Demande à Nico de signer un nouveau mandat.
 12.11 OFFRE ok 💰pc
 CI ok' where app_affaire_id = 30816;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 18.11 PUV mardi 24 novembre 15h
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 18.11 PUV mardi 24 novembre 15h
 12.11 OFFRE ok 💰
 M.DAUBORD Rémi 0684953424 remsdaubs@hotmail.com 
 CI ok' where app_affaire_id = 30817;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 24.11 ancien EDD récupéré ?
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 24.11 ancien EDD récupéré ?
 13.11 CPMIS reporté : Me Bougon s''est aperçu qu''un EDD avait déjà été fait sur la maison d''à côté, il devrait donc y avoir un lot qui appartient à la maison qu''on vend. Le géomètre ne s''en était pas aperçu visiblement. Il faut donc récupérer l''EDD qui est à l''étude Coulaud pour voir ce qu''il en est. Signature en janvier d''après Claire car plusieurs secrétaires et clerc ont démissionné et n''ont pas été remplacées.
 05.11 compromis 13 novembre 17H15
 04.11 rdv CPMIS demandé par Claire : "Je reviens vers vous dans le cadre du dossier pré-cité, après l''avoir eu au téléphone hier, le géomètre m''envoie le projet lundi prochain 🥳.
@@ -1899,7 +1906,7 @@ PRET (ANTOINE) : remboursement prêt auto nécessaire et validation PTZ au nom q
 31.08 OFFRE ok
 CI-A en attente
 CHARGE ACQ : SURENDETTEMENT vendeur. MISE AUX ENCHERE prévue mars 2027 si pas de vente amiable. Montant de la dette demandée à Claire.' where app_affaire_id = 1000320;
-update public.app_affaire_note set texte = texte || E'\n\n' || '[classeur G, relu le 26/11/2026] 18.11 VENTE 24 Novembre à 16H 
+update public.app_affaire_note set texte = texte || E'\n' || '[classeur G, suivi en cours au 26/11/2026] 18.11 VENTE 24 Novembre à 16H 
 16.11 DIVISION docs pj. et transmis au notaire par Stéph. avec demande de rdv VENTE
 10.11 DIVISION : Stéphanie appelle le géomètre sté JULIEN pour savoir s''il peut relancer le cadastre car jeudi dernier le vendeur n''avait tjrs rien.
 22.10 point DIVISION ? Document modificatif signé et renvoyé au géomètre fin de semaine dernière pour envoi au cadastre.
@@ -1967,7 +1974,7 @@ update public.app_classeur_avis set avis_a_envoyer = 'oui', ecrit_par = 'classeu
 do $$ declare n int; begin
   select count(*) into n from public.app_affaire_note where ecrit_par = 'classeur:3bis:2026-11-27';
   if n <> 47 then raise exception '⛔ controle : % notes neuves (attendu 47)', n; end if;
-  select count(*) into n from public.app_affaire_note where texte like '%[classeur G, relu le 26/11/2026]%';
+  select count(*) into n from public.app_affaire_note where texte like '%[classeur G, suivi en cours au 26/11/2026]%';
   if n <> 78 then raise exception '⛔ controle : % notes portent le paragraphe (attendu 78)', n; end if;
   select count(*) into n from public.app_affaire_note;
   if n <> 4571 then raise exception '⛔ controle : % notes en tout (attendu 4571)', n; end if;
@@ -1976,6 +1983,9 @@ do $$ declare n int; begin
   if n <> 0 then raise exception '⛔ controle : % note(s) dont le texte d''avant n''est plus intact', n; end if;
   select count(*) into n from public.app_classeur_avis where ecrit_par = 'classeur:3bis:2026-11-27';
   if n <> 27 then raise exception '⛔ controle : % lignes d''avis marquees (attendu 27)', n; end if;
+  select count(*) into n from _saisies_avant s join public.app_affaire_note a using (app_affaire_id)
+   where md5(a.texte) = s.m and a.origine = 'saisie';
+  if n <> 9 then raise exception '⛔ controle : % des 9 notes saisies seulement sont intactes', n; end if;
   raise notice '✅ lot 3 bis A : 47 notes neuves, 78 paragraphes, 27 lignes d''avis touchees';
 end $$;
 do $$ begin raise exception 'A BLANC LOT 3 BIS A VERT -- RIEN N''EST ECRIT'; end $$;

@@ -16,7 +16,7 @@ SA REGLE : case vide chez nous -> le Sheet ; case remplie qui differe -> le Shee
 
 ⭐ « UNE NOTE NEUVE DATEE » ET LA CLE DE LA TABLE : app_affaire_note a pour cle app_affaire_id SEUL (une note par
    transaction -- verifie le 27/11, et c'est ce que le lot 1 du 17/11 a rencontre). Une note neuve sur une piece qui en
-   porte deja une est donc un PARAGRAPHE DATE AJOUTE (« [classeur G, relu le 26/11/2026] ... »), le texte d'avant reste
+   porte deja une est donc un PARAGRAPHE DATE AJOUTE (« [classeur G, suivi en cours au 26/11/2026] ... »), le texte d'avant reste
    intact au-dessus, et une SAUVEGARDE DATEE (app_affaire_note_avant_3bis_20261127) permet a l'inverse de le rendre a
    l'octet. Rien n'est jamais remplace.
 ⭐ LA PIECE : celle qui porte deja la note G de la ligne (un ecart : on complete la meme note) ; sinon, comme le 17/11,
@@ -50,6 +50,14 @@ SAUVE_AVIS = "app_classeur_avis_avant_3bis_20261127"
 BASE = P.RACINE / "supabase" / "patch_3bis_commentaires_avis_2026-11-27"
 RAPPORT = P.NOTICE / "ETAPE_3BIS_LOT_A_COMMENTAIRES_AVIS_2026-11-27.csv"
 RANG = {"vente": 3, "compromis": 2, "offre": 1}
+# ⭐ SON MOT DU 27/11 AU SOIR : « si le format differe, je veux qu'on n'en cree pas un deuxieme » -- LES DEUX FORMES DU 17/11,
+#   relues en base : une note neuve commence par « G : le commentaire -- » (3 484 notes) ; un paragraphe ajoute se pose A LA
+#   FIN, apres UN saut de ligne, sous la forme « [classeur F, suivi en cours au 17/11/2026] texte » (80 notes, dont 998).
+NOTE_NEUVE = "G : le commentaire -- "
+PARAGRAPHE = "[classeur G, suivi en cours au 26/11/2026] "
+# ⛔ SON MOT : « jamais une note ecrite a la main dans l'app. Il y en a neuf, protege-les nommement. » -- les 9 notes
+#   « saisie », relues en base le 27/11 au soir ; le patch verifie qu'elles sont 9, et INTACTES a l'octet apres lui
+NOTES_SAISIES = (1001384, 1001388, 1001389, 1001390, 1001391, 1001392, 1001393, 1001394, 1001395)
 AVIS = {"Avis à envoyer (oui / non)": "avis_a_envoyer", "Commentaire Avis": "commentaire_avis", "Avis envoyé": "avis_envoye"}
 
 
@@ -104,12 +112,12 @@ def main() -> int:
                     signaux.append((i, "note saisie sur %d" % cible))
                 elif cible in N:
                     cpt["G : paragraphe date ajoute a la note de la piece"] += 1
-                    ajouts.append((cible, "[classeur G, relu le 26/11/2026] " + g))
+                    ajouts.append((cible, PARAGRAPHE + g))
                     rapport.append(("COMMENTAIRES", i, cible, "paragraphe ajoute", g[:120]))
                 else:
                     cpt["G : note neuve sur la piece"] += 1
                     k, d, c = L[cible]
-                    inserts.append((cible, d, c, "classeur:G", "G : COMMENTAIRES du classeur, relu le 26/11/2026 -- " + g))
+                    inserts.append((cible, d, c, "classeur:G", NOTE_NEUVE + g))
                     rapport.append(("COMMENTAIRES", i, cible, "note neuve", g[:120]))
         for col, champ in AVIS.items():
             val = case(i, col)
@@ -136,6 +144,8 @@ def main() -> int:
         par_piece.setdefault(a, []).append(t)
     cibles_ins = {x[0] for x in inserts}
     assert not (cibles_ins & set(par_piece)), "une piece recevrait une note neuve ET un paragraphe"
+    assert not ((cibles_ins | set(par_piece)) & set(NOTES_SAISIES)), "⛔ le lot toucherait une des 9 notes saisies"
+    assert sorted(a for a, (o, _t) in N.items() if o == "saisie") == list(NOTES_SAISIES), "⛔ les notes saisies ont change"
     assert len(cibles_ins) == len(inserts), "deux notes neuves sur la meme piece : %s" % [
         a for a, n in Counter(x[0] for x in inserts).items() if n > 1]
     for k, n in sorted(cpt.items()):
@@ -144,6 +154,13 @@ def main() -> int:
 
     avis_touches = sorted({x[0] for x in avis_upd})
     corps = []
+    saisies = ", ".join(map(str, NOTES_SAISIES))
+    corps.append("-- 0. ⛔ LES 9 NOTES SAISIES DANS L'APP, NOMMEES : %s -- on prend leur empreinte AVANT" % saisies)
+    corps.append("create temp table _saisies_avant on commit drop as select app_affaire_id, md5(texte) m, origine\n"
+                 "  from public.app_affaire_note where origine = 'saisie';")
+    corps.append("do $$ begin\n  if (select string_agg(app_affaire_id::text, ',' order by app_affaire_id) from _saisies_avant) <> %s then\n"
+                 "    raise exception '⛔ garde : les notes saisies ne sont plus les 9 nommees -- rien n''est ecrit'; end if;\nend $$;"
+                 % q(",".join(map(str, NOTES_SAISIES))))
     corps.append("-- 1. LA GARDE : rien de ce lot n'est deja pose, et les sauvegardes n'existent pas")
     corps.append("do $$ begin\n  if exists (select 1 from public.app_affaire_note where ecrit_par = %s)\n"
                  "     or to_regclass('public.%s') is not null or to_regclass('public.%s') is not null then\n"
@@ -165,8 +182,8 @@ def main() -> int:
                                              for a, d, c, o, t in inserts) + ";")
     corps.append("-- 4. LES PARAGRAPHES DATES AJOUTES (%d pieces) -- le texte d'avant reste intact au-dessus" % len(par_piece))
     for a, ts in sorted(par_piece.items()):
-        corps.append("update public.app_affaire_note set texte = texte || E'\\n\\n' || %s where app_affaire_id = %d;"
-                     % (q("\n\n".join(ts)), a))
+        corps.append("update public.app_affaire_note set texte = texte || E'\\n' || %s where app_affaire_id = %d;"
+                     % (q("\n".join(ts)), a))
     corps.append("-- 5. LES AVIS (%d cases, %d lignes neuves)" % (len(avis_upd), len(avis_ins)))
     etq_de = {x[0]: x[4] for x in avis_upd}
     for i in avis_ins:
@@ -180,7 +197,7 @@ def main() -> int:
     corps.append("do $$ declare n int; begin\n"
                  "  select count(*) into n from public.app_affaire_note where ecrit_par = %s;\n"
                  "  if n <> %d then raise exception '⛔ controle : %% notes neuves (attendu %d)', n; end if;\n"
-                 "  select count(*) into n from public.app_affaire_note where texte like '%%[classeur G, relu le 26/11/2026]%%';\n"
+                 "  select count(*) into n from public.app_affaire_note where texte like '%%[classeur G, suivi en cours au 26/11/2026]%%';\n"
                  "  if n <> %d then raise exception '⛔ controle : %% notes portent le paragraphe (attendu %d)', n; end if;\n"
                  "  select count(*) into n from public.app_affaire_note;\n"
                  "  if n <> %d then raise exception '⛔ controle : %% notes en tout (attendu %d)', n; end if;\n"
@@ -189,6 +206,9 @@ def main() -> int:
                  "  if n <> 0 then raise exception '⛔ controle : %% note(s) dont le texte d''avant n''est plus intact', n; end if;\n"
                  "  select count(*) into n from public.app_classeur_avis where ecrit_par = %s;\n"
                  "  if n <> %d then raise exception '⛔ controle : %% lignes d''avis marquees (attendu %d)', n; end if;\n"
+                 "  select count(*) into n from _saisies_avant s join public.app_affaire_note a using (app_affaire_id)\n"
+                 "   where md5(a.texte) = s.m and a.origine = 'saisie';\n"
+                 "  if n <> 9 then raise exception '⛔ controle : %% des 9 notes saisies seulement sont intactes', n; end if;\n"
                  "  raise notice '✅ lot 3 bis A : %d notes neuves, %d paragraphes, %d lignes d''avis touchees';\n"
                  "end $$;" % (q(MARQUE), len(inserts), len(inserts), len(par_piece), len(par_piece), n_notes_apres, n_notes_apres,
                               SAUVE_NOTE, q(MARQUE), len(avis_touches), len(avis_touches), len(inserts), len(par_piece),
@@ -213,7 +233,7 @@ def main() -> int:
         "       avis_envoye = s.avis_envoye, ecrit_par = s.ecrit_par, ecrit_le = s.ecrit_le\n"
         "  from public.%s s where s.id_unique = a.id_unique;\n"
         "do $$ declare n int; begin\n"
-        "  select count(*) into n from public.app_affaire_note where ecrit_par = %s or texte like '%%[classeur G, relu le 26/11/2026]%%';\n"
+        "  select count(*) into n from public.app_affaire_note where ecrit_par = %s or texte like '%%[classeur G, suivi en cours au 26/11/2026]%%';\n"
         "  if n <> 0 then raise exception '⛔ inverse : %% trace(s) du lot restent', n; end if;\n"
         "  select count(*) into n from public.app_classeur_avis where ecrit_par = %s;\n"
         "  if n <> 0 then raise exception '⛔ inverse : %% avis marques restent', n; end if;\n"
@@ -222,7 +242,7 @@ def main() -> int:
     (BASE.parent / (BASE.name + "_REPETITION.sql")).write_text(
         "-- REPETITION de %s (lecture seule) -- attendu : %d notes neuves, %d paragraphes, %d lignes d'avis, %d notes en tout\n"
         "select (select count(*) from public.app_affaire_note where ecrit_par = %s) notes_neuves,\n"
-        "       (select count(*) from public.app_affaire_note where texte like '%%[classeur G, relu le 26/11/2026]%%') paragraphes,\n"
+        "       (select count(*) from public.app_affaire_note where texte like '%%[classeur G, suivi en cours au 26/11/2026]%%') paragraphes,\n"
         "       (select count(*) from public.app_classeur_avis where ecrit_par = %s) avis,\n"
         "       (select count(*) from public.app_affaire_note) notes_en_tout,\n"
         "       (select count(*) from public.app_affaire_note a join public.%s s using (app_affaire_id)\n"

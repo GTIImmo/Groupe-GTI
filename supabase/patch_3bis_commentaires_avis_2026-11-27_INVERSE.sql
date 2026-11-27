@@ -9,7 +9,7 @@ update public.app_classeur_avis a set avis_a_envoyer = s.avis_a_envoyer, comment
        avis_envoye = s.avis_envoye, ecrit_par = s.ecrit_par, ecrit_le = s.ecrit_le
   from public.app_classeur_avis_avant_3bis_20261127 s where s.id_unique = a.id_unique;
 do $$ declare n int; begin
-  select count(*) into n from public.app_affaire_note where ecrit_par = 'classeur:3bis:2026-11-27' or texte like '%[classeur G, relu le 26/11/2026]%';
+  select count(*) into n from public.app_affaire_note where ecrit_par = 'classeur:3bis:2026-11-27' or texte like '%[classeur G, suivi en cours au 26/11/2026]%';
   if n <> 0 then raise exception '⛔ inverse : % trace(s) du lot restent', n; end if;
   select count(*) into n from public.app_classeur_avis where ecrit_par = 'classeur:3bis:2026-11-27';
   if n <> 0 then raise exception '⛔ inverse : % avis marques restent', n; end if;

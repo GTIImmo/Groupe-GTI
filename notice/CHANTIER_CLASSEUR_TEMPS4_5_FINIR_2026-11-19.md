@@ -6480,6 +6480,23 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   paragraphes dates, 31 cases d'avis sur 27 lignes (17 lignes neuves, 10 cases vides, 4 qui different, valeur d'avant
   sauvee) ; 0 signal. A BLANC VERT (ses controles passes, erreur voulue) ; relu apres : 0 trace, 4 524 notes. A SON ACCORD.
 - Lots B (En attente de) et C (repartitions) : a fabriquer ensuite, meme patron.
+
+### 20.103 Le 27/11 (18) : LE LOT A JOUE (19:28) -- au format du 17/11, les 9 notes saisies gardees nommement
+
+- Son mot : « Oui, joue le lot A [...] je veux les trois gardes [...] Il y en a neuf, protege-les nommement. » et « tu dis
+  que le lot du 17/11 a deja pose 80 paragraphes dates. Je n'en trouve aucun. Montre-moi un exemple -- si le format
+  differe, je veux qu'on n'en cree pas un deuxieme. »
+- LE FORMAT DU 17/11, relu en base : la note 998 finit par « [...] la date qui peut convenir.\" ⏎[classeur F, suivi en cours
+  au 17/11/2026] Vente directe GGE » -- le paragraphe va A LA FIN, apres UN saut de ligne ; 80 notes le portent (41
+  classeur:G, 39 classeur:F+G). Une note neuve du 17/11 commence par « G : le commentaire -- » (3 484 notes).
+  ⛔ LE MIEN DIFFERAIT (« [classeur G, relu le 26/11/2026] » apres deux sauts ; « G : COMMENTAIRES du classeur, relu ... -- »)
+  -> ALIGNE sur le 17/11 : « [classeur G, suivi en cours au 26/11/2026] » apres un saut, et « G : le commentaire -- ».
+- LES 9 NOTES SAISIES, nommees dans le patch (1001384, 1001388 a 1001395) : empreinte prise AVANT, garde « elles sont
+  les 9 », controle « 9 intactes a l'octet » APRES. A blanc refait apres le changement de format : VERT.
+- JOUE le 27/11 a 19:28:21. REPETITION : 47 notes neuves, 78 paragraphes, 27 lignes d'avis, 4 571 notes (4 524 + 47),
+  0 texte d'avant abime, 9 saisies, sauvegardes 78 notes + 10 avis (RLS, 0 droit ouvert) ; 43 textes retrouvent un « + ».
+- ⭐ SON CONSTAT, A ECRIRE : la regle R30a a deja rapporte -- les COMMENTAIRES manquants passent de 94 (au 82) a 47 (au
+  84). La moitie des trous venaient de PIECES MAL RATTACHEES, pas de valeurs absentes.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
