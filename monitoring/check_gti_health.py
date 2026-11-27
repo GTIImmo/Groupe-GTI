@@ -74,6 +74,38 @@ WORKER_STALE_POLICY: dict[str, int | None] = {
 #   message de RETABLISSEMENT (`had_critical and not criticals`), qui ne change pas.
 CLES_HORS_ALERTE: frozenset[str] = frozenset({"monitor.summary"})
 
+# ⛔ REGLE 5 (27/11/2026) -- NE PAS VOIR N'EST PAS GUERIR.
+#   Deux familles n'ecrivent une ligne QUE pour ce qui va mal :
+#   `scheduledtasks:<tache>` et `workers.heartbeat:<worker>`. La reconciliation de
+#   `write_results` (03/09) en deduit que toute cle qui n'est PAS reemise est guerie, et
+#   ecrit « Retour a la normale ». Mais quand la sonde n'a PAS PU REGARDER (PowerShell qui
+#   depasse ses 15 s, Supabase illisible, sonde qui plante), aucune cle n'est reemise :
+#   la reconciliation prenait l'aveuglement pour une guerison.
+#
+#   MESURE au serveur (app_monitor_event, du 07/09 au 27/11) : 20 lectures des taches
+#   ratees, toutes « timed out after 15 seconds », dont 8 entre le 22 et le 27/11. Elles
+#   ont fabrique 24 faux « Retour a la normale » ; 21 ont ete re-criees dans les 4 heures.
+#   Le 26/11, la descente en code 1 a ainsi envoye TROIS alertes (10:49, 16:49, 20:49) et
+#   DEUX faux retablissements (14:52, 18:51) pour une seule cause. Le battement des
+#   workers n'a jamais ete illisible (0 fois), mais il a le meme trou.
+#
+#   LA REGLE : une famille n'est reconciliee que si sa VUE D'ENSEMBLE a ete vue a cette
+#   passe (cle presente, statut autre que « unknown », pas sautee). Sinon ses cles
+#   gardent leur etat, sans etre reecrites, et un retablissement n'est annonce que s'il
+#   ne reste aucun rouge, en comptant les etats gardes.
+#
+#   Ce que la regle NE fait PAS : elle ne rend pas la vue ; une lecture ratee retarde
+#   toujours la PREMIERE alerte jusqu'a la passe suivante (08:49 -> 10:49 le 26/11).
+#
+#   Retour arriere : False, et tout redevient comme avant, a l'octet pres.
+NE_PAS_VOIR_N_EST_PAS_GUERIR = True
+
+# prefixe de la famille -> cle de sa vue d'ensemble (celle qui dit si la sonde a vu)
+VUE_D_ENSEMBLE_DES_FAMILLES: dict[str, str] = {
+    "workers.heartbeat:": "workers.heartbeat",
+    "scheduledtasks:": "scheduledtasks",
+}
+
 # Criticite des taches planifiees Windows surveillees (defaut = warning).
 TASK_CRITICALITY: dict[str, str] = {
     "GTI Quotidien": "critical",
@@ -3744,11 +3776,28 @@ def configure_supabase(args: argparse.Namespace) -> SupabaseClient | None:
     return SupabaseClient(url, service_key, timeout_seconds=args.timeout_seconds)
 
 
+def familles_non_vues(results: list[CheckResult]) -> set[str]:
+    """Regle 5 : les prefixes de famille que la sonde n'a PAS vus a cette passe.
+
+    Vue d'ensemble absente (sonde plantee, rien a suivre), « unknown » (lecture ratee)
+    ou sautee (hors Windows) : la famille n'a pas ete regardee.
+    """
+    par_cle = {r.status_key: r for r in results}
+    aveugles: set[str] = set()
+    for prefixe, cle in VUE_D_ENSEMBLE_DES_FAMILLES.items():
+        vue = par_cle.get(cle)
+        sautee = isinstance(getattr(vue, "details", None), dict) and bool(vue.details.get("skipped"))
+        if vue is None or vue.status == "unknown" or sautee:
+            aveugles.add(prefixe)
+    return aveugles
+
+
 def dispatch_alerts(
     alerter: "Alerter | None",
     results: list[CheckResult],
     previous_status: dict[str, Any],
     previous_status_lu: bool,
+    etats_gardes: dict[str, Any] | None = None,
 ) -> None:
     """C.17 -- Envoi de l'alerte, INDEPENDANT de l'ecriture Supabase.
 
@@ -3779,10 +3828,21 @@ def dispatch_alerts(
         newly_critical = [
             r for r in criticals if previous_status.get(r.status_key) != "critical"
         ]
+        # Regle 5 : apres une passe aveugle, la VUE D'ENSEMBLE d'une famille revient de
+        # « unknown » a « critical » -- ce n'est pas un fait neuf. Elle n'est rouge que si
+        # une de ses cles l'est, et cette cle-la est dans la liste si elle est neuve (meme
+        # preuve que monitor.summary, 14/10). Seule, elle n'envoie donc rien ; avec un vrai
+        # nouveau rouge, l'e-mail part comme avant, elle comprise.
+        if NE_PAS_VOIR_N_EST_PAS_GUERIR and newly_critical and all(
+            r.status_key in VUE_D_ENSEMBLE_DES_FAMILLES.values() for r in newly_critical
+        ):
+            newly_critical = []
         had_critical = any(state == "critical" for state in previous_status.values())
+        # Regle 5 : un rouge GARDE parce que non revu reste un rouge -- pas de retablissement.
+        rouge_garde = any(state == "critical" for state in (etats_gardes or {}).values())
         if newly_critical:
             alerter.dispatch(newly_critical, kind="critical")
-        elif had_critical and not criticals:
+        elif had_critical and not criticals and not rouge_garde:
             alerter.dispatch([], kind="recovery")
     except Exception as exc:  # best-effort : jamais bloquant
         print(f"[alert] dispatch echoue: {exc}", file=sys.stderr)
@@ -3849,6 +3909,10 @@ def write_results(
     # verte immortelle.
     #
     # Rien n'est lu de plus : previous_status vient d'etre charge juste au-dessus.
+    #
+    # ⛔ REGLE 5 (27/11) : une famille que la sonde n'a pas pu regarder n'est PAS
+    # reconciliee -- ses cles gardent leur etat (voir NE_PAS_VOIR_N_EST_PAS_GUERIR).
+    etats_gardes: dict[str, Any] = {}
     if previous_status_lu:
         # TROIS familles, et la troisieme s'est revelee en nettoyant les deux
         # premieres : safe_check n'ecrit « monitor.<sonde> » QUE si la sonde
@@ -3859,6 +3923,7 @@ def write_results(
             ("monitor.",           "monitor",        "sonde"),
         )
         cles_emises = {r.status_key for r in results}
+        aveugles = familles_non_vues(results) if NE_PAS_VOIR_N_EST_PAS_GUERIR else set()
         for cle, ancien in previous_status.items():
             if not isinstance(cle, str):
                 continue
@@ -3871,6 +3936,9 @@ def write_results(
             if cle in cles_emises or ancien == "ok":
                 continue
             prefixe, composant, sonde = famille
+            if prefixe in aveugles:
+                etats_gardes[cle] = ancien  # non revue : ni « ok », ni reecrite
+                continue
             quoi = cle[len(prefixe):] or cle
             results.append(CheckResult(
                 status_key=cle,
@@ -3882,8 +3950,15 @@ def write_results(
                 message=f"Retour a la normale : {quoi}",
                 details={"resolu": True, "etat_precedent": ancien},
             ))
+        if etats_gardes:
+            print(
+                "[regle 5] sonde aveugle cette passe (" + ", ".join(sorted(aveugles)) + ") : "
+                f"{len(etats_gardes)} etat(s) GARDE(S) tel(s) quel(s), aucun « Retour a la normale » : "
+                + ", ".join(f"{c}={e}" for c, e in sorted(etats_gardes.items())),
+                file=sys.stderr,
+            )
 
-    dispatch_alerts(alerter, results, previous_status, previous_status_lu)
+    dispatch_alerts(alerter, results, previous_status, previous_status_lu, etats_gardes)
 
     try:
         supabase.upsert_status([result.status_row() for result in results])

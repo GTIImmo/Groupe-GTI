@@ -448,6 +448,9 @@ refus** : sans la règle 0, elles armeraient ce piège.
   - la passe de 16:49 a relu le même code 1 et l'a annoncé comme neuf (l. 3779-3784).
   - Conséquence : la première alerte du matin a pris deux heures de retard (10:49 au lieu
     de 08:49), et il y a eu un faux rétablissement.
+  - ⛔ **Corrigé le 27/11, mesuré au serveur** (`app_monitor_event`) : elle a sonné **trois**
+    fois, pas deux (10:49, 16:49, 20:49), avec **deux** faux rétablissements (14:52 et
+    18:51). La passe de 18:49 a été aveugle à son tour, après la rédaction de ce paragraphe.
 - **Ce n'est pas la descente du chantier de l'après-midi** : celle-là a été lancée par un
   script, pas par la tâche, et elle a fini en code 0. Le dernier résultat de la tâche est
   resté celui de 06:45 (vérifié : `LastRunTime` 26/11 06:45:01, prochaine 27/11 06:45).
@@ -720,4 +723,82 @@ normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
   descendre, et `phase2.sqlite` est inchangé.
 - **L'ancien banc** : 19 sur 19.
 - **Le retour arrière** : `REFUSER_LES_CHUTES = False`.
-- **Ce qui reste** : la règle 5, la sonde (`monitoring/check_gti_health.py`).
+- **Commit** : `f3905bf` (26/11, 20:50). ⚠ Trouvé **poussé** le 27/11 à 17:34
+  (`origin/main` le contient). Ce n'est pas par cette session.
+
+### La première nuit des règles 0 à 4 (27/11, lue à 17:35)
+
+- **Les quatre descentes ciblées du run de 04:00** : passées, aucun refus.
+- **La descente de 06:45** : code 0, 169 tables sur 169, 1 388 064 lignes en 1 542 s. La
+  tâche « GTI Descente » finit en résultat 0, et « GTI Sauvegarde » (08:00) aussi.
+- **La règle 3** a nommé les 5 objets absents, avec leur reste local, exactement comme au
+  `--dry-run`.
+- **La règle 4** a déclaré les 8 files d'attente écartées.
+- **Aucun** « chute refusee », « comptage impossible » ni « copie incomplete » dans les
+  journaux de la nuit.
+- **La sentinelle** `scheduledtasks:gti_descente` s'est éteinte d'elle-même à 06:50. ⚠ Cette
+  passe a vu la tâche « en cours » (code 267009, accepté), et non son résultat : ce
+  « retour » était donc lui aussi pris sans voir, et il s'est trouvé juste à 07:19. C'est
+  une autre classe, voir la règle 5.
+
+### Règle 5 — ne pas voir n'est pas guérir (27/11, la sonde)
+
+- **Sa décision** (27/11) : « Oui, la règle 5 ».
+- **Ce que le serveur montre** (`app_monitor_event`, du 07/09 au 27/11) :
+  - 20 lectures des tâches ratées, toutes pour la même cause, « timed out after
+    15 seconds » (le PowerShell de `check_scheduled_tasks`). 8 d'entre elles tombent entre
+    le 22 et le 27/11 ;
+  - elles ont fabriqué **24 faux « Retour à la normale »**, et 21 ont été re-criés dans les
+    4 heures. Les 8 lectures ratées d'avant le 22/11 n'avaient aucune tâche en anomalie à
+    « guérir » ;
+  - le battement des workers n'a **jamais** été illisible (0 fois), mais il a le même trou ;
+  - les journaux de la sonde gardent la trace d'un envoi aux deux passes du faux
+    rétablissement (26/11 à 14:48 et à 18:48).
+- **Le code** : `monitoring/check_gti_health.py`.
+  - L'interrupteur `NE_PAS_VOIR_N_EST_PAS_GUERIR = True`, la table
+    `VUE_D_ENSEMBLE_DES_FAMILLES` (`scheduledtasks:` → `scheduledtasks`,
+    `workers.heartbeat:` → `workers.heartbeat`) et la fonction `familles_non_vues()`.
+  - Dans `write_results`, une famille dont la vue d'ensemble est absente, « unknown » ou
+    sautée n'est pas réconciliée : ses clés gardent leur état sans être réécrites, et le
+    journal le dit (« [regle 5] … état(s) GARDÉ(S) »).
+  - Dans `dispatch_alerts`, deux choses :
+    - un rouge gardé empêche le rétablissement ;
+    - une vue d'ensemble qui revient seule de « unknown » à « critical » n'envoie rien. Elle
+      n'est rouge que si une de ses tâches l'est, et cette tâche-là est dans la liste si elle
+      est neuve : c'est la même preuve que `monitor.summary` (14/10).
+  - ⚠ **Ce second point est un ajout** à la règle telle que proposée. Sans lui, la règle ne
+    tenait pas sa promesse : après une passe aveugle, l'e-mail repartait par la vue
+    d'ensemble.
+- **Le banc** `monitoring/test_ne_pas_voir_n_est_pas_guerir.py` : **19 sur 19**. Il joue les
+  vraies fonctions (`check_scheduled_tasks` avec un PowerShell imité, `check_worker_heartbeat`,
+  `write_results`, `dispatch_alerts`).
+  - **Ce qui ne change pas** : une guérison vue est toujours annoncée, avec son
+    rétablissement ; un vrai nouveau rouge après une passe aveugle part comme avant ; un état
+    précédent illisible donne toujours un envoi sans déduplication.
+  - **Ce qui change** : sur une lecture ratée, une sonde plantée ou une sonde sautée, l'état
+    est gardé et rien n'est envoyé. Le battement illisible garde son rouge pendant que les
+    tâches vues sont réconciliées.
+  - **Le témoin inverse sur l'histoire réelle**, du 26/11 à 08:49 au 27/11 à 06:49.
+    Interrupteur éteint, le banc reproduit **à l'identique les 6 événements que le serveur
+    garde** pour `gti_descente` : 3 alertes, 3 rétablissements et 9 « Retour à la normale ».
+    Interrupteur allumé : **une** alerte, **un** rétablissement, **un** retour.
+  - **Le témoin positif des pièces** : chacune des trois pièces, cassée sur une copie, fait
+    échouer le banc (2, 5 et 10 épreuves sur 19).
+- **Les anciens bancs de la sonde** :
+  - `test_resume_hors_alerte` (8), `test_sonde_illisible_jamais_verte`,
+    `test_notifications_emballement` (10) et `test_recherche_divergente_fraicheur` (16)
+    passent tous ;
+  - `test_travaux_en_erreur_resolus` a **2 échecs (7 et 9) qui existaient déjà** : ils sont
+    identiques sur le code d'avant la règle, et sans rapport avec elle.
+- **Ce que la règle NE fait PAS** :
+  - elle ne rend pas la vue : une lecture ratée retarde toujours la **première** alerte
+    jusqu'à la passe suivante ;
+  - elle ne traite pas la tâche « en cours » (267009), qui est acceptée comme un succès.
+    C'est arrivé deux fois sur 30 vrais retours (`gti_quotidien` le 18/09 à 05:49,
+    `gti_descente` le 15/11 à 06:51) : le « retour » a été re-crié ensuite.
+- **Prend effet** à la prochaine passe de la sonde (« GTI Health Monitor », 18:48), sans
+  aucun geste.
+- **Le retour arrière** : `NE_PAS_VOIR_N_EST_PAS_GUERIR = False`.
+- **Deux suites possibles, à lui de trancher** :
+  - la cause : porter le délai de la seule lecture PowerShell de 15 à 60 s ;
+  - la tâche « en cours » : garder son état précédent tant qu'elle tourne.
