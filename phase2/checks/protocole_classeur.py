@@ -444,10 +444,15 @@ def r30_apres_les_verdicts(rangs: list, I=None, meme_dossier: bool = False) -> N
             if p.startswith("a part sans effet sur l'etiquette"):
                 for q in p.rsplit(":", 1)[1].split():
                     nommees[int(q)].append(x)
+    # ⛔ 27/11 (le passage 83, rouge) : jamais une ligne dont SES DECISIONS fixent les pieces -- R30a ajoutait 4782 a
+    #   91IHSGNC et 26697 a MQ6H8TVQ, contre sa decision rendue (temoin « ses_decisions »)
+    decidees = {i for d_ in SES_DECISIONS.values() for i in d_["lignes"]} | set(V3_ATTENDU_PAR_SA_DECISION)
     for a, xs in sorted(nommees.items()):
         if len(xs) != 1 or a in tenues or R30_POSSIBLES.get(a, 99) != 1 or a in les_20_a_part():
             continue
         x = xs[0]
+        if x["id_unique"] in decidees:
+            continue
         if a < min(x.get("pieces") or [a]):
             continue
         if meme_dossier and I is not None and I.pieces[a].get("app_dossier_uuid") != x.get("etiquette"):
@@ -2723,8 +2728,13 @@ def ecarts_temoins(I: Image, con: sqlite3.Connection, pid: int) -> dict:
                 else:
                     ok = any(p.startswith("a part sans effet") and str(n) in p.split(":")[1].split()
                              for p in PR.get(x["ligne"], []))
-                    noter("v3_neutres", x["ligne"], "%d neutre" % n, "neutre nomme" if ok else "PAS NOMME NEUTRE",
-                          int(not ok))
+                    # R30a (validee le 27/11) : la V3 RANGEAIT deja ce neutre avec la ligne -- rattache par R30a, il est a
+                    #   sa place V3 ; c'est un accord, pas un ecart (le passage 83 l'a montre sur 3 neutres)
+                    r30 = not ok and any(p.startswith("REGLE R30") and str(n) in p.rsplit(":", 1)[1].split()
+                                         for p in PR.get(x["ligne"], []))
+                    noter("v3_neutres", x["ligne"], "%d neutre" % n,
+                          "neutre nomme" if ok else ("rattache par R30a, a sa place V3" if r30 else "PAS NOMME NEUTRE"),
+                          int(not (ok or r30)))
     remplacees = {i for d_ in SES_DECISIONS.values() for i in d_["lignes"]}
     for fam in ("coupes_132", "coupes_29"):
         for e in T["familles"][fam]:

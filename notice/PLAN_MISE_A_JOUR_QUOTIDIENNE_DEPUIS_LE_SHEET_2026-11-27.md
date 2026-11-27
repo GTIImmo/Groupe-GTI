@@ -550,6 +550,20 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
       seulement les 58 qui sont seules dans leur dossier.
     - ⏰ **Le prochain passage officiel (83) portera R30a.** Il n'est pas joué : il change le passage que
       lisent l'écrivain et la boucle, et il se recopie ensuite en base. Les deux gestes attendent ton accord.
+    - ✅ **Joué le 27/11 au soir, à son mot.** Le **passage 83** est sorti **ROUGE** : 5 lignes de témoin
+      ont basculé.
+      - 2 dans « ses_decisions » : R30a ajoutait 4782 à 91IHSGNC et 26697 à MQ6H8TVQ, deux lignes dont il a
+        fixé les pièces.
+      - 3 dans « v3_neutres » : la V3 rangeait déjà ces pièces avec leur ligne.
+      - **Correction** : R30a ne touche plus aucune ligne de ses décisions, et le témoin v3_neutres compte
+        « rattachée par R30a » comme un accord. Le **passage 84** est **VERT**
+        (`temoin_d_apres_le_passage_83_2026-11-27.py 84 …`) : 188 pièces sur 184 lignes, 0 verdict et 0
+        étiquette changés, identique au rejeu sur copie, témoins identiques au 82 (825), même image, mêmes
+        entrées. Les témoins de l'écrivain restent 4 733 et 4 731 (« les 5 » échoue comme au 82, et c'est
+        antérieur).
+      - Le 83 reste au socle, comme trace.
+      - ⏰ **Recopier les passages 83 et 84 en base, et faire passer l'écrivain et la boucle au 84** :
+        attendent son accord.
 
 **Étape 3 — les dates d'annulation élargies.**
 - **Ce qu'elle fait** : s'il n'y a aucun compromis et seulement une offre refusée, la date va sur
@@ -805,7 +819,20 @@ jours de lecture de la boucle. C'est une estimation.
 >     exemple exactement la moitié ou les trois quarts du montant de Hektor. Si c'en est une, on ne corrige
 >     pas : on signale.
 >
->   Quand les quatre passent, **le Sheet gagne et on corrige l'app** : « c'est mon montant qui sert à la
+>     ⭐ **Élargi le 27/11 au soir (son mot : « prends tous les rapports ronds de partage, pas trois valeurs
+>     choisies »)** : tout rapport de 5 % en 5 %, ainsi que le tiers et les deux tiers.
+>   - **⑤ l'entrée seule** (le sien, 27/11 au soir) : si le montant du Sheet est égal aux seuls honoraires
+>     d'entrée et que la sortie n'est pas nulle, on ne touche à rien. C'est rare (la sortie n'est remplie
+>     que sur 0,2 % des ventes) ; exemple : a49d96ef, 15 000 d'entrée et 11 000 de sortie.
+>   - **⑥ un coefficient connu** (le sien, 27/11 au soir) : si le rapport du Sheet sur Hektor vaut un
+>     coefficient de TVA (1,2, 1/1,2, 1,196, 1,1), on ne corrige pas : on signale. Exemple : 0bc98552,
+>     6 000 contre 5 000, soit exactement 1,2.
+>   - **Le recompte du 27/11 au soir, avec les six contrôles : 6 vrais conflits sur 19.**
+>     - 13 sont retirés : 11 parts rondes (50 %, 60 %, 75 %, 80 %), 1 entrée seule, 1 coefficient de TVA.
+>     - Les 6 restants sont 78bb247a, 650e65c8, b7aabaf3, ad8681cd, EAQJ9D0T et KO6QPUV7. Chacun a une
+>       raison connue, écrite au carnet § 20.101.
+>
+>   Quand les six passent, **le Sheet gagne et on corrige l'app** : « c'est mon montant qui sert à la
 >   paie ». Et tout ce qui paraît aberrant (un prix à 743 €) se **signale**, sans jamais s'écrire en
 >   silence.
 >   - ✅ **Mesuré aux trois contrôles** (carnet § 20.99) :
@@ -818,7 +845,20 @@ jours de lecture de la boucle. C'est une estimation.
 >     VMSFVBJS.
 > - **D7** : trois ventes candidates à lui proposer (réelles, récentes, avec un petit écart), chacune avec
 >   ses risques. C'est lui qui choisit. Proposées : 0bc98552, ba54cb6c et b7aabaf3 (carnet § 20.99).
->   - ✅ **SON CHOIX : 0bc98552** (vente 23319, bien 43437, 23/09/2026, prix 96 000 ; Sheet 6 000 contre
+>   - ⛔ **0bc98552 EST RETIRÉE le 27/11 au soir** (son mot : « si tu ne peux pas l'expliquer, change de
+>     candidate »). Son rapport vaut exactement 1,2, et rien chez nous ne l'explique : Hektor est cohérent
+>     avec lui-même (prix 96 000 = net vendeur 91 000 + 5 000, sur le compromis comme sur la vente), le Sheet
+>     dit 6 000, et le montant de la facture GGTI00004518 n'est pas en base.
+>     **Aucune autre candidate ne passe ses critères** :
+>     - 78bb247a est un de ses cas en attente, et elle baisse le montant ;
+>     - 650e65c8 est aberrante ;
+>     - b7aabaf3 et ad8681cd sont hors de l'index historique, et portent un partage 50/50 chez Hektor ;
+>     - EAQJ9D0T a une facture suivie d'un avoir, KO6QPUV7 un protocole d'accord : leur montant a été
+>       renégocié.
+>
+>     **Ma recommandation** : pas d'essai maintenant. L'étape « informer Hektor » est la dernière, et peut-être
+>     jamais nécessaire (D11).
+>   - *(l'ancien choix, gardé pour l'histoire)* **0bc98552** (vente 23319, bien 43437, 23/09/2026, prix 96 000 ; Sheet 6 000 contre
 >     Hektor 5 000). Elle est dans l'index historique, et « je préfère qu'un premier essai monte un montant
 >     plutôt qu'il le baisse ». b7aabaf3 est écartée : elle a deux risques à la fois.
 >   - **Sa question avant l'essai** : Hektor recalcule-t-il son hors-taxe ou sa part admin quand on change

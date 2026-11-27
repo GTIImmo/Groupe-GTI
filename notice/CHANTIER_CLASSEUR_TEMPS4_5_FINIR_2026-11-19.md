@@ -6433,6 +6433,36 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   (une note neuve datee) ; une part qui differe se met de cote (regle 6).
 - SES RESERVES, notees et non touchees (plan § 7.1) : Prix = 42 / 43 / 63 sur 990 lignes, 0 sur 12, 743 sur VMSFVBJS,
   650e65c8 reglee avant sa vente.
+
+### 20.101 Le 27/11 (16) : le PASSAGE 83 ROUGE, R30a corrigee, le PASSAGE 84 VERT ; D6 a six controles ; 0bc98552 retiree
+
+- Son mot : « Le passage 83 : oui, joue-le [...] le temoin d'apres est obligatoire avant que l'ecrivain et la boucle y
+  passent, et tu me le montres avant de recopier en base. » Socle sauvegarde avant chaque passage
+  (protocole/socle_avant_passage_83_2026-11-27.sqlite, ..._84_...).
+- PASSAGE 83 (officiel, meme image que le 82) : verdicts / etiquettes / motifs 0 ; 190 pieces sur 186 lignes, exactement
+  celles que R30a nomme ; identique au rejeu sur copie ; MAIS LES TEMOINS ONT BOUGE -> ROUGE, cinq ecarts nommes :
+  . ses_decisions : 91IHSGNC « 4781 4783 » -> R30a ajoutait 4782 ; MQ6H8TVQ « 26695 26696 26698 » -> ajoutait 26697.
+    SES DECISIONS RENDUES fixent ces pieces : R30a ne devait pas y toucher ;
+  . v3_neutres : 9a09e537 (28118), TA5QUCD4 (28363), ZYVO6KK1 (16019) -- la V3 RANGEAIT ces neutres avec leur ligne ;
+    R30a les y met : c'est la place V3, le temoin le comptait comme un ecart.
+- CORRECTION (je tranche seul : regle + temoin + 0 rendu) : r30_apres_les_verdicts saute les lignes de SES_DECISIONS et
+  de V3_ATTENDU_PAR_SA_DECISION ; le temoin v3_neutres accepte « rattache par R30a, a sa place V3 ». Rejeu sur copie :
+  188 pieces sur 184 lignes, temoins IDENTIQUES au 82.
+- PASSAGE 84 (officiel) : temoin d'apres (temoin_d_apres_le_passage_83_2026-11-27.py 84 <copie> 84) VERT -- 0 verdict,
+  0 etiquette, 0 motif ; 188 pieces, exactement celles de R30a ; identique au rejeu ; 825 temoins = ceux du 82 ; meme
+  image, memes entrees vivantes. L'ecrivain de la colonne A sur le 84 : temoin 1 4 733 / 4 733, temoin 2 4 731 / 4 731
+  (« les 5 » echoue comme au 82 : anterieur). Le 83 reste au socle (la trace). ⏰ A SON ACCORD : recopier 83 + 84 en
+  base, et faire passer l'ecrivain et la boucle au 84.
+- D6, SES CONTROLES 5 ET 6, ET LE 4e ELARGI (tous les rapports ronds, de 5 % en 5 %, plus 1/3 et 2/3) : sur les 19,
+  11 parts rondes (50 %, 60 % Y8O4NJSY, 75 %, 80 % ba54cb6c), 1 entree seule (a49d96ef : 15 000 d'entree + 11 000 de
+  sortie), 1 coefficient de TVA (0bc98552 : 1,2) -> 6 VRAIS CONFLITS : 78bb247a (un de ses cas en attente), 650e65c8
+  (aberrante), b7aabaf3 et ad8681cd (hors index, partage 50/50 chez Hektor), EAQJ9D0T (facture + avoir AVR00000223),
+  KO6QPUV7 (« PROTOCOLE D'ACCORD » sur la facture).
+- D7 : 0bc98552 RETIREE (le 1,2 inexplicable avec nos donnees : Hektor coherent 96 000 = 91 000 + 5 000, la facture n'est
+  pas en base). AUCUNE autre candidate ne passe ses criteres. Reco : pas d'essai maintenant (l'etape Hektor est la
+  derniere, D11).
+- ⚠ LE PUSH ATTEND : origin porte 8fb7124 (la note GED §12.65, meme contenu que notre a001058 -- la session GED l'a
+  poussee de son cote) -> l'historique a diverge ; et af5bc64 (sonde, autre session) est arrive, non vu par lui.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
