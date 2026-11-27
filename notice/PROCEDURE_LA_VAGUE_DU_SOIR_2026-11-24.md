@@ -3214,3 +3214,61 @@ on le prouve.
 - **Puis la sentinelle.**
 
 ⛔ Rien d'écrit chez Hektor ni dans le Sheet.
+
+### Le 27/11 (9) : les familles 3 et 2 fabriquées, essais à blanc VERTS — elles attendent son accord
+
+**Son mot** : « Fais les deux ».
+
+**① La famille 3 : 23 dates d'annulation, chacune posée sur SON compromis** (sa règle).
+- **Mesurée d'abord contre R27.** Le juge lit la date déjà posée (R27 ②), mais R27 ne joue que sur deux lignes d'un même
+  dossier qui ont le même Mandat, le même Acquéreur et la même Commission. Sur les 4 803 lignes de l'image du 82, **aucune
+  des 23 n'a de telle jumelle**. La poser ne nourrit donc pas la preuve du juge. Le générateur le remesure et refuse s'il en
+  trouve une.
+- **La valeur** : la case « Annulée » de l'image du 82, au format ISO comme le 25/11, exigée identique dans le Sheet du jour.
+  Aucune n'est antérieure à son compromis.
+- **Ce qui reste hors du patch** : les 3 dates antérieures, les 2 qu'il a écartées et O6R10ZQA.
+- **Le patch** `supabase/patch_dates_annulation_famille3_2026-11-27.sql` (md5 a15bbc33), généré par
+  `phase2/checks/dates_annulation_famille3_generer_patch_2026-11-27.py` :
+  - les gardes : 23 compromis annulés sans date, l'empreinte des 23 lignes (dccd53de), 449 dates posées ;
+  - la sauvegarde avec clé primaire et RLS ; le journal (23) ;
+  - la pose seulement sur des cases vides ;
+  - les contrôles : 449 + 23, rien d'autre ne bouge ;
+  - **l'empreinte d'après est exigée : ed9a346bf8c6fb30ff91f8638b242725**.
+- **L'à blanc est VERT** : 472 dates après le geste, puis l'inverse rend l'état d'avant.
+
+**② La famille 2 : un geste en deux temps.**
+- **Les 6 ventes** : QXDW8EQA, 6FQO29C8, EJN79TJ1, 2U5QPKRC, I3TFR2KG et 91IHSGNC. Seule leur case « Prix » du Sheet est
+  fausse ; honoraires, facture et dates concordent.
+- **MQ6H8TVQ reste à lui** : il n'a pas de facture au Sheet, et PITIOT est absent de l'annuaire.
+- **Temps 1, les parts.** Les 4 chaînes en supposition (27712, 17769, 24618, 4781) prennent la part du classeur. Elles sont
+  résolues par les règles du 13/11, et le nom est écrit comme les parts du classeur déjà posées pour ces négociateurs.
+  - Chaque supposition nommait déjà la bonne personne : **seule l'origine change**, comme A07EC3DH le 24/11.
+  - Les 8 suppositions sont mises de côté, entières.
+- **Temps 2, les ventes.** Leur règlement et leur facture sont posés mot pour mot.
+- **Le patch** `supabase/patch_famille2_parts_et_ventes_2026-11-27.sql` (md5 37068526), généré par
+  `phase2/checks/famille2_parts_et_ventes_generer_patch_2026-11-27.py` :
+  - les gardes : 8 suppositions exactes, le registre des parts (113c064e), les 6 ventes (7b515374), 3 738 ventes réglées ;
+  - deux sauvegardes, avec clé primaire et RLS ;
+  - le journal (8 + 12), la règle 6 ;
+  - les contrôles :
+    - plus aucune part hektor sur les 4 chaînes ;
+    - les parts hors des 4 chaînes intactes, et 17 970 parts en tout ;
+    - 3 738 + 6 ventes réglées, 3 680 + 6 factures ;
+    - 0 sans part ; 20 sur supposition seule, inchangé ;
+    - **l'empreinte d'après est exigée : c2477fa31eb028a4dbae1dc422f3d86b**.
+- **L'à blanc est VERT** :
+  - la vraie nuit rejouée : l'absorbeur **saute** les 4 chaînes (`proteges_app` 4), la purge ne fait rien ;
+  - l'inverse rend l'état d'avant ;
+  - **témoin inverse** : sur les chaînes remises en supposition, l'absorbeur **écrit** (4 dossiers, 8 lignes).
+
+**③ Une correction de conception, faite en route.** Les inverses de ces deux patchs ne jugent plus que leur part (leçon 31) :
+ils comparent les cases et les chaînes à leur sauvegarde. Avant, ils comparaient le registre entier à son état du matin, et ils
+auraient refusé de jouer après une nuit. La comparaison « = avant » reste dans l'essai à blanc.
+- ⚠ L'inverse de la famille 1, déjà posée, garde l'ancienne forme. Il est sûr, mais il refuserait après une nuit qui
+  toucherait ces 9 lignes. Il faudrait alors le refabriquer.
+
+**④ Relu après les deux à blanc**, en lecture seule : aucune sauvegarde, rien au journal des trois lots, rien de mis de côté ;
+449 dates, 3 738 ventes réglées, les 8 suppositions toujours là. **Rien n'est resté.**
+
+**Les deux familles sont indépendantes l'une de l'autre**, et l'ordre de pose est libre. ⛔ Rien n'est écrit en base, dans le
+Sheet ni chez Hektor. **Elles attendent son accord.**

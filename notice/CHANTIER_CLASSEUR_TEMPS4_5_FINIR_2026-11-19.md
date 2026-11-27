@@ -6290,6 +6290,16 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Relu au pooler : 3 738 ventes reglees (+9), 3 680 factures (+9), 0 vente reglee sans part, 20 sur supposition (inchange),
   journal 18, sauvegarde 9 lignes avec cle primaire + RLS. Inverse pret (f85cce2a). Temoin : _REPETITION apres le run.
 - Reste a son mot : la famille 2 (recopier d'abord les parts de 5 chaines), la famille 3 (R27 d'abord), ses cas, la sentinelle.
+
+### 20.94 Le 27/11 (9) : familles 3 (23 dates) et 2 (4 chaines + 6 ventes) fabriquees, a blanc VERTS, a son accord
+
+- Son mot : « Fais les deux ». Famille 3 : 0/23 jumelle de R27 (le juge lit la date posee) ; patch a15bbc33, empreinte
+  d'apres ed9a346b, a blanc vert (472 dates).
+- Famille 2 : 6 ventes (MQ6H8TVQ reste a lui) ; temps 1 = 4 chaines en supposition -> part du classeur (seule l'origine change,
+  8 mises de cote), temps 2 = 12 cases ; patch 37068526, empreinte d'apres c2477fa3 ; a blanc vert, la nuit saute les 4,
+  temoin inverse 4/8.
+- Correction : les inverses ne jugent que leur part (lecon 31) ; celui de la famille 1 (pose) garde l'ancienne forme, stricte.
+- Rien reste apres les a blanc. Independantes, a son accord.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
