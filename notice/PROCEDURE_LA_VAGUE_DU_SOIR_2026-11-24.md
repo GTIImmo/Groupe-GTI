@@ -2980,3 +2980,35 @@ fabrication du 27/11 à 07:09:08 UTC, code 0.
 
 ⛔ Rien n'est écrit dans le Sheet, en base ni chez Hektor. **La vague attend son accord sur les deux empreintes.** Puis le
 partage DECHAUD 50 / GENTES 50 sur 3647.
+
+### Le 27/11 (3) : la vague des six ÉCRITE (vague2a, 10:09) — 6 sur 6, la colonne A porte 4 731 cases relues justes
+
+**Son mot** : « Oui » (écrire la vague2a sur les deux empreintes), puis « Vas y » après le refus de la fenêtre.
+
+**⓪ Le refus de 08:12** : la première tentative a été refusée par l'outil lui-même, code 3 : « garde : 08:12 est dans la
+fenetre de la nuit 03:30-09:30 (run, pose, descente) » (`FENETRE_INTERDITE`, lignes 82 et 804 de l'écrivain). Rien n'a
+été écrit : l'à blanc rejoué à 08:12 redonnait la colonne A 3001cb4a01f72651 et 6 lignes à écrire. La garde n'a pas été
+contournée. ⛔ **Leçon : regarder l'heure contre cette fenêtre AVANT de demander son accord pour écrire.**
+
+**① L'à blanc de 10:08:35** (après la fenêtre) : 6 à écrire, 0 sautée, 0 contre le protocole, code 0 ; empreintes
+**inchangées** : vague 52b1cff3442c952b, colonne A 3001cb4a01f72651.
+
+**② L'écriture de 10:08:57**, l'interrupteur donné à la commande seule puis retiré : **6 écrites, 6 vérifiées**, code 0.
+- Les six critères de l'écrivain sont verts : relues sur leur ID Unique 6/6, aucune autre case A modifiée, rien hors de A
+  par nous (aucune ligne touchée par un humain pendant l'écriture), étiquette écrite = celle des transactions, aucune
+  étiquette sur deux lignes, zéro ligne contre le protocole.
+- Rapport et sauvegarde d'avant : `C:\Hektor\Backups\classeur_colonne_a\2026-11-27_100857_vague2a_ECRIRE`.
+- Retour arrière possible : `defaire --nom vague2a` (il lit cette sauvegarde).
+
+**③ La relecture par un autre chemin** (`relire_la_colonne_a_contre_le_protocole_2026-11-25.py`, les sept vagues, 10:09) :
+- Sheet relu : 4 805 lignes, 4 805 ID Unique, 0 en double, **4 731 cases A remplies** (4 725 + 6).
+- Chaque vague : étiquette = dossier de SES pièces du protocole = case A = arrivée = prévue, **0 fausse** : vague1a 50,
+  1b 50, 1c 50, 1d 500, 1e 2 000, 1f 2 125, **2a 6** ; chaque ligne à sa ligne de préparation ; 0 à plusieurs dossiers.
+- La colonne entière : 0 hors des vagues, 0 manquante, 0 étiquette sur deux lignes, 0 ligne non tranchée remplie ; les
+  quatre doubles vides.
+- ⚠ **Il sort en code 1, pour UNE seule cause, nommée** : sa constante `LES_DEUX_DE_E` (P252U1JH, d2108609) attend ces
+  deux lignes VIDES — c'était sa décision du 25/11, levée par son ordre du 27/11 qui les met dans la vague des six.
+  **Preuve** : le même relecteur, importé sans être modifié, cette seule constante vidée, sort « TOUT EST JUSTE », code
+  0 (`relire_sans_la_liste_e.py`, dossier de travail). L'outil n'est pas touché : à son mot.
+
+⛔ Rien d'écrit en base ni chez Hektor. **Suite, à son accord** : le partage DECHAUD 50 / GENTES 50 sur la chaîne 3647.

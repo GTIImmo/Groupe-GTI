@@ -6232,6 +6232,17 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - vague2a dans son ordre : 9Q0FHAKK, PEE1XTR8, HUY49KEC, P252U1JH, d2108609, a360d9e3. A blanc : 6 a ecrire, 0 sautee,
   0 contre le protocole ; empreintes vague 52b1cff3442c952b, colonne A 3001cb4a01f72651.
 - Attend son accord. Puis DECHAUD 50 / GENTES 50 sur 3647.
+
+### 20.88 Le 27/11 (3) : la vague des six (vague2a) ECRITE a 10:09 -- 6/6, colonne A 4 731 cases relues justes
+
+- 08:12 : refus de l'outil (fenetre 03:30-09:30, l. 82/804), rien d'ecrit, pas contourne. Lecon : l'heure contre la
+  fenetre AVANT de demander l'accord.
+- 10:08 a blanc : memes empreintes (52b1cff3 / 3001cb4a), 6/0/0. 10:09 ecriture : 6 ecrites, 6 verifiees, 6 criteres
+  verts ; sauvegarde 2026-11-27_100857_vague2a_ECRIRE.
+- Relecture par un autre chemin, les 7 vagues : 4 731 cases, 0 fausse, 0 hors vague, 0 manquante, 0 en double, doubles
+  vides. Code 1 pour UNE cause : la constante LES_DEUX_DE_E du relecteur (P252U1JH, d2108609 attendues vides, sa
+  decision du 25/11 levee par son ordre du 27/11) ; sans elle, TOUT EST JUSTE (code 0). Outil non touche.
+- Suite a son accord : DECHAUD 50 / GENTES 50 sur 3647.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
