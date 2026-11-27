@@ -6272,6 +6272,17 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   appelant.
 - Rejoue sur les 7 vagues : TOUT EST JUSTE, code 0 (4 731 cases, 0 fausse, 0 hors vague, 0 manquante).
 - Temoin inverse : sans la vague2a, code 1, ses 6 cases « hors des vagues ».
+
+### 20.92 Le 27/11 (7) : les 47 (+2) remesurees au 82 (48) ; famille 1 (9 ventes reglees) a blanc VERT, a son accord
+
+- Son mot : « Fini ce qui etait prevu » (la methode des 47 du 25/11). Outil des 47 : passage et image en constantes ; au 81
+  = les 47 du 25/11 a l'identique ; au 82 = 48 (+ 9Q0FHAKK, vente 3650, tout concorde).
+- Le juge ne lit pas vente_reglee_app / numero_facture_app (« circulaires ») ; il LIT date_annulation_app (R27 ②) : la
+  famille 3 se mesure d'abord contre R27.
+- Famille 1 = 9 (les 8 + 9Q0FHAKK), valeurs mot pour mot (image 82 = Sheet du jour), chaines a parts du classeur.
+  Patch 19d690d8 : gardes (cases vides, fe8ded18, 3 729), sauvegarde avec cle primaire + RLS, journal 18, controles
+  (+9 / +9, 0 sans part, 20 sur supposition), empreinte d'apres c283c736. A blanc VERT (10:56), rien reste.
+- Suite a son mot : la famille 2 (5 chaines a parts supposees : recopier d'abord), la famille 3 (R27 d'abord), puis la sentinelle.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

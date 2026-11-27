@@ -3117,3 +3117,72 @@ vagues, 0 manquante, 0 étiquette sur deux lignes ; les quatre doubles vides ; 0
 « hors des vagues » (9Q0FHAKK, HUY49KEC, P252U1JH, PEE1XTR8, a360d9e3, d2108609). Il mord donc toujours.
 
 ⛔ Rien d'écrit en base, dans le Sheet ni chez Hektor.
+
+### Le 27/11 (7) : les 47 (+2) remesurées au passage 82 — la famille 1 (9 ventes réglées) fabriquée, à blanc VERT, à son accord
+
+**Son mot** : « Fini ce qui était prévu, on verra l'analyse des 3 051 plus tard. » Le prévu, c'est la méthode des 47 (+2)
+écrite le 25/11, en trois familles, chacune à son accord. Puis la sentinelle.
+
+**① La mesure rejouée.**
+- L'outil `les_47_valeurs_jamais_posees_2026-11-25.py` a reçu deux constantes, son passage et son image. Elles gardent
+  leurs valeurs du 25/11.
+- **Au 81** : il redonne les 47, mêmes pièces, mêmes verdicts. L'outil n'a donc pas changé, et rien n'a été posé depuis.
+- **Au 82** (image 2026-11-26_094931), il y a **48** valeurs : les mêmes 47, avec les mêmes verdicts, plus **9Q0FHAKK**
+  (la vente 3650 réglée le 24/01/2025, facture GGTI00003842). Pour elle tout concorde : ce sont les « +2 ».
+- Le fichier : `notice/CLASSEUR_LES_47_VALEURS_JAMAIS_POSEES_2026-11-27_PASSAGE_82.csv`.
+
+**② Le juge ne lit pas ces deux colonnes.** `protocole_classeur.py` les écarte en toutes lettres : « jamais nos recopies de son
+Sheet (vente_reglee_app, numero_facture_app : circulaires) ». Poser la famille 1 ne nourrit donc pas sa preuve.
+- ⚠ Ce n'est **pas** vrai des dates d'annulation : la règle R27 ② lit la date d'annulation déjà posée sur le compromis.
+  La famille 3 devra d'abord être mesurée contre les paires de R27.
+- Le déclencheur du registre (`app_affaire_partie_suivre`) ne réagit qu'aux parties de l'affaire. Il ne bouge pas pour
+  ces deux colonnes.
+
+**③ La famille 1, ce sont 9 ventes réglées où tout concorde** : les 8 du 25/11, plus 9Q0FHAKK.
+- Les 9 ventes, chacune avec son règlement et sa facture :
+  - 9Q0FHAKK (3650) : 24/01/2025, GGTI00003842 ;
+  - AYIHPHF5 (14115) : 02/03/2022, GGTI00002112 ;
+  - LWZL8V5M (20674) : 05/11/2020, avec sa case facture entière ;
+  - 84c91bb8 (30835) : 19/11/2026, GGTI00004555 ;
+  - a56ce827 (30828) : 16/11/2026, GGTI00004550 ;
+  - ef08b63a (30844) : 23/11/2026, « GGTI00004516 / 19.11 relance » ;
+  - d9a0630c (30834) : 17/11/2026, GGTI00004551 ;
+  - a6d41ca1 (30846) : 24/11/2026, GGTI00004549 ;
+  - 8f3a4326 (30847) : 24/11/2026, GGTI00004538.
+- **Les valeurs sont prises mot pour mot, comme C8 le 16/11.** Elles sont lues dans l'image du 82, et le générateur exige le
+  même texte dans le Sheet du jour, ligne et état compris.
+- **Les chaînes** : les 9 portent des parts du classeur, donc protégées. Aucune n'est déjà réglée par une autre pièce.
+
+**④ Le patch** (`supabase/patch_ventes_reglees_famille1_2026-11-27.sql`, md5 19d690d8), généré par
+`phase2/checks/ventes_reglees_famille1_generer_patch_2026-11-27.py` :
+- **Les gardes** : il ne se rejoue pas ; les 9 ventes ont leurs deux cases vides ; l'empreinte des 9 lignes (fe8ded18) ;
+  3 729 ventes réglées au registre.
+- **La sauvegarde datée** des 9 lignes, avec sa clé primaire et la RLS.
+- **Le journal** : 18 lignes, avec la ligne d'origine et son numéro.
+- **La pose** se fait seulement sur des cases vides.
+- **Les contrôles** :
+  - les 18 cases portent la valeur du journal ;
+  - aucune autre colonne des 9 lignes n'a bougé ;
+  - le registre passe à 3 729 + 9 ventes réglées et 3 671 + 9 factures ;
+  - 0 vente réglée sans part ;
+  - les ventes réglées sur des parts supposées seules restent 20 ;
+  - **l'empreinte d'après est exigée : c283c736b2850a010a619e04ce0b7810**.
+- Ses compagnons : `_INVERSE` (f85cce2a), `_REPETITION` (ee1d7d1f), `_A_BLANC` (8822a493).
+
+**⑤ L'essai à blanc, joué chez Supabase à 10:56 : VERT.**
+- Après le geste : 3 738 ventes réglées, les 9 valeurs en place, empreinte c283c736.
+- L'inverse rend l'état d'avant (fe8ded18).
+- Relu ensuite en lecture seule : pas de sauvegarde, 0 ligne au journal du lot, 3 729 ventes réglées, les 9 cases encore
+  vides. **Rien n'est resté.**
+- Le patch réel a été refabriqué avec l'empreinte d'après. L'à blanc ressort avec le même md5, donc l'état n'avait pas bougé.
+
+**⑥ Ce qui suit, chacun à son mot.**
+- **La famille 2** : les 7 où seule la case « Prix » du Sheet est fautive. ⚠ 5 de ces chaînes n'ont que des parts supposées
+  (EJN79TJ1, 2U5QPKRC, I3TFR2KG, 91IHSGNC, MQ6H8TVQ). Il faut d'abord recopier leurs parts du classeur, comme sur 3647, et
+  c'est sa décision. MQ6H8TVQ n'a pas non plus de facture.
+- **La famille 3** : les 23 dates posables. Il faut d'abord les mesurer contre R27 ②.
+- **Restent à lui** : G8YSAI5Z (un 2e règlement sur un dossier déjà réglé) ; df0ce30c et 78bb247a (écarts d'honoraires) ;
+  les 3 dates antérieures à leur compromis ; O6R10ZQA, son double PAOLONE.
+- **Puis la sentinelle** : trois gestes, chacun à son accord.
+
+⛔ Rien n'est écrit en base, dans le Sheet ni chez Hektor. **La famille 1 attend son accord.**

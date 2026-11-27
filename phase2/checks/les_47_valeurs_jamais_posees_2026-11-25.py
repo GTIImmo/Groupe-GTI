@@ -37,6 +37,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 import protocole_classeur as P  # noqa: E402
 
 SORTIE = RACINE / "notice" / "CLASSEUR_LES_47_VALEURS_JAMAIS_POSEES_2026-11-25.csv"
+#: le passage du protocole et son image (27/11 : reglables, pour remesurer au 82 sans toucher la mesure du 25/11)
+PASSAGE, IMAGE = 81, "2026-11-25_072625"
 ECARTEES_PAR_LUI = {"6U5DQQ4J": "sa decision du 25/11 : date anterieure au compromis, ecartee",
                     "S3HOG6UL": "sa decision du 25/11 : date anterieure au compromis, ecartee"}
 #: ses doubles de saisie (25/11) : « NE TRANCHE PAS SEUL » -- rien ne se pose sur eux avant sa decision
@@ -77,9 +79,9 @@ def nombre(t):
 def main() -> int:
     con = sqlite3.connect("file:%s?mode=ro" % (P.DOSSIER / "socle.sqlite").as_posix(), uri=True)
     V = {i: (v, json.loads(ps) if ps else []) for i, v, ps in con.execute(
-        "select id_unique, verdict, pieces from verdict where passage=81")}
+        "select id_unique, verdict, pieces from verdict where passage=?", (PASSAGE,))}
     con.close()
-    sheet = json.loads((P.IMAGES / "2026-11-25_072625" / "sheet.json").read_text(encoding="utf-8"))
+    sheet = json.loads((P.IMAGES / IMAGE / "sheet.json").read_text(encoding="utf-8"))
     ent = sheet["entete"]
     k = {c: ent.index(c) for c in ("Etat Actuel", "Vente Réglée", "Numéro de facture", "Commission TTC", "Prix",
                                    "Annulée", "Compromis", "Vente Fixée", "Signée", "Agence")}
