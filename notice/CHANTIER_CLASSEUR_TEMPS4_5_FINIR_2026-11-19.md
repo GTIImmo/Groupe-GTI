@@ -6515,6 +6515,25 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   protege sa chaine.
 - LA PART QUI DIFFERE (hors du lot C, sa regle 6) : U0GQ3KTO, chaine 4385 -- le Sheet « CHAMPAGNAC 50 | JORAND 50 »,
   chez nous la personne 35 a 100 % (entree 50 + sortie 50, classeur_reconstitue du 13/11).
+
+### 20.105 Le 27/11 (20) : LOTS B ET C JOUES -- LES AVIS, PREMIERE COLONNE DU CLASSEUR ENTIEREMENT FINIE
+
+- Son mot : « Oui, joue B et C, puis leurs repetitions. »
+- LOT B joue a 20:17:50. REPETITION : 57 notes neuves, 342 marques « [classeur F, suivi en cours au 26/11/2026] » (285
+  paragraphes + 57 notes), 4 628 notes en tout, 0 texte d'avant abime, 9 notes saisies intactes, sauvegarde 285 notes
+  (RLS, 0 droit ouvert), les 78 marques du lot A toujours la.
+- LOT C joue a 20:18:13. REPETITION : 419 parts sur 203 chaines, toutes classeur_reconstitue, 0 chaine au-dela de 100 %,
+  18 389 parts en tout (17 970 + 419).
+- ⭐⭐ LES AVIS SONT COMPLETS, case par case contre le Sheet du 26/11 : « Avis a envoyer » 2 283 / 2 283, « Commentaire
+  Avis » 393 / 393, « Avis envoye » 2 414 / 2 414 -- ses chiffres exacts. C'EST LA PREMIERE COLONNE DU CLASSEUR
+  ENTIEREMENT FINIE (les 2 cases des lignes non tranchees comprises).
+- ⭐ SES DEUX ALERTES D'A BLANC, des BONNES NOUVELLES (son mot) : le controle qui a crie (342 marques pour 285) et le
+  generateur tombe sur sa propre syntaxe ont tous deux ARRETE le geste AVANT la base -- c'est ce qu'on leur demande.
+- ⭐ SA PRECISION SUR LA GARDE DE LA NUIT : la base ne liste pas les origines protegees, elle liste les ECRASABLES
+  (« hektor* ») -- classeur_reconstitue protege sa chaine par construction, le defaut de l'ancien convertisseur (qui ne
+  reconnaissait que « saisie ») ne peut pas revenir. ⚠ RESERVE ECRITE AU PLAN (§ 7.1) : les 203 chaines sont soustraites
+  POUR DE BON au recalcul de la nuit -- une part fausse ne se corrigera plus toute seule.
+- U0GQ3KTO (chaine 4385) dans SA LISTE A TRANCHER (plan § 8), avec les 6 conflits de commission.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

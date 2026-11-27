@@ -795,6 +795,12 @@ jours de lecture de la boucle. C'est une estimation.
 - **La colonne Prix porte 0 sur 12 lignes.**
 - **743 € sur la ligne VMSFVBJS**, ta saisie, que tu as vue toi-même.
 - **650e65c8 est réglée avant sa vente** : vente 3265 du 29/01/2026, « Vente Réglée » au 15/12/2025.
+- ⚠ **Les 203 chaînes du lot C sont soustraites pour de bon au recalcul de la nuit** (son mot du 27/11 au soir).
+  `app_repartition_absorber` saute toute chaîne qui porte une part dont l'origine ne commence pas par « hektor ».
+  La base liste les origines **écrasables**, pas les protégées : `classeur_reconstitue` protège donc sa chaîne par
+  construction, et le défaut de l'ancien convertisseur, qui ne reconnaissait que `saisie`, ne peut pas revenir.
+  ⛔ **La conséquence, voulue par lui : une part fausse sur ces 203 chaînes ne se corrigera plus toute seule.**
+  Seule une correction humaine, ou la boucle du matin, la reprendra.
 - ⚠ Conséquence pour le contrôle ③ de D6 : sur ces lignes, le prix ne peut pas concorder. Le jour où leur
   vente arrivera, elles sortiront en « écart de prix » et seront signalées, jamais écrites.
 
@@ -914,5 +920,10 @@ jours de lecture de la boucle. C'est une estimation.
 - **D10** — Les 170 lignes dont l'offre n'a jamais été saisie, alors qu'elles ont un compromis ou une
   vente : on crée l'offre chez nous seulement (origine `classeur`, comme les lots du 16/11), ou on
   laisse la case du Sheet seule ? Chez Hektor, c'est exclu : le bien reculerait.
+- **Ta liste à trancher, cas par cas, avec le dossier** (27/11 au soir) :
+  - **U0GQ3KTO**, chaîne 4385 : ton Sheet dit « CHAMPAGNAC 50 | JORAND 50 » ; chez nous, une seule personne (35) porte
+    100 % (50 à l'entrée et 50 à la sortie, `classeur_reconstitue` du 13/11). Elle est hors du lot C, selon ta règle 6 ;
+  - **les 6 conflits de commission** : 78bb247a, 650e65c8, b7aabaf3, ad8681cd, EAQJ9D0T, KO6QPUV7 (carnet § 20.101) ;
+  - et tes cas déjà en attente, qui sont au carnet.
 - **D11** — L'étape 9 (informer Hektor) : on la remplace par une rubrique « à corriger dans Hektor ? »
   du rapport du matin. *(ma recommandation : oui ; 0 geste mesuré en 4 jours)*
