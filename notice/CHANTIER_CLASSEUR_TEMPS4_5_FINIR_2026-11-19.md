@@ -6327,6 +6327,31 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
 - Les 334 : 332 lus, 0 a une autre ligne, 0 dossier a deux lignes ; mais 24 pieces nommees par deux lignes.
 - En attente de : 1 536 V, 437 pictogrammes, 14 courts (SRU 12), 1 125 longs ; 84 textes ont perdu un signe (+ 68).
 - Le suivi : 15 dates d'annulation et 62 notes ne sont plus sur une piece de leur ligne.
+
+### 20.97 Le 27/11 (12) : LE PLAN DE LA MISE A JOUR QUOTIDIENNE -- socle en base POSE, audit des gestes, plan valide
+
+⭐ LE PLAN DU CHANTIER EN COURS : notice/PLAN_MISE_A_JOUR_QUOTIDIENNE_DEPUIS_LE_SHEET_2026-11-27.md
+  (commit e1a2c73 + complements du soir). Il prend la suite de ce carnet ; ce carnet reste le journal des gestes.
+- Socle en base POSE le 27/11 (son accord) : patch des 5 tables joue, copie --ecrire relue avant commit, --verifier
+  rejoue : 82 passages / 393 449 verdicts / 65 361 temoins / 18 motifs / 8 fichiers A L'IDENTIQUE. Son propre
+  controle dit la meme chose (empreintes des passages 79, 81, 82).
+- Son but, plus large : une mise a jour QUOTIDIENNE de l'app et du serveur depuis les lignes neuves et modifiees du
+  Sheet ; des ecritures chez nous ET des gestes chez Hektor par le worker, selon la colonne.
+- Sa rectification : on SAIT creer et corriger une transaction (change_hektor_annonce_status, reprendre_transaction
+  + champs_touches). ⛔ MAIS 135 des 138 travaux depuis mai sont sur des biens d'essai (24933, 24113, 62774, 62965) ;
+  aucune correction sur un bien vendu reel. Le tableau des gestes, piece par piece et etat par etat : § 2 du plan.
+- Le stock tombe sur nos verrous (compromis_verrouille_par_vente on, compromis cloture, offre acceptee) : il reste
+  CHEZ NOUS ; Hektor n'est informe que pour une affaire vivante, par un geste prouve dans l'etat exact.
+- Les 190 nees du classeur (35 compromis annules, 96 offres refusees, 59 acceptees) : rien chez Hektor (« elle n'en
+  aura jamais », 15/11). Les 19 compromis sans honoraires : 18 sont des leurs, 1 est 46188 ; 2 erreurs de mon audit.
+- Offre Achat auditee : 4 769 cases ; 4 421 egales ; 114 ecarts (93 offres acceptees, 21 refusees : aucun corrigeable
+  chez Hektor) ; 170 lignes sans offre parmi leurs pieces (D10).
+- Sa mesure : gestes chez Hektor par semaine sur les affaires vivantes (135 lignes) -> 0 en 4 jours (22 -> 26/11) ;
+  les dates qui bougent sont des rendez-vous A VENIR. L'etape « informer Hektor » passe EN DERNIER (etape 9), et ma
+  reco est une rubrique du rapport du matin a la place (D11).
+- D9 CONFIRME : une seule table de routage en base (app_champ_destination), pour les deux sens.
+- Ce qui survit a la coupure du Sheet et a celle de Hektor : § 6.1 du plan. Demain : l'etape 2 (la regle des 334
+  sur copie du juge), pendant qu'il repond a D1-D8.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

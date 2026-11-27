@@ -48,16 +48,20 @@ classeur : « elle n'en aura jamais » (de numéro Hektor).
 acheteur. Les créer chez Hektor remettrait 114 biens vendus en « Sous offre » ou en « Sous
 compromis », et poserait la date du jour sur chacune.
 
-**⑥ Le plan suit ton ordre** (§ 6) :
+**⑥ Le plan suit ton ordre** (§ 6), revu le 27/11 au soir :
 1. l'audit (ce document) ;
 2. la règle des 334 ;
 3. les dates d'annulation élargies ;
-4. la Commission TTC, ta décision ;
+4. la Commission TTC chez nous ;
 5. la boucle, qui regarde seulement ;
 6. la boucle, qui écrit chez nous ;
-7. la boucle, qui informe Hektor des affaires vivantes ;
-8. les lignes neuves ;
-9. R1 à R5, la fin du chantier, là où le gel s'endort.
+7. les lignes neuves ;
+8. R1 à R5, la fin du chantier, là où le gel s'endort ;
+9. **en dernier, et peut-être jamais** : la boucle qui informe Hektor. **0 geste mesuré en 4 jours sur
+   les affaires vivantes** (§ 6, étape 9).
+
+Ce qui survit à chacune des deux coupures (celle du Sheet, celle de Hektor) est écrit étape par étape au
+§ 6.1.
 
 ---
 
@@ -291,26 +295,51 @@ compromis », et poserait la date du jour sur chacune.
 > voulu.
 
 **Offre Achat (la date de l'offre)**. Elle entre, puisqu'une ligne neuve commence par elle.
-- **Une ligne neuve** : la boucle cherche d'abord l'offre que le négociateur a déjà saisie chez Hektor.
-  C'est le cas ordinaire tant que les négociateurs saisissent dans Hektor (étape 2). Le juge la trouve
-  par la date et par le bien.
-- **Si elle n'existe pas chez Hektor** : création par `change_hektor_annonce_status`, cible `offer`,
-  avec `transaction_date` = la date du Sheet. ⚠ Sans `transaction_date`, Hektor pose la date du jour.
-  La création met le bien « Sous offre ».
-  - Interdite sur un bien vendu, clos ou en estimation : l'écran la refuse.
-  - Interdite aussi sur un bien déjà engagé : `nouvelleOffreFermeeSurBienEngage`.
-  - Si le Sheet dit l'offre acceptée, il faut ensuite `updateOffre accepte`. ⚠ Corriger le montant
-    d'abord, accepter ensuite.
-- **Une date qui change sur une offre existante** :
-  - offre proposée : correction chez Hektor (prouvée sur l'offre 33050) ;
-  - offre acceptée : **impossible chez Hektor** (200 et zéro octet) → chez nous seulement ;
-  - offre refusée : sa date chez Hektor est celle du refus, et nos lecteurs lisent la première
-    proposition → chez nous seulement.
-- **Où chez nous** : une ligne d'affaire au registre, avec son `app_affaire_id`. Pour une
-  correction : le carnet `app_affaire_champ_app` (champ `date`), qui prime à l'écran.
-  ⚠ La colonne `date` du registre est relue chez Hektor chaque nuit, et la protection lui est refusée
-  nommément (`R2_JUGES_SUR_LE_REGISTRE`).
-- ⚠ **L'audit des 18 n'a pas mesuré cette colonne.** Il faut le refaire pour elle avant de la brancher.
+
+*L'audit, fait le 27/11 au soir* : même méthode que les 18 (Sheet du 26/11, verdict du passage 82, base
+en direct). La date comparée chez nous est celle de la **première proposition** de l'offre, lue dans
+son journal (`premiere_proposition`, règle R29 du juge), et jamais la colonne `date`, qui porte le
+dernier mouvement.
+- **4 769 cases au Sheet**, dont 64 sur des lignes non tranchées, qui n'ont pas de pièce sûre.
+- Sur les 4 705 tranchées, **4 421 sont égales au jour près** : 4 279 sur une offre de Hektor, 142 sur
+  une offre née du classeur le 16/11.
+- **114 écarts**, médiane 2 jours ; 74 font 3 jours ou moins, 9 plus de 30 jours, le maximum 366. Ils
+  portent sur :
+  - **93 offres acceptées**, dont 13 sur un bien au parc : la correction est impossible chez Hektor ;
+  - **21 offres refusées** : chez Hektor, leur date est déjà celle du refus.
+  → **Aucun ne peut se corriger chez Hektor : chez nous seulement.**
+- **170 manquent : la ligne n'a aucune offre parmi ses pièces.** 113 ont un compromis et une vente,
+  49 un compromis seul, 8 une vente seule. C'est le cas « offre jamais saisie » : 66 % des offres
+  depuis 2025 sont saisies chez Hektor **déjà acceptées**, et certaines jamais. Pour ces 170, créer
+  l'offre chez Hektor ferait reculer le bien (§ 2.4) ; leur sort est ta décision **D10**.
+
+*Où la date s'écrit* :
+- **la pièce existe chez Hektor** : rien ne s'écrit si la date est égale. Si elle diffère, la date du
+  Sheet va **au carnet** (`app_affaire_champ_app`, champ `date` de l'offre), qui prime à l'écran.
+  - ⚠ La colonne `date` du registre est relue chez Hektor chaque nuit, et la protection lui est refusée
+    nommément (`R2_JUGES_SUR_LE_REGISTRE`) : on n'y écrit pas.
+  - Chez Hektor, seule une offre **proposée** se corrige (prouvé sur l'offre 33050). Elle n'est
+    concernée par aucun des 114 écarts.
+- **la pièce n'existe pas chez Hektor** : D10 pour le stock, D5 pour une ligne neuve.
+
+*Une ligne neuve qui n'a qu'une offre* (aujourd'hui, 436 lignes tranchées n'ont qu'une offre, ni
+compromis ni vente ; 417 sont « Annulée » et 19 « Offre d'achat », vivantes) :
+1. La boucle voit la ligne neuve dans le journal des différences (étape 5).
+2. Le juge cherche l'offre sur le bien, par la date. Tant que les négociateurs saisissent dans Hektor,
+   la nuit l'a normalement déjà descendue. **Les 5 lignes neuves des 24 et 26/11 sont toutes dans ce
+   cas** : le juge les a tranchées au passage 82, sur leur offre de Hektor.
+3. Si elle est trouvée, la ligne prend son étiquette, et ses autres cases s'écrivent chez nous :
+   - la Commission TTC → `honoraires_entree_app` (ta décision du 27/11) ;
+   - la répartition → `app_affaire_repartition` ;
+   - les notes et les avis.
+   **Rien ne part chez Hektor.**
+4. Si elle n'est pas trouvée après N jours : un **signal** dans le rapport du matin. C'est D5 :
+   signaler, ou créer chez Hektor par `change_hektor_annonce_status`, cible `offer`, avec
+   `transaction_date` = la date du Sheet.
+   - ⚠ Sans `transaction_date`, la date du jour est posée.
+   - ⚠ La création met le bien « Sous offre ». Elle est interdite sur un bien vendu, clos, en
+     estimation ou déjà engagé.
+   - ⚠ Si le Sheet la dit acceptée, il faut corriger le montant d'abord, puis `updateOffre accepte`.
 
 **Compromis (la date)**. 4 246 cases, 4 096 égales à Hektor, 81 écarts, 51 manquants.
 - **Compromis actif, bien au parc** : correction chez Hektor par la reprise (`transaction_date` →
@@ -510,10 +539,10 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
   - 298 cases au stade de l'offre → `honoraires_entree_app` ;
   - et, si tu dis oui (D2), les 18 compromis nés du classeur ;
   - un patch, son inverse, sa répétition.
-- **4b, chez Hektor** : d'abord **un essai réel** sur une vente réelle que tu choisis, par la reprise
-  (`seller_fees`), relue par `transaction_etat_from_api.py`. Ensuite les 4 compromis actifs au parc.
-  Ensuite les ventes, une par une.
-- Environ 1 jour, plus l'essai.
+- **4b, chez Hektor** : les conflits sur un compromis ou une vente. ⛔ **Déplacé à l'étape 9, en
+  dernier** (ton mot du 27/11 au soir). D'ici là, chaque conflit est un **signal** du rapport du matin,
+  et tu le corriges toi-même dans Hektor si tu le veux.
+- Environ ½ jour.
 
 **Étape 5 — la boucle, qui regarde seulement** (quelques jours, ta demande). Elle a huit pièces :
 1. **la photo du jour** : l'image existe ; une tâche planifiée la prend chaque jour et la garde 15 jours.
@@ -552,30 +581,7 @@ Elle n'écrit que dans ses propres tables, et ces tables se créent avec ton acc
   code avec les mêmes gardes que les patchs.
 - Environ 2 à 3 jours.
 
-**Étape 7 — la boucle informe Hektor**, pour les affaires vivantes seulement, et en dernier. Quatre
-préalables :
-- **une porte sans écran pour la reprise** :
-  - `app_modifier_affaire_optimistic` exige un administrateur connecté (`is_app_manager_or_admin`) ;
-  - sa charge « part entière », fabriquée par l'écran, et le worker de l'offre reconstruit le
-    formulaire de Hektor avec elle ;
-  - il faut donc fabriquer cette charge côté serveur, sans copier l'écran : c'est l'interdit écrit dans
-    le code.
-- **un essai réel par état touché** : compromis actif au parc, vente d'un bien vendu réel, offre
-  proposée. Aujourd'hui, 135 gestes sur 138 portent sur des biens d'essai.
-- **le débit** : 1 requête par seconde, un quota de 13 000 à 17 000 requêtes par période, et la nuit en
-  prend déjà ~4 500. Le coût d'une reprise en requêtes n'est **pas mesuré** (trois étapes de l'assistant,
-  plus les relectures).
-- **les interdits codés**, qui ne passent jamais par la boucle :
-  - créer une pièce plus ancienne que l'état du bien ;
-  - corriger une offre acceptée ;
-  - corriger un compromis annulé ;
-  - corriger le compromis d'une chaîne vendue ;
-  - supprimer une vente (décision humaine) ;
-  - changer un état (ton interdit sur le stock ; pour le quotidien, c'est D4).
-
-Environ 3 à 5 jours, plus les essais.
-
-**Étape 8 — les lignes neuves.** ~30 à 40 par mois (mesure du 19/11).
+**Étape 7 — les lignes neuves.** ~30 à 40 par mois (mesure du 19/11).
 - Aujourd'hui, le négociateur saisit dans Hektor et la nuit descend la transaction. Le juge rattache la
   ligne à sa pièce.
 - **Non mesuré** : qui arrive en premier, la ligne du Sheet ou la transaction de Hektor ; et pourquoi le
@@ -584,7 +590,7 @@ Environ 3 à 5 jours, plus les essais.
   création chez Hektor par la boucle ne vient que par ta règle (D5).
 - Environ 1 jour.
 
-**Étape 9 — R1 à R5, la fin du chantier.** C'est là que le gel s'endort. Repris de la note du 19/11
+**Étape 8 — R1 à R5, la fin du chantier.** C'est là que le gel s'endort. Repris de la note du 19/11
 (§ 10.6), sans changement de fond.
 - **R1 LIRE** : la colonne A est relue chaque nuit dans une table chez nous (étiquette → ID Unique,
   numéro de ligne), avec une vue que l'app interroge. La sentinelle des lignes non reliées en sort
@@ -600,8 +606,91 @@ Environ 3 à 5 jours, plus les essais.
 - **R5 LES NON ÉCRITES** : le protocole s'arrête aux 70. Ce sont tes 61 « rien à étiqueter », tes 9
   impossibles, et tes 2 doubles vides par décision. R5 les **signale**, il ne les cherche plus.
 
-**Le total, si tout est fait** : environ 15 à 20 jours de travail, sans compter les attentes d'accord ni
-les jours de lecture de la boucle. C'est une estimation.
+**Étape 9 — EN DERNIER, et peut-être jamais : la boucle informe Hektor.** Ton mot du 27/11 au soir :
+c'est la plus chère et la plus risquée, et elle ne concerne que les affaires vivantes.
+
+*La mesure demandée* : combien de gestes chez Hektor par semaine, en vrai, si la boucle ne traite que
+les affaires vivantes ?
+- **La source** : les 6 photos du Sheet en cache, du 22/11 10:44 au 26/11 09:49, soit **4,0 jours**.
+- **Qui est vivant** : une ligne tranchée au passage 82 dont une pièce est vivante (offre proposée ou
+  acceptée, compromis actif, ou vente), sur un bien au parc, avec son numéro Hektor. **135 lignes sur
+  4 733.** Tu en comptes 142 ; je ne reconstitue pas l'écart de 7, faute de ta définition.
+- **Ce qui a bougé en 4 jours** : 187 cases sur toutes les lignes, hors colonne A. Dont 50
+  COMMENTAIRES, 45 En attente de, 17 Etat Actuel, 9 avis, 8 Compromis, 8 Vente Fixée, 7 factures, 6
+  charges. Et 5 lignes neuves.
+- **Sur les affaires vivantes, dans les colonnes qui informeraient Hektor** : 13 changements, et
+  **aucun ne demande de geste** :
+  - les 8 « Vente Fixée » sont des dates **à venir** (30/11 au 17/12) sur des affaires qui n'ont pas
+    encore de vente : la vente se crée à la signature ;
+  - 4 des 5 « Compromis » sont des dates **à venir**, ou de la semaine (24/11 au 08/12), sur des
+    affaires qui n'ont pas encore de compromis ;
+  - le 5e est le Sheet qui rattrape Hektor : la date est déjà égale.
+  - « Annulée » posée sur une affaire vivante : 0 ;
+  - les 5 lignes neuves ont toutes leur offre chez Hektor. Leurs cases s'écrivent chez nous, et leur
+    Commission TTC va dans `honoraires_entree_app`.
+- **Réponse : 0 geste chez Hektor en 4 jours.** Ramené à la semaine : 0. La mesure est courte (4 jours,
+  une semaine de fin novembre), mais elle va dans ton sens.
+- ⭐ **Et elle apprend une chose** : sur une affaire vivante, le Sheet porte les dates de compromis et de
+  vente **avant** l'évènement. Ce sont des rendez-vous. C'est la même chose que les 109 « antérieures »
+  (D3) : une date du Sheet n'est une date de signature que si la pièce existe.
+
+*Ma recommandation* : pas d'étape 9 pour l'instant. Le rapport du matin porte une rubrique « à
+corriger dans Hektor ? », une ligne par cas, et tu corriges toi-même si tu le veux. On ne rouvre
+l'étape 9 que si la rubrique dépasse deux ou trois cas par semaine pendant un mois.
+
+*Si on la faisait un jour, ses quatre préalables restent* :
+- **une porte sans écran pour la reprise** :
+  - `app_modifier_affaire_optimistic` exige un administrateur connecté (`is_app_manager_or_admin`) ;
+  - sa charge « part entière », fabriquée par l'écran, et le worker de l'offre reconstruit le
+    formulaire de Hektor avec elle ;
+  - il faudrait la fabriquer côté serveur, sans copier l'écran : c'est l'interdit écrit dans le code.
+- **un essai réel par état touché** (135 gestes sur 138 sont sur des biens d'essai) ;
+- **le débit** : quota de 13 000 à 17 000 requêtes par période. Le coût d'une reprise en requêtes n'est
+  pas mesuré ;
+- **les interdits codés** :
+  - créer une pièce plus ancienne que l'état du bien ;
+  - corriger une offre acceptée, un compromis annulé, ou le compromis d'une chaîne vendue ;
+  - supprimer une vente ;
+  - changer un état (D4).
+
+Environ 3 à 5 jours plus les essais, si un jour il le faut.
+
+**Le total, sans l'étape 9** : environ 12 à 15 jours de travail, sans compter les attentes d'accord ni les
+jours de lecture de la boucle. C'est une estimation.
+
+### 6.1 Ce qui survit à la coupure, et ce qui meurt avec elle — étape par étape
+
+> **La boucle est un transitoire** : c'est le nom que tu lui as donné le 26/11. Il y a **deux
+> coupures**, et elles ne tuent pas les mêmes choses :
+> - **la coupure du Sheet** : R3 et R4, quand l'app écrit le Sheet et qu'on n'y saisit plus. Le Sheet
+>   cesse d'être une source ;
+> - **la coupure de Hektor** : ton étape 2 du 08/10, « l'app fait tout le travail quotidien, Hektor ne
+>   fournit plus que les numéros ». Hektor cesse d'être une destination pour les transactions.
+
+- **Étape 0, le socle en base** : **survit.** C'est la mémoire des décisions, et elle sert à l'histoire.
+- **Étape 2, la règle des 334** : son **résultat survit**, puisque les pièces restent rattachées. Le
+  juge **meurt à la coupure du Sheet** : quand chaque ligne naît avec son étiquette (R4), on n'apparie
+  plus.
+- **Étape 3, les dates d'annulation** et **étape 4a, la Commission chez nous** : **survivent.** Ce sont
+  des données chez nous, et c'est leur place définitive.
+- **Étape 5, la boucle qui regarde** :
+  - la photo du jour, le journal des différences et le juge du jour **meurent à la coupure du Sheet** ;
+  - ⭐ **la table de routage survit** : elle sert à R3 dans l'autre sens (D9, confirmé) ;
+  - la garde (ta famille B) **survit tant que la nuit recalcule les chaînes** ;
+  - le témoin et le rapport du matin **changent d'objet** : ils surveilleront l'écriture de l'app dans le
+    Sheet.
+- **Étape 6, la boucle qui écrit chez nous** : son code **meurt à la coupure du Sheet** (le sens
+  s'inverse) ; **son journal survit**, avec les valeurs d'avant de chaque écrasement.
+- **Étape 7, les lignes neuves** : **meurt à la coupure du Sheet**, puisque R4 fait naître la ligne avec
+  son étiquette.
+- **Étape 8, R1 à R5** :
+  - R1 (lire la colonne A) **devient un contrôle** : vérifier que le Sheet porte ce que l'app a écrit ;
+  - R2 (montrer), R3 (écrire) et R4 (créer la ligne) **survivent : c'est le sens définitif** ;
+  - R5 (signaler les non écrites) survit tant qu'il en reste.
+- **Étape 9, informer Hektor** : **meurt entièrement à la coupure de Hektor.** C'est la raison de plus
+  pour ne pas la construire avant d'en avoir besoin.
+- ⭐ **Ce qui ne meurt avec aucune des deux coupures** : les places chez nous (carnet, notes, avis,
+  répartition, cases `_app`), la table de routage, et le journal. C'est là que va l'effort.
 
 ---
 
@@ -616,9 +705,9 @@ les jours de lecture de la boucle. C'est une estimation.
 - L'effet de la suppression d'une vente sur un bien sorti des annonces vivantes.
 - Le nombre de requêtes Hektor par geste.
 - Combien des 70 compromis hors parc ont une vente dans leur chaîne.
-- Combien de cases du Sheet changent par jour : le journal des différences n'existe pas encore.
+- Combien de cases du Sheet changent par jour **sur la durée**. Je n'ai que 4 jours (187 cases, 5 lignes
+  neuves, du 22 au 26/11) : le journal des différences n'existe pas encore.
 - Si Hektor porte un champ « charge » ou la répartition sur une transaction.
-- La colonne Offre Achat : elle n'est pas dans l'audit des 18.
 - Tes chiffres 106, 43, 426, 386, 154 et 1 163 : je ne les reconstitue pas, faute de ta définition.
 - Les Apps Script du classeur (V1).
 
@@ -639,5 +728,11 @@ les jours de lecture de la boucle. C'est une estimation.
   Hektor, ou laisser la part ?
 - **D7** — L'essai réel de l'étape 4b : sur quelle vente ?
 - **D8** — Le Notaire et les autres colonnes que tu n'as pas citées restent dehors : confirmé ?
-- **D9** — La table de routage en base (`app_champ_destination`), une seule pour les deux sens :
-  confirmé ?
+- **D9** — ✅ **CONFIRMÉ le 27/11 au soir** : une seule table de routage en base
+  (`app_champ_destination`), pour les deux sens. « C'est elle qui empêchera l'aller-retour entre mon
+  Sheet et mon app, et je ne veux pas d'une sixième liste. »
+- **D10** — Les 170 lignes dont l'offre n'a jamais été saisie, alors qu'elles ont un compromis ou une
+  vente : on crée l'offre chez nous seulement (origine `classeur`, comme les lots du 16/11), ou on
+  laisse la case du Sheet seule ? Chez Hektor, c'est exclu : le bien reculerait.
+- **D11** — L'étape 9 (informer Hektor) : on la remplace par une rubrique « à corriger dans Hektor ? »
+  du rapport du matin. *(ma recommandation : oui ; 0 geste mesuré en 4 jours)*
