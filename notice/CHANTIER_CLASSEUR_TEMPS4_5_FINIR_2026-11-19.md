@@ -6310,6 +6310,23 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   Mise de cote 168 = 158 + 2 + 8.
 - Registre : 3 744 ventes reglees, 3 686 factures, 472 dates, 17 970 parts. Temoins demain : les 4 repetitions.
 - A lui : G8YSAI5Z, df0ce30c, 78bb247a, MQ6H8TVQ, les 3 anterieures, O6R10ZQA. Puis la sentinelle.
+
+### 20.96 Le 27/11 (11) : son mot de l'apres-midi -- socle en base (a blanc VERT), audit des 18 colonnes, ses 3 mesures
+
+- Son mot : par REGLE (case vide -> le Sheet ; case remplie differente -> le Sheet gagne, avec valeur d'avant + journal, arret
+  si le temoin du matin n'est pas vert) ; 18 colonnes entrent, 6 dehors ; ordre : audit, regle des 334, annulations
+  elargies, boucle qui regarde ; AVANT TOUT : la memoire des decisions en base.
+- Socle en base : 4 tables a l'identique + 8 fichiers, 185,7 Mo mesures ; outil socle_du_protocole_en_base_2026-11-27.py
+  a blanc VERT (relu octet pour octet, temoin inverse mord, rien ne reste) ; patch des 5 tables cded3c75, a blanc VERT chez
+  Supabase, 0 table apres. Deux gestes a son accord.
+- 15 contre 9 : mon 15 est du passage 81 ; au 82, 5 tranches par ses decisions, 1 dans les 61 -> 9, sa liste.
+- Audit (audit_18_colonnes_du_classeur_2026-11-27.py, CSV 16 440 lignes) : tout boucle ; 3 colonnes SANS case chez nous
+  (Commission TTC, Compromis, Vente Fixee) ; ses 249 / 6 / 17 / 334 retrouves ; 426 / 386 / 154 / 1 163 non reconstitues.
+- 109 dates anterieures (pas 104) : 101 ont la case Compromis du Sheet = Hektor (son hypothese ne tient pas telle quelle) ;
+  109/109 « Signe » FALSE (contre 89 % ailleurs) -> le rendez-vous de signature, l'affaire tombee avant.
+- Les 334 : 332 lus, 0 a une autre ligne, 0 dossier a deux lignes ; mais 24 pieces nommees par deux lignes.
+- En attente de : 1 536 V, 437 pictogrammes, 14 courts (SRU 12), 1 125 longs ; 84 textes ont perdu un signe (+ 68).
+- Le suivi : 15 dates d'annulation et 62 notes ne sont plus sur une piece de leur ligne.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

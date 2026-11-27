@@ -3319,3 +3319,82 @@ nuit.
 **Puis la sentinelle** (trois gestes, chacun à son accord).
 
 ⛔ Rien d'écrit chez Hektor ni dans le Sheet.
+
+### Le 27/11 (11) : son mot de l'après-midi — le socle en base, l'audit des 18 colonnes, ses trois mesures
+
+**Son mot** :
+- la boucle se fait **par règle**, sans décision humaine chaque jour ;
+- **sa règle, une seule** : une case vide chez nous prend le Sheet ; une case remplie qui diffère, le Sheet gagne. Deux
+  conditions : chaque écrasement garde sa valeur d'avant et son journal, et la boucle s'arrête d'elle-même si son témoin du
+  matin n'est pas vert ;
+- **18 colonnes entrent** : les 6 des négociateurs, COMMENTAIRES, En attente de, Commission TTC, Charge Commission,
+  Compromis, Vente Fixée, Vente Réglée, Annulée, Numéro de facture et les 3 avis ;
+- **6 restent dehors** : Prix, Mandat, Offre Achat (le Sheet y a tort, c'est mesuré) ; Acquéreur, Vendeur, Vente Prévue (sa
+  décision, pour l'instant) ;
+- **son ordre** : l'audit, puis la règle des 334, puis les dates d'annulation élargies, puis la boucle (qui regarde et
+  montre quelques jours avant d'écrire) ;
+- **« avant tout ça »** : mettre la mémoire des décisions en base ;
+- ⛔ rien chez Hektor, et on ne corrige pas l'état d'une pièce.
+
+**① Le socle en base : prêt, essai à blanc VERT, rien n'est écrit.**
+- Le constat est le sien, et il est juste : `socle.sqlite` (159 Mo, md5 5ca7c766) vit dans le cache. Ses 17 copies sont sur
+  le même disque, et la sauvegarde de 09:00 ne le prend pas (elle ne prend que `data\hektor.sqlite` et le schéma).
+- **Ce qui partirait en base** : les 4 tables du socle à l'identique (82 passages, 393 449 verdicts, 65 361 lignes de
+  témoin, 18 motifs), plus 8 fichiers :
+  - les entrées vivantes du juge (`entrees_passage_81/82.json`, `v3_calcul.json`, `mandants_des_biens_2026-11-23.json`) ;
+  - la photo du Sheet du passage 82 (`sheet.json`, `gel.json`, `manifeste.json`, `t6_photo.json`).
+  - ⛔ Pas le `registre.sqlite` de l'image (96 Mo) : c'est une photo de notre propre base. À sa décision.
+- **La place, mesurée à blanc : 185,7 Mo**, sur une base de 4 561 Mo.
+- **L'outil** : `phase2/checks/socle_du_protocole_en_base_2026-11-27.py`.
+  - `--a-blanc` : des tables temporaires, la copie, la relecture. Les 4 tables et les 8 fichiers sont relus identiques,
+    octet pour octet. Le témoin inverse mord : une lettre ajoutée à un verdict change l'empreinte. Rien ne reste.
+  - `--ecrire` : copie les passages absents de la base et relit chaque table avant le commit.
+  - `--verifier` : la base contre le socle, en lecture seule.
+- **Le patch des 5 tables** : `supabase/patch_socle_du_protocole_en_base_2026-11-27.sql` (cded3c75). Les tables sont créées
+  vides, avec la RLS, sans aucun droit pour public, anon et authenticated.
+  - Son essai à blanc est VERT chez Supabase. Relu après : 0 table.
+- **Deux gestes à son accord** : jouer le patch, puis la copie. Ensuite, chaque nouveau passage se recopie.
+
+**② Les 15 impossibles annoncés contre ses 9 : l'écart est de mon fait.** Mon « 15 » date du passage 81 (25/11 au soir) et
+je ne l'ai pas recompté après le passage 82. Au 82 :
+- 5 des 15 sont tranchés par ses décisions (9Q0FHAKK, HUY49KEC, P252U1JH, d2108609, PEE1XTR8) ;
+- 1 est passé dans les « rien à étiqueter » (9B7U8221). Les 58 sont devenus 61 avec lui et deux lignes tranchées au 81,
+  3308P0UX et T2GZOY5O ;
+- 15 − 5 − 1 = **9, exactement sa liste**.
+
+**③ L'audit des 18 colonnes** (`phase2/checks/audit_18_colonnes_du_classeur_2026-11-27.py`, lecture seule). Sources :
+- le Sheet de l'image du 82 ;
+- le verdict du 82 ;
+- la base en direct, donc avec les gestes du 27/11.
+
+Toutes les sommes bouclent. Une ligne par case qui n'est pas « déjà chez nous » :
+`notice/AUDIT_18_COLONNES_DU_CLASSEUR_2026-11-27.csv` (16 440 lignes).
+- **⛔ Trois colonnes n'ont pas de case chez nous** : Commission TTC, Compromis et Vente Fixée. Notre seule valeur est celle
+  de Hektor. Sa règle « le Sheet gagne » demande d'abord une place où écrire.
+- **La Charge** vit sur le mandat, **la répartition** sur la chaîne, **les notes** sur la pièce, **les avis** sur l'ID.
+- **Ses chiffres que je retrouve** : 249 offres refusées seules ; les 6 « annulé au Sheet, pas chez nous » (3 compromis
+  actifs + 3 offres acceptées seules) ; 17 avis ; les 334 (332 lus).
+- **Ceux que je ne retrouve pas**, faute de connaître sa définition : 426, 386, 154 et 1 163.
+
+**④ Ses trois mesures.**
+- **Les dates antérieures : 109, pas 104.** Écart médian 10 jours, maximum 51. Son hypothèse ne tient pas telle quelle : dans
+  101 cas sur 109, la case Compromis **du Sheet lui-même** porte la date de Hektor au jour près.
+  - Le témoin, sur toutes les lignes tranchées : 4 096 égales, 41 où Hektor est après, 40 où il est avant. Aucun sens
+    constant.
+  - **Mais les 109 ont toutes « Signé » à FALSE.** Les lignes annulées après leur compromis le sont à 89 % (279 sur 314).
+    109 sur 109 n'est pas un hasard.
+  - **La lecture voisine** : la date du compromis est le rendez-vous de signature, et l'affaire est tombée avant. Les 109
+    dates seraient justes.
+- **Les 334** : 332 occurrences (275 offres, 48 ventes, 9 compromis) sur 312 lignes.
+  - Aucune n'est donnée à une autre ligne ; aucun de leurs dossiers ne porte une deuxième ligne. **Les deux vérifiés.**
+  - Mais **24 pièces sont nommées par deux lignes** (302 pièces distinctes), et 105 sont dans un autre dossier que leur ligne.
+- **« En attente de »** : 3 112 cases = 1 536 « V » seuls + 437 pictogrammes seuls + 14 de 1 à 3 caractères (« SRU » 12,
+  « v », « CI A ») + 1 125 de 4 caractères et plus.
+  - Sur les lignes tranchées, 342 textes sont chez nous « au même texte » : 258 n'ont perdu que leurs pictogrammes (sa
+    décision du 17/11) et **84 ont perdu un signe** (+ 68, > 13, € 5, < 1, = 1).
+
+**⑤ Le point de la boucle qui suit, déjà visible** : des écritures posées ne sont plus sur une pièce de leur ligne.
+- **15 dates d'annulation** (sur 472) sont sur une pièce que le protocole ne donne à aucune ligne.
+- **53 notes G et 9 notes F** sont posées le 17/11 sur une pièce que le protocole ne donne plus à leur ligne.
+
+⛔ Rien d'écrit en base (hors essais à blanc, qui n'ont rien laissé), ni dans le Sheet, ni chez Hektor.
