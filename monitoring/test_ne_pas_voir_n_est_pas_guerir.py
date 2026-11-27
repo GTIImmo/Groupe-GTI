@@ -107,12 +107,23 @@ def imiter_powershell(taches: dict[str, int] | None):
     def run(cmd, **kw):
         if taches is None:
             raise subprocess.TimeoutExpired(cmd, kw.get("timeout", 15))
-        rows = [{"Name": n, "State": "Ready", "LastResult": r, "AgeMin": 60} for n, r in taches.items()]
+        rows = [{"Name": n, "State": "Running" if r == 267009 else "Ready", "LastResult": r, "AgeMin": 60}
+                for n, r in taches.items()]
         return FauxProcessus(json.dumps(rows))
     return run
 
 
-def sonde(sb: FauxSupabase, taches, avec_battement: bool = False) -> list:
+@contextlib.contextmanager
+def interrupteurs(regle5: bool, en_cours: bool):
+    avant = (cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR, cgh.GARDER_LES_TACHES_EN_COURS)
+    cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR, cgh.GARDER_LES_TACHES_EN_COURS = regle5, en_cours
+    try:
+        yield
+    finally:
+        cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR, cgh.GARDER_LES_TACHES_EN_COURS = avant
+
+
+def sonde(sb: FauxSupabase, taches, avec_battement: bool = False, en_cours: bool = True) -> list:
     """Une vraie passe des deux sondes concernees, PowerShell imite."""
     args = argparse.Namespace(scheduled_tasks=TACHES, timeout_seconds=15, project_root=".",
                               worker_stale_default_minutes=180)
@@ -120,25 +131,23 @@ def sonde(sb: FauxSupabase, taches, avec_battement: bool = False) -> list:
     vrai_run = cgh.subprocess.run
     cgh.subprocess.run = imiter_powershell(taches)
     try:
-        if avec_battement:
-            mon.safe_check("worker_heartbeat", mon.check_worker_heartbeat)
-        mon.safe_check("scheduled_tasks", mon.check_scheduled_tasks)
+        with interrupteurs(cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR, en_cours):
+            if avec_battement:
+                mon.safe_check("worker_heartbeat", mon.check_worker_heartbeat)
+            mon.safe_check("scheduled_tasks", mon.check_scheduled_tasks)
     finally:
         cgh.subprocess.run = vrai_run
     return mon.results
 
 
-def ecrire(sb: FauxSupabase, resultats: list, regle: bool):
-    """write_results reel ; rend (envois, sortie d'erreur)."""
+def ecrire(sb: FauxSupabase, resultats: list, regle: bool, en_cours: bool | None = None):
+    """write_results reel ; rend (envois, sortie d'erreur). `regle` = regle 5 ;
+    `en_cours` = la regle des taches en cours (par defaut : comme la regle 5)."""
     alerte = FauxAlerter()
     tampon = io.StringIO()
-    avant = cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR
-    cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR = regle
-    try:
+    with interrupteurs(regle, regle if en_cours is None else en_cours):
         with contextlib.redirect_stderr(tampon):
             cgh.write_results(sb, resultats, False, 24.0, alerte)
-    finally:
-        cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR = avant
     return alerte.envois, tampon.getvalue()
 
 
@@ -249,6 +258,62 @@ def cas_unitaires() -> None:
              envois, [("critical", [VUE_T, D])])
 
 
+EN_COURS = 267009
+
+
+def cas_des_taches_en_cours() -> None:
+    """La tache « en cours » (27/11) : pas encore de verdict, l'etat precedent est garde."""
+    print()
+    print("La tache « en cours » (267009), regle 5 allumee :")
+
+    # 5m -- la descente en anomalie redemarre : la panne mesuree (06:50-06:51).
+    sb = FauxSupabase({D: "critical", VUE_T: "critical"})
+    res = sonde(sb, dict(TOUT_VA, **{"GTI Descente": EN_COURS}))
+    envois, err = ecrire(sb, res, True)
+    vue = [r for r in res if r.status_key == VUE_T][0]
+    verifier("5m  descente rouge qui redemarre : etat garde, aucun « Retour », aucun envoi",
+             (retours(res), envois, sb.statut(D), sb.lignes[D]["message"]), ([], [], "critical", "(d'avant)"))
+    verifier("5m' le journal et la vue d'ensemble disent PAR QUOI",
+             ("[en cours]" in err and "scheduledtasks:gti_descente=critical" in err, "[regle 5]" in err,
+              "1 en cours (etat precedent garde)" in vue.message, vue.details.get("en_cours_cles")),
+             (True, False, True, [D]))
+    sb = FauxSupabase({D: "critical", VUE_T: "critical"})
+    res = sonde(sb, dict(TOUT_VA, **{"GTI Descente": EN_COURS}), en_cours=False)
+    envois, err = ecrire(sb, res, True, en_cours=False)
+    vue = [r for r in res if r.status_key == VUE_T][0]
+    verifier("5m-INVERSE  eteinte : declaree guerie avant d'avoir fini (le defaut du 15/11)",
+             (retours(res), envois, sb.statut(D), "en cours" in vue.message, "en_cours" in vue.details),
+             ([D], [("recovery", [])], "ok", False, False))
+
+    # 5n -- une tache SAINE qui tourne : rien a garder, rien ne change.
+    sb = FauxSupabase({VUE_T: "ok"})
+    res = sonde(sb, dict(TOUT_VA, **{"GTI Descente": EN_COURS}))
+    envois, err = ecrire(sb, res, True)
+    verifier("5n  tache saine qui tourne : aucune cle, aucun envoi, rien au journal",
+             (retours(res), envois, sb.statut(D), "[en cours]" in err), ([], [], None, False))
+
+    # 5o / 5p -- la passe d'apres lit le VRAI resultat.
+    sb = FauxSupabase({D: "critical", VUE_T: "critical"})
+    ecrire(sb, sonde(sb, dict(TOUT_VA, **{"GTI Descente": EN_COURS})), True)
+    res = sonde(sb, DESCENTE_EN_1)
+    envois, err = ecrire(sb, res, True)
+    verifier("5o  puis elle finit en 1 : toujours rouge, et PAS de nouvel e-mail (meme incident)",
+             (envois, sb.statut(D)), ([], "critical"))
+    sb = FauxSupabase({D: "critical", VUE_T: "critical"})
+    ecrire(sb, sonde(sb, dict(TOUT_VA, **{"GTI Descente": EN_COURS})), True)
+    res = sonde(sb, TOUT_VA)
+    envois, err = ecrire(sb, res, True)
+    verifier("5p  puis elle finit en 0 : « Retour a la normale » et retablissement, a ce moment-la",
+             (retours(res), envois, sb.statut(D)), ([D], [("recovery", [])], "ok"))
+
+    # 5q -- « jamais lancee » (267011) n'est PAS couvert, expres (tache re-enregistree).
+    sb = FauxSupabase({D: "critical", VUE_T: "critical"})
+    res = sonde(sb, dict(TOUT_VA, **{"GTI Descente": 267011}))
+    envois, err = ecrire(sb, res, True)
+    verifier("5q  « jamais lancee » (267011) reste une guerison, comme avant (non couvert, voulu)",
+             (retours(res), envois), ([D], [("recovery", [])]))
+
+
 def cas_du_delai() -> None:
     """La cause (27/11) : la lecture des taches a son propre delai, 60 s."""
     print()
@@ -294,8 +359,8 @@ def cas_du_delai() -> None:
              (recu, vue.status), ([60], "unknown"))
 
 
-def histoire_du_26_11(regle: bool):
-    """Les passes reelles du 26/11 08:49 au 27/11 06:49 (heures mesurees au serveur)."""
+def histoire_du_26_11(regle: bool, en_cours: bool):
+    """Les passes reelles du 26/11 08:49 au 27/11 08:49 (heures mesurees au serveur)."""
     def lue(descente: int) -> dict[str, int]:
         # recrutement et menage en orange depuis le 24/11 (mesure au serveur)
         return dict(TOUT_VA, **{"GTI Descente": descente, "GTI Recrutement": 1,
@@ -310,13 +375,14 @@ def histoire_du_26_11(regle: bool):
         ("26/11 20:49", lue(1)), ("26/11 22:49", lue(1)),
         ("27/11 00:49", lue(1)), ("27/11 02:49", lue(1)), ("27/11 04:49", lue(1)),
         ("27/11 06:49", lue(267009)),  # la descente du jour est en cours
+        ("27/11 08:49", lue(0)),       # finie en 0 a 07:19 (lue ici, comme avec 60 s)
     ]
     sb = FauxSupabase({R: "warning", M: "warning", VUE_T: "warning"})
     journal_d, envois_tous, retours_tous = [], [], 0
     for heure, taches in passes:
         deja = len(sb.evenements)
-        res = sonde(sb, taches)
-        envois, _ = ecrire(sb, res, regle)
+        res = sonde(sb, taches, en_cours=en_cours)
+        envois, _ = ecrire(sb, res, regle, en_cours=en_cours)
         journal_d += [(heure, ev["status"]) for ev in sb.evenements[deja:] if ev["event_key"] == D]
         retours_tous += len(retours(res))
         envois_tous += [(heure, k) for k, cles in envois]  # TOUS les envois, quels qu'ils soient
@@ -328,21 +394,27 @@ def histoire() -> None:
     print("L'histoire reelle du 26/11 (descente en code 1, 3 lectures ratees), rejouee :")
     serveur = [("26/11 10:49", "critical"), ("26/11 14:49", "ok"), ("26/11 16:49", "critical"),
                ("26/11 18:49", "ok"), ("26/11 20:49", "critical"), ("27/11 06:49", "ok")]
-    journal, envois, nb_retours = histoire_du_26_11(False)
-    verifier("H-INVERSE  eteinte : les 6 evenements gti_descente DU SERVEUR, a l'identique",
+    journal, envois, nb_retours = histoire_du_26_11(False, False)
+    verifier("H-INVERSE  tout eteint : les 6 evenements gti_descente DU SERVEUR, a l'identique",
              journal, serveur)
-    verifier("H-INVERSE  eteinte : 3 alertes descente et 3 retablissements",
+    verifier("H-INVERSE  tout eteint : 3 alertes descente et 3 retablissements",
              envois, [("26/11 10:49", "critical"), ("26/11 14:49", "recovery"),
                       ("26/11 16:49", "critical"), ("26/11 18:49", "recovery"),
                       ("26/11 20:49", "critical"), ("27/11 06:49", "recovery")])
-    verifier("H-INVERSE  eteinte : 9 « Retour a la normale » (8 faux, comme au serveur, + 1)",
+    verifier("H-INVERSE  tout eteint : 9 « Retour a la normale » (8 faux, comme au serveur, + 1)",
              nb_retours, 9)
-    journal, envois, nb_retours = histoire_du_26_11(True)
-    verifier("H  allumee : 2 evenements gti_descente (le rouge, puis la fin du 27/11)",
+    journal, envois, nb_retours = histoire_du_26_11(True, False)
+    verifier("H5  regle 5 seule : 2 evenements gti_descente (le rouge, puis la fin LUE EN COURS a 06:49)",
              journal, [("26/11 10:49", "critical"), ("27/11 06:49", "ok")])
-    verifier("H  allumee : UNE alerte, UN retablissement",
+    verifier("H5  regle 5 seule : UNE alerte, UN retablissement (a 06:49, sans verdict)",
              envois, [("26/11 10:49", "critical"), ("27/11 06:49", "recovery")])
-    verifier("H  allumee : 1 seul « Retour a la normale » (le vrai)", nb_retours, 1)
+    verifier("H5  regle 5 seule : 1 seul « Retour a la normale »", nb_retours, 1)
+    journal, envois, nb_retours = histoire_du_26_11(True, True)
+    verifier("H  tout allume : 2 evenements gti_descente (le rouge, puis le VRAI resultat a 08:49)",
+             journal, [("26/11 10:49", "critical"), ("27/11 08:49", "ok")])
+    verifier("H  tout allume : UNE alerte, UN retablissement, quand le 0 est lu",
+             envois, [("26/11 10:49", "critical"), ("27/11 08:49", "recovery")])
+    verifier("H  tout allume : 1 seul « Retour a la normale » (le vrai)", nb_retours, 1)
 
 
 def main() -> int:
@@ -352,7 +424,10 @@ def main() -> int:
         pass
     if not cgh.NE_PAS_VOIR_N_EST_PAS_GUERIR:
         print("⚠ l'interrupteur NE_PAS_VOIR_N_EST_PAS_GUERIR est eteint dans le code")
+    if not cgh.GARDER_LES_TACHES_EN_COURS:
+        print("⚠ l'interrupteur GARDER_LES_TACHES_EN_COURS est eteint dans le code")
     cas_unitaires()
+    cas_des_taches_en_cours()
     cas_du_delai()
     histoire()
     print()

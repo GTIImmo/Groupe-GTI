@@ -830,3 +830,52 @@ normale, sans poussée. Le banc : `phase2/sync/test_garde_de_la_descente.py`.
 - **Prend effet** à la prochaine passe de la sonde (18:48), sans aucun geste.
 - **Le retour arrière** : passer `--scheduled-tasks-timeout-seconds 15`, ou changer le
   défaut.
+- **Commit** : `8b7eabb` (27/11, 17:50, local).
+
+### Une tâche « en cours » n'a pas encore de verdict (27/11)
+
+- **Sa décision** (27/11) : « Oui, vas-y ».
+- **Le défaut** : le code 267009 (« la tâche tourne ») était accepté comme sain. Une tâche en
+  anomalie qui **redémarrait** était donc déclarée « Retour à la normale » avant d'avoir fini.
+- **Ce que le serveur montre** : sur les 30 retours non aveugles du 07/09 au 27/11, **au
+  moins 5** ont été pris pendant que la tâche tournait :
+  - la descente à 06:50 ou 06:51, quatre fois (31/10, 15/11, 16/11, 27/11) ;
+  - le quotidien à 05:49, le 18/09.
+  - Deux ont été démentis ensuite (le 18/09 et le 15/11). Les trois autres se sont trouvés
+    justes **par chance**, dont celui de ce matin.
+- **Le code** : `monitoring/check_gti_health.py`.
+  - L'interrupteur `GARDER_LES_TACHES_EN_COURS = True`, et la constante
+    `TACHE_EN_COURS = 267009`.
+  - `check_scheduled_tasks` relève les tâches en 267009. La vue d'ensemble les nomme : dans
+    son message, « N en cours (état précédent gardé) », et dans ses détails, `en_cours` et
+    `en_cours_cles`.
+  - `write_results` : une clé en cours garde son état précédent, sans être réécrite, et le
+    journal le dit (« [en cours] … »).
+  - La règle s'appuie sur la règle 5 : un rouge gardé bloque le rétablissement, et la vue
+    d'ensemble seule n'envoie rien. Le filtre de la vue d'ensemble joue dès qu'une des deux
+    règles est allumée.
+  - Le code 267009 reste accepté : la règle ne fait naître **aucune** alerte nouvelle.
+- **Non couvert, exprès** : le code 267011 (« jamais lancée ») reste une guérison. C'est le
+  cas d'une tâche ré-enregistrée, donc d'un geste humain.
+- **Le banc** : **34 sur 34**, avec 7 épreuves de plus et une histoire prolongée jusqu'au
+  27/11 à 08:49.
+  - Une descente rouge qui redémarre garde son état : aucun « Retour », aucun envoi.
+  - Une tâche saine qui tourne ne change rien.
+  - Si elle finit en 1, elle reste rouge, sans nouvel e-mail. Si elle finit en 0, le
+    rétablissement part à ce moment-là.
+  - **Le témoin inverse**, interrupteur éteint : la tâche est déclarée guérie avant d'avoir
+    fini, et le message est celui d'avant.
+  - **L'histoire du 26/11**, rejouée :
+    - tout éteint : toujours les 6 événements du serveur, à l'identique ;
+    - règle 5 seule : le rétablissement part à 06:49, sans verdict ;
+    - les deux règles : il part à 08:49, quand le 0 est lu.
+  - **Le témoin positif des pièces**, neutralisées à l'exécution : sans la garde, ou sans le
+    relevé du 267009, 6 épreuves sur 34 échouent.
+    - ⚠ Les trois pièces de la règle 5 ne sont pas recassées sur copie, car un filtre de
+      confidentialité refuse désormais de copier le fichier de la sonde : il contient
+      l'adresse d'alerte par défaut. Elles avaient été prouvées sur `7de733e`, et seule la
+      condition du filtre a changé depuis (ajout de « ou la règle en cours »).
+- **Les anciens bancs** : inchangés, avec les 2 mêmes échecs déjà présents dans
+  `test_travaux_en_erreur_resolus`.
+- **Prend effet** à la prochaine passe de la sonde (18:48), sans aucun geste.
+- **Le retour arrière** : `GARDER_LES_TACHES_EN_COURS = False`.

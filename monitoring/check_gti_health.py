@@ -254,6 +254,24 @@ TASK_CRITICALITY: dict[str, str] = {
 # Codes LastTaskResult consideres comme sains : succes / en cours / jamais lance.
 ACCEPTABLE_TASK_RESULTS = {0, 267009, 267011}
 
+# ⛔ 27/11/2026 -- UNE TACHE EN COURS N'A PAS ENCORE DE VERDICT (suite de la regle 5).
+#   267009 veut dire « la tache tourne » : ce n'est pas un succes, c'est l'absence de
+#   resultat. Or il est accepte comme sain, donc une tache en anomalie qui REDEMARRE
+#   etait declaree « Retour a la normale » avant meme d'avoir fini.
+#   MESURE au serveur (07/09 -> 27/11) : sur 30 retours non aveugles, au moins 5 ont ete
+#   pris pendant que la tache tournait (la descente a 06:50-06:51 quatre fois, le
+#   quotidien a 05:49 une fois) ; 2 ont ete re-cries ensuite (18/09, 15/11), les 3
+#   autres se sont trouves justes par chance.
+#   LA REGLE : une tache lue en 267009 GARDE son etat precedent (sans etre reecrite)
+#   jusqu'a la passe qui lit son vrai resultat. Une tache saine qui tourne ne change
+#   rien : elle n'avait rien a garder. Le code reste accepte (aucune alerte nouvelle).
+#   Elle s'appuie sur la regle 5 : etats gardes, et vue d'ensemble seule sans envoi.
+#   ⚠ NON couvert, expres : 267011 (« jamais lancee ») reste une guerison -- c'est le
+#   cas d'une tache re-enregistree, un geste humain.
+#   Retour arriere : False.
+GARDER_LES_TACHES_EN_COURS = True
+TACHE_EN_COURS = 267009
+
 # Sentinelles de donnees : requetes read-only qui detectent les DERIVES SILENCIEUSES
 # (idnego, notifications orphelines, diffusion sans mandat, chute d'actives...) que le
 # monitoring infra ne voit pas. Calibrees sur la baseline live du 2026-07-04.
@@ -1956,6 +1974,7 @@ class Monitor:
         if isinstance(data, dict):
             data = [data]
         problems: list[dict[str, Any]] = []
+        en_cours: list[str] = []
         for row in data:
             name = row.get("Name") or "?"
             state = row.get("State") or "?"
@@ -1969,6 +1988,8 @@ class Monitor:
             if result is not None and int(result) not in ACCEPTABLE_TASK_RESULTS:
                 severity = "critical" if criticality == "critical" else "warning"
                 problems.append({"name": name, "severity": severity, "reason": f"dernier resultat {result}", "result": result})
+            elif result is not None and int(result) == TACHE_EN_COURS:
+                en_cours.append(name)  # pas encore de verdict (voir GARDER_LES_TACHES_EN_COURS)
         for item in problems:
             slug = str(item["name"]).lower().replace(" ", "_")
             self.add(
@@ -1987,15 +2008,24 @@ class Monitor:
             summary_status = "warning"
         else:
             summary_status = "ok"
+        message = f"Taches planifiees: {len(data)} suivies, {len(problems)} en anomalie"
+        details: dict[str, Any] = {
+            "tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems],
+            "duree_lecture_s": duree_lecture, "delai_s": delai,
+        }
+        if GARDER_LES_TACHES_EN_COURS and en_cours:
+            # write_results garde l'etat precedent de ces cles (cles_en_cours)
+            message += f", {len(en_cours)} en cours (etat precedent garde)"
+            details["en_cours"] = en_cours
+            details["en_cours_cles"] = [f"scheduledtasks:{str(n).lower().replace(' ', '_')}" for n in en_cours]
         self.add(
             "scheduledtasks",
             "system",
             "scheduledtasks",
             "windows_tasks",
             summary_status,
-            f"Taches planifiees: {len(data)} suivies, {len(problems)} en anomalie",
-            {"tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems],
-             "duree_lecture_s": duree_lecture, "delai_s": delai},
+            message,
+            details,
         )
 
     def _sentinel_sample(self, sentinel: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
@@ -3808,6 +3838,17 @@ def familles_non_vues(results: list[CheckResult]) -> set[str]:
     return aveugles
 
 
+def cles_en_cours(results: list[CheckResult]) -> set[str]:
+    """Les cles `scheduledtasks:<tache>` lues « en cours » (267009) : pas encore de verdict."""
+    if not GARDER_LES_TACHES_EN_COURS:
+        return set()
+    cles: set[str] = set()
+    for r in results:
+        if r.status_key == "scheduledtasks" and isinstance(r.details, dict):
+            cles.update(str(c) for c in (r.details.get("en_cours_cles") or []))
+    return cles
+
+
 def dispatch_alerts(
     alerter: "Alerter | None",
     results: list[CheckResult],
@@ -3849,7 +3890,7 @@ def dispatch_alerts(
         # une de ses cles l'est, et cette cle-la est dans la liste si elle est neuve (meme
         # preuve que monitor.summary, 14/10). Seule, elle n'envoie donc rien ; avec un vrai
         # nouveau rouge, l'e-mail part comme avant, elle comprise.
-        if NE_PAS_VOIR_N_EST_PAS_GUERIR and newly_critical and all(
+        if (NE_PAS_VOIR_N_EST_PAS_GUERIR or GARDER_LES_TACHES_EN_COURS) and newly_critical and all(
             r.status_key in VUE_D_ENSEMBLE_DES_FAMILLES.values() for r in newly_critical
         ):
             newly_critical = []
@@ -3940,6 +3981,8 @@ def write_results(
         )
         cles_emises = {r.status_key for r in results}
         aveugles = familles_non_vues(results) if NE_PAS_VOIR_N_EST_PAS_GUERIR else set()
+        en_cours = cles_en_cours(results)
+        gardes_en_cours: dict[str, Any] = {}
         for cle, ancien in previous_status.items():
             if not isinstance(cle, str):
                 continue
@@ -3955,6 +3998,10 @@ def write_results(
             if prefixe in aveugles:
                 etats_gardes[cle] = ancien  # non revue : ni « ok », ni reecrite
                 continue
+            if cle in en_cours:
+                etats_gardes[cle] = ancien  # la tache tourne : pas encore de verdict
+                gardes_en_cours[cle] = ancien
+                continue
             quoi = cle[len(prefixe):] or cle
             results.append(CheckResult(
                 status_key=cle,
@@ -3966,11 +4013,19 @@ def write_results(
                 message=f"Retour a la normale : {quoi}",
                 details={"resolu": True, "etat_precedent": ancien},
             ))
-        if etats_gardes:
+        gardes_aveugles = {c: e for c, e in etats_gardes.items() if c not in gardes_en_cours}
+        if gardes_aveugles:
             print(
                 "[regle 5] sonde aveugle cette passe (" + ", ".join(sorted(aveugles)) + ") : "
-                f"{len(etats_gardes)} etat(s) GARDE(S) tel(s) quel(s), aucun « Retour a la normale » : "
-                + ", ".join(f"{c}={e}" for c, e in sorted(etats_gardes.items())),
+                f"{len(gardes_aveugles)} etat(s) GARDE(S) tel(s) quel(s), aucun « Retour a la normale » : "
+                + ", ".join(f"{c}={e}" for c, e in sorted(gardes_aveugles.items())),
+                file=sys.stderr,
+            )
+        if gardes_en_cours:
+            print(
+                f"[en cours] {len(gardes_en_cours)} tache(s) en cours (267009), sans verdict : "
+                "etat precedent GARDE, aucun « Retour a la normale » : "
+                + ", ".join(f"{c}={e}" for c, e in sorted(gardes_en_cours.items())),
                 file=sys.stderr,
             )
 
