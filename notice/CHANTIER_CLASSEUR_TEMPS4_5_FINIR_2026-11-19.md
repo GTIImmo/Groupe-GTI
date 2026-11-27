@@ -6463,6 +6463,23 @@ REPETITION GENERALE (suite) : brouillon 80 = memes 630 morceaux ; rejeu exact 4 
   derniere, D11).
 - ⚠ LE PUSH ATTEND : origin porte 8fb7124 (la note GED §12.65, meme contenu que notre a001058 -- la session GED l'a
   poussee de son cote) -> l'historique a diverge ; et af5bc64 (sonde, autre session) est arrive, non vu par lui.
+
+### 20.102 Le 27/11 (17) : 83 + 84 EN BASE, l'ecrivain au 84, la fusion poussee ; ETAPE 3 BIS LOT A a blanc VERT
+
+- Son mot : « Ton temoin a fait exactement ce que j'attendais, et il a sauve deux de mes decisions » -> LECONS_DE_METHODE.md,
+  lecon 32. Passages 83 (rouge, garde comme trace) et 84 recopies en base, relus avant le commit (84 passages, 403 055
+  verdicts, 67 011 temoins, 10 fichiers). L'ecrivain, son relecteur et son classement lisent le 84.
+- Fusion de origin/main (8fb7124 = notre a001058, meme patch GED) sans reecrire aucun commit ; poussee (8fed387) ; les
+  fichiers modifies non commites des autres (listing, rapports de synchro) NON touches.
+- ETAPE 3 BIS, l'audit refait sur le 84 : COMMENTAIRES 47 manquants (94 au 82 : les pieces de R30a portaient leurs notes)
+  + 108 ecarts ; En attente de 240 manquants + 77 autres textes + 84 abimes (+ 262 pictogrammes retires, sa decision) ;
+  repartitions 203 + 1 ; avis 27 + 4.
+- ⭐ app_affaire_note a pour cle app_affaire_id SEUL : « une note neuve datee » = un PARAGRAPHE DATE ajoute a la note de la
+  piece (le texte d'avant intact au-dessus, sauvegarde datee pour l'inverse) ; jamais une note « saisie » par un humain.
+- LOT A (COMMENTAIRES + avis) : etape_3bis_commentaires_et_avis_generer_patch_2026-11-27.py -> 47 notes neuves, 78
+  paragraphes dates, 31 cases d'avis sur 27 lignes (17 lignes neuves, 10 cases vides, 4 qui different, valeur d'avant
+  sauvee) ; 0 signal. A BLANC VERT (ses controles passes, erreur voulue) ; relu apres : 0 trace, 4 524 notes. A SON ACCORD.
+- Lots B (En attente de) et C (repartitions) : a fabriquer ensuite, meme patron.
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
