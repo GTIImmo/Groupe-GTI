@@ -17,7 +17,7 @@ from ..services import parcours_phrases, parcours_publics
 from ..services.agent_tarifs import cout_usd
 from ..services.openai_listing_sheet_service import OpenAIListingSheetService
 from ..services.assistant_catalogue import ContexteAssistant, Refus
-from ..services.assistant_gestes import GESTES, lire_fiche_du_parcours
+from ..services.assistant_gestes import GESTES, lire_fiche_du_parcours, ouvrir_editeur_du_parcours
 from ..services.assistant_service import AGENT_KEY, AGENT_PHRASE, MAX_QUESTION_CARACTERES, PLAFOND_JOUR_USD, AssistantService
 from ..services.supabase_admin import SupabaseAdminService
 from ..settings import Settings, get_settings
@@ -534,14 +534,16 @@ def parcours_repondre(
     if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
         raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
     annee = parcours_moteur.annee_a_paris()
-    if payload.question not in {q["id"] for q in parcours_moteur.questions_posees(dict(ligne.get("reponses") or {}), annee)}:
+    genre = ligne.get("genre")  # P5-a : la création ou l'avis -- chacun ses questions
+    if payload.question not in {q["id"] for q in parcours_moteur.questions_posees(dict(ligne.get("reponses") or {}), annee,
+                                                                                   genre)}:
         raise HTTPException(status_code=400, detail="Cette question n'est pas posée pour ce bien.")
     try:
         reponses = parcours_moteur.enregistrer(dict(ligne.get("reponses") or {}), payload.question, payload.valeurs,
-                                               payload.geste)
+                                               payload.geste, genre)
     except parcours_moteur.RefusParcours as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
-    prochaine = parcours_moteur.suivante(reponses, annee)
+    prochaine = parcours_moteur.suivante(reponses, annee, genre)
     ecrite = store.ecrire_reponses(ligne, reponses, prochaine["id"] if prochaine else None)
     if not ecrite:
         # P4-c (20/11) : si SEULE la lecture des services publics (arrière-plan) a écrit entre-temps, la réponse se rejoue
@@ -550,8 +552,8 @@ def parcours_repondre(
         if fraiche and fraiche.get("etat") == "en_cours" and fraiche.get("app_dossier_id") is None \
                 and parcours_moteur.seul_publics_a_bouge(ligne.get("reponses") or {}, fraiche.get("reponses") or {}):
             reponses = parcours_moteur.enregistrer(dict(fraiche.get("reponses") or {}), payload.question,
-                                                   payload.valeurs, payload.geste)
-            prochaine = parcours_moteur.suivante(reponses, annee)
+                                                   payload.valeurs, payload.geste, genre)
+            prochaine = parcours_moteur.suivante(reponses, annee, genre)
             ecrite = store.ecrire_reponses(fraiche, reponses, prochaine["id"] if prochaine else None)
     if not ecrite:
         raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
@@ -600,6 +602,8 @@ def parcours_lire_fiche(
         raise HTTPException(status_code=404, detail="Parcours introuvable")
     if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
         raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    if ligne.get("genre") == parcours_moteur.GENRE_AVIS:  # P5-a : la fiche, les services, les phrases = la création
+        raise HTTPException(status_code=400, detail="Pas pour l'avis de valeur : réponds à la question à boutons.")
     ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=(user.email or "").strip().lower(),
                             role=str(profile.get("role") or ""), jeton=_jeton(authorization),
                             conversation_id=ligne.get("conversation_id"), nom=profile.get("display_name") or None)
@@ -633,6 +637,8 @@ def parcours_services_publics(
         raise HTTPException(status_code=404, detail="Parcours introuvable")
     if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
         raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    if ligne.get("genre") == parcours_moteur.GENRE_AVIS:  # P5-a : la fiche, les services, les phrases = la création
+        raise HTTPException(status_code=400, detail="Pas pour l'avis de valeur : réponds à la question à boutons.")
     annee = parcours_moteur.annee_a_paris()
     reponses = dict(ligne.get("reponses") or {})
     cle = parcours_moteur.cle_publics(reponses)
@@ -720,6 +726,8 @@ def parcours_phrase_libre(
         raise HTTPException(status_code=404, detail="Parcours introuvable")
     if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
         raise HTTPException(status_code=409, detail="Ce parcours est terminé : la fiche est créée.")
+    if ligne.get("genre") == parcours_moteur.GENRE_AVIS:  # P5-a : la fiche, les services, les phrases = la création
+        raise HTTPException(status_code=400, detail="Pas pour l'avis de valeur : réponds à la question à boutons.")
     annee = parcours_moteur.annee_a_paris()
     question = next((q for q in parcours_moteur.questions_posees(dict(ligne.get("reponses") or {}), annee)
                      if q["id"] == payload.question), None)
@@ -788,7 +796,44 @@ def parcours_cree(
         raise HTTPException(status_code=404, detail="Parcours introuvable")
     if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
         raise HTTPException(status_code=409, detail="Ce parcours est déjà terminé.")
+    if ligne.get("genre") == parcours_moteur.GENRE_AVIS:  # P5-a : l'avis se termine en ouvrant l'éditeur (son bien relu)
+        raise HTTPException(status_code=400, detail="Un avis de valeur se termine en ouvrant son éditeur.")
     ecrite = store.terminer(ligne, payload.app_dossier_id)
     if not ecrite:
         raise HTTPException(status_code=409, detail="Ce parcours est déjà terminé.")
     return {"ok": True, "parcours": parcours_moteur.vue(ecrite)}
+
+
+@router.post("/parcours/{parcours_id}/editeur")
+def parcours_ouvrir_editeur(
+    parcours_id: str,
+    authorization: str | None = Depends(require_request_user),
+    settings: Settings = Depends(get_settings),
+    admin_service: SupabaseAdminService = Depends(get_admin_service),
+    service: AssistantService = Depends(get_assistant_service),
+    store: parcours_moteur.ParcoursStore = Depends(get_parcours_store),
+):
+    # P5-a (27/11) : « Ouvrir l'éditeur rempli » à la fin d'un parcours d'AVIS. Le bien est RELU avec le jeton de la
+    #   personne (toujours à sa portée ?), le parcours est rattaché au bien et terminé (une fois) ; l'écran ouvre l'éditeur
+    #   avec les réponses. ⛔ Rien n'est généré ni envoyé : « Générer » reste son clic dans l'éditeur.
+    user, profile = _ouvrir(settings, authorization, admin_service, service)
+    _parcours_ouvert(service, profile)
+    if len(parcours_id) != 36:
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    ligne = store.lire_service(parcours_id)
+    if not ligne or str(ligne.get("user_id") or "") != str(user.id):
+        raise HTTPException(status_code=404, detail="Parcours introuvable")
+    if ligne.get("genre") != parcours_moteur.GENRE_AVIS:
+        raise HTTPException(status_code=400, detail="Ce parcours n'est pas un avis de valeur.")
+    if ligne.get("etat") != "en_cours" or ligne.get("app_dossier_id") is not None:
+        raise HTTPException(status_code=409, detail="Ce parcours est déjà terminé : rouvre l'éditeur depuis sa pastille.")
+    ctx = ContexteAssistant(settings=settings, user_id=str(user.id), email=(user.email or "").strip().lower(),
+                            role=str(profile.get("role") or ""), jeton=_jeton(authorization),
+                            conversation_id=ligne.get("conversation_id"), nom=profile.get("display_name") or None)
+    try:
+        ouverture, ecrite = ouvrir_editeur_du_parcours(ctx, ligne)
+    except Refus as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    if not ecrite:
+        raise HTTPException(status_code=409, detail="Le parcours a bougé ailleurs (un autre onglet ?) : recharge-le.")
+    return {"ok": True, "parcours": parcours_moteur.vue(ecrite), "ouverture": ouverture}

@@ -179,6 +179,7 @@ TOUTES = ["qui_suis_je", "decrire", "chercher", "compter", "fiches_biens", "note
           "proposer_ajouter_photo", "proposer_deposer_documents", "proposer_ouvrir_creation_annonce",  # créer, 18/11
           "proposer_parcours_creation",  # créer par le parcours guidé, 19/11 (P4-a)
           "proposer_ouvrir_avis_de_valeur",  # l'avis de valeur d'un bien existant, 18/11 (§70)
+          "proposer_parcours_avis",  # l'avis par le parcours guidé, 27/11 (P5-a)
           "proposer_couverture_photo", "proposer_visibilite_photo",
           "proposer_deplacer_photo", "proposer_portail",  # activer un brouillon : retiré le 15/11
           "proposer_creer_contact", "proposer_ajouter_recherche", "proposer_modifier_recherche",  # lot 2c, 17/11

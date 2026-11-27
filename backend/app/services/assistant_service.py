@@ -200,8 +200,15 @@ CONSIGNE_PARCOURS = (
     "dans « photos_du_bien » du meme proposer_parcours_creation (elles iront a l'etape Photos de la fenetre, jamais "
     "lues). Sans fiche jointe, dis en une phrase que photographier la fiche de "
     "visite remplie (Joindre) evite la plupart des questions. "
+    # P5-a (27/11) : l'avis de valeur par le parcours (6 questions à boutons, puis l'éditeur rempli)
+    "Pour PREPARER L'AVIS DE VALEUR d'un bien existant (« fais l'avis de valeur de 63289 »), propose "
+    "proposer_parcours_avis avec ce que la personne a deja dit : les 6 questions suivent a boutons, puis l'editeur "
+    "s'ouvre rempli. Garde proposer_ouvrir_avis_de_valeur quand elle demande d'ouvrir l'editeur tout de suite. "
     "Pour tout autre sujet (prix, statut, contact, recherche…), jamais de parcours.\n"
 )
+
+# les outils qui n'existent pour l'IA que si l'interrupteur du parcours l'ouvre au compte (P4-a ; P5-a : l'avis)
+OUTILS_DU_PARCOURS = frozenset({"proposer_parcours_creation", "proposer_parcours_avis"})
 
 agent_registry.DEFAULT_SPECS.setdefault(
     AGENT_KEY, agent_registry.AgentSpec(AGENT_KEY, _INSTRUCTIONS, MODELE_PAR_DEFAUT, 1500)
@@ -430,7 +437,7 @@ class AssistantService:
                                                                   "parcours": CONSIGNE_PARCOURS if parcours else ""}),
             model=OpenAIResponsesModel(str(spec.model), self._client()),
             model_settings=reglages,
-            tools=outils_sdk(ctx.role, frozenset() if parcours else frozenset({"proposer_parcours_creation"})),
+            tools=outils_sdk(ctx.role, frozenset() if parcours else OUTILS_DU_PARCOURS),
         )
         entree = [{"role": m["role"], "content": str(m.get("contenu") or "")}
                   for m in historique if m.get("role") in {"user", "assistant"} and m.get("contenu")]

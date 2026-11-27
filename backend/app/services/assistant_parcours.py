@@ -33,6 +33,29 @@ GENRES: tuple[str, ...] = tuple(DONNEES["genres"])
 PROFIL_PAR_TYPE: dict[str, str] = DONNEES["profil_par_type"]
 CLES_PIECE: frozenset[str] = frozenset(DONNEES["cles_piece"])
 
+# P5-a (27/11) : le parcours de l'AVIS DE VALEUR d'un bien qui existe (toile v27, planches 16 à 21) -- ses 6 questions et
+# les cases du brouillon de l'ÉDITEUR (parcours_avis.json). Les fonctions ci-dessous prennent `genre` : sans genre, ou un
+# genre de création, rien ne change (les questions de la fenêtre « Nouvelle annonce »).
+AVIS: dict[str, Any] = json.loads((Path(__file__).with_name("parcours_avis.json")).read_text(encoding="utf-8"))
+GENRE_AVIS = "avis"
+QUESTIONS_AVIS: list[dict[str, Any]] = AVIS["questions"]
+PAR_ID_AVIS: dict[str, dict[str, Any]] = {q["id"]: q for q in QUESTIONS_AVIS}
+CASES_AVIS: dict[str, dict[str, Any]] = AVIS["cases"]
+POSTES_AVIS: dict[str, str] = AVIS["postes"]
+NIVEAUX_AVIS: dict[str, str] = AVIS["niveaux"]
+# le bien de l'avis, gardé dans les réponses pendant les questions (la ligne reste « sans bien » : l'auteur seul la lit) ;
+# rattaché à la ligne quand l'éditeur s'ouvre (règle de lecture du 19/11 : le négociateur du bien et l'admin)
+CLE_BIEN = "_bien"
+MAX_COURT = 200
+
+
+def _questions(genre: str | None) -> list[dict[str, Any]]:
+    return QUESTIONS_AVIS if genre == GENRE_AVIS else QUESTIONS
+
+
+def _par_id(genre: str | None) -> dict[str, dict[str, Any]]:
+    return PAR_ID_AVIS if genre == GENRE_AVIS else PAR_ID
+
 # Réservé au suivi des questions dans `reponses` (jamais une case de la fenêtre).
 CLE_ETATS = "_questions"
 # Ce qu'un geste fait de la question : répondue, « je complète plus tard », « je ne sais pas ».
@@ -98,13 +121,15 @@ def etats(reponses: dict[str, Any]) -> dict[str, str]:
     return dict(brut) if isinstance(brut, dict) else {}
 
 
-def questions_posees(reponses: dict[str, Any], annee: int) -> list[dict[str, Any]]:
+def questions_posees(reponses: dict[str, Any], annee: int, genre: str | None = None) -> list[dict[str, Any]]:
+    if genre == GENRE_AVIS:
+        return list(QUESTIONS_AVIS)  # l'avis : ses 6 questions, pour tout bien
     return [q for q in QUESTIONS if posee(q, reponses, annee)]
 
 
-def suivante(reponses: dict[str, Any], annee: int) -> dict[str, Any] | None:
+def suivante(reponses: dict[str, Any], annee: int, genre: str | None = None) -> dict[str, Any] | None:
     faits = etats(reponses)
-    return next((q for q in questions_posees(reponses, annee) if q["id"] not in faits), None)
+    return next((q for q in questions_posees(reponses, annee, genre) if q["id"] not in faits), None)
 
 
 def _valeur_simple(cle: str, valeur: Any) -> str:
@@ -151,9 +176,63 @@ def _photos(valeur: Any) -> list[dict[str, Any]]:
     return propres
 
 
-def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste: str) -> dict[str, Any]:
+def _euros_avis(cle: str, valeur: Any) -> str:
+    texte = _valeur_simple(cle, valeur)
+    for x in (" ", " ", " ", "€"):
+        texte = texte.replace(x, "")
+    if texte and not texte.isdigit():
+        raise RefusParcours(f"« {cle} » : un montant en euros, sans centimes (pas « {valeur} »).")
+    return str(int(texte)) if texte else ""
+
+
+def _postes_avis(valeur: Any) -> dict[str, dict[str, str]]:
+    """L'état poste par poste, comme la grille de l'éditeur : {poste: {niveau, label}} ; un poste sans niveau n'est pas
+    gardé (« je ne sais pas »)."""
+    if valeur in (None, ""):
+        return {}
+    if not isinstance(valeur, dict):
+        raise RefusParcours("L'état par poste attend un niveau par poste.")
+    propres: dict[str, dict[str, str]] = {}
+    for poste, v in valeur.items():
+        if poste not in POSTES_AVIS:
+            raise RefusParcours(f"Poste inconnu : « {poste} ».")
+        v = v if isinstance(v, dict) else {"niveau": v}
+        niveau = _valeur_simple("niveau", v.get("niveau"))
+        label = _valeur_simple("label", v.get("label"))[:60]
+        if not niveau:
+            continue
+        if niveau not in NIVEAUX_AVIS:
+            raise RefusParcours(f"Niveau inconnu pour « {POSTES_AVIS[poste]} » : « {niveau} ».")
+        propres[poste] = {"niveau": niveau, "label": label}
+    return propres
+
+
+def _valeur_avis(cle: str, valeur: Any) -> Any:
+    """P5-a : une case de l'AVIS, contrôlée comme l'éditeur la reçoit (montant entier, choix de sa liste, texte borné)."""
+    spec = CASES_AVIS[cle]
+    genre = spec["genre"]
+    if genre == "postes":
+        return _postes_avis(valeur)
+    if genre == "euros":
+        return _euros_avis(cle, valeur)
+    texte = _valeur_simple(cle, valeur)
+    if genre == "choix" and texte and texte not in spec["valeurs"]:
+        raise RefusParcours(f"« {texte} » n'est pas un choix de « {cle} ».")
+    if genre == "court" and len(texte) > MAX_COURT:
+        raise RefusParcours(f"La case « {cle} » est trop longue ({len(texte)} caractères, {MAX_COURT} au plus).")
+    return texte
+
+
+def _fourchette_en_ordre(reponses: dict[str, Any]) -> None:
+    bornes = [int(reponses[k]) for k in ("basse", "estimee", "haute") if str(reponses.get(k) or "").isdigit()]
+    if bornes != sorted(bornes):
+        raise RefusParcours("La fourchette va de la plus basse à la plus haute (basse ≤ estimée ≤ haute).")
+
+
+def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste: str,
+                genre: str | None = None) -> dict[str, Any]:
     """Rend les NOUVELLES réponses ; ne touche que les cases de la question. Lève RefusParcours sinon."""
-    question = PAR_ID.get(question_id)
+    question = _par_id(genre).get(question_id)
     if not question:
         raise RefusParcours("Question inconnue.")
     if geste not in ETAT_PAR_GESTE:
@@ -167,18 +246,22 @@ def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste:
                 raise RefusParcours("Les coordonnées d'un nouveau mandant se saisissent dans leurs cases protégées.")
             if cle not in question["champs"]:
                 raise RefusParcours(f"La case « {cle} » n'appartient pas à la question « {question['titre']} ».")
-            if cle == "composition":
-                propre: Any = _pieces(valeur)
+            if genre == GENRE_AVIS:
+                propre: Any = _valeur_avis(cle, valeur)
+            elif cle == "composition":
+                propre = _pieces(valeur)
             elif cle == "photos":
                 propre = _photos(valeur)
             else:
                 propre = _valeur_simple(cle, valeur)
                 if cle == "mandant_choix" and propre not in MANDANT_CHOIX:
                     raise RefusParcours("Le mandant est « existant » ou « nouveau ».")
-            if propre in ("", []):
+            if propre in ("", [], {}):
                 nouvelles.pop(cle, None)  # vider une case = la retirer (la fenêtre la laissera vide)
             else:
                 nouvelles[cle] = propre
+        if genre == GENRE_AVIS:
+            _fourchette_en_ordre(nouvelles)
     suivi = etats(reponses)
     suivi[question_id] = ETAT_PAR_GESTE[geste]
     nouvelles[CLE_ETATS] = suivi
@@ -188,26 +271,26 @@ def enregistrer(reponses: dict[str, Any], question_id: str, valeurs: Any, geste:
 
 
 def appliquer_depart(reponses: dict[str, Any], valeurs: dict[str, Any], source: str, annee: int,
-                     doutes: dict[str, float] | None = None) -> dict[str, Any]:
+                     doutes: dict[str, float] | None = None, genre: str | None = None) -> dict[str, Any]:
     """P4-a : pré-remplit le parcours avec ce que la personne a DÉJÀ dit (traduit dans la langue de la fenêtre). Ne
     remplace jamais une réponse donnée ; ignore une case qui n'est d'aucune question (la fenêtre ne la montre pas) ou
     qui ne passe pas les contrôles d'une réponse ; marque « connue » chaque question posée dont l'essentiel est dit."""
     if source not in SOURCES:
         raise RefusParcours("Source inconnue.")
-    toutes = {c for q in QUESTIONS for c in q["champs"]}
+    toutes = {c for q in _questions(genre) for c in q["champs"]}
     nouvelles = dict(reponses)
     sources = dict(nouvelles.get(CLE_SOURCES) or {})
     for cle, valeur in (valeurs or {}).items():
         if cle.startswith("_") or cle in COORDONNEES or cle not in toutes or cle in nouvelles:
             continue
         try:
-            propre: Any = _pieces(valeur) if cle == "composition" else _photos(valeur) if cle == "photos" \
-                else _valeur_simple(cle, valeur)
+            propre: Any = _valeur_avis(cle, valeur) if genre == GENRE_AVIS else _pieces(valeur) if cle == "composition" \
+                else _photos(valeur) if cle == "photos" else _valeur_simple(cle, valeur)
             if cle == "mandant_choix" and propre not in MANDANT_CHOIX:
                 continue
         except RefusParcours:
             continue
-        if propre in ("", []):
+        if propre in ("", [], {}):
             continue
         nouvelles[cle] = propre
         sources[cle] = source
@@ -217,9 +300,9 @@ def appliquer_depart(reponses: dict[str, Any], valeurs: dict[str, Any], source: 
         nouvelles[CLE_SOURCES] = sources
     suivi = etats(nouvelles)
     a_verifier = set(nouvelles.get(CLE_DOUTES) or {})
-    for q in questions_posees(nouvelles, annee):
+    for q in questions_posees(nouvelles, annee, genre):
         essentiels = q.get("essentiels") or []
-        if essentiels and q["id"] not in suivi and all(nouvelles.get(c) not in (None, "", []) for c in essentiels) \
+        if essentiels and q["id"] not in suivi and all(nouvelles.get(c) not in (None, "", [], {}) for c in essentiels) \
                 and not a_verifier & set(q["champs"]):
             suivi[q["id"]] = ETAT_CONNUE
     if suivi:
@@ -233,16 +316,20 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
     """Ce que l'écran reçoit : la question à poser, le repère « 4 sur 17 », les réponses (sans le suivi interne)."""
     annee = annee or annee_a_paris()
     reponses = dict(ligne.get("reponses") or {})
-    posees = questions_posees(reponses, annee)
+    genre = ligne.get("genre")
+    avis = genre == GENRE_AVIS
+    posees = questions_posees(reponses, annee, genre)
     faits = etats(reponses)
-    q = suivante(reponses, annee)
+    q = suivante(reponses, annee, genre)
     return {
         "id": ligne.get("id"),
         "genre": ligne.get("genre"),
         "etat": ligne.get("etat"),
         "app_dossier_id": ligne.get("app_dossier_id"),
         "maj_le": ligne.get("maj_le"),
-        "profil": profil(reponses),
+        "profil": None if avis else profil(reponses),
+        # P5-a : le bien de l'avis (numéro d'annonce, titre) -- gardé dans les réponses jusqu'à l'ouverture de l'éditeur
+        "bien": (dict(reponses.get(CLE_BIEN) or {}) or None) if avis else None,
         "question": ({k: q[k] for k in ("id", "titre", "phrase", "forme", "champs")} if q else None),
         "repere": {"rang": (posees.index(q) + 1) if q else len(posees), "total": len(posees),
                    "faites": sum(1 for p in posees if p["id"] in faits)},
@@ -257,7 +344,8 @@ def vue(ligne: dict[str, Any], annee: int | None = None) -> dict[str, Any]:
         "doutes": dict(reponses.get(CLE_DOUTES) or {}),
         "fiche": dict(reponses.get(CLE_FICHE) or {}) or None,
         # P4-c : les propositions des services publics encore utiles (question posée, rien encore dit sur ces cases)
-        "publics": publics_vue(reponses, annee),
+        "publics": {"possible": False, "a_jour": False, "le": None, "propositions": []} if avis
+        else publics_vue(reponses, annee),
         # P4-d : les phrases libres gardées (le texte sans coordonnées, la question, ce qu'elles ont rempli)
         "phrases": [p for p in reponses.get(CLE_PHRASES) or [] if isinstance(p, dict)],
         "fin": q is None,

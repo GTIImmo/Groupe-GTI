@@ -1212,8 +1212,8 @@ print("  (au clic, la route refuse aussi un rôle hors de geste.roles : DIRECTIO
 voir(ges.GESTES["transaction"].roles == ges.DIRECTION, "la carte est déclarée DIRECTION : la route de validation la refuse à un négociateur")
 
 print("10) aucune fonction de geste ne fait autre chose que proposer")
-voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 44,
-     "44 gestes (le parcours guidé le 19/11 (P4-a), le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
+voir(all(f.nom.startswith("proposer_") for f in ges.FONCTIONS_GESTES) and len(ges.FONCTIONS_GESTES) == 45,
+     "45 gestes (l'avis par le parcours guidé le 27/11 (P5-a), le parcours guidé le 19/11 (P4-a), le brouillon retiré le 15/11, 3 du lot 2c, 3 du lot 3c, 1 de la vague C, le numéro de mandat, la relance "
      "et l'annulation d'une signature le 16/11, puis les 8 cartes directes de l'audit §35, le prix et le Pilotage pour la direction, ajouter une photo et déposer des documents le 17/11, "
      "ouvrir la création et l'avis de valeur le 18/11), "
      "tous « proposer_ » : le "

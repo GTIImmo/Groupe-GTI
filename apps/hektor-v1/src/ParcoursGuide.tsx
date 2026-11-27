@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  RefusAssistant, chercherPublicsParcours, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, photosDuBienParcours, repondreParcours,
-  type CaseParcours, type PhotoDuBien, type CatalogueParcours, type CoordonneesMandant, type ParcoursVue, type PropositionPublique, type QuestionParcours,
+  RefusAssistant, chercherPublicsParcours, deposerCoordonneesMandant, deposerFichier, lireFicheParcours, ouvertureAvisDeVue, ouvrirEditeurParcours,
+  photosDuBienParcours, repondreParcours,
+  type CaseParcours, type PhotoDuBien, type CatalogueParcours, type CoordonneesMandant, type OuvertureAvis, type ParcoursVue, type PropositionPublique,
+  type QuestionParcours,
 } from './lib/assistant'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,9 +61,18 @@ function libelleValeur(c: CaseParcours | undefined, v: unknown): string {
 }
 
 /** Le résumé d'une réponse donnée, dans sa pastille verte. */
-function resume(q: QuestionParcours & { etat: string | null }, reponses: Valeurs, cat: CatalogueParcours): string {
+function resume(q: QuestionParcours & { etat: string | null }, reponses: Valeurs, cat: CatalogueParcours, avis = false): string {
   if (q.etat === 'nsp') return 'je ne sais pas'
   if (q.etat === 'passee') return 'plus tard'
+  if (avis && q.champs.includes('estimee')) {  // P5-a, planche 17 : « 260 000 € · 247 000 à 273 000 »
+    const bornes = reponses.basse && reponses.haute ? ` · ${euros(reponses.basse)} à ${euros(reponses.haute)}` : ''
+    return reponses.estimee ? `${euros(reponses.estimee)}${bornes}` : 'rien de plus'
+  }
+  if (avis && q.forme === 'postes') {  // P5-a, planche 18 : « 4 étoiles · 7 postes »
+    const n = reponses.etatPostes && typeof reponses.etatPostes === 'object' ? Object.keys(reponses.etatPostes as object).length : 0
+    const morceaux = [reponses.etatNote ? `${texte(reponses.etatNote)} étoile${texte(reponses.etatNote) === '1' ? '' : 's'}` : '', n ? `${n} poste${n > 1 ? 's' : ''}` : '']
+    return morceaux.filter(Boolean).join(' · ') || 'rien de plus'
+  }
   if (q.forme === 'pieces') {
     const n = Array.isArray(reponses.composition) ? reponses.composition.length : 0
     return n ? `${n} pièce${n > 1 ? 's' : ''}` : 'aucune pièce'
@@ -80,6 +91,8 @@ function resume(q: QuestionParcours & { etat: string | null }, reponses: Valeurs
     const cas = cat.cases[c]
     const v = libelleValeur(cas, reponses[c])
     if (cas && estACocher(cas)) return OUI.has(texte(reponses[c])) ? cas.libelle : `pas de ${cas.libelle.toLowerCase()}`
+    if (avis && cas?.genre === 'long') return cas.libelle.replace(/ \(.*\)$/, '').toLowerCase()  // P5-a : un texte se nomme, il ne se recopie pas
+    if (avis && cas?.genre === 'nombre') return `${cas.libelle.replace(/ \/ an \(€\)$| \(€\)$/, '').toLowerCase()} ${euros(reponses[c])}`
     return cas?.genre === 'nombre' ? `${cas.libelle} : ${v}` : v
   })
   const dits = [...new Set(tous)]
@@ -360,9 +373,86 @@ function QuestionPhotos({ parcoursId, photos, onChange }: { parcoursId: string; 
   )
 }
 
+// ── P5-a (27/11) : L'AVIS DE VALEUR d'un bien qui existe (toile v27, planches 16 à 21) ──
+// Les cases sont celles de l'ÉDITEUR (EstimationDocumentEditor, son brouillon) et ses listes (ESTIM_POSTES, ESTIM_NIVEAUX, le
+// contexte de l'e-mail) ; les mêmes que backend/app/services/parcours_avis.json. Le propriétaire et son e-mail n'y sont
+// jamais : l'éditeur les prend sur la fiche ; « destinataire » dit seulement « le propriétaire » ou « personne ».
+const LETTRES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((l) => ({ value: l, label: l }))
+const CATALOGUE_AVIS: CatalogueParcours = {
+  typesPiece: [],
+  cases: Object.fromEntries(([
+    { nom: 'variante', libelle: 'Pour quoi faire', genre: 'liste', options: [{ value: 'vente', label: 'Vente (suite à visite)' }, { value: 'succession', label: 'Succession (valeur pour le notaire)' }] },
+    { nom: 'dpe', libelle: 'DPE', genre: 'liste', options: LETTRES },
+    { nom: 'ges', libelle: 'GES', genre: 'liste', options: LETTRES },
+    { nom: 'chauffage', libelle: 'Chauffage', genre: 'texte' },
+    { nom: 'exposition', libelle: 'Exposition', genre: 'texte' },
+    { nom: 'basse', libelle: 'Fourchette basse (€)', genre: 'nombre', entier: true },
+    { nom: 'estimee', libelle: 'Valeur estimée (€)', genre: 'nombre', entier: true },
+    { nom: 'haute', libelle: 'Fourchette haute (€)', genre: 'nombre', entier: true },
+    { nom: 'etatNote', libelle: 'En étoiles', genre: 'liste', options: ['1', '2', '3', '4', '5'].map((n) => ({ value: n, label: `${n} ★` })) },
+    { nom: 'etatLabel', libelle: "Libellé d'état", genre: 'texte' },
+    { nom: 'toiture', libelle: 'Toiture', genre: 'texte' },
+    { nom: 'menuiseries', libelle: 'Menuiseries', genre: 'texte' },
+    { nom: 'etatTexte', libelle: "Appréciation de l'état", genre: 'long' },
+    { nom: 'pointsForts', libelle: 'Points forts (un par ligne)', genre: 'long' },
+    { nom: 'pointsVigilance', libelle: 'Points de vigilance (un par ligne)', genre: 'long' },
+    { nom: 'taxeFonciere', libelle: 'Taxe foncière / an (€)', genre: 'nombre', entier: true },
+    { nom: 'energie', libelle: 'Énergie / an (€)', genre: 'nombre', entier: true },
+    { nom: 'eau', libelle: 'Eau / an (€)', genre: 'nombre', entier: true },
+    { nom: 'assurance', libelle: 'Assurance / an (€)', genre: 'nombre', entier: true },
+    { nom: 'argumentaire', libelle: 'Argumentaire de prix', genre: 'long' },
+    { nom: 'commentaire', libelle: 'Ton avis (avis du conseiller)', genre: 'long' },
+    { nom: 'destinataire', libelle: "À qui l'envoyer", genre: 'liste', options: [{ value: 'proprietaire', label: "Le propriétaire (l'e-mail de sa fiche)" }, { value: 'personne', label: "Personne pour l'instant" }] },
+  ] as CaseParcours[]).map((c) => [c.nom, c])),
+}
+// = ESTIM_POSTES et ESTIM_NIVEAUX de l'éditeur (App.tsx), dans le même ordre
+const POSTES_AVIS: Array<[string, string]> = [['grosoeuvre', 'Gros œuvre'], ['facade', 'Façade'], ['toiture', 'Toiture'], ['menuiseries', 'Menuiseries'],
+  ['chauffage', 'Chauffage'], ['electricite', 'Électricité'], ['plomberie', 'Plomberie'], ['interieur', 'Intérieur']]
+const NIVEAUX_AVIS: Array<[string, string]> = [['neuf', 'Neuf / refait'], ['bon', 'Bon'], ['correct', 'Correct'], ['aprevoir', 'À prévoir']]
+type PostesAvis = Record<string, { niveau: string; label: string }>
+
+/** Planche 18 : les 8 postes en une grille ; un clic choisit le niveau, un second clic le retire (« je ne sais pas »). */
+/** Un clic sur la grille, calculé sur la valeur À JOUR (deux clics rapides comptent deux, comme le compteur). */
+function basculerPoste(avant: unknown, poste: string, niveau: string): PostesAvis {
+  const apres: PostesAvis = { ...((avant && typeof avant === 'object' ? avant : {}) as PostesAvis) }
+  if (apres[poste]?.niveau === niveau) delete apres[poste]
+  else apres[poste] = { niveau, label: apres[poste]?.label ?? '' }
+  return apres
+}
+
+function GrillePostes({ postes, onChoisir }: { postes: PostesAvis; onChoisir: (poste: string, niveau: string) => void }) {
+  const choisir = onChoisir
+  return (
+    <div className="asp-postes" role="group" aria-label="L'état poste par poste">
+      <span />
+      {NIVEAUX_AVIS.map(([v, l]) => <span key={v} className="asp-postes-tete">{l}</span>)}
+      {POSTES_AVIS.map(([poste, libelle]) => (
+        <div key={poste} className="asp-postes-ligne" role="group" aria-label={libelle}>
+          <span className="asp-postes-nom">{libelle}{postes[poste]?.label ? <em> · {postes[poste].label}</em> : null}</span>
+          {NIVEAUX_AVIS.map(([v, l]) => {
+            const on = postes[poste]?.niveau === v
+            return <button key={v} type="button" className={`asp-postes-c${on ? ' is-on' : ''}`} aria-pressed={on}
+              aria-label={`${libelle} : ${l}`} onClick={() => choisir(poste, v)}>{on ? <Coche /> : null}</button>
+          })}
+        </div>
+      ))}
+      <p className="asp-note asp-postes-pied">Un poste laissé vide = « je ne sais pas » : il n'ira pas dans le rapport.</p>
+    </div>
+  )
+}
+
+function euros(v: unknown): string {
+  const n = Number.parseInt(texte(v), 10)
+  return Number.isNaN(n) ? '' : `${n.toLocaleString('fr-FR')} €`
+}
+
 function valeursDe(q: QuestionParcours, reponses: Valeurs): Valeurs {
   const v: Valeurs = {}
-  for (const c of q.champs) v[c] = c === 'composition' || c === 'photos' ? (Array.isArray(reponses[c]) ? reponses[c] : []) : texte(reponses[c])
+  for (const c of q.champs) {
+    v[c] = c === 'composition' || c === 'photos' ? (Array.isArray(reponses[c]) ? reponses[c] : [])
+      : c === 'etatPostes' ? (reponses[c] && typeof reponses[c] === 'object' ? { ...(reponses[c] as PostesAvis) } : {})  // P5-a
+        : texte(reponses[c])
+  }
   return v
 }
 
@@ -379,10 +469,13 @@ export type ParcoursGuideProps = {
   ficheOuverte?: boolean
   /** P4-d : la question OUVERTE (ou aucune) -- la zone du bas y envoie les phrases libres */
   onQuestion?: (parcoursId: string, question: { id: string; titre: string } | null) => void
+  /** P5-a : « Ouvrir l'éditeur rempli » d'un parcours d'avis (l'App ouvre l'éditeur de l'avis de valeur du bien) */
+  onOuvrirAvis?: (ouverture: OuvertureAvis) => void
 }
 
-export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants, ficheOuverte, onQuestion }: ParcoursGuideProps) {
-  const cat = useMemo(() => catalogue(vue.profil), [catalogue, vue.profil])
+export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, onOuvrirBien, chercherMandants, ficheOuverte, onQuestion, onOuvrirAvis }: ParcoursGuideProps) {
+  const avis = vue.genre === 'avis'  // P5-a : l'avis de valeur -- les cases de l'éditeur, pas celles de la fenêtre
+  const cat = useMemo(() => (avis ? CATALOGUE_AVIS : catalogue(vue.profil)), [avis, catalogue, vue.profil])
   const [ouverte, setOuverte] = useState<string | null>(null)  // une réponse déjà donnée que l'on modifie
   const q = ouverte ? vue.questions.find((x) => x.id === ouverte) ?? null : vue.question
   const [valeurs, setValeurs] = useState<Valeurs>(() => (q ? valeursDe(q, vue.reponses) : {}))
@@ -453,12 +546,21 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
   // P4-d : la zone du bas sait quelle question est ouverte (une phrase tapée y va, sans tour d'IA)
   const enCoursQ = vue.etat === 'en_cours' && vue.app_dossier_id == null
   useEffect(() => {
-    onQuestion?.(vue.id, enCoursQ && q ? { id: q.id, titre: q.titre } : null)
+    onQuestion?.(vue.id, enCoursQ && q && !avis ? { id: q.id, titre: q.titre } : null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vue.id, q?.id, enCoursQ])
 
   const setValeur = (nom: string, v: unknown) => setValeurs((avant) => {
     const apres: Valeurs = { ...avant, [nom]: v }
+    if (avis && nom === 'estimee') {  // P5-a : la fourchette suit la valeur à ±5 % tant qu'elle n'a pas été corrigée à la main
+      const ancienne = Number.parseInt(texte(avant.estimee), 10), nouvelle = Number.parseInt(texte(v), 10)
+      for (const [borne, k] of [['basse', 0.95], ['haute', 1.05]] as const) {
+        const actuelle = texte(avant[borne]).trim()
+        if (!actuelle || (!Number.isNaN(ancienne) && actuelle === String(Math.round(ancienne * k)))) {
+          apres[borne] = Number.isNaN(nouvelle) ? '' : String(Math.round(nouvelle * k))
+        }
+      }
+    }
     for (const cible of RECOPIES[nom] ?? []) {
       if (!(cible in avant)) continue
       if (!texte(avant[cible]).trim() || texte(avant[cible]) === texte(avant[nom])) apres[cible] = v
@@ -494,11 +596,29 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           }
         }
         if (q.forme === 'fichiers') corps = { photos: (valeurs.photos as PhotoDuBien[]) ?? [] }  // P6 : l'ordre et la visibilité
+        if (q.champs.includes('etatPostes')) corps.etatPostes = (valeurs.etatPostes as PostesAvis) ?? {}  // P5-a : la grille entière
       }
       onVue(await repondreParcours(vue.id, q.id, geste, corps))
       setOuverte(null)
     } catch (e) {
       setErreur(e instanceof RefusAssistant || e instanceof Error ? e.message : "La réponse n'a pas été gardée.")
+    } finally {
+      setEnvoi(false)
+    }
+  }
+
+  // P5-a : « Ouvrir l'éditeur rempli » -- le serveur relit le bien, rattache le parcours et le termine ; puis l'App ouvre
+  //   l'éditeur. Un refus (bien hors de portée, parcours bougé) se dit ici, et l'éditeur ne s'ouvre pas.
+  const ouvrirEditeur = async () => {
+    if (envoi || !onOuvrirAvis) return
+    setEnvoi(true)
+    setErreur(null)
+    try {
+      const r = await ouvrirEditeurParcours(vue.id)
+      onVue(r.parcours)
+      onOuvrirAvis(r.ouverture)
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'éditeur n'a pas pu s'ouvrir.")
     } finally {
       setEnvoi(false)
     }
@@ -568,6 +688,8 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           <div className="asp-grille">{saisies.map((c) => <Champ key={c.nom} c={c} valeur={texte(valeurs[c.nom])} onChange={(v) => setValeur(c.nom, v)} />)}</div>
         ) : null}
         {listes.map((c) => <Pilules key={c.nom} c={c} valeur={texte(valeurs[c.nom])} onChange={(v) => setValeur(c.nom, v)} />)}
+        {q.forme === 'postes' ? <GrillePostes postes={(valeurs.etatPostes as PostesAvis) ?? {}}
+          onChoisir={(poste, niveau) => setValeurs((avant) => ({ ...avant, etatPostes: basculerPoste(avant.etatPostes, poste, niveau) }))} /> : null}
       </>
     )
   }
@@ -580,13 +702,13 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           {donnees.map((x) => (
             <span key={x.id} className="asp-rep" title={x.etat === 'connue' ? "D'après ta demande : pas reposée, tu peux la modifier" : undefined}>
               <span className={`asp-ok${x.etat === 'faite' || x.etat === 'connue' ? '' : ' is-pale'}`}><Coche /></span>
-              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat)}</b>{x.etat === 'connue' ? <em className="asp-dit">{x.champs.some((c) => vue.sources?.[c] === 'demande' || vue.sources?.[c] === 'phrase') ? 'dit' : 'lu'}</em> : null}
+              <i>{x.titre}</i><b>{resume(x, vue.reponses, cat, avis)}</b>{x.etat === 'connue' ? <em className="asp-dit">{x.champs.some((c) => vue.sources?.[c] === 'demande' || vue.sources?.[c] === 'phrase') ? 'dit' : 'lu'}</em> : null}
               {enCours ? <button type="button" onClick={() => setOuverte(x.id)} disabled={envoi}>Modifier</button> : null}
             </span>
           ))}
         </div>
       ) : null}
-      {enCours && ficheOuverte ? (
+      {enCours && ficheOuverte && !avis ? (
         <div className="asp-fiche" role="group" aria-label="La fiche de visite">
           <input ref={choixFiche} type="file" hidden multiple accept="image/jpeg,image/png,image/webp"
             onChange={(e) => { void lireFiche(e.target.files); e.target.value = '' }} />
@@ -600,7 +722,16 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           {fiche.erreur ? <span className="asp-fiche-ko" role="alert">{fiche.erreur}</span> : null}
         </div>
       ) : null}
-      {!enCours ? (
+      {!enCours && avis ? (
+        <article className="asp-q is-faite">
+          <header className="asp-qh"><h3>Avis de valeur{vue.bien?.hektor_annonce_id ? ` de l'annonce ${vue.bien.hektor_annonce_id}` : ''}</h3></header>
+          <div className="asp-qb"><p className="asp-phrase">L'éditeur s'est ouvert rempli de tes réponses. Le PDF se génère depuis l'éditeur, par ton clic « Générer ».</p></div>
+          <footer className="asp-pied"><span /><div>
+            {onOuvrirAvis && ouvertureAvisDeVue(vue) ? <button type="button" className="asp-sec" onClick={() => onOuvrirAvis(ouvertureAvisDeVue(vue)!)}>Rouvrir l'éditeur rempli</button> : null}
+            {vue.app_dossier_id != null && onOuvrirBien ? <button type="button" className="asp-sec" onClick={() => onOuvrirBien(String(vue.app_dossier_id))}>Ouvrir la fiche</button> : null}
+          </div></footer>
+        </article>
+      ) : !enCours ? (
         <article className="asp-q is-faite">
           <header className="asp-qh"><h3>{vue.genre === 'creation_annonce' ? 'Annonce créée' : 'Estimation créée'}</h3></header>
           <div className="asp-qb"><p className="asp-phrase">Le parcours est terminé : la fiche a été créée par la fenêtre.</p></div>
@@ -638,7 +769,8 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
           </div>
           {erreur ? <div className="asp-ko" role="alert">{erreur}</div> : null}
           <footer className="asp-pied">
-            <span>{q.forme === 'fichiers' && ficheOuverte ? "Elles vont à l'étape 2 « Photos » de la fenêtre (20 au plus) et partent comme aujourd'hui, une par une, après « Créer »." : "Les listes sont celles de la fenêtre de création. Un clic ici n'appelle pas l'IA."}</span>
+            <span>{avis ? "Les cases sont celles de l'éditeur de l'avis de valeur. Un clic ici n'appelle pas l'IA."
+              : q.forme === 'fichiers' && ficheOuverte ? "Elles vont à l'étape 2 « Photos » de la fenêtre (20 au plus) et partent comme aujourd'hui, une par une, après « Créer »." : "Les listes sont celles de la fenêtre de création. Un clic ici n'appelle pas l'IA."}</span>
             <div>
               {ouverte ? <button type="button" className="asp-sec" onClick={() => setOuverte(null)} disabled={envoi}>Annuler</button> : null}
               <button type="button" className="asp-sec" onClick={() => void envoyer('nsp')} disabled={envoi}>Je ne sais pas</button>
@@ -651,12 +783,14 @@ export default function ParcoursGuide({ vue, catalogue, onVue, onOuvrirFenetre, 
         <article className="asp-q is-fin">
           <header className="asp-qh"><h3>Tout est répondu</h3><span className="asp-rang">{vue.repere.faites} sur {vue.repere.total}</span></header>
           <div className="asp-qb">
-            <p className="asp-phrase">La fenêtre de création s'ouvre remplie de tes réponses. Rien n'est créé tant que tu n'as pas cliqué « Créer » dans la fenêtre.</p>
+            <p className="asp-phrase">{avis ? "L'éditeur de l'avis s'ouvre rempli de tes réponses ; il calcule le marché et les autres sources. Rien n'est généré ni envoyé tant que tu n'as pas cliqué « Générer » dans l'éditeur."
+              : "La fenêtre de création s'ouvre remplie de tes réponses. Rien n'est créé tant que tu n'as pas cliqué « Créer » dans la fenêtre."}</p>
           </div>
           {erreur ? <div className="asp-ko" role="alert">{erreur}</div> : null}
           <footer className="asp-pied">
-            <span>Tu peux encore modifier une réponse ci-dessus.</span>
-            <div>{onOuvrirFenetre ? <button type="button" className="asp-go" onClick={() => onOuvrirFenetre(vue)}>Ouvrir la fenêtre remplie</button> : null}</div>
+            <span>{avis ? "Après l'ouverture, les réponses ne se modifient plus ici : l'éditeur est là pour ça." : 'Tu peux encore modifier une réponse ci-dessus.'}</span>
+            <div>{avis ? (onOuvrirAvis ? <button type="button" className="asp-go" disabled={envoi} onClick={() => void ouvrirEditeur()}>{envoi ? 'J’ouvre…' : "Ouvrir l'éditeur rempli"}</button> : null)
+              : onOuvrirFenetre ? <button type="button" className="asp-go" onClick={() => onOuvrirFenetre(vue)}>Ouvrir la fenêtre remplie</button> : null}</div>
           </footer>
         </article>
       )}

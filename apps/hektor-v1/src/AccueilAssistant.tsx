@@ -56,6 +56,8 @@ const CONVERSATION_GARDEE = 'gti_assistant_conversation'
 const GESTES: Record<string, { titre: string; fait: (r: Record<string, unknown>) => string; suite?: string; valider?: string }> = {
   // 19/11 (P4-a) : créer par le parcours guidé ; le clic n'écrit que la mémoire du parcours
   parcours_creation: { titre: 'Créer par questions guidées', fait: () => 'Le parcours commence ci-dessous.', suite: 'Les questions se répondent à boutons, sans l\'IA.', valider: 'Commencer les questions' },
+  // P5-a (27/11) : l'avis de valeur par le parcours (6 questions à boutons, puis l'éditeur rempli)
+  parcours_avis: { titre: 'Avis de valeur par questions', fait: () => 'Le parcours commence ci-dessous.', suite: 'Les questions se répondent à boutons, sans l\'IA ; à la fin, l\'éditeur s\'ouvre rempli.', valider: 'Commencer les questions' },
   demande_direction: { titre: 'Demande à la direction', fait: () => 'Demande envoyée.', suite: 'Elle attend la direction dans Suivi.' },
   creer_relance: { titre: 'Relance', fait: () => 'Relance créée.' },
   statut_relance: { titre: 'Relance', fait: () => 'Relance mise à jour.' },
@@ -413,7 +415,8 @@ function CarteVue({ carte, onValider, onRefuser, onRouvrir, onAvis }: { carte: C
         <div className="asi-c-f">
           <button className="asi-b is-main" type="button" onClick={onValider}>{geste?.valider ?? 'Valider'}</button>
           <button className="asi-b" type="button" onClick={onRefuser}>Refuser</button>
-          <small>{carte.geste === 'parcours_creation' ? "Rien n'est créé : seule la fenêtre, à la fin, crée par ton clic." : 'Rien ne part avant ton clic.'}</small>
+          <small>{carte.geste === 'parcours_creation' ? "Rien n'est créé : seule la fenêtre, à la fin, crée par ton clic."
+            : carte.geste === 'parcours_avis' ? "Rien n'est généré : seul l'éditeur, à la fin, génère le PDF par ton clic." : 'Rien ne part avant ton clic.'}</small>
         </div>
       </div>
     )
@@ -834,7 +837,7 @@ export default function AccueilAssistant(props: {
         }
         // 19/11 (P4-a) : « créer par questions » n'écrit que la mémoire du parcours -- il s'ouvre sous la conversation,
         // déjà rempli de la demande ; les questions suivent à boutons, sans le modèle
-        if (carte.geste === 'parcours_creation' && r.resultat?.ouvrir === 'parcours') {
+        if ((carte.geste === 'parcours_creation' || carte.geste === 'parcours_avis') && r.resultat?.ouvrir === 'parcours') {
           const vue = (r.resultat as unknown as { parcours: ParcoursVue }).parcours
           setParcours((l) => [...l.filter((x) => x.id !== vue.id), vue])
           window.setTimeout(() => { if (fil.current) fil.current.scrollTop = fil.current.scrollHeight }, 0)
@@ -1178,7 +1181,7 @@ export default function AccueilAssistant(props: {
                   // P4-c : la lecture des services publics revient en arrière-plan -- une vue plus ANCIENNE ne remplace pas la plus récente
                   && !(x.maj_le && v.maj_le && v.maj_le < x.maj_le) ? v : x)))}
                   onOuvrirFenetre={props.onOuvrirParcours} onOuvrirBien={liens.bien} chercherMandants={props.chercherMandantsParcours} ficheOuverte={Boolean(trombone?.ouvert)}
-                  onQuestion={surQuestion} />
+                  onQuestion={surQuestion} onOuvrirAvis={(o) => portes.current.onOuvrirAvis(o)} />
               </div>
             </div>
           )) : null}

@@ -826,6 +826,154 @@ rl = appeler(route.parcours_photos_du_bien, p6, "Bearer j", Settings(), None, S,
 voir(rl[0] == 404, "les photos du parcours d'un AUTRE : introuvables, même pour l'admin")
 interrupteur["valeur"] = "on"
 
+print("6 nonies) P5-a : l'AVIS DE VALEUR par le parcours (6 questions, puis l'éditeur rempli)")
+AV = moteur.GENRE_AVIS
+an = moteur.annee_a_paris()
+voir([q["id"] for q in moteur.questions_posees({}, an, AV)] == ["bien", "valeur", "etat", "points", "charges", "envoi"]
+     and [q["id"] for q in moteur.questions_posees({"type": "2"}, an, AV)] == ["bien", "valeur", "etat", "points", "charges", "envoi"],
+     "l'avis : ses 6 questions (le bien, la valeur, l'état, les points, les charges, l'envoi), pour tout bien")
+voir(moteur.questions_posees({}, an)[0]["id"] == "bien" and len(moteur.questions_posees({}, an)) == len(moteur.questions_posees({}, an, None))
+     and "valeur" not in {q["id"] for q in moteur.questions_posees({}, an)}, "sans genre : les questions de la CRÉATION, inchangées")
+toutes_avis = {c for q in moteur.QUESTIONS_AVIS for c in q["champs"]}
+voir(toutes_avis == set(moteur.CASES_AVIS) and len(toutes_avis) == 23,
+     "23 cases nommées par une question = le brouillon de l'éditeur (24) moins le propriétaire et son e-mail, plus « destinataire »")
+voir(moteur.POSTES_AVIS == {k: v for k, v in ges.POSTES_AVIS.items()} and set(moteur.NIVEAUX_AVIS) == set(ges.NIVEAUX_AVIS),
+     "les 8 postes et les 4 niveaux : les mêmes que la carte directe (= ceux de l'éditeur)")
+rv = moteur.enregistrer({}, "valeur", {"basse": "247 000 €", "estimee": "260000", "haute": "273\u00a0000"}, "repondre", AV)
+voir(rv["basse"] == "247000" and rv["haute"] == "273000" and rv["_questions"]["valeur"] == "faite",
+     "la valeur : un montant entier, espaces et « € » retirés")
+voir(refuse(lambda: moteur.enregistrer({}, "valeur", {"basse": "300000", "estimee": "260000"}, "repondre", AV), "plus basse"),
+     "une fourchette à l'envers : refusée (basse ≤ estimée ≤ haute)")
+voir(refuse(lambda: moteur.enregistrer({}, "valeur", {"estimee": "deux cent mille"}, "repondre", AV), "montant"),
+     "un montant en lettres : refusé")
+voir(refuse(lambda: moteur.enregistrer({}, "bien", {"variante": "location"}, "repondre", AV), "choix")
+     and refuse(lambda: moteur.enregistrer({}, "bien", {"dpe": "H"}, "repondre", AV), "choix"),
+     "un choix hors de sa liste (contexte, lettre du DPE) : refusé")
+re_ = moteur.enregistrer({}, "etat", {"etatNote": "4", "etatPostes": {"toiture": {"niveau": "neuf", "label": "refaite 2019"},
+                                                                    "facade": {"niveau": ""}}}, "repondre", AV)
+voir(re_["etatPostes"] == {"toiture": {"niveau": "neuf", "label": "refaite 2019"}},
+     "l'état par poste : gardé comme la grille de l'éditeur ; un poste sans niveau (« je ne sais pas ») n'est pas gardé")
+voir(refuse(lambda: moteur.enregistrer({}, "etat", {"etatPostes": {"cave": {"niveau": "bon"}}}, "repondre", AV), "Poste inconnu")
+     and refuse(lambda: moteur.enregistrer({}, "etat", {"etatPostes": {"toiture": {"niveau": "parfait"}}}, "repondre", AV), "Niveau"),
+     "un poste ou un niveau hors de la grille : refusé")
+voir(refuse(lambda: moteur.enregistrer({}, "bien", {"type": "1"}, "repondre", AV), "n'appartient pas")
+     and refuse(lambda: moteur.enregistrer({}, "valeur", {"estimee": "1"}, "repondre"), "Question inconnue"),
+     "les deux parcours ne se mélangent pas : une case de la création dans l'avis, une question de l'avis dans la création")
+dep = moteur.appliquer_depart({moteur.CLE_BIEN: {"hektor_annonce_id": 63412}},
+                              {"basse": "247000", "estimee": "260000", "haute": "273000", "type": "1", "email": "x@exemple.invalid",
+                               "etatPostes": {"toiture": {"niveau": "neuf", "label": ""}}}, "demande", an, genre=AV)
+voir(dep["_questions"] == {"valeur": "connue"} and "type" not in dep and "email" not in dep
+     and dep["etatPostes"] == {"toiture": {"niveau": "neuf", "label": ""}} and dep["_bien"] == {"hektor_annonce_id": 63412},
+     "le départ : la fourchette dite = « connue » ; une case d'ailleurs ou un e-mail ignorés ; l'état à moitié dit reste posé")
+v_av = moteur.vue({"id": "x", "genre": AV, "reponses": dep, "etat": "en_cours"}, an)
+voir(v_av["profil"] is None and v_av["bien"] == {"hektor_annonce_id": 63412} and v_av["publics"]["possible"] is False
+     and v_av["question"]["id"] == "bien" and v_av["repere"]["total"] == 6 and "_bien" not in v_av["reponses"],
+     "la vue de l'avis : son bien, 6 questions, aucun service public lancé par l'écran")
+
+# le geste : proposer l'avis par questions sur un bien
+BIEN_AV = {"app_dossier_id": 32621, "hektor_annonce_id": 63412, "titre_bien": "Maison 5 pièces"}
+vus_biens = []
+
+
+def faux_bien(c, numero):
+    vus_biens.append((c.jeton, str(numero)))
+    if str(numero) == "99999":
+        raise ges.Refus("L'annonce 99999 n'est pas parmi les biens vivants que tu peux voir.")
+    return dict(BIEN_AV)
+
+
+ges._bien = faux_bien
+ges._hors_catalogue = lambda c, n: None
+dit = {"hektor_annonce_id": "63412", "champs": [{"cle": "estimee", "valeur": "260 000"}, {"cle": "basse", "valeur": "247000"},
+                                                 {"cle": "haute", "valeur": "273000"}, {"cle": "variante", "valeur": "succession"},
+                                                 {"cle": "dpe", "valeur": "D"}],
+       "postes": [{"poste": "toiture", "niveau": "neuf", "label": ""}]}
+interrupteur["valeur"] = ""
+voir(refuse_g(lambda: ges.preparer_parcours_avis(ctx, dit), "pas ouvert"), "interrupteur fermé : le geste de l'avis est refusé")
+interrupteur["valeur"] = "admin"
+res_av, par_av = ges.preparer_parcours_avis(ctx, dit)
+voir("Déjà dit" in res_av and "le bien" in res_av and "la valeur" in res_av and "4 questions" in res_av and "Générer" in res_av
+     and "63412" in res_av, "la carte : le bien, ce qui est déjà dit, les questions qui restent, rien avant « Générer »")
+voir(par_av["champs"]["variante"] == "succession" and par_av["champs"]["dpe"] == "D" and par_av["champs"]["estimee"] == "260000"
+     and par_av["postes"] == {"toiture": {"niveau": "neuf", "label": ""}}, "la carte garde ce qui est dit, contrôlé")
+voir(refuse_g(lambda: ges.preparer_parcours_avis(ctx, {**dit, "champs": [{"cle": "dpe", "valeur": "Z"}]}), "choix")
+     and refuse_g(lambda: ges.preparer_parcours_avis(ctx, {**dit, "hektor_annonce_id": "99999"}), "biens vivants"),
+     "un DPE inventé, un bien hors de sa portée : la carte est refusée")
+voir(all(j == "jeton-de-paul" for j, _ in vus_biens), "le bien est relu avec SON jeton")
+table.clear()
+r_av = ges.executer_parcours_avis(ctx, par_av)
+pav = r_av["parcours"]["id"]
+l_av = table[pav]
+voir(r_av["ouvrir"] == "parcours" and l_av["genre"] == "avis" and l_av["app_dossier_id"] is None
+     and l_av["reponses"]["_bien"] == {"hektor_annonce_id": 63412, "app_dossier_id": 32621, "titre": "Maison 5 pièces"}
+     and l_av["etape"] == "etat" and r_av["parcours"]["question"]["id"] == "etat",
+     "au clic : un parcours « avis », le bien dans ses RÉPONSES (la ligne reste sans bien : l'auteur seul la lit), "
+     "la première question non dite (l'état)")
+voir("proposer_parcours_avis" in [f.nom for f in ges.FONCTIONS_GESTES] and "proposer_parcours_avis" in asvc.OUTILS_DU_PARCOURS
+     and "proposer_parcours_creation" in asvc.OUTILS_DU_PARCOURS and "proposer_parcours_avis" in asvc.CONSIGNE_PARCOURS,
+     "l'outil est proposé à l'IA, caché avec le parcours quand l'interrupteur le ferme, et la consigne le nomme")
+props_av = ges.GESTES["parcours_avis"].parametres["properties"]
+voir(not any(k in json.dumps(props_av) for k in ("recipient", "ownerName", "\"email\"")),
+     "l'outil n'a aucune case pour le propriétaire ni son e-mail")
+
+# les routes, sur ce parcours d'avis
+interrupteur["valeur"] = "on"
+table[pav]["user_id"] = UID
+r = appeler(route.parcours_repondre, pav, route.ParcoursReponsePayload(question="etat", geste="repondre",
+            valeurs={"etatNote": "4", "etatPostes": {"toiture": {"niveau": "neuf", "label": ""}, "electricite": {"niveau": "aprevoir", "label": ""}}}),
+            "Bearer j", Settings(), None, S, ST)
+voir(r["ok"] and r["parcours"]["question"]["id"] == "points" and table[pav]["reponses"]["etatPostes"]["electricite"]["niveau"] == "aprevoir",
+     "répondre à l'avis : gardé, la question suivante revient (les points)")
+r = appeler(route.parcours_repondre, pav, route.ParcoursReponsePayload(question="bien", geste="repondre", valeurs={"type": "1"}),
+            "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 400, "une case de la création envoyée à l'avis : refusée")
+r = appeler(route.parcours_repondre, pav, route.ParcoursReponsePayload(question="quartier", geste="nsp"), "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 400 and "pas posée" in r[1], "une question de la création sur un avis : non posée")
+for nom, f, args in (("la fiche de visite", route.parcours_lire_fiche, (route.ParcoursFichePayload(fichiers="x"),)),
+                     ("les services publics", route.parcours_services_publics, ()),
+                     ("une phrase libre", route.parcours_phrase_libre, (route.ParcoursPhrasePayload(question="etat", texte="toiture refaite"),)),
+                     ("« la fiche est créée »", route.parcours_cree, (route.ParcoursCreePayload(app_dossier_id=1),))):
+    r = appeler(f, pav, *args, "Bearer j", Settings(), None, S, ST)
+    voir(r[0] == 400 and table[pav]["etat"] == "en_cours", f"{nom} : propre à la création, refusé sur un avis, rien ne bouge")
+for q, val in (("points", {"pointsForts": "Jardin de 490 m²", "pointsVigilance": "Électricité à refaire"}),
+               ("charges", {"taxeFonciere": "1 240", "energie": "1900"}),
+               ("envoi", {"argumentaire": "Rare dans le quartier.", "commentaire": "À présenter dès cet automne.", "destinataire": "personne"})):
+    r = appeler(route.parcours_repondre, pav, route.ParcoursReponsePayload(question=q, geste="repondre", valeurs=val), "Bearer j", Settings(), None, S, ST)
+voir(r["ok"] and r["parcours"]["fin"] and r["parcours"]["question"] is None, "les 6 répondues : « tout est répondu »")
+# ouvrir l'éditeur
+r = appeler(route.parcours_ouvrir_editeur, pav, "Bearer j", Settings(), None, S, ST, uid=AUTRE_UID, role="admin")
+voir(r[0] == 404 and table[pav]["etat"] == "en_cours", "ouvrir l'éditeur du parcours d'un AUTRE : introuvable, même pour l'admin")
+table[pav]["reponses"]["_bien"]["hektor_annonce_id"] = 99999
+r = appeler(route.parcours_ouvrir_editeur, pav, "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 400 and "biens vivants" in r[1] and table[pav]["etat"] == "en_cours" and table[pav]["app_dossier_id"] is None,
+     "le bien n'est plus à sa portée : l'éditeur ne s'ouvre pas, le parcours reste en cours")
+table[pav]["reponses"]["_bien"] = {"hektor_annonce_id": 63412, "app_dossier_id": 1, "titre": "trafiqué"}
+vus_biens.clear()
+r = appeler(route.parcours_ouvrir_editeur, pav, "Bearer jeton-de-paul", Settings(), None, S, ST)
+ouv = r["ouverture"]
+voir(r["ok"] and ouv["ouvrir"] == "avis_de_valeur" and ouv["app_dossier_id"] == 32621 and ouv["hektor_annonce_id"] == 63412
+     and vus_biens == [("jeton-de-paul", "63412")],
+     "ouvrir : le bien RELU avec son jeton fait foi (pas celui gardé dans les réponses)")
+voir(ouv["champs"]["estimee"] == "260000" and ouv["champs"]["variante"] == "succession" and ouv["champs"]["dpe"] == "D"
+     and ouv["champs"]["taxeFonciere"] == "1240" and ouv["postes"]["electricite"]["niveau"] == "aprevoir"
+     and ouv["sans_destinataire"] is True and "destinataire" not in ouv["champs"] and "etatPostes" not in ouv["champs"],
+     "l'éditeur reçoit les réponses dans SES cases, le barème à part, « personne » = sans destinataire")
+voir(not any(k in json.dumps(ouv) for k in ("recipient", "ownerName", "@")), "aucune coordonnée du propriétaire ne transite")
+pa = appels[-1]["params"]
+voir(table[pav]["etat"] == "termine" and table[pav]["app_dossier_id"] == 32621 and pa["app_dossier_id"] == "is.null"
+     and pa["etat"] == "eq.en_cours" and r["parcours"]["etat"] == "termine",
+     "le parcours est rattaché au bien et TERMINÉ par une écriture conditionnelle (le négociateur du bien et l'admin le lisent)")
+r = appeler(route.parcours_ouvrir_editeur, pav, "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 409, "ouvrir une seconde fois par la route : 409 (l'écran le rouvre depuis sa pastille)")
+r = appeler(route.parcours_repondre, pav, route.ParcoursReponsePayload(question="points", geste="nsp"), "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 409, "terminé : l'avis ne se modifie plus par le parcours (l'éditeur est là pour ça)")
+table.clear()
+rc = appeler(route.parcours_commencer, depart, "Bearer j", Settings(), None, S, ST)
+r = appeler(route.parcours_ouvrir_editeur, rc["parcours"]["id"], "Bearer j", Settings(), None, S, ST)
+voir(r[0] == 400 and "pas un avis" in r[1], "un parcours de CRÉATION n'ouvre pas l'éditeur d'avis")
+voir(ges.ouverture_avis_du_parcours({"destinataire": "proprietaire", "estimee": "1"}, 1, 2)["sans_destinataire"] is False,
+     "« le propriétaire » : l'éditeur garde l'e-mail de la fiche")
+
 print("7) aucun appel au modèle")
 src = open(moteur.__file__, encoding="utf-8").read()
 voir("openai" not in src.lower().replace("ne connaît pas openai", ""), "le moteur ne connaît pas OpenAI")
