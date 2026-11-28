@@ -6635,6 +6635,30 @@ reglees sur une affaire morte sans vente ; fa06e4e5 ; YRUF0S9H ; G8YSAI5Z (deux 
 LE MATIN, DANS SON ORDRE : apres 07:45 le temoin de la nuit ; puis la photo du jour, le passage, sa copie en base ; puis
 l'essai a blanc sur tout le stock et son a_blanc ; puis SON « vas-y », qui couvre l'ensemble ; puis ecrire et repetition.
 Le plan est corrige (§ 0, § 6 etape 5 fusionnee, § 6.2 l'outil).
+### 20.108 Le 28/11 (matin) : temoin de la nuit VERT, passage 85, l'essai de l'outil VERT a blanc ET en aller-retour -- attend son « vas-y »
+
+- 07:46 TEMOIN DE LA NUIT : VERT (4 628 notes a l'octet, 9 665 parts du classeur dont les 419 du lot C, les 9 saisies,
+  avis 2 283 / 393 / 2 414 ; 472 dates d'annulation, 0 perdue). 3647 : 31 DECHAUD entree 50 + 32 GENTES sortie 50,
+  classeur_reconstitue, 0 part hektor -- juste.
+- 07:47 photo 2026-11-28_074723 (4 806 lignes, 3 neuves : 1d713a84 en attente, 2e08ac0e et a8f42dee tranchees) ; PASSAGE 85 :
+  4 735 + 71 = 4 806, boucle. « un temoin crie » : les MEMES 30 ecarts qu'au 82 et au 84, ligne a ligne (0 temoin qui
+  differe du 84) -- pas un ecart neuf. 0 verdict deja rendu qui change (84 -> 85 : seulement les 3 lignes neuves).
+- Socle en base : a blanc VERT puis ecrit (passage 85, relu a l'identique). Routeur pose : 38 lignes.
+- ESSAI au 85 : 619 ecritures (registre 572 = 241 dates + 291 commissions + 21 ventes reglees + 19 factures ; notes 33 =
+  7 neuves + 3 sous la neuve + 23 paragraphes sur 15 notes ; parts 4 sur 2 chaines ; charges 10), 148 differences.
+  RAPPROCHE DE LA NUIT (565) case par case : les 565 sont TOUTES la, 0 disparue ; les 54 de plus = 49 cases que le Sheet a
+  changees depuis le 26/11 ou ses 3 lignes neuves + 5 factures dont la vente est descendue de Hektor cette nuit (« attend
+  sa vente » 49 -> 44 : la boucle fait ce qui etait annonce). Sa liste : les MEMES 56 cas. ⚠ 8 rubriques, pas 9 (le 9 de
+  la nuit, au 20.107 et dans mon message, etait une erreur de compte ; la liste n'a pas change).
+- ⛔ L'A BLANC A D'ABORD ECHOUE (07:52) : la charge n'avait pas de piece au journal (de_app_affaire_id NOT NULL) ; tout annule,
+  rien d'ecrit. Corrige comme le patron du 24/11 : la piece de la ligne qui porte le mandat, la plus avancee. (La nuit,
+  seul « verifier » avait tourne : EXPLAIN ne voit pas une contrainte NOT NULL.)
+- Lot maj_classeur_20261128075335 : verifier VERT ; a blanc VERT (empreinte d'avant c219ccd6..., d'apres cf57c727...) ;
+  ⭐ NEUF : ALLER-RETOUR VERT (le patch puis l'inverse dans une transaction : l'empreinte revient a l'octet, le reflet des
+  charges aussi, journal et differences a 0) ; son temoin inverse mord (sans l'inverse : « l'empreinte ne revient pas »).
+  Relu apres : meme empreinte, 0 sauvegarde restee, 0 ligne au journal. Commit 9e42577, pousse.
+- Rapport du matin : notice/RAPPORT_DU_MATIN_CLASSEUR_20261128075335.md, envoye. ATTEND SON « VAS-Y ».
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer
