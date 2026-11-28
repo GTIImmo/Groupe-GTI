@@ -689,6 +689,13 @@ class Essai:
                     self.signaux.append(("commission", col, i, "le Sheet porte %g contre %g chez Hektor : rapport %.4f, un "
                                                                "coefficient de TVA" % (sh, ttc, r)))
                     continue
+                if i not in CONFLITS_ANNONCES:
+                    # sa decision du 28/11 couvre LES SIX nommes ; un conflit neuf (une case changee, une vente neuve) lui remonte
+                    self.etat(col, "4 un conflit NEUF aux six controles (hors des six de sa decision)")
+                    self.mettre_de_cote(col, i, "le Sheet porte %s, la vente %d porte %g chez Hektor : un conflit neuf aux six "
+                                                "controles, hors des six que tu as tranches -- je ne l'ecris pas sans ton mot"
+                                        % (s, a, ttc), motif="un conflit de commission NEUF, hors des six de ta decision")
+                    continue
                 self.etat(col, "2 ECRIT : conflit aux six controles, le Sheet gagne (sur la vente)")
                 self.ecrire(famille="ledger", colonne=col, id_unique=i, num=self.num(i), piece=a, champ="honoraires_entree_app",
                             valeur=s, avant=v["he_app"], pourquoi="D6, conflit aux six controles : le Sheet gagne (son mot "
@@ -1394,10 +1401,10 @@ def etape_essai(passage: int, photo_avant: str | None, passage_avant: int | None
                 and w["pourquoi"].startswith("D6, conflit")}
     dire("   LES CONFLITS DE COMMISSION ECRITS : %s -- annonces : %s : %s" % (
         sorted(conflits), sorted(CONFLITS_ANNONCES), "LES MEMES" if conflits == CONFLITS_ANNONCES else
-        "⛔ PAS CEUX ANNONCES (en trop %s, manquent %s)" % (sorted(conflits - CONFLITS_ANNONCES),
-                                                          sorted(CONFLITS_ANNONCES - conflits))))
-    if conflits != CONFLITS_ANNONCES:
-        crie.append("Commission TTC (les six conflits)")
+        "⚠ %d des six ne sont plus un conflit aujourd'hui (%s) -- dit au rapport" % (
+            len(CONFLITS_ANNONCES - conflits), sorted(CONFLITS_ANNONCES - conflits))))
+    if not conflits <= CONFLITS_ANNONCES:      # ne peut pas arriver (un conflit neuf lui remonte) : la garde de la garde
+        crie.append("Commission TTC : un conflit ecrit hors des six de sa decision")
     diff, diff_r = [], None
     if passage_avant:
         bouge = deja_rendu_qui_bouge(passage_avant, passage)
