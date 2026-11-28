@@ -1238,7 +1238,7 @@ def fabriquer_sql(E: Essai, lot: str, diff: list[dict], photo_avant: str) -> dic
             lot, len(W), len(led), len(neuves), len(ids_avis), len(parts), len(charges), q(lot), q(lot), q(marque),
             S["note"], q(marque), q(marque), q(marque), q(lot)))
     return {"tete": tete % (lot, D.passage, D.image, len(W), len(led), len(notes), len(avis), len(parts), len(charges)),
-            "corps": corps_txt, "inverse": inverse, "repetition": repetition, "empreinte_sql": emp_sql,
+            "corps": corps_txt, "blocs": corps, "inverse": inverse, "repetition": repetition, "empreinte_sql": emp_sql,
             "attendus": {"journal": len(W), "registre": len(led), "notes_neuves": len(neuves), "paragraphes": len(par_piece),
                          "avis": len(ids_avis), "parts": len(parts), "charges": len(charges), "differences": len(diff)}}
 
@@ -1424,6 +1424,7 @@ def etape_essai(passage: int, photo_avant: str | None, passage_avant: int | None
                                          "-- RIEN N''EST ECRIT'; end $$;\n", encoding="utf-8")
     (d / "patch_modele.sql").write_text(sql["tete"] + "\nbegin;\n" + sql["corps"] + "commit;\n", encoding="utf-8")
     (d / "patch_INVERSE.sql").write_text(sql["inverse"], encoding="utf-8")
+    (d / "blocs.json").write_text(json.dumps(sql["blocs"], ensure_ascii=False), encoding="utf-8")
     (d / "patch_REPETITION.sql").write_text(sql["repetition"], encoding="utf-8")
     with (d / "ecritures.csv").open("w", encoding="utf-8-sig", newline="") as h:
         w = csv.writer(h, delimiter=";")
@@ -1495,6 +1496,43 @@ def jouer(lot: str, mode: str, empreinte: str | None = None) -> int:
     return code
 
 
+def etape_verifier(lot: str) -> int:
+    """EN LECTURE SEULE, AVANT TOUT A BLANC : la garde jouee pour de vrai (son empreinte relue), puis CHAQUE ecriture passee
+    par EXPLAIN -- la syntaxe, les colonnes, les types, sans rien executer. Une transaction read only : rien ne peut s'ecrire."""
+    d = SORTIE / lot
+    blocs = json.loads((d / "blocs.json").read_text(encoding="utf-8"))
+    cn, cu = P.pooler()
+    e = lire_empreinte(cu, lot)
+    ok, ko = Counter(), []
+    for b in blocs:
+        s = b.lstrip()
+        try:
+            if s.startswith("do $$ declare n int; e text; begin") and "%(EMPREINTE)s" in s:
+                cu.execute(b.replace("%(EMPREINTE)s", e))
+                ok["la garde, jouee (lecture seule)"] += 1
+            elif s.startswith(("insert into", "update ", "select public.app_reposer")):
+                cu.execute("explain " + s)
+                cu.fetchall()
+                ok["EXPLAIN " + " ".join(s.split()[:3])] += 1
+            else:
+                ok["non verifie ici (DDL, controles : l'a blanc le dira)"] += 1
+        except Exception as x:  # noqa: BLE001
+            ko.append((s[:120], str(x).splitlines()[0][:200]))
+            cn.rollback()
+            cu.execute("set transaction read only")
+    cn.rollback()
+    for n_ in cn.notices:
+        dire("   notice : %s" % n_.strip()[:200])
+    cn.close()
+    dire("VERIFICATION DU SQL du lot %s (lecture seule) -- empreinte d'avant %s" % (lot, e))
+    for k, n in sorted(ok.items()):
+        dire("   %5d  %s" % (n, k))
+    for s, x in ko:
+        dire("   ⛔ %s  ->  %s" % (s, x))
+    dire("⇒ %s" % ("VERT : la garde passe, chaque ecriture se compile" if not ko else "⛔ %d bloc(s) en erreur" % len(ko)))
+    return 0 if not ko else 1
+
+
 def etape_repetition(lot: str) -> int:
     d = SORTIE / lot
     att = json.loads((d / "decisions.json").read_text(encoding="utf-8"))["attendus"]
@@ -1556,6 +1594,8 @@ def main() -> int:
     w = sp.add_parser("ecrire")
     w.add_argument("--lot", required=True)
     w.add_argument("--empreinte", required=True)
+    v = sp.add_parser("verifier")
+    v.add_argument("--lot", required=True)
     r = sp.add_parser("repetition")
     r.add_argument("--lot", required=True)
     ro = sp.add_parser("routeur")
@@ -1575,6 +1615,8 @@ def main() -> int:
         return jouer(a.lot, "vrai", a.empreinte)
     if a.etape == "repetition":
         return etape_repetition(a.lot)
+    if a.etape == "verifier":
+        return etape_verifier(a.lot)
     return etape_routeur(a.poser)
 
 
