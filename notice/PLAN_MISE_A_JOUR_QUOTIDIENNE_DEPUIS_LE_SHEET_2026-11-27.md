@@ -736,16 +736,28 @@ d'avant de chaque case). **Trois pièces sont neuves** : le journal des différe
 rapport du matin.
 
 **Le matin, dans cet ordre (son ordre du 28/11)** :
-1. après 07:45, le témoin de la nuit (`temoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger`). Rouge : tout
-   s'arrête, et chaque écart est nommé ;
+1. après 07:45, le témoin de la nuit (`temoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger --fichier <la photo
+   prise après la dernière écriture>`). Rouge : tout s'arrête, et chaque écart est nommé. Depuis le 28/11 il mesure six
+   choses : les notes, les parts du classeur, les 9 saisies, les avis, **les cases de l'app du registre** (annulation,
+   commission, vente réglée, facture) et **les charges** (le carnet et leur reflet) ;
 2. la photo du jour (`protocole_classeur.py image`), le passage du juge (`protocole_classeur.py passage`), sa copie en base
    (`socle_du_protocole_en_base_2026-11-27.py --ecrire`) ;
 3. l'essai à blanc sur tout le stock : `maj_quotidienne_du_classeur.py essai --passage N --passage-avant N-1 --photo-avant
-   <la photo de la veille>`, puis `a_blanc --lot <lot>`. Il sort ce qu'il écrirait, colonne par colonne, et les sommes
-   bouclent ;
+   <la photo de la veille>`, puis `verifier --lot <lot>`, `a_blanc --lot <lot>` et **`aller_retour --lot <lot>`** (le
+   patch puis son inverse dans une transaction annulée : l'empreinte revient à l'octet). Il sort ce qu'il écrirait,
+   colonne par colonne, et les sommes bouclent ;
 4. il lit le rapport du matin (`notice/RAPPORT_DU_MATIN_CLASSEUR_<lot>.md`), et dit « vas-y » ;
 5. `ecrire --lot <lot> --empreinte <celle de l'essai>`, puis `repetition --lot <lot>`. **Ce « vas-y » couvre l'ensemble** :
    les dates d'annulation, les commissions, les factures, les ventes réglées, les charges, les notes, les avis, les parts.
+6. après l'écriture : l'essai rejoué doit donner **0 écriture** ; puis la photo du témoin de la nuit, prise sur la base
+   écrite (`--photo --fichier C:\Hektor\chantier_classeur_q6_cache\temoin_de_la_nuit_<date>.json`), que le matin suivant
+   jugera.
+
+**Le premier lot, écrit le 28/11 à 08:14 sur son « vas-y »** : `maj_classeur_20261128075335` (passage 85), 619 écritures
+— 241 dates d'annulation, 291 commissions (dont ses six conflits), 21 ventes réglées, 19 numéros de facture, 33 gestes de
+note (7 notes neuves, des paragraphes datés sur 15 notes), 4 parts sur 2 chaînes, 10 charges — et 148 différences au
+journal. Répétition verte ; l'essai rejoué : 0 écriture. Sauvegardes datées : `*_avant_maj_20261128075335`. Retour :
+`patch_INVERSE.sql` du lot, déjà éprouvé en aller-retour.
 
 **Ce qui ne s'écrit jamais** : rien chez Hektor ; jamais l'état d'une pièce ; jamais une part supprimée (elle lui remonte) ;
 jamais une note écrasée ; jamais une des 9 notes saisies ; jamais une charge saisie dans l'app ; jamais une pièce qu'il a

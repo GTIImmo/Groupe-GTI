@@ -13,8 +13,13 @@ cherche avant de continuer. »
   3. les 9 notes saisies a la main : intactes a l'octet ;
   4. les avis : toujours 2 283, 393 et 2 414 cases remplies, chaque ligne a l'octet.
   + (a titre d'information, il ne fait pas tomber le temoin) les dates d'annulation posees chez nous.
+  LE 28/11 (apres le premier lot de l'outil du matin) : --fichier choisit la photo (par defaut celle du 27/11), et deux
+  mesures de plus, qui font tomber le temoin -- la nuit ne doit pas toucher ce que l'outil a ecrit chez nous :
+  5. les cases de l'app du registre (date d'annulation, commission, vente reglee, numero de facture), a l'octet ;
+  6. les charges du carnet des mandats (charge_commission) et leur reflet au registre des mandats, a l'octet.
+  (Une photo plus ancienne que ces mesures les saute, en le disant.)
 ⛔ Ne se juge pas entre 04:00 et 07:45 (la nuit et la descente). La photo est dans le cache, pas dans le depot.
-Sortie : 0 vert . 1 un des quatre a bouge (on s'arrete) . 2 pas pu mesurer.
+Sortie : 0 vert . 1 une mesure a bouge (on s'arrete) . 2 pas pu mesurer.
 """
 from __future__ import annotations
 
@@ -52,9 +57,19 @@ def mesurer() -> dict:
     cu.execute("select app_affaire_id, date_annulation_app from public.app_affaire_ledger "
                "where nullif(trim(coalesce(date_annulation_app, '')), '') is not null")
     dates = {str(a): d for a, d in cu.fetchall()}
+    cu.execute("select app_affaire_id, date_annulation_app, honoraires_entree_app, vente_reglee_app, numero_facture_app "
+               "from public.app_affaire_ledger where coalesce(date_annulation_app, honoraires_entree_app, vente_reglee_app, "
+               "numero_facture_app) is not null")
+    registre = {str(a): [d, c, v, f] for a, d, c, v, f in cu.fetchall()}
+    cu.execute("select hektor_annonce_id, numero_mandat, valeur_app, origine from public.app_mandat_champ_app "
+               "where champ = 'charge_commission'")
+    charges = {"%s|%s" % (a, n): [v, o] for a, n, v, o in cu.fetchall()}
+    cu.execute("select hektor_annonce_id, numero_mandat, mandat_charge_honoraires_app from public.app_mandat_register_current "
+               "where mandat_charge_honoraires_app is not null")
+    reflet = {"%s|%s" % (a, n): v for a, n, v in cu.fetchall()}
     cn.close()
     return {"pris_le": datetime.now().isoformat(timespec="seconds"), "notes": notes, "parts": parts, "avis": avis,
-            "dates_annulation": dates}
+            "dates_annulation": dates, "registre_app": registre, "charges": charges, "reflet_charges": reflet}
 
 
 def comptes(m: dict) -> dict:
@@ -64,7 +79,10 @@ def comptes(m: dict) -> dict:
             "chaines_du_lot_c": len({k.split("|")[0] for k, v in m["parts"].items() if v[3] == "classeur:3bisC:2026-11-27"}),
             "saisies": sum(1 for a in SAISIES if str(a) in m["notes"] and m["notes"][str(a)][0] == "saisie"),
             "avis": [sum(1 for v in av if v[0]), sum(1 for v in av if v[1]), sum(1 for v in av if v[2])],
-            "dates_annulation": len(m["dates_annulation"])}
+            "dates_annulation": len(m["dates_annulation"]),
+            "registre_app": len(m["registre_app"]) if "registre_app" in m else "-",
+            "charges": len(m["charges"]) if "charges" in m else "-",
+            "reflet_charges": len(m["reflet_charges"]) if "reflet_charges" in m else "-"}
 
 
 def main() -> int:
@@ -72,7 +90,9 @@ def main() -> int:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--photo", action="store_true")
     g.add_argument("--juger", action="store_true")
+    ap.add_argument("--fichier", default=str(PHOTO), help="la photo (par defaut celle du 27/11)")
     a = ap.parse_args()
+    photo = Path(a.fichier)
     heure = datetime.now().strftime("%H:%M")
     if a.juger and "04:00" <= heure < "07:45":
         print("⛔ %s : la nuit ou la descente tourne -- se juge apres 07:45" % heure)
@@ -81,13 +101,14 @@ def main() -> int:
     c = comptes(m)
     print("MESURE %s : %s" % (m["pris_le"], c))
     if a.photo:
-        if PHOTO.exists():
-            print("⛔ la photo existe deja (%s) -- on ne l'ecrase pas" % PHOTO)
+        if photo.exists():
+            print("⛔ la photo existe deja (%s) -- on ne l'ecrase pas" % photo)
             return 2
-        PHOTO.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
-        print("PHOTO ecrite : %s (%d octets, md5 %s)" % (PHOTO, PHOTO.stat().st_size, h(PHOTO.read_text(encoding="utf-8"))[:8]))
+        photo.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+        print("PHOTO ecrite : %s (%d octets, md5 %s)" % (photo, photo.stat().st_size, h(photo.read_text(encoding="utf-8"))[:8]))
         return 0
-    p = json.loads(PHOTO.read_text(encoding="utf-8"))
+    p = json.loads(photo.read_text(encoding="utf-8"))
+    print("photo lue : %s" % photo)
     print("PHOTO    %s : %s" % (p["pris_le"], comptes(p)))
     cris = []
     # 1. les notes, a l'octet
@@ -122,7 +143,36 @@ def main() -> int:
     # + les dates d'annulation (information)
     dp = sorted(k for k in p["dates_annulation"] if m["dates_annulation"].get(k) != p["dates_annulation"][k])
     print("+ DATES D'ANNULATION (information) : %d perdues ou changees%s" % (len(dp), (" : %s" % dp[:10]) if dp else ""))
-    print("\n⇒ %s" % ("VERT : les quatre tiennent, on peut avancer" if not cris else
+    # 5. les cases de l'app du registre (28/11) -- une case neuve se NOMME, une case perdue ou changee fait tomber le temoin
+    if "registre_app" in p:
+        rp = sorted(set(p["registre_app"]) - set(m["registre_app"]))
+        rc = sorted(k for k in p["registre_app"] if k in m["registre_app"] and m["registre_app"][k] != p["registre_app"][k])
+        rn = sorted(set(m["registre_app"]) - set(p["registre_app"]))
+        print("5. CASES DE L'APP DU REGISTRE (annulation, commission, vente reglee, facture) : %d pieces, %d perdues, "
+              "%d changees, %d neuves" % (len(p["registre_app"]), len(rp), len(rc), len(rn)))
+        for k in (rp + rc)[:20]:
+            print("   ⛔ piece %s : %s -> %s" % (k, p["registre_app"][k], m["registre_app"].get(k)))
+        if rn:
+            print("   neuves : %s" % rn[:20])
+        if rp or rc:
+            cris.append("cases de l'app du registre : perdues %s, changees %s" % (rp[:10], rc[:10]))
+    else:
+        print("5. CASES DE L'APP DU REGISTRE : la photo est plus ancienne que cette mesure -- sautee")
+    # 6. les charges du carnet des mandats et leur reflet (28/11)
+    if "charges" in p:
+        cp = sorted(k for k in p["charges"] if m["charges"].get(k) != p["charges"][k])
+        fp = sorted(k for k in p["reflet_charges"] if m["reflet_charges"].get(k) != p["reflet_charges"][k])
+        print("6. CHARGES : carnet %d, %d perdues ou changees ; reflet %d, %d perdus ou changes" % (
+            len(p["charges"]), len(cp), len(p["reflet_charges"]), len(fp)))
+        for k in cp[:10]:
+            print("   ⛔ carnet %s : %s -> %s" % (k, p["charges"][k], m["charges"].get(k)))
+        for k in fp[:10]:
+            print("   ⛔ reflet %s : %s -> %s" % (k, p["reflet_charges"][k], m["reflet_charges"].get(k)))
+        if cp or fp:
+            cris.append("charges : carnet %s, reflet %s" % (cp[:10], fp[:10]))
+    else:
+        print("6. CHARGES : la photo est plus ancienne que cette mesure -- sautee")
+    print("\n⇒ %s" % ("VERT : tout tient, on peut avancer" if not cris else
                       "⛔ ROUGE -- ON S'ARRETE ET ON CHERCHE : " + " ; ".join(cris)))
     return 0 if not cris else 1
 

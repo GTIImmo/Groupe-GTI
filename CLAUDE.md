@@ -133,8 +133,10 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 >   - ⭐ **L'OUTIL, construit la nuit du 27 au 28/11** : `phase2/checks/maj_quotidienne_du_classeur.py` (plan § 6.2). Il
 >     écrit chez nous **dès le premier matin** (les étapes 5 et 6 sont fusionnées : pas de phase d'observation), avec
 >     sauvegarde datée, journal, témoin chiffré et arrêt automatique. Son essai à blanc **est** le rattrapage du stock :
->     plus de patch fait à la main. Le matin : le témoin de la nuit, la photo, le passage, l'essai, **son « vas-y »**,
->     l'écriture, la répétition ;
+>     plus de patch fait à la main. Le matin : le témoin de la nuit, la photo, le passage, l'essai (verifier, a_blanc,
+>     aller_retour), **son « vas-y »**, l'écriture, la répétition, l'essai rejoué (0), la photo neuve du témoin ;
+>   - ✅ **le 1er lot est ÉCRIT le 28/11 à 08:14** (619 cases, passage 85 : carnet § 20.109) ; ⛔ rien ne lance encore
+>     l'outil tout seul (aucune tâche planifiée : sa décision, « on verra après ») ;
 >   - en queue (ce n'est pas l'outil) : les lignes neuves, puis R1 à R5 (R3 attend ses Apps Script) ;
 >   - **en dernier, et peut-être jamais** : informer Hektor (0 geste mesuré en 4 jours sur les affaires
 >     vivantes).

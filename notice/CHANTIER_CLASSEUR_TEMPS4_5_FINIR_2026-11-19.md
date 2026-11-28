@@ -6659,6 +6659,46 @@ Le plan est corrige (§ 0, § 6 etape 5 fusionnee, § 6.2 l'outil).
   Relu apres : meme empreinte, 0 sauvegarde restee, 0 ligne au journal. Commit 9e42577, pousse.
 - Rapport du matin : notice/RAPPORT_DU_MATIN_CLASSEUR_20261128075335.md, envoye. ATTEND SON « VAS-Y ».
 
+### 20.109 Le 28/11 (matin) : SON « VAS-Y » -- le premier lot de l'outil ECRIT chez nous (619), repetition verte, 0 reste
+
+- SON MOT (08:1x) : « Vas y », sur le rapport du matin du lot maj_classeur_20261128075335.
+- 08:14:16 ECRIT : l'empreinte d'avant relue = c219ccd6 (celle de l'essai) ; joue sans erreur ; EMPREINTE APRES cf57c727 =
+  celle de l'a blanc (le geste est deterministe). 619 ecritures : 241 dates d'annulation, 291 commissions (dont ses six
+  conflits), 21 ventes reglees, 19 numeros de facture, 33 gestes de note (7 notes neuves, 3 sous la neuve, 23 paragraphes
+  sur 15 notes), 4 parts (chaines 30851, 30862), 10 charges ; 148 differences au journal. Sauvegardes datees :
+  *_avant_maj_20261128075335 (registre, notes, avis, carnet des charges, reflet).
+- REPETITION VERTE : journal 619, registre 572 a leur valeur, notes neuves 7, 0 texte d'avant abime, parts 4, charges 10,
+  les 9 saisies intactes, differences 148.
+- L'ESSAI REJOUE apres l'ecriture : 0 ecriture (les six conflits « ne sont plus un conflit aujourd'hui » : ils sont ecrits).
+  Un lot vide passe verifier et a blanc (empreinte d'avant = d'apres).
+- ⚠ CORRIGE dans l'outil : un second essai le meme jour remettait les 148 differences au journal (cle photo_apres + ID
+  Unique + colonne) -- elles sont sautees quand elles y sont deja (son mot : plusieurs ecritures le meme jour).
+- LE TEMOIN DE LA NUIT, ETENDU (--fichier ; 5. les cases de l'app du registre ; 6. les charges, carnet et reflet) :
+  TEMOIN POSITIF contre la photo du 27/11 -- il crie exactement le lot : 15 notes changees = les 15 notes a paragraphe,
+  7 neuves = les 7 notes neuves, 241 dates neuves = les 241 du lot, 4 parts neuves = les 4 du lot ; rien d'autre.
+  PHOTO NEUVE apres l'ecriture : C:\Hektor\chantier_classeur_q6_cache\temoin_de_la_nuit_2026-11-28.json (08:17:51 :
+  notes 4 635, parts du classeur 9 669, avis 2 283 / 393 / 2 414, dates 713, cases de l'app 4 584 pieces, charges 23 516,
+  reflet 23 516) -- jugee contre elle-meme : VERT.
+
+- LES ATTENDUS DE LA SESSION VOISINE (poses dans la fiche memoire avant l'ecriture), compares apres : dates 472 -> 713 ;
+  notes 4 628 -> 4 635 ; parts 18 389 -> 18 393 (parts du classeur 9 665 -> 9 669), 0 orpheline ; numero_facture_app
+  3 686 -> 3 705 ; vente_reglee_app 3 744 -> 3 765 ; differences 0 -> 148 ; avis inchanges. honoraires_entree_app :
+  66 -> 356, et non 357 -- une des 291 ecritures REMPLACE une valeur qui existait (la case du Sheet a change depuis le
+  26/11 ; la valeur d'avant est au journal) : 66 + 290 = 356.
+- SES DEUX ECARTS « NON RECONCILIES », ventiles piece par piece (ventiler_66_et_3744.py, lecture seule) :
+  - les 66 honoraires de l'app d'avant le lot, contre 23 « deja chez nous (honoraires de l'app) » : 23 offres qui decident
+    de leur ligne, egales au Sheet (ce sont les 23) + 19 egales au Sheet mais comptees sous « la vente, champ TTC » (14) ou
+    « le compromis » (5), qui passent avant + 1 reecrite par le lot (la case changee) + 16 sur une piece qui ne decide pas
+    (15 offres d'une ligne qui a un compromis, 1 compromis d'une ligne qui a une vente) + 7 sur aucune ligne tranchee du
+    Sheet (998, 30706, 30713, et les pieces nees dans l'app 1001339, 1001378, 1001381, 1001384) = 66.
+  - les 3 744 ventes reglees d'avant, contre 3 742 « deja chez nous » : 3 742 lignes (dont G8YSAI5Z, deux ventes) + 2 ventes
+    sur aucune ligne tranchee du Sheet (7126 « 14/03/2025 », 28147 « 3 fevrier25 ») = 3 744.
+
+⏰ DEMAIN MATIN (29/11), APRES 07:45 :
+    python -X utf8 -u phase2\checks\temoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger --fichier C:\Hektor\chantier_classeur_q6_cache\temoin_de_la_nuit_2026-11-28.json
+  puis la sequence du plan § 6.2 (photo, passage 86, socle en base, essai --passage 86 --passage-avant 85 --photo-avant
+  2026-11-28_074723, verifier, a_blanc, aller_retour, rapport, son « vas-y »).
+
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

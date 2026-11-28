@@ -1421,6 +1421,17 @@ def etape_essai(passage: int, photo_avant: str | None, passage_avant: int | None
     if photo_avant:
         diff = differences(lire_photo(photo_avant), D.photo)
         diff_r = resume_differences(diff)
+        # plusieurs ecritures le meme jour (son mot du 28/11) : une case deja au journal pour CETTE photo ne s'y remet pas
+        # (sa cle est photo_apres + ID Unique + colonne) -- le rapport la montre toujours, le journal ne la double pas
+        cn_, cu_ = P.pooler()
+        cu_.execute("select id_unique, colonne from public.app_classeur_difference where photo_apres = %s", (D.image,))
+        deja = {(i_, c_) for i_, c_ in cu_.fetchall()}
+        cn_.close()
+        if deja:
+            n0 = len(diff)
+            diff = [x for x in diff if (x["id_unique"], x["colonne"]) not in deja]
+            dire("   LE JOURNAL DES DIFFERENCES porte deja %d case(s) pour la photo %s : %d deja au journal, %d a y mettre"
+                 % (len(deja), D.image, n0 - len(diff), len(diff)))
     sql = fabriquer_sql(E, lot, diff, photo_avant or "")
     SORTIE.mkdir(parents=True, exist_ok=True)
     d = SORTIE / lot
