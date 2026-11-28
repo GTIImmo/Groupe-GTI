@@ -5,6 +5,7 @@ r"""LA MISE A JOUR QUOTIDIENNE DEPUIS LE SHEET -- L'OUTIL (28/11/2026, son mot d
     python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py differences [--de IMAGE] [--a IMAGE]
     python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py essai --passage N
     python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py a_blanc --lot LOT
+    python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py aller_retour --lot LOT     (le patch PUIS l'inverse, annules)
     python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py ecrire --lot LOT --empreinte E      (apres SON « vas-y »)
     python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py repetition --lot LOT
     python -X utf8 -u phase2\checks\maj_quotidienne_du_classeur.py routeur [--poser]
@@ -816,7 +817,12 @@ class Essai:
             for i_, _s in ls[1:]:
                 self.etat(col, "1 meme mandat qu'une autre ligne, meme valeur (ecrite une fois)")
             self.etat(col, "2 ECRIT : %s" % ("le Sheet gagne (valeur d'avant au journal)" if nous else "case vide"))
-            self.ecrire(famille="charge", colonne=col, id_unique=i, num=self.num(i), annonce=k[0], mandat=k[1], valeur=s,
+            # le journal veut sa piece (de_app_affaire_id NOT NULL) : comme le patron du 24/11 (v.piece), la piece de la
+            # ligne qui porte ce mandat -- la plus avancee (vente, compromis, offre), puis le plus petit numero
+            porteuses = sorted((a for a in D.pieces(i) if (str(D.L[a]["annonce"]), str(D.L[a]["mandat"])) == k),
+                               key=lambda a: (-RANG.get(D.L[a]["kind"], 0), a))
+            assert porteuses, "une charge sans piece qui porte son mandat (%s, %s)" % (i, k)
+            self.ecrire(famille="charge", colonne=col, id_unique=i, num=self.num(i), piece=porteuses[0], annonce=k[0], mandat=k[1], valeur=s,
                         avant=(nous[0] if nous else None), avant_origine=(nous[1] if nous else None),
                         avant_par=(nous[2] if nous else None))
 
@@ -1503,6 +1509,75 @@ def jouer(lot: str, mode: str, empreinte: str | None = None) -> int:
     return code
 
 
+def etape_aller_retour(lot: str) -> int:
+    """L'ALLER-RETOUR A BLANC (28/11, avant son « vas-y » -- son mot : « patch, inverse, repetition »). Dans UNE transaction :
+    le patch du lot (gardes, sauvegardes datees, journal, ecritures, controles), puis SON INVERSE ; l'empreinte de la base doit
+    revenir A L'OCTET a celle d'avant, le reflet des charges aussi, le journal et les differences du lot a zero. Puis une
+    erreur VOULUE : tout est annule, rien ne reste. La preuve que l'inverse rend chaque case, AVANT que la case ne s'ecrive."""
+    d = SORTIE / lot
+    if not d.exists():
+        raise SystemExit("⛔ lot inconnu : %s" % lot)
+    dec = json.loads((d / "decisions.json").read_text(encoding="utf-8"))
+    annonces = sorted({str(w["annonce"]) for w in dec["ecritures"] if w["famille"] == "charge"})
+    reflet_sql = ("select coalesce(string_agg(concat_ws('|', hektor_annonce_id, numero_mandat, "
+                  "coalesce(mandat_charge_honoraires_app, '-')), ';' order by hektor_annonce_id, numero_mandat), '') "
+                  "from public.app_mandat_register_current where hektor_annonce_id::text in (%s)"
+                  % (", ".join("'%s'" % a for a in annonces) or "NULL"))
+    so = socle_module()
+    cn = so.connexion_ecriture()
+    cn.autocommit = True
+    cu = cn.cursor()
+    cu.execute("begin read only")
+    e_avant = lire_empreinte(cu, lot)
+    cu.execute(reflet_sql)
+    r_avant = cu.fetchone()[0]
+    cu.execute("rollback")
+    dire("   empreinte d'avant, relue maintenant : %s ; reflet des charges : %d mandat(s)" % (
+        e_avant, len(r_avant.split(";")) if r_avant else 0))
+    aller = (d / "patch_A_BLANC.sql").read_text(encoding="utf-8").replace("%(EMPREINTE)s", e_avant)
+    k = aller.rfind("do $$ begin raise exception 'A BLANC MAJ CLASSEUR VERT")
+    assert k > 0, "l'a blanc n'a pas sa fin voulue"
+    inv = (d / "patch_INVERSE.sql").read_text(encoding="utf-8")
+    assert inv.count("\nbegin;\n") == 1 and inv.rstrip().endswith("commit;"), "l'inverse n'a pas sa forme"
+    inv = inv.replace("\nbegin;\n", "\n", 1).rstrip()[:-len("commit;")]
+    q_ = lambda s: "'" + s.replace("'", "''") + "'"  # noqa: E731
+    retour = (
+        "do $$ declare e text; r text; n int; begin\n"
+        "  e := (%s);\n"
+        "  if e is distinct from %s then raise exception '⛔ aller-retour : l''empreinte ne revient pas (%%, attendue %s)', e; end if;\n"
+        "  r := (%s);\n"
+        "  if r is distinct from %s then raise exception '⛔ aller-retour : le reflet des charges ne revient pas'; end if;\n"
+        "  select count(*) into n from public.app_classeur_realignement_journal where lot = %s;\n"
+        "  if n <> 0 then raise exception '⛔ aller-retour : %% ligne(s) du journal restent', n; end if;\n"
+        "  select count(*) into n from public.app_classeur_difference where lot = %s;\n"
+        "  if n <> 0 then raise exception '⛔ aller-retour : %% difference(s) restent', n; end if;\n"
+        "  raise exception 'ALLER-RETOUR MAJ CLASSEUR VERT -- l''empreinte revient a %s, RIEN N''EST ECRIT';\n"
+        "end $$;" % (dec["empreinte_sql"].strip().rstrip(";"), q_(e_avant), e_avant, reflet_sql, q_(r_avant), q_(lot),
+                     q_(lot), e_avant))
+    txt = aller[:k] + "\n-- ═══ L'INVERSE, DANS LA MEME TRANSACTION ═══\n" + inv + "\n" + retour + "\n"
+    (d / "patch_ALLER_RETOUR_A_BLANC.sql").write_text(txt, encoding="utf-8")
+    code = 1
+    try:
+        cu.execute(txt)
+        dire("⛔ l'aller-retour n'a PAS leve son erreur voulue")
+        code = 2
+    except Exception as e:  # noqa: BLE001
+        msg = str(e).splitlines()[0]
+        dire("erreur levee : %s" % msg[:300])
+        code = 0 if ("ALLER-RETOUR" in msg and "VERT" in msg) else 1
+        try:
+            cu.execute("rollback")
+        except Exception:  # noqa: BLE001
+            pass
+    for n in cn.notices:
+        dire("notice : %s" % n.strip()[:300])
+    cn.close()
+    if code == 0:
+        dire("✅ ALLER-RETOUR VERT -- le patch puis l'inverse rendent la base a l'octet (empreinte %s) ; rien n'est ecrit"
+             % e_avant)
+    return code
+
+
 def etape_verifier(lot: str) -> int:
     """EN LECTURE SEULE, AVANT TOUT A BLANC : la garde jouee pour de vrai (son empreinte relue), puis CHAQUE ecriture passee
     par EXPLAIN -- la syntaxe, les colonnes, les types, sans rien executer. Une transaction read only : rien ne peut s'ecrire."""
@@ -1598,6 +1673,8 @@ def main() -> int:
     e.add_argument("--passage-avant", type=int, default=None, help="le passage de la veille, pour le temoin du juge")
     b = sp.add_parser("a_blanc")
     b.add_argument("--lot", required=True)
+    ar = sp.add_parser("aller_retour")
+    ar.add_argument("--lot", required=True)
     w = sp.add_parser("ecrire")
     w.add_argument("--lot", required=True)
     w.add_argument("--empreinte", required=True)
@@ -1618,6 +1695,8 @@ def main() -> int:
         return etape_essai(a.passage, a.photo_avant, a.passage_avant)
     if a.etape == "a_blanc":
         return jouer(a.lot, "a_blanc")
+    if a.etape == "aller_retour":
+        return etape_aller_retour(a.lot)
     if a.etape == "ecrire":
         return jouer(a.lot, "vrai", a.empreinte)
     if a.etape == "repetition":
