@@ -6579,6 +6579,62 @@ CE QUI L'ATTEND (ses decisions) :
   b7aabaf3, ad8681cd, EAQJ9D0T, KO6QPUV7) ; ses cas en attente des 47 ;
 - plus tard : les 58 orphelins seuls dans leur dossier (geste de chainage) ; la Commission TTC chez nous (etape 4, ses six
   controles) ; puis la boucle qui regarde (etape 5).
+### 20.107 Le 28/11 (nuit) : L'OUTIL DE LA MISE A JOUR QUOTIDIENNE, CONSTRUIT -- essai de nuit vert, rien d'ecrit
+
+SON MOT (27/11, la nuit) : « tu construis l'outil de mise a jour cette nuit, et ce matin il ecrit TOUTES mes cases chez
+nous, d'un seul coup. Il n'y a que les gestes chez Hektor qui restent dehors. » -- « ton essai a blanc de cet outil EST le
+rattrapage de mon stock [...] arrete de fabriquer des patchs a la main ». Ses trois decisions : pousse les deux commits
+(fait, ce6f139) ; les six conflits de Commission, le Sheet gagne sur les six, 650e65c8 a 2 800 compris ; le numero de
+facture, la case entiere telle quelle. Ses bornes : rien de ce que le temoin surveille avant lui ; rien entre 04:00 et 07:30.
+
+CE QUI EST CONSTRUIT (commit 1b47588, pousse) :
+- phase2/checks/maj_quotidienne_du_classeur.py -- modes differences / essai / a_blanc / ecrire / repetition / routeur ;
+- deux tables NEUVES et VIDES (patch_maj_quotidienne_tables_2026-11-28.sql, joue a 01:12) : app_champ_destination (le
+  routeur, D9) et app_classeur_difference (le journal des differences). ⭐ Le journal d'ecriture n'est PAS neuf : c'est
+  app_classeur_realignement_journal, qui porte deja la valeur d'avant de chaque case.
+- ⭐ SON RAISONNEMENT EST JUSTE, mesure : trois pieces seulement sont neuves (le journal des differences, la porte sans
+  ecran, le rapport du matin). Les regles de decision sont celles deja jouees (lots A B C, etape 3, C8, charge du 24/11, D6).
+
+LES ESSAIS DE NUIT (lecture seule de la base, AUCUNE ecriture dans ce que le temoin surveille) :
+- les differences, sur les fichiers en cache (22/11 -> 26/11) : 5 005 cases, dont 4 725 de notre colonne A, 280 hors
+  colonne A, 5 lignes neuves. ⭐ TEMOIN : la photo d'avant + le journal = la photo d'apres, A L'OCTET. (Le « 187 » du plan
+  comptait les cases changees hors lignes neuves : 280 - 187 = 93, les cases des 5 lignes neuves.)
+- l'essai sur tout le stock, passage 84 : TOUTES les colonnes bouclent ; 0 ligne deja rendue ne bouge (82 -> 84) ;
+  565 ecritures : 239 dates d'annulation, 288 commissions, 16 ventes reglees, 14 factures, 8 charges ; les lots A, B, C de la
+  veille ne laissent AUCUN reste (notes, avis, parts : 0 -- le « deja chez nous » les reconnait).
+
+CHAQUE CHIFFRE RAPPROCHE DE CE QUI ETAIT ANNONCE :
+- Annulee : 239 = ses 229 de l'etape 3 (223 + ses 6) + 10 compromis nes du classeur, par SA regle du 16/11 (« la date va sur
+  le compromis ») ; D3 = 109, comme annonce (apres correction : D3 se juge sur TOUS les compromis de la ligne, avant le
+  « plusieurs compromis ») ; 24 avant la 1re proposition, fa06e4e5, YRUF0S9H : comme annonce.
+- Commission : 288 = 264 au stade de l'offre + 18 de D2 + ses 6. Au stade de l'offre, l'audit du 84 comptait 299 lignes =
+  264 a ecrire + 31 deja chez nous + 4 ABERRANTES (trois a 0 EUR, une a 6 300 pour 19 800) -- signalees, pas ecrites, par le
+  garde-fou des aberrations de D6 (son mot : « tout ce qui parait aberrant se signale »). Les six conflits ecrits = les six
+  annonces (l'outil s'arrete sinon). 11 partages, 1 TVA, 1 entree seule, 10 ecarts de prix : comme annonce.
+- Charge : 940 deja chez nous (= l'audit) ; ses 5 ecarts = 3 ecrits + 2 que SA decision du 24/11 ecarte (« la vente reglee
+  fait foi » sur un mandat a deux lignes) ; ses 5 manquants = 5 ecrits ; 16 sans mandat sur leurs pieces.
+- Vente Reglee 16, factures 14 : comme annonce.
+- Offre Achat : au passage 82, l'outil redonne EXACTEMENT 4 421 egales / 114 ecarts / 170 sans offre. Au 84, R30a a
+  rattache une offre a 109 des 170 -- et 99 de ces offres ne portent pas la date du Sheet : PEUT-ETRE PAS L'OFFRE DE LA
+  LIGNE. Le rapport les montre a part (« ne rien corriger sans la regarder »).
+
+SES DEUX DOUTES (⑨) :
+- « ton compte des factures a poser me parait bas » -- il a raison de douter : 3 759 cases = 3 683 deja chez nous + 14 a
+  poser + 3 sur une ligne en attente + 59 SANS VENTE CHEZ NOUS. Les 59 : 49 sont des affaires VIVANTES (compromis actif,
+  offre acceptee) dont la vente n'est pas encore descendue de Hektor -- la facture est emise avant la vente ; l'outil les
+  POSERA tout seul le matin ou la vente arrivera. 10 sont des affaires mortes (avoirs « AVR », protocoles d'accord,
+  « APPORTEUR ») : dans sa liste.
+- « je ne suis pas sur que tu aies toutes mes colonnes -- regarde Offre Achat et l'Etat Actuel » -- le routeur porte les
+  38 colonnes, une ligne chacune. Offre Achat : au rapport, jamais ecrite (la colonne date de l'offre est relue chaque nuit,
+  la meme raison que son point 4). Etat Actuel : une colonne RESUME (Vente reglee 3 763 = Vente Reglee 3 763 ; Annulee 898 =
+  Annulee 898) -- jamais ecrite (c'est un etat), montree quand elle contredit nos pieces (32 lignes au 84, 78 au 82).
+
+SA LISTE (9 motifs, 56 cas) : 24 annulations avant la 1re proposition ; 16 charges sans mandat ; 10 factures et 2 ventes
+reglees sur une affaire morte sans vente ; fa06e4e5 ; YRUF0S9H ; G8YSAI5Z (deux ventes vivantes) ; U0GQ3KTO.
+
+LE MATIN, DANS SON ORDRE : apres 07:45 le temoin de la nuit ; puis la photo du jour, le passage, sa copie en base ; puis
+l'essai a blanc sur tout le stock et son a_blanc ; puis SON « vas-y », qui couvre l'ensemble ; puis ecrire et repetition.
+Le plan est corrige (§ 0, § 6 etape 5 fusionnee, § 6.2 l'outil).
 ---
 
 ### Pour la suite — ce que la nuit et demain matin doivent montrer

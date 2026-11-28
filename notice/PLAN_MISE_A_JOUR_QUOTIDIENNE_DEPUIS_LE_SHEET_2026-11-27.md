@@ -48,20 +48,19 @@ classeur : « elle n'en aura jamais » (de numéro Hektor).
 acheteur. Les créer chez Hektor remettrait 114 biens vendus en « Sous offre » ou en « Sous
 compromis », et poserait la date du jour sur chacune.
 
-**⑥ Le plan suit ton ordre** (§ 6), revu le 27/11 au soir :
+**⑥ Le plan suit ton ordre** (§ 6), revu le 28/11 à la nuit (son mot : « tu construis l'outil cette nuit, et ce
+matin il écrit TOUTES mes cases chez nous, d'un seul coup ») :
 1. l'audit (ce document) ;
 2. la règle des 334 : ✅ **R30a validée le 27/11 au soir** (190 pièces, aucun dossier ne bouge) ;
-3. les dates d'annulation élargies ;
-3 bis. **les écritures sans risque chez nous** (~840 cases : répartitions, COMMENTAIRES, En attente de,
-   avis) — ajoutée par lui le 27/11 au soir ;
-4. la Commission TTC chez nous, avec les **quatre** contrôles de D6. L'essai chez Hektor se fait sur
-   0bc98552 (son choix) ;
-5. la boucle, qui regarde seulement ;
-6. la boucle, qui écrit chez nous ;
-7. les lignes neuves ;
-8. R1 à R5, la fin du chantier, là où le gel s'endort ;
-9. **en dernier, et peut-être jamais** : la boucle qui informe Hektor. **0 geste mesuré en 4 jours sur
-   les affaires vivantes** (§ 6, étape 9).
+3. les dates d'annulation élargies ; 3 bis. les écritures sans risque (✅ lots A, B, C joués le 27/11) ; 4. la Commission TTC
+   chez nous — ⭐ **les trois sont désormais des colonnes de l'outil** : plus de patch fait à la main (son mot du 28/11 :
+   « ton essai à blanc de cet outil EST le rattrapage de mon stock ») ;
+5. ⭐ **L'OUTIL : la boucle qui écrit chez nous dès le premier matin** — les étapes 5 et 6 d'avant sont **fusionnées** (son
+   mot du 28/11 : « pas de phase d'observation ») ; ✅ **construit la nuit du 27 au 28/11** (§ 6.2) ;
+6. **EN QUEUE, ce n'est pas l'outil** : les lignes neuves (étape 7), puis R1 à R5 (étape 8 ; R3 attend qu'il ouvre ses Apps
+   Script) ;
+7. **en dernier, et peut-être jamais** : la boucle qui informe Hektor (étape 9). **0 geste mesuré en 4 jours sur les affaires
+   vivantes.**
 
 Ce qui survit à chacune des deux coupures (celle du Sheet, celle de Hektor) est écrit étape par étape au
 § 6.1.
@@ -623,44 +622,35 @@ contrôle et par le tien. Ensuite, chaque nouveau passage se recopie
   et tu le corriges toi-même dans Hektor si tu le veux.
 - Environ ½ jour.
 
-**Étape 5 — la boucle, qui regarde seulement** (quelques jours, ta demande). Elle a huit pièces :
-1. **la photo du jour** : l'image existe ; une tâche planifiée la prend chaque jour et la garde 15 jours.
-   ⚠ Une tâche neuve se déclare d'abord dans la surveillance (`check_gti_health.py`). Hors 04:00-07:30.
-2. **le journal des différences** : la photo du jour contre celle de la veille, case par case (ID Unique
-   × colonne). Chaque case est neuve, modifiée ou disparue. Il est écrit dans une table chez nous : ta
-   mémoire des décisions va en base.
-3. **le juge** sur les lignes neuves ou modifiées, avec son empreinte (`empreinte_du_juge()`).
-4. **le routeur** : UNE table en base, `app_champ_destination`. ⛔ **Pas une sixième liste : il y en a
-   déjà cinq** (recommandation du 22/10, jamais créée). Une ligne par colonne : la destination chez
-   nous, la règle (vide → Sheet, différent → Sheet gagne, ou exclue), le geste chez Hektor, ses
-   conditions d'état, l'interrupteur. ⭐ **La même table servira à R3**, l'app qui écrit le Sheet : une
-   seule table pour les deux sens.
-5. **la décision par case** : ce qui s'écrirait chez nous, et le geste qui partirait chez Hektor, filtré
-   par les règles du § 2.5 (pièce vivante, état prouvé, bien au parc, ordre).
-6. **le témoin du matin**. Il est vert si :
-   - la photo est lue ;
-   - le juge est passé et reproductible ;
-   - les sommes bouclent ;
-   - aucune ligne déjà rendue ne change d'étiquette sans règle.
-   S'il n'est pas vert, la boucle s'arrête d'elle-même.
-7. **la garde, ta famille B** (§ 18.3, le geste 9) : chaque écriture (date, note, avis, répartition) est
-   relue pour voir si elle est toujours sur la pièce que le protocole lui donne. Sinon, la boucle propose
-   la place juste et le journal le dit. En mode « regarder », elle montre seulement. Déjà mesuré : 15
-   dates et 62 notes ne sont pas sur une pièce de leur ligne.
-8. **le rapport du matin**, que tu lis : les cases neuves et modifiées, ce qui s'écrirait, ce qui partirait
-   chez Hektor, ce qui ne peut pas.
+**Étape 5 — L'OUTIL : la boucle écrit chez nous DÈS LE PREMIER MATIN** (les étapes 5 et 6 d'avant, **fusionnées** le 28/11).
 
-Elle n'écrit que dans ses propres tables, et ces tables se créent avec ton accord. Environ 3 à 4 jours.
+> ⛔ **Corrigé le 28/11, son mot** : « Il y a un malentendu sur ton étape 5 : tu l'as écrite "la boucle regarde seulement,
+> quelques jours, ta demande", puis l'étape 6 "elle écrit, après tes jours de lecture". Ce n'est pas ce que j'ai demandé :
+> pas de phase d'observation, elle écrit dès le premier matin, avec sauvegarde datée, journal, témoin chiffré et arrêt
+> automatique. Mes gardes, c'est l'interrupteur et le témoin, pas des jours d'attente. »
+>
+> ⭐ **Et sur le rythme, il se corrige lui-même** : « plusieurs écritures le même jour, ce n'est pas imprudent — dix hier,
+> toutes vertes. Ce qui protège, c'est le patron, pas l'attente. La nuit ne touche ni les dates d'annulation, ni les
+> honoraires de l'app, ni les notes, ni les avis ; seules les répartitions demandaient une nuit, et c'est le témoin de ce
+> matin. »
 
-**Étape 6 — la boucle écrit chez nous**, derrière un interrupteur, après tes jours de lecture.
-- Chaque écrasement garde sa valeur d'avant et sa ligne de journal. Le carnet porte déjà
-  `valeur_hektor_au_moment`.
-- ⚠ **Le point ① de la note du 22/10 est toujours ouvert** : il faut une porte appelable sans écran.
-  Aujourd'hui, nos écritures du stock passent par des patchs SQL. La boucle a besoin d'un chemin de
-  code avec les mêmes gardes que les patchs.
-- Environ 2 à 3 jours.
+Les huit pièces (le détail et la commande sont au § 6.2) :
+1. **la photo du jour** : l'image du protocole — existe ;
+2. ⭐ **neuf — le journal des différences** : deux photos, case par case, dans `app_classeur_difference` ;
+3. **le juge** : le passage du protocole sur la photo du jour — existe ;
+4. **le routeur** : `app_champ_destination` (D9, une seule table, pour les deux sens) — sa graine est le § 3, posée dans la
+   table ;
+5. **la décision par case** : les règles **déjà jouées**, reprises telles quelles ;
+6. **le témoin chiffré** : chaque colonne boucle ; les six conflits de la Commission sont les six annoncés ; aucune ligne
+   déjà rendue ne change d'étiquette. Sinon : **arrêt**, de lui-même ;
+7. ⭐ **neuf — la porte d'écriture appelable sans écran** (le point ① de la note du 22/10) : le lot entier en une
+   transaction, avec les mêmes gardes que les patchs ;
+8. ⭐ **neuf — le rapport du matin** : sa première rubrique est faite des dates que la nuit réécrit (Compromis, Vente Fixée,
+   Offre Achat), **montrées et jamais écrites**. ⛔ **Pas de table de signaux à part** (son mot) : c'est le rapport.
 
-**Étape 7 — les lignes neuves.** ~30 à 40 par mois (mesure du 19/11).
+**Étape 7 — EN QUEUE (ce n'est pas l'outil) : les lignes neuves.** ~30 à 40 par mois (mesure du 19/11). ⭐ L'outil les
+voit déjà (le journal des différences les nomme, le juge les tranche quand leur pièce existe) ; cette étape ne garde que
+ce qui reste vraiment à faire pour elles.
 - Aujourd'hui, le négociateur saisit dans Hektor et la nuit descend la transaction. Le juge rattache la
   ligne à sa pièce.
 - **Non mesuré** : qui arrive en premier, la ligne du Sheet ou la transaction de Hektor ; et pourquoi le
@@ -669,7 +659,8 @@ Elle n'écrit que dans ses propres tables, et ces tables se créent avec ton acc
   création chez Hektor par la boucle ne vient que par ta règle (D5).
 - Environ 1 jour.
 
-**Étape 8 — R1 à R5, la fin du chantier.** C'est là que le gel s'endort. Repris de la note du 19/11
+**Étape 8 — EN QUEUE (ce n'est pas l'outil) : R1 à R5, la fin du chantier.** ⛔ R3 attend qu'il ouvre ses Apps Script
+(V1). C'est là que le gel s'endort. Repris de la note du 19/11
 (§ 10.6), sans changement de fond.
 - **R1 LIRE** : la colonne A est relue chaque nuit dans une table chez nous (étiquette → ID Unique,
   numéro de ligne), avec une vue que l'app interroge. La sentinelle des lignes non reliées en sort
@@ -736,6 +727,42 @@ Environ 3 à 5 jours plus les essais, si un jour il le faut.
 
 **Le total, sans l'étape 9** : environ 12 à 15 jours de travail, sans compter les attentes d'accord ni les
 jours de lecture de la boucle. C'est une estimation.
+
+### 6.2 L'outil — construit la nuit du 27 au 28/11 (`phase2/checks/maj_quotidienne_du_classeur.py`, commit 1b47588)
+
+**Son raisonnement, vérifié par la mesure** : « tes huit pièces ne sont pas huit constructions neuves ». C'est vrai : la
+photo, le juge et les règles existaient ; le journal d'écriture aussi (`app_classeur_realignement_journal`, avec la valeur
+d'avant de chaque case). **Trois pièces sont neuves** : le journal des différences, la porte d'écriture sans écran, le
+rapport du matin.
+
+**Le matin, dans cet ordre (son ordre du 28/11)** :
+1. après 07:45, le témoin de la nuit (`temoin_de_la_nuit_ecritures_du_classeur_2026-11-27.py --juger`). Rouge : tout
+   s'arrête, et chaque écart est nommé ;
+2. la photo du jour (`protocole_classeur.py image`), le passage du juge (`protocole_classeur.py passage`), sa copie en base
+   (`socle_du_protocole_en_base_2026-11-27.py --ecrire`) ;
+3. l'essai à blanc sur tout le stock : `maj_quotidienne_du_classeur.py essai --passage N --passage-avant N-1 --photo-avant
+   <la photo de la veille>`, puis `a_blanc --lot <lot>`. Il sort ce qu'il écrirait, colonne par colonne, et les sommes
+   bouclent ;
+4. il lit le rapport du matin (`notice/RAPPORT_DU_MATIN_CLASSEUR_<lot>.md`), et dit « vas-y » ;
+5. `ecrire --lot <lot> --empreinte <celle de l'essai>`, puis `repetition --lot <lot>`. **Ce « vas-y » couvre l'ensemble** :
+   les dates d'annulation, les commissions, les factures, les ventes réglées, les charges, les notes, les avis, les parts.
+
+**Ce qui ne s'écrit jamais** : rien chez Hektor ; jamais l'état d'une pièce ; jamais une part supprimée (elle lui remonte) ;
+jamais une note écrasée ; jamais une des 9 notes saisies ; jamais une charge saisie dans l'app ; jamais une pièce qu'il a
+fixée lui-même ; **jamais la date du compromis ni celle de la vente fixée** (son mot du 28/11 : « la nuit les réécrit comme
+Hektor les donne, je l'ai vérifié dans le code du run. Les écrire ne servirait à rien »).
+
+**Ses trois décisions du 28/11, que l'outil applique** :
+- **les six conflits de la Commission TTC : le Sheet gagne sur les six**, « y compris 650e65c8 à 2 800 — mon commentaire parle
+  d'une renégociation de 300 €, je le sais, c'est quand même ma règle ». L'outil vérifie que les conflits qu'il écrit sont
+  exactement ces six, sinon il s'arrête ;
+- **le numéro de facture : la case entière, telle quelle**, relances et doubles factures comprises (« une colonne, une
+  règle. Ne découpe rien, ne nettoie rien ») ;
+- les deux commits de la veille : poussés.
+
+**L'essai de nuit, en lecture seule, sur le passage 84 (28/11 à 01:18)** : toutes les colonnes bouclent ; 0 ligne déjà
+rendue ne bouge (82 → 84) ; 565 écritures (557 cases du registre, 8 charges) ; les lots A, B et C de la veille ne laissent
+**aucun reste** (notes, avis et parts : 0) ; sa liste tient en 9 motifs.
 
 ### 6.1 Ce qui survit à la coupure, et ce qui meurt avec elle — étape par étape
 

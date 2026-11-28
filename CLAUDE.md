@@ -119,7 +119,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 
 **Ordre de Frédéric : ① ⑤ ④ ② puis ③ → ⑥ → ⑦ ⑧.** *(⑦ clos le 21/10.)*
 
-> ### ⭐ LE CHANTIER EN COURS (27/11/2026) — LA MISE À JOUR QUOTIDIENNE DEPUIS LE SHEET
+> ### ⭐ LE CHANTIER EN COURS (27-28/11/2026) — LA MISE À JOUR QUOTIDIENNE DEPUIS LE SHEET
 >
 > **Le plan, validé dans sa structure par Frédéric le 27/11 au soir :**
 > **`notice/PLAN_MISE_A_JOUR_QUOTIDIENNE_DEPUIS_LE_SHEET_2026-11-27.md`**.
@@ -128,13 +128,18 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 >   modifications du classeur Sheet.
 > - **Le journal des gestes** est le carnet `notice/CHANTIER_CLASSEUR_TEMPS4_5_FINIR_2026-11-19.md`
 >   (§ 20.97 et suivants).
-> - **L'ordre** :
->   - fait : le socle du protocole en base (27/11), puis l'audit des gestes ;
->   - ensuite : la règle des 334, les dates d'annulation élargies, la Commission chez nous ;
->   - puis la boucle, qui regarde, et qui écrit chez nous ;
->   - puis les lignes neuves, puis R1 à R5 ;
+> - **L'ordre** (revu le 28/11, son mot) :
+>   - fait : le socle du protocole en base, l'audit des gestes, R30a, les lots A B C (27/11) ;
+>   - ⭐ **L'OUTIL, construit la nuit du 27 au 28/11** : `phase2/checks/maj_quotidienne_du_classeur.py` (plan § 6.2). Il
+>     écrit chez nous **dès le premier matin** (les étapes 5 et 6 sont fusionnées : pas de phase d'observation), avec
+>     sauvegarde datée, journal, témoin chiffré et arrêt automatique. Son essai à blanc **est** le rattrapage du stock :
+>     plus de patch fait à la main. Le matin : le témoin de la nuit, la photo, le passage, l'essai, **son « vas-y »**,
+>     l'écriture, la répétition ;
+>   - en queue (ce n'est pas l'outil) : les lignes neuves, puis R1 à R5 (R3 attend ses Apps Script) ;
 >   - **en dernier, et peut-être jamais** : informer Hektor (0 geste mesuré en 4 jours sur les affaires
 >     vivantes).
+> - ⛔ **Jamais écrites** : la date du compromis et celle de la vente fixée (la nuit les réécrit) — elles sont la 1re
+>   rubrique du rapport du matin. ⛔ **Pas de table de signaux à part** : le rapport du matin en tient lieu.
 > - ⛔ **Avant tout geste chez Hektor sur une transaction**, lire le § 2 du plan : le tableau des gestes,
 >   pièce par pièce et état par état. **135 des 138 créations ou corrections depuis mai portent sur des
 >   biens d'essai.**
